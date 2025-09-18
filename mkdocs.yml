@@ -1,0 +1,5 @@
+site_name: spooliq
+nav:
+  - Home: ./README.md
+theme:
+  name: material

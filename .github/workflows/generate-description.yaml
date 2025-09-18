@@ -1,0 +1,29 @@
+name: Generate Description - spooliq
+
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  generate-description:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate PR description
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Generating description for PR #${{ github.event.pull_request.number }}"
+          # Add custom logic here if needed
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "PR description generation completed"

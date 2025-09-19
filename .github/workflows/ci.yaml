@@ -150,8 +150,8 @@ jobs:
       - name: Run tests with coverage (Windows)
         if: runner.os == 'Windows'
         run: |
-          go test -v -coverprofile=coverage.out ./...
-          go tool cover -html=coverage.out -o coverage.html
+          go test -v -coverprofile="coverage.out" "./..."
+          go tool cover -html="coverage.out" -o="coverage.html"
 
       - name: Run tests with coverage (Linux/macOS)
         if: runner.os != 'Windows'

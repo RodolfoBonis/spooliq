@@ -149,7 +149,13 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          go test -v -race -coverprofile=coverage.out ./...
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            # Windows doesn't support -race flag without CGO
+            go test -v -coverprofile=coverage.out ./...
+          else
+            # Linux and macOS support -race flag
+            go test -v -race -coverprofile=coverage.out ./...
+          fi
           go tool cover -html=coverage.out -o coverage.html
 
       - name: Upload coverage artifacts

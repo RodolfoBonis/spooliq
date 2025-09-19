@@ -133,7 +133,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./dockerfile.with-ca
+          file: ./dockerfile
           push: true
           tags: ${{ env.IMAGE_URL }}
           build-args: |

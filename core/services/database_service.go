@@ -12,8 +12,8 @@ import (
 
 	// Entidades do SpoolIq
 	filamentsEntities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
-	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
+	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 
 	"github.com/jinzhu/gorm"
 	// Drivers de banco de dados

@@ -50,15 +50,15 @@ func RegisterUserRoutes(r *gin.Engine, handler *handlers.UserHandler) {
 			users.GET("/me", handler.GetCurrentUser)
 
 			// Admin endpoints for user management
-			users.GET("", handler.GetUsers)                              // List users (admin)
-			users.POST("", handler.CreateUser)                          // Create user (admin)
-			users.GET("/:id", handler.GetUserByID)                      // Get user by ID (admin or self)
-			users.PATCH("/:id", handler.UpdateUser)                     // Update user (admin or self)
-			users.DELETE("/:id", handler.DeleteUser)                    // Delete user (admin)
-			users.PATCH("/:id/enabled", handler.SetUserEnabled)         // Enable/disable user (admin)
-			users.PATCH("/:id/password", handler.ResetUserPassword)     // Reset password (admin)
-			users.POST("/:id/roles", handler.AddUserRole)               // Add role (admin)
-			users.DELETE("/:id/roles/:role", handler.RemoveUserRole)    // Remove role (admin)
+			users.GET("", handler.GetUsers)                          // List users (admin)
+			users.POST("", handler.CreateUser)                       // Create user (admin)
+			users.GET("/:id", handler.GetUserByID)                   // Get user by ID (admin or self)
+			users.PATCH("/:id", handler.UpdateUser)                  // Update user (admin or self)
+			users.DELETE("/:id", handler.DeleteUser)                 // Delete user (admin)
+			users.PATCH("/:id/enabled", handler.SetUserEnabled)      // Enable/disable user (admin)
+			users.PATCH("/:id/password", handler.ResetUserPassword)  // Reset password (admin)
+			users.POST("/:id/roles", handler.AddUserRole)            // Add role (admin)
+			users.DELETE("/:id/roles/:role", handler.RemoveUserRole) // Remove role (admin)
 		}
 	}
 }

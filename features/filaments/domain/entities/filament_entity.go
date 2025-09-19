@@ -10,19 +10,19 @@ import (
 // @Description Filamento para impressão 3D
 // @Example {"id": 1, "name": "PLA Branco", "brand": "SUNLU", "material": "PLA", "color": "Branco", "price_per_kg": 125.0, "url": "https://amazon.com.br/dp/B07PGYHYV8"}
 type Filament struct {
-	ID             uint       `gorm:"primary_key;auto_increment" json:"id"`
-	Name           string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
-	Brand          string     `gorm:"type:varchar(255);not null" json:"brand" validate:"required,min=1,max=255"`
-	Material       string     `gorm:"type:varchar(100);not null" json:"material" validate:"required,min=1,max=100"`
-	Color          string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
-	ColorHex       string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
-	PricePerKg     float64    `gorm:"type:decimal(10,2);not null" json:"price_per_kg" validate:"required,min=0"`
-	PricePerMeter  *float64   `gorm:"type:decimal(10,4)" json:"price_per_meter,omitempty" validate:"omitempty,min=0"`
-	URL            string     `gorm:"type:text" json:"url" validate:"omitempty,url"`
-	OwnerUserID    *string    `gorm:"type:varchar(255);index" json:"owner_user_id,omitempty"` // null = catálogo global (admin), string = Keycloak User ID
-	CreatedAt      time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt      time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
-	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID            uint       `gorm:"primary_key;auto_increment" json:"id"`
+	Name          string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
+	Brand         string     `gorm:"type:varchar(255);not null" json:"brand" validate:"required,min=1,max=255"`
+	Material      string     `gorm:"type:varchar(100);not null" json:"material" validate:"required,min=1,max=100"`
+	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
+	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
+	PricePerKg    float64    `gorm:"type:decimal(10,2);not null" json:"price_per_kg" validate:"required,min=0"`
+	PricePerMeter *float64   `gorm:"type:decimal(10,4)" json:"price_per_meter,omitempty" validate:"omitempty,min=0"`
+	URL           string     `gorm:"type:text" json:"url" validate:"omitempty,url"`
+	OwnerUserID   *string    `gorm:"type:varchar(255);index" json:"owner_user_id,omitempty"` // null = catálogo global (admin), string = Keycloak User ID
+	CreatedAt     time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt     time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
+	DeletedAt     *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // TableName especifica o nome da tabela para o GORM

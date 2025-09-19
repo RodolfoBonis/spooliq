@@ -110,14 +110,14 @@ func (EnergyProfileModel) TableName() string {
 
 // CostProfileModel representa um perfil de custos no banco de dados
 type CostProfileModel struct {
-	ID               uint       `gorm:"primary_key;auto_increment"`
-	QuoteID          uint       `gorm:"not null;index"`
-	WearPercentage   float64    `gorm:"type:decimal(5,2);not null;default:0"`
-	OverheadAmount   float64    `gorm:"type:decimal(10,2);not null;default:0"`
-	Description      string     `gorm:"type:text"`
-	CreatedAt        time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
-	UpdatedAt        time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
-	DeletedAt        *time.Time `gorm:"index"`
+	ID             uint       `gorm:"primary_key;auto_increment"`
+	QuoteID        uint       `gorm:"not null;index"`
+	WearPercentage float64    `gorm:"type:decimal(5,2);not null;default:0"`
+	OverheadAmount float64    `gorm:"type:decimal(10,2);not null;default:0"`
+	Description    string     `gorm:"type:text"`
+	CreatedAt      time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
+	UpdatedAt      time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
+	DeletedAt      *time.Time `gorm:"index"`
 }
 
 // TableName especifica o nome da tabela para o GORM
@@ -127,17 +127,17 @@ func (CostProfileModel) TableName() string {
 
 // MarginProfileModel representa um perfil de margens no banco de dados
 type MarginProfileModel struct {
-	ID                    uint       `gorm:"primary_key;auto_increment"`
-	QuoteID               uint       `gorm:"not null;index"`
-	PrintingOnlyMargin    float64    `gorm:"type:decimal(8,2);not null;default:0"`
-	PrintingPlusMargin    float64    `gorm:"type:decimal(8,2);not null;default:0"`
-	FullServiceMargin     float64    `gorm:"type:decimal(8,2);not null;default:0"`
-	OperatorRatePerHour   float64    `gorm:"type:decimal(10,2);not null;default:0"`
-	ModelerRatePerHour    float64    `gorm:"type:decimal(10,2);not null;default:0"`
-	Description           string     `gorm:"type:text"`
-	CreatedAt             time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
-	UpdatedAt             time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
-	DeletedAt             *time.Time `gorm:"index"`
+	ID                  uint       `gorm:"primary_key;auto_increment"`
+	QuoteID             uint       `gorm:"not null;index"`
+	PrintingOnlyMargin  float64    `gorm:"type:decimal(8,2);not null;default:0"`
+	PrintingPlusMargin  float64    `gorm:"type:decimal(8,2);not null;default:0"`
+	FullServiceMargin   float64    `gorm:"type:decimal(8,2);not null;default:0"`
+	OperatorRatePerHour float64    `gorm:"type:decimal(10,2);not null;default:0"`
+	ModelerRatePerHour  float64    `gorm:"type:decimal(10,2);not null;default:0"`
+	Description         string     `gorm:"type:text"`
+	CreatedAt           time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
+	UpdatedAt           time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
+	DeletedAt           *time.Time `gorm:"index"`
 }
 
 // TableName especifica o nome da tabela para o GORM

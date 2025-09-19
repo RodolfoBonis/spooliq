@@ -38,7 +38,7 @@ func GetSystemStatusHandler(systemUc usecases.SystemUseCase) gin.HandlerFunc {
 // Routes registers system-related routes for the application.
 func Routes(route *gin.RouterGroup, systemUc usecases.SystemUseCase, cacheMiddleware *middlewares.CacheMiddleware) {
 	systemRoute := route.Group("/system")
-	
+
 	// Endpoint sem cache (sempre busca dados frescos)
 	systemRoute.GET("", GetSystemStatusHandler(systemUc))
 }

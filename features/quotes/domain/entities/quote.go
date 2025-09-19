@@ -12,7 +12,7 @@ type Quote struct {
 	UpdatedAt   time.Time
 
 	// Relacionamentos
-	FilamentLines []QuoteFilamentLine
+	FilamentLines  []QuoteFilamentLine
 	MachineProfile *MachineProfile
 	EnergyProfile  *EnergyProfile
 	CostProfile    *CostProfile
@@ -125,13 +125,13 @@ func (ep *EnergyProfile) CalculateEnergyCost(kWhConsumed float64) float64 {
 
 // CostProfile representa um perfil de custos (Entity pura)
 type CostProfile struct {
-	ID               uint
-	QuoteID          uint
-	WearPercentage   float64
-	OverheadAmount   float64
-	Description      string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID             uint
+	QuoteID        uint
+	WearPercentage float64
+	OverheadAmount float64
+	Description    string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // CalculateWearCost calcula o custo de desgaste (regra de negócio)
@@ -141,16 +141,16 @@ func (cp *CostProfile) CalculateWearCost(materialCost float64) float64 {
 
 // MarginProfile representa um perfil de margens (Entity pura)
 type MarginProfile struct {
-	ID                    uint
-	QuoteID               uint
-	PrintingOnlyMargin    float64
-	PrintingPlusMargin    float64
-	FullServiceMargin     float64
-	OperatorRatePerHour   float64
-	ModelerRatePerHour    float64
-	Description           string
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                  uint
+	QuoteID             uint
+	PrintingOnlyMargin  float64
+	PrintingPlusMargin  float64
+	FullServiceMargin   float64
+	OperatorRatePerHour float64
+	ModelerRatePerHour  float64
+	Description         string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // CalculateLaborCost calcula o custo de mão de obra (regra de negócio)

@@ -13,11 +13,11 @@ import (
 )
 
 type keycloakUserRepository struct {
-	client             *gocloak.GoCloak
-	keycloakConfig     entities.KeyCloakDataEntity
-	logger             logger.Logger
-	adminToken         *gocloak.JWT
-	adminTokenExpiry   time.Time
+	client           *gocloak.GoCloak
+	keycloakConfig   entities.KeyCloakDataEntity
+	logger           logger.Logger
+	adminToken       *gocloak.JWT
+	adminTokenExpiry time.Time
 }
 
 // NewKeycloakUserRepository creates a new Keycloak user repository

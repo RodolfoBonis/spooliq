@@ -11,11 +11,11 @@ import (
 // @Description Preset de configuração do sistema
 // @Example {"id": 1, "key": "energy_maceio_al_2025", "data": {"base_tariff": 0.804, "flag_surcharge": 0, "location": "Maceió-AL", "year": 2025}}
 type Preset struct {
-	ID        uint      `gorm:"primary_key;auto_increment" json:"id"`
-	Key       string    `gorm:"type:varchar(255);unique_index;not null" json:"key" validate:"required,min=1,max=255"`
-	Data      string    `gorm:"type:text;not null" json:"data" validate:"required"` // JSON blob
-	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
+	ID        uint       `gorm:"primary_key;auto_increment" json:"id"`
+	Key       string     `gorm:"type:varchar(255);unique_index;not null" json:"key" validate:"required,min=1,max=255"`
+	Data      string     `gorm:"type:text;not null" json:"data" validate:"required"` // JSON blob
+	CreatedAt time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 	DeletedAt *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 

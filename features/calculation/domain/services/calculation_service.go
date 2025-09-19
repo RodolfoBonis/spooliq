@@ -60,15 +60,15 @@ func (s *calculationServiceImpl) Calculate(ctx context.Context, input entities.C
 
 	// Montar resultado
 	result.Results = entities.CalculationResults{
-		FilamentCosts: filamentCosts,
-		KWh:           kWh,
-		EnergyCost:    energyCost,
-		MaterialsCost: materialsCost,
-		WearCost:      wearCost,
-		LaborCost:     laborCost,
-		DirectCost:    directCost,
-		Packages:      packages,
-		Markup:        markup,
+		FilamentCosts:   filamentCosts,
+		KWh:             kWh,
+		EnergyCost:      energyCost,
+		MaterialsCost:   materialsCost,
+		WearCost:        wearCost,
+		LaborCost:       laborCost,
+		DirectCost:      directCost,
+		Packages:        packages,
+		Markup:          markup,
 		EffectiveMargin: effectiveMargin,
 	}
 

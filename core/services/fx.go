@@ -15,4 +15,4 @@ var Module = fx.Module("services",
 			return Connector
 		},
 	),
-) 
+)

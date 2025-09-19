@@ -24,17 +24,17 @@ func (s *JSONExportService) Generate(ctx context.Context, data *entities.ExportD
 	exportJSON := map[string]interface{}{
 		"metadata": data.Metadata,
 		"quote": map[string]interface{}{
-			"id":           data.Quote.ID,
-			"title":        data.Quote.Title,
-			"notes":        data.Quote.Notes,
-			"owner_user_id": data.Quote.OwnerUserID,
-			"created_at":   data.Quote.CreatedAt,
-			"updated_at":   data.Quote.UpdatedAt,
-			"filament_lines": data.Quote.FilamentLines,
+			"id":              data.Quote.ID,
+			"title":           data.Quote.Title,
+			"notes":           data.Quote.Notes,
+			"owner_user_id":   data.Quote.OwnerUserID,
+			"created_at":      data.Quote.CreatedAt,
+			"updated_at":      data.Quote.UpdatedAt,
+			"filament_lines":  data.Quote.FilamentLines,
 			"machine_profile": data.Quote.MachineProfile,
-			"energy_profile": data.Quote.EnergyProfile,
-			"cost_profile": data.Quote.CostProfile,
-			"margin_profile": data.Quote.MarginProfile,
+			"energy_profile":  data.Quote.EnergyProfile,
+			"cost_profile":    data.Quote.CostProfile,
+			"margin_profile":  data.Quote.MarginProfile,
 		},
 	}
 

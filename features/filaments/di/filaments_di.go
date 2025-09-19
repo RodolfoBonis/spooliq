@@ -5,8 +5,8 @@ import (
 	data_repositories "github.com/RodolfoBonis/spooliq/features/filaments/data/repositories"
 	domain_repositories "github.com/RodolfoBonis/spooliq/features/filaments/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
-	"go.uber.org/fx"
 	"github.com/jinzhu/gorm"
+	"go.uber.org/fx"
 )
 
 var FilamentsModule = fx.Module("filaments",

@@ -89,16 +89,16 @@ func ModelToEntity(model *models.QuoteModel) *entities.Quote {
 
 	if model.MarginProfile != nil {
 		entity.MarginProfile = &entities.MarginProfile{
-			ID:                    model.MarginProfile.ID,
-			QuoteID:               model.MarginProfile.QuoteID,
-			PrintingOnlyMargin:    model.MarginProfile.PrintingOnlyMargin,
-			PrintingPlusMargin:    model.MarginProfile.PrintingPlusMargin,
-			FullServiceMargin:     model.MarginProfile.FullServiceMargin,
-			OperatorRatePerHour:   model.MarginProfile.OperatorRatePerHour,
-			ModelerRatePerHour:    model.MarginProfile.ModelerRatePerHour,
-			Description:           model.MarginProfile.Description,
-			CreatedAt:             model.MarginProfile.CreatedAt,
-			UpdatedAt:             model.MarginProfile.UpdatedAt,
+			ID:                  model.MarginProfile.ID,
+			QuoteID:             model.MarginProfile.QuoteID,
+			PrintingOnlyMargin:  model.MarginProfile.PrintingOnlyMargin,
+			PrintingPlusMargin:  model.MarginProfile.PrintingPlusMargin,
+			FullServiceMargin:   model.MarginProfile.FullServiceMargin,
+			OperatorRatePerHour: model.MarginProfile.OperatorRatePerHour,
+			ModelerRatePerHour:  model.MarginProfile.ModelerRatePerHour,
+			Description:         model.MarginProfile.Description,
+			CreatedAt:           model.MarginProfile.CreatedAt,
+			UpdatedAt:           model.MarginProfile.UpdatedAt,
 		}
 	}
 
@@ -188,16 +188,16 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 
 	if entity.MarginProfile != nil {
 		model.MarginProfile = &models.MarginProfileModel{
-			ID:                    entity.MarginProfile.ID,
-			QuoteID:               entity.MarginProfile.QuoteID,
-			PrintingOnlyMargin:    entity.MarginProfile.PrintingOnlyMargin,
-			PrintingPlusMargin:    entity.MarginProfile.PrintingPlusMargin,
-			FullServiceMargin:     entity.MarginProfile.FullServiceMargin,
-			OperatorRatePerHour:   entity.MarginProfile.OperatorRatePerHour,
-			ModelerRatePerHour:    entity.MarginProfile.ModelerRatePerHour,
-			Description:           entity.MarginProfile.Description,
-			CreatedAt:             entity.MarginProfile.CreatedAt,
-			UpdatedAt:             entity.MarginProfile.UpdatedAt,
+			ID:                  entity.MarginProfile.ID,
+			QuoteID:             entity.MarginProfile.QuoteID,
+			PrintingOnlyMargin:  entity.MarginProfile.PrintingOnlyMargin,
+			PrintingPlusMargin:  entity.MarginProfile.PrintingPlusMargin,
+			FullServiceMargin:   entity.MarginProfile.FullServiceMargin,
+			OperatorRatePerHour: entity.MarginProfile.OperatorRatePerHour,
+			ModelerRatePerHour:  entity.MarginProfile.ModelerRatePerHour,
+			Description:         entity.MarginProfile.Description,
+			CreatedAt:           entity.MarginProfile.CreatedAt,
+			UpdatedAt:           entity.MarginProfile.UpdatedAt,
 		}
 	}
 

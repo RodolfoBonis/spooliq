@@ -3,8 +3,8 @@ package entities
 import (
 	"time"
 
-	quoteEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 	calculationEntities "github.com/RodolfoBonis/spooliq/features/calculation/domain/entities"
+	quoteEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 )
 
 // ExportFormat define os formatos de export suportados
@@ -18,18 +18,18 @@ const (
 
 // ExportData contém todos os dados necessários para gerar um export
 type ExportData struct {
-	Quote       *quoteEntities.Quote                       `json:"quote"`
-	Calculation *calculationEntities.CalculationResults    `json:"calculation,omitempty"`
-	Metadata    *ExportMetadata                            `json:"metadata"`
+	Quote       *quoteEntities.Quote                    `json:"quote"`
+	Calculation *calculationEntities.CalculationResults `json:"calculation,omitempty"`
+	Metadata    *ExportMetadata                         `json:"metadata"`
 }
 
 // ExportMetadata contém metadados sobre o export
 type ExportMetadata struct {
-	GeneratedAt   time.Time    `json:"generated_at"`
-	GeneratedBy   string       `json:"generated_by"`
-	Format        ExportFormat `json:"format"`
-	Version       string       `json:"version"`
-	SystemInfo    SystemInfo   `json:"system_info"`
+	GeneratedAt time.Time    `json:"generated_at"`
+	GeneratedBy string       `json:"generated_by"`
+	Format      ExportFormat `json:"format"`
+	Version     string       `json:"version"`
+	SystemInfo  SystemInfo   `json:"system_info"`
 }
 
 // SystemInfo contém informações do sistema
@@ -41,11 +41,11 @@ type SystemInfo struct {
 
 // ExportRequest representa uma solicitação de export
 type ExportRequest struct {
-	QuoteID           uint         `json:"quote_id" validate:"required"`
-	Format            ExportFormat `json:"format" validate:"required,oneof=pdf csv json"`
+	QuoteID            uint         `json:"quote_id" validate:"required"`
+	Format             ExportFormat `json:"format" validate:"required,oneof=pdf csv json"`
 	IncludeCalculation bool         `json:"include_calculation"`
-	CustomTitle       string       `json:"custom_title,omitempty"`
-	Notes             string       `json:"notes,omitempty"`
+	CustomTitle        string       `json:"custom_title,omitempty"`
+	Notes              string       `json:"notes,omitempty"`
 }
 
 // ExportResult representa o resultado de um export

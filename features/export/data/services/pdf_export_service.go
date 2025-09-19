@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/jung-kurt/gofpdf"
 	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
+	"github.com/jung-kurt/gofpdf"
 )
 
 type PDFExportService struct{}

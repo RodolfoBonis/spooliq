@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jinzhu/gorm"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/presets/domain/repositories"
+	"github.com/jinzhu/gorm"
 )
 
 type presetRepositoryImpl struct {

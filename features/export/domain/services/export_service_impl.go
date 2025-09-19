@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
-	"github.com/RodolfoBonis/spooliq/features/export/data/services"
-	"github.com/RodolfoBonis/spooliq/features/quotes/domain/repositories"
-	quoteEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
-	calculationServices "github.com/RodolfoBonis/spooliq/features/calculation/domain/services"
-	calculationEntities "github.com/RodolfoBonis/spooliq/features/calculation/domain/entities"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	calculationEntities "github.com/RodolfoBonis/spooliq/features/calculation/domain/entities"
+	calculationServices "github.com/RodolfoBonis/spooliq/features/calculation/domain/services"
+	"github.com/RodolfoBonis/spooliq/features/export/data/services"
+	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
+	quoteEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
+	"github.com/RodolfoBonis/spooliq/features/quotes/domain/repositories"
 	"github.com/go-playground/validator/v10"
 )
 

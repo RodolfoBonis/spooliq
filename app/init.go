@@ -51,7 +51,7 @@ func InitAndRun() fx.Option {
 				docs.SwaggerInfo.Description = "SpoolIq calcula o preço real das suas impressões 3D: filamento multi-cor (g/m), energia (kWh + bandeira), desgaste, overhead e mão-de-obra. Gera pacotes (só impressão, ajustes, modelagem), exporta PDF/CSV e guarda materiais."
 				docs.SwaggerInfo.Version = "1.0"
 
-				host := cfg.Environment
+				var host string
 				if cfg.Environment == entities.Environment.Development {
 					host = "localhost"
 				} else {

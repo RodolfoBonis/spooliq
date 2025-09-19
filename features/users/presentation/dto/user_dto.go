@@ -2,40 +2,41 @@ package dto
 
 import (
 	"time"
+
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 )
 
 // UserResponse represents a user in API responses
 type UserResponse struct {
-	ID          string            `json:"id"`
-	Username    string            `json:"username"`
-	Email       string            `json:"email"`
-	FirstName   string            `json:"first_name"`
-	LastName    string            `json:"last_name"`
-	FullName    string            `json:"full_name"`
-	Enabled     bool              `json:"enabled"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
-	Roles       []string          `json:"roles"`
-	Attributes  map[string]string `json:"attributes,omitempty"`
+	ID         string            `json:"id"`
+	Username   string            `json:"username"`
+	Email      string            `json:"email"`
+	FirstName  string            `json:"first_name"`
+	LastName   string            `json:"last_name"`
+	FullName   string            `json:"full_name"`
+	Enabled    bool              `json:"enabled"`
+	CreatedAt  time.Time         `json:"created_at"`
+	UpdatedAt  time.Time         `json:"updated_at"`
+	Roles      []string          `json:"roles"`
+	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
 // UsersListResponse represents a paginated list of users
 type UsersListResponse struct {
 	Users []UserResponse `json:"users"`
-	Total int           `json:"total"`
-	Page  int           `json:"page"`
-	Size  int           `json:"size"`
+	Total int            `json:"total"`
+	Page  int            `json:"page"`
+	Size  int            `json:"size"`
 }
 
 // CreateUserRequest represents the request to create a new user
 type CreateUserRequest struct {
 	Username          string `json:"username" validate:"required,min=3,max=50"`
-	Email            string `json:"email" validate:"required,email"`
-	FirstName        string `json:"first_name" validate:"required,min=1,max=100"`
-	LastName         string `json:"last_name" validate:"required,min=1,max=100"`
-	Password         string `json:"password" validate:"required,min=8"`
-	Enabled          bool   `json:"enabled"`
+	Email             string `json:"email" validate:"required,email"`
+	FirstName         string `json:"first_name" validate:"required,min=1,max=100"`
+	LastName          string `json:"last_name" validate:"required,min=1,max=100"`
+	Password          string `json:"password" validate:"required,min=8"`
+	Enabled           bool   `json:"enabled"`
 	TemporaryPassword bool   `json:"temporary_password"`
 }
 
@@ -76,11 +77,11 @@ type UserRoleRequest struct {
 func (req *CreateUserRequest) ToEntity() *entities.UserCreateRequest {
 	return &entities.UserCreateRequest{
 		Username:          req.Username,
-		Email:            req.Email,
-		FirstName:        req.FirstName,
-		LastName:         req.LastName,
-		Password:         req.Password,
-		Enabled:          req.Enabled,
+		Email:             req.Email,
+		FirstName:         req.FirstName,
+		LastName:          req.LastName,
+		Password:          req.Password,
+		Enabled:           req.Enabled,
 		TemporaryPassword: req.TemporaryPassword,
 	}
 }

@@ -136,10 +136,10 @@ func (cl *CustomLogger) LogError(ctx context.Context, message string, err error)
 	if err == nil {
 		return
 	}
-	
+
 	// Create a logger with additional caller skip for LogError method
 	loggerWithSkip := cl.logger.WithOptions(zap.AddCallerSkip(0))
-	
+
 	var fields map[string]interface{}
 	if appErr, ok := err.(interface{ ToLogFields() map[string]interface{} }); ok {
 		fields = appErr.ToLogFields()
@@ -148,7 +148,7 @@ func (cl *CustomLogger) LogError(ctx context.Context, message string, err error)
 			"error": err.Error(),
 		}
 	}
-	
+
 	// Add context fields to error fields
 	zapFields := cl.zapFields(ctx, fields)
 	loggerWithSkip.Error(message, zapFields...)

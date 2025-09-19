@@ -160,4 +160,4 @@ func (r *RedisService) Close() error {
 		return r.client.Close()
 	}
 	return nil
-} 
+}

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
@@ -41,7 +43,7 @@ func NewFxApp() *fx.App {
 			func(lc fx.Lifecycle, router *gin.Engine, systemUc system_uc.SystemUseCase, authUc auth_uc.AuthUseCase, filamentsUc filaments_uc.FilamentUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
-					logger.Error(nil, "Failed to initialize Redis", map[string]interface{}{
+					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
 						"error": err.Error(),
 					})
 				}

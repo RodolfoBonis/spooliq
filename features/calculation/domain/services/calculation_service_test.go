@@ -61,7 +61,7 @@ func TestCalculationService_Calculate(t *testing.T) {
 	// Verificar resultados esperados
 	t.Run("Custo do Filamento", func(t *testing.T) {
 		expectedFilamentCost := (125.0 / 1000) * 63.53 // (price_per_kg / 1000) * grams
-		expectedFilamentCost = 7.94125                  // valor esperado
+		expectedFilamentCost = 7.94125                 // valor esperado
 
 		if len(result.Results.FilamentCosts) != 1 {
 			t.Errorf("Esperado 1 linha de filamento, obtido %d", len(result.Results.FilamentCosts))
@@ -84,7 +84,7 @@ func TestCalculationService_Calculate(t *testing.T) {
 
 	t.Run("Custo de Energia", func(t *testing.T) {
 		expectedEnergyCost := 0.687135 * (0.804 + 0) // kWh * (base_tariff + flag_surcharge)
-		expectedEnergyCost = 0.5524605              // valor esperado
+		expectedEnergyCost = 0.5524605               // valor esperado
 
 		if !floatEquals(result.Results.EnergyCost, expectedEnergyCost, 0.001) {
 			t.Errorf("Custo de energia = %f, esperado %f", result.Results.EnergyCost, expectedEnergyCost)
@@ -102,7 +102,7 @@ func TestCalculationService_Calculate(t *testing.T) {
 
 	t.Run("Custo de Desgaste", func(t *testing.T) {
 		expectedWearCost := 8.4937105 * (10.0 / 100) // materials_cost * (wear_pct/100)
-		expectedWearCost = 0.84937105                 // valor esperado
+		expectedWearCost = 0.84937105                // valor esperado
 
 		if !floatEquals(result.Results.WearCost, expectedWearCost, 0.001) {
 			t.Errorf("Custo de desgaste = %f, esperado %f", result.Results.WearCost, expectedWearCost)
@@ -111,7 +111,7 @@ func TestCalculationService_Calculate(t *testing.T) {
 
 	t.Run("Custo de Mão de Obra", func(t *testing.T) {
 		expectedLaborCost := (30.0 * 20.0 / 60) + (80.0 * 0.0 / 60) // (op_rate * op_minutes/60) + (cad_rate * cad_minutes/60)
-		expectedLaborCost = 10.0                                      // valor esperado
+		expectedLaborCost = 10.0                                    // valor esperado
 
 		if !floatEquals(result.Results.LaborCost, expectedLaborCost, 0.001) {
 			t.Errorf("Custo de mão de obra = %f, esperado %f", result.Results.LaborCost, expectedLaborCost)
@@ -120,7 +120,7 @@ func TestCalculationService_Calculate(t *testing.T) {
 
 	t.Run("Custo Direto", func(t *testing.T) {
 		expectedDirectCost := 8.4937105 + 0.84937105 + 8.0 + 10.0 // materials + wear + overhead + labor
-		expectedDirectCost = 27.343082                             // valor esperado
+		expectedDirectCost = 27.343082                            // valor esperado
 
 		if !floatEquals(result.Results.DirectCost, expectedDirectCost, 0.001) {
 			t.Errorf("Custo direto = %f, esperado %f", result.Results.DirectCost, expectedDirectCost)
@@ -138,7 +138,7 @@ func TestCalculationService_Calculate(t *testing.T) {
 			t.Error("Pacote 'only_print' não encontrado")
 		} else {
 			expectedPrice := 27.343082 * (1 + 70.0/100) // direct_cost * (1 + margin/100)
-			expectedPrice = 46.4832394                   // valor esperado
+			expectedPrice = 46.4832394                  // valor esperado
 
 			if !floatEquals(onlyPrintPackage.Price, expectedPrice, 0.001) {
 				t.Errorf("Preço do pacote 'only_print' = %f, esperado %f", onlyPrintPackage.Price, expectedPrice)
@@ -151,8 +151,8 @@ func TestCalculationService_Calculate(t *testing.T) {
 			t.Error("Pacote 'light_adjust' não encontrado")
 		} else {
 			expectedPrice := 27.343082 * (1 + 90.0/100) // direct_cost * (1 + margin/100)
-			expectedPrice += (80.0 * 30.0) / 60          // + extra CAD time
-			expectedPrice = 51.9518558 + 40.0            // valor esperado
+			expectedPrice += (80.0 * 30.0) / 60         // + extra CAD time
+			expectedPrice = 51.9518558 + 40.0           // valor esperado
 			expectedPrice = 91.9518558
 
 			if !floatEquals(lightAdjustPackage.Price, expectedPrice, 0.001) {
@@ -185,8 +185,8 @@ func TestCalculationService_MultipleFilaments(t *testing.T) {
 				Label:         "Suporte Solúvel",
 				Meters:        &[]float64{10.0}[0], // 10 metros
 				PricePerMeter: &[]float64{0.25}[0], // R$ 0,25 por metro
-				Grams:         30.0,                 // será ignorado porque meters está definido
-				PricePerKg:    100.0,                // será ignorado porque price_per_meter está definido
+				Grams:         30.0,                // será ignorado porque meters está definido
+				PricePerKg:    100.0,               // será ignorado porque price_per_meter está definido
 			},
 		},
 		Machine: entities.MachineInput{

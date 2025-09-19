@@ -15,11 +15,11 @@ import (
 
 // CacheConfig holds cache configuration for an endpoint.
 type CacheConfig struct {
-	TTL          time.Duration // Time to live
-	KeyPrefix    string        // Prefix for cache keys
-	VaryByUser   bool          // Include user ID in cache key
-	VaryByQuery  bool          // Include query parameters in cache key
-	VaryByHeader []string      // Include specific headers in cache key
+	TTL          time.Duration           // Time to live
+	KeyPrefix    string                  // Prefix for cache keys
+	VaryByUser   bool                    // Include user ID in cache key
+	VaryByQuery  bool                    // Include query parameters in cache key
+	VaryByHeader []string                // Include specific headers in cache key
 	Condition    func(*gin.Context) bool // Optional condition to enable cache
 }
 
@@ -83,9 +83,9 @@ func (cm *CacheMiddleware) Cache(config CacheConfig) gin.HandlerFunc {
 		// Cache miss - proceed with request and cache response
 		writer := &responseWriter{
 			ResponseWriter: c.Writer,
-			body:          make([]byte, 0),
-			statusCode:    http.StatusOK,
-			headers:       make(map[string]string),
+			body:           make([]byte, 0),
+			statusCode:     http.StatusOK,
+			headers:        make(map[string]string),
 		}
 		c.Writer = writer
 
@@ -199,7 +199,7 @@ func (cm *CacheMiddleware) getUserID(c *gin.Context) string {
 			return id
 		}
 	}
-	
+
 	// Try from claims
 	if claimsInterface, exists := c.Get("claims"); exists {
 		if claims, ok := claimsInterface.(map[string]interface{}); ok {
@@ -213,21 +213,21 @@ func (cm *CacheMiddleware) getUserID(c *gin.Context) string {
 			}
 		}
 	}
-	
+
 	// Try user_uuid (alternative naming)
 	if userUUID, exists := c.Get("user_uuid"); exists {
 		if id, ok := userUUID.(string); ok {
 			return id
 		}
 	}
-	
+
 	// Try sub claim (JWT standard)
 	if sub, exists := c.Get("sub"); exists {
 		if id, ok := sub.(string); ok {
 			return id
 		}
 	}
-	
+
 	return ""
 }
 
@@ -283,4 +283,4 @@ func (cm *CacheMiddleware) CacheConditional(ttl time.Duration, condition func(*g
 		TTL:       ttl,
 		Condition: condition,
 	})
-} 
+}

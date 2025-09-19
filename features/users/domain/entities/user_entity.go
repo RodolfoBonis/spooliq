@@ -1,34 +1,34 @@
 package entities
 
 import (
-	"time"
 	"errors"
 	"regexp"
+	"time"
 )
 
 // User represents a user in the domain
 type User struct {
-	ID          string             `json:"id"`
-	Username    string             `json:"username"`
-	Email       string             `json:"email"`
-	FirstName   string             `json:"first_name"`
-	LastName    string             `json:"last_name"`
-	Enabled     bool               `json:"enabled"`
-	CreatedAt   time.Time          `json:"created_at"`
-	UpdatedAt   time.Time          `json:"updated_at"`
-	Roles       []string           `json:"roles"`
-	Attributes  map[string]string  `json:"attributes,omitempty"`
+	ID         string            `json:"id"`
+	Username   string            `json:"username"`
+	Email      string            `json:"email"`
+	FirstName  string            `json:"first_name"`
+	LastName   string            `json:"last_name"`
+	Enabled    bool              `json:"enabled"`
+	CreatedAt  time.Time         `json:"created_at"`
+	UpdatedAt  time.Time         `json:"updated_at"`
+	Roles      []string          `json:"roles"`
+	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
 // UserCreateRequest represents data needed to create a new user
 type UserCreateRequest struct {
-	Username        string `json:"username" validate:"required,min=3,max=50"`
-	Email          string `json:"email" validate:"required,email"`
-	FirstName      string `json:"first_name" validate:"required,min=1,max=100"`
-	LastName       string `json:"last_name" validate:"required,min=1,max=100"`
-	Password       string `json:"password" validate:"required,min=8"`
-	Enabled        bool   `json:"enabled"`
-	TemporaryPassword bool `json:"temporary_password"`
+	Username          string `json:"username" validate:"required,min=3,max=50"`
+	Email             string `json:"email" validate:"required,email"`
+	FirstName         string `json:"first_name" validate:"required,min=1,max=100"`
+	LastName          string `json:"last_name" validate:"required,min=1,max=100"`
+	Password          string `json:"password" validate:"required,min=8"`
+	Enabled           bool   `json:"enabled"`
+	TemporaryPassword bool   `json:"temporary_password"`
 }
 
 // UserUpdateRequest represents data that can be updated for a user

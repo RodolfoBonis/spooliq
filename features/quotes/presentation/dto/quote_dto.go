@@ -2,14 +2,15 @@ package dto
 
 import (
 	"fmt"
+
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 )
 
 // CreateQuoteRequest representa a requisição para criar um orçamento
 type CreateQuoteRequest struct {
-	Title         string                        `json:"title" validate:"required,min=1,max=255"`
-	Notes         string                        `json:"notes,omitempty"`
-	FilamentLines []CreateFilamentLineRequest   `json:"filament_lines" validate:"required,min=1"`
+	Title          string                       `json:"title" validate:"required,min=1,max=255"`
+	Notes          string                       `json:"notes,omitempty"`
+	FilamentLines  []CreateFilamentLineRequest  `json:"filament_lines" validate:"required,min=1"`
 	MachineProfile *CreateMachineProfileRequest `json:"machine_profile,omitempty"`
 	EnergyProfile  *CreateEnergyProfileRequest  `json:"energy_profile,omitempty"`
 	CostProfile    *CreateCostProfileRequest    `json:"cost_profile,omitempty"`
@@ -18,9 +19,9 @@ type CreateQuoteRequest struct {
 
 // UpdateQuoteRequest representa a requisição para atualizar um orçamento
 type UpdateQuoteRequest struct {
-	Title         string                        `json:"title" validate:"required,min=1,max=255"`
-	Notes         string                        `json:"notes,omitempty"`
-	FilamentLines []UpdateFilamentLineRequest   `json:"filament_lines" validate:"required,min=1"`
+	Title          string                       `json:"title" validate:"required,min=1,max=255"`
+	Notes          string                       `json:"notes,omitempty"`
+	FilamentLines  []UpdateFilamentLineRequest  `json:"filament_lines" validate:"required,min=1"`
 	MachineProfile *UpdateMachineProfileRequest `json:"machine_profile,omitempty"`
 	EnergyProfile  *UpdateEnergyProfileRequest  `json:"energy_profile,omitempty"`
 	CostProfile    *UpdateCostProfileRequest    `json:"cost_profile,omitempty"`
@@ -44,8 +45,8 @@ type CreateFilamentLineRequest struct {
 	FilamentSnapshotURL           string   `json:"filament_snapshot_url,omitempty"`
 
 	// Required fields
-	WeightGrams                   float64  `json:"weight_grams" validate:"required,min=0"`
-	LengthMeters                  *float64 `json:"length_meters,omitempty" validate:"omitempty,min=0"`
+	WeightGrams  float64  `json:"weight_grams" validate:"required,min=0"`
+	LengthMeters *float64 `json:"length_meters,omitempty" validate:"omitempty,min=0"`
 }
 
 // UpdateFilamentLineRequest representa a requisição para atualizar uma linha de filamento
@@ -147,17 +148,17 @@ type CalculateQuoteRequest struct {
 
 // QuoteResponse representa a resposta de um orçamento
 type QuoteResponse struct {
-	ID            uint                      `json:"id"`
-	Title         string                    `json:"title"`
-	Notes         string                    `json:"notes,omitempty"`
-	OwnerUserID   string                    `json:"owner_user_id"`
-	CreatedAt     string                    `json:"created_at"`
-	UpdatedAt     string                    `json:"updated_at"`
-	FilamentLines []FilamentLineResponse    `json:"filament_lines,omitempty"`
-	MachineProfile *MachineProfileResponse  `json:"machine_profile,omitempty"`
-	EnergyProfile  *EnergyProfileResponse   `json:"energy_profile,omitempty"`
-	CostProfile    *CostProfileResponse     `json:"cost_profile,omitempty"`
-	MarginProfile  *MarginProfileResponse   `json:"margin_profile,omitempty"`
+	ID             uint                    `json:"id"`
+	Title          string                  `json:"title"`
+	Notes          string                  `json:"notes,omitempty"`
+	OwnerUserID    string                  `json:"owner_user_id"`
+	CreatedAt      string                  `json:"created_at"`
+	UpdatedAt      string                  `json:"updated_at"`
+	FilamentLines  []FilamentLineResponse  `json:"filament_lines,omitempty"`
+	MachineProfile *MachineProfileResponse `json:"machine_profile,omitempty"`
+	EnergyProfile  *EnergyProfileResponse  `json:"energy_profile,omitempty"`
+	CostProfile    *CostProfileResponse    `json:"cost_profile,omitempty"`
+	MarginProfile  *MarginProfileResponse  `json:"margin_profile,omitempty"`
 }
 
 // FilamentLineResponse representa a resposta de uma linha de filamento

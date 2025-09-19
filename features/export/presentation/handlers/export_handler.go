@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
-	"github.com/RodolfoBonis/spooliq/features/export/domain/services"
 	coreEntities "github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
+	"github.com/RodolfoBonis/spooliq/features/export/domain/services"
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -150,11 +150,11 @@ func (h *ExportHandler) exportQuote(c *gin.Context, format entities.ExportFormat
 
 	// Criar request de export
 	exportRequest := &entities.ExportRequest{
-		QuoteID:           uint(id),
-		Format:            format,
+		QuoteID:            uint(id),
+		Format:             format,
 		IncludeCalculation: req.IncludeCalculation,
-		CustomTitle:       req.CustomTitle,
-		Notes:             req.Notes,
+		CustomTitle:        req.CustomTitle,
+		Notes:              req.Notes,
 	}
 
 	// Executar export
@@ -188,8 +188,8 @@ func (h *ExportHandler) exportQuote(c *gin.Context, format entities.ExportFormat
 
 type ExportRequestDTO struct {
 	IncludeCalculation bool   `json:"include_calculation"`
-	CustomTitle       string `json:"custom_title,omitempty"`
-	Notes             string `json:"notes,omitempty"`
+	CustomTitle        string `json:"custom_title,omitempty"`
+	Notes              string `json:"notes,omitempty"`
 }
 
 type SupportedFormatsResponse struct {

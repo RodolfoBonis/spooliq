@@ -56,6 +56,11 @@ type FilamentResponse struct {
 	UpdatedAt     string   `json:"updated_at"`
 }
 
+// ListResponse represents the response for filament lists
+type ListResponse struct {
+	Data []*FilamentResponse `json:"data"`
+}
+
 // ToFilamentResponse converts a filament entity to API response format
 func ToFilamentResponse(filament *entities.Filament) *FilamentResponse {
 	return &FilamentResponse{

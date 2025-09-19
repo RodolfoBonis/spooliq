@@ -6,11 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ListResponse represents the response for filament lists
-type ListResponse struct {
-	Filaments []usecases.FilamentResponse `json:"filaments"`
-}
-
 // CreateFilamentHandler handles creating a new filament.
 // @Summary Create Filament
 // @Schemes
@@ -57,7 +52,7 @@ func GetFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} ListResponse "Successfully retrieved filaments"
+// @Success 200 {object} usecases.ListResponse "Successfully retrieved filaments"
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments [get]
 func GetAllFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {

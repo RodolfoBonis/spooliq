@@ -118,7 +118,7 @@ func (uc *filamentUseCaseImpl) GetAllFilaments(c *gin.Context) {
 		responses = append(responses, ToFilamentResponse(filament))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"filaments": responses})
+	c.JSON(http.StatusOK, ListResponse{Data: responses})
 }
 
 func (uc *filamentUseCaseImpl) UpdateFilament(c *gin.Context) {
@@ -219,7 +219,7 @@ func (uc *filamentUseCaseImpl) GetUserFilaments(c *gin.Context) {
 		responses = append(responses, ToFilamentResponse(filament))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"filaments": responses})
+	c.JSON(http.StatusOK, ListResponse{Data: responses})
 }
 
 func (uc *filamentUseCaseImpl) GetGlobalFilaments(c *gin.Context) {
@@ -237,5 +237,5 @@ func (uc *filamentUseCaseImpl) GetGlobalFilaments(c *gin.Context) {
 		responses = append(responses, ToFilamentResponse(filament))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"filaments": responses})
+	c.JSON(http.StatusOK, ListResponse{Data: responses})
 }

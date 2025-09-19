@@ -41,24 +41,17 @@ func InitAndRun() fx.Option {
 				// setup the swagger info
 				if cfg.Environment == entities.Environment.Development {
 					docs.SwaggerInfo.Host = "localhost:" + cfg.Port
+					docs.SwaggerInfo.Schemes = []string{"http", "https"}
 				} else {
-					docs.SwaggerInfo.Host = "spooliq.RodolfoBonis.com"
+					docs.SwaggerInfo.Host = "api.spooliq.rodolfodebonis.com.br"
+					docs.SwaggerInfo.Schemes = []string{"https"}
 				}
 
 				docs.SwaggerInfo.BasePath = "/api/v1"
-				docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
 				docs.SwaggerInfo.Title = "spooliq"
 				docs.SwaggerInfo.Description = "SpoolIq calcula o preço real das suas impressões 3D: filamento multi-cor (g/m), energia (kWh + bandeira), desgaste, overhead e mão-de-obra. Gera pacotes (só impressão, ajustes, modelagem), exporta PDF/CSV e guarda materiais."
 				docs.SwaggerInfo.Version = "1.0"
-
-				var host string
-				if cfg.Environment == entities.Environment.Development {
-					host = "localhost"
-				} else {
-					host = "spooliq.RodolfoBonis.com"
-				}
-
-				docs.SwaggerInfo.Host = host + ":" + cfg.Port
 
 				// Run the Gin server
 				go app.Run(":" + cfg.Port)

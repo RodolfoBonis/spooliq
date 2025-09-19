@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/usecases"
-	"github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto"
+	_ "github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto"
 	"github.com/gin-gonic/gin"
 )
 

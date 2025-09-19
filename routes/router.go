@@ -6,6 +6,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/features/auth"
 	auth_uc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/filaments"
+	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/system"
 	system_uc "github.com/RodolfoBonis/spooliq/features/system/domain/usecases"
 	"github.com/gin-gonic/gin"
@@ -19,6 +21,7 @@ func InitializeRoutes(
 	router *gin.Engine,
 	systemUc system_uc.SystemUseCase,
 	authUc auth_uc.AuthUseCase,
+	filamentsUc filaments_uc.FilamentUseCase,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
@@ -32,4 +35,5 @@ func InitializeRoutes(
 	health.Routes(root, logger)
 	auth.Routes(root, authUc, protectFactory)
 	system.Routes(root, systemUc, cacheMiddleware)
+	filaments.Routes(root, filamentsUc, protectFactory)
 }

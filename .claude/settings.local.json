@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(go mod:*)",
+      "Bash(go test:*)",
+      "Bash(go tool cover:*)",
+      "Bash(make:*)",
+      "Bash(docker:*)",
+      "Bash(timeout 30 go run main.go)",
+      "Bash(curl:*)",
+      "Bash(go run:*)",
+      "Bash(cat:*)",
+      "Bash(REDIS_PASSWORD=redis123 go run main.go)",
+      "Bash(timeout 15 go run main.go)",
+      "Bash(timeout 20 go run main.go)",
+      "Bash(timeout 10 go run main.go)",
+      "Bash(timeout:*)",
+      "Bash(set REDIS_PASSWORD=redis123)",
+      "Bash(go get:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

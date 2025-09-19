@@ -10,11 +10,15 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 
-	"github.com/jinzhu/gorm"
-	// O import em branco abaixo é necessário para registrar o driver do banco de dados Postgres com o GORM.
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	// Entidades do SpoolIq
+	filamentsEntities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
+	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
+	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
 
-	// The blank import is required to register the database driver.
+	"github.com/jinzhu/gorm"
+	// Drivers de banco de dados
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	_ "github.com/lib/pq"
 )
 
@@ -23,25 +27,36 @@ var Connector *gorm.DB
 
 // ConnectorConfig holds the configuration for the database connector.
 type ConnectorConfig struct {
+	Driver   string // "postgres" ou "sqlite"
 	Host     string
 	Port     string
 	User     string
 	DBName   string
 	Password string
+	Path     string // Para SQLite
 }
 
 func buildConnectorConfig() *ConnectorConfig {
+	// Usar driver da configuração ou PostgreSQL como padrão
+	driver := config.EnvDBDriver()
+
 	connectorConfig := ConnectorConfig{
+		Driver:   driver,
 		Host:     config.EnvDBHost(),
 		Port:     config.EnvDBPort(),
 		User:     config.EnvDBUser(),
 		Password: config.EnvDBPassword(),
 		DBName:   config.EnvDBName(),
+		Path:     config.EnvDBSQLitePath(),
 	}
 	return &connectorConfig
 }
 
 func connectorURL(connectorConfig *ConnectorConfig) string {
+	if connectorConfig.Driver == "sqlite" {
+		return connectorConfig.Path
+	}
+
 	return fmt.Sprintf(
 		"host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
 		connectorConfig.Host,
@@ -54,9 +69,10 @@ func connectorURL(connectorConfig *ConnectorConfig) string {
 
 // OpenConnection opens a new database connection.
 func OpenConnection(logger logger.Logger) *errors.AppError {
-	dbConfig := connectorURL(buildConnectorConfig())
+	connConfig := buildConnectorConfig()
+	dbConfig := connectorURL(connConfig)
 
-	db, err := gorm.Open("postgres",
+	db, err := gorm.Open(connConfig.Driver,
 		dbConfig,
 	)
 
@@ -74,12 +90,11 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 			"db_config": dbConfig,
 		})
 	} else {
-		cfg := buildConnectorConfig()
 		logger.Info(context.Background(), "Database connection established", map[string]interface{}{
-			"host":   cfg.Host,
-			"port":   cfg.Port,
-			"dbname": cfg.DBName,
-			"user":   cfg.User,
+			"host":   connConfig.Host,
+			"port":   connConfig.Port,
+			"dbname": connConfig.DBName,
+			"user":   connConfig.User,
 		})
 	}
 
@@ -142,15 +157,20 @@ func RetryHandler(n int, f func() (bool, error)) error {
 
 // RunMigrations runs the database migrations.
 func RunMigrations() {
-	/*
-		Define the Migrations here
+	// Executar migrações automáticas
+	Connector.AutoMigrate(
+		// Filaments
+		&filamentsEntities.Filament{},
 
-		Example:
-			Connector.AutoMigrate(
-				&dtos.Products{},
-				&dtos.Clients{},
-				&dtos.Orders{},
-			)
-	*/
+		// Quotes e relacionados
+		&quotesEntities.Quote{},
+		&quotesEntities.QuoteFilamentLine{},
+		&quotesEntities.MachineProfile{},
+		&quotesEntities.EnergyProfile{},
+		&quotesEntities.CostProfile{},
+		&quotesEntities.MarginProfile{},
 
+		// Presets
+		&presetsEntities.Preset{},
+	)
 }

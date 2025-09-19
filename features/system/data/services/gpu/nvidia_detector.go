@@ -38,7 +38,7 @@ func (d *NvidiaDetector) GetGPUInfo() (entities.GPU, *errors.AppError) {
 
 	count, err := gonvml.DeviceCount()
 	if err != nil || count == 0 {
-		appErr := errors.NewAppError(coreEntities.ErrService, "No NVIDIA GPU found or error getting count", map[string]interface{}{"error": err}, err)
+		appErr := errors.NewAppError(coreEntities.ErrService, "Nenhuma GPU NVIDIA encontrada ou erro ao obter contagem", map[string]interface{}{"error": err}, err)
 		d.logger.LogError(context.Background(), "Failed to get NVIDIA device count", appErr)
 		return entities.GPU{}, appErr
 	}
@@ -52,13 +52,13 @@ func (d *NvidiaDetector) GetGPUInfo() (entities.GPU, *errors.AppError) {
 
 	name, err := device.Name()
 	if err != nil {
-		name = "NVIDIA GPU (Unknown Model)"
+		name = "GPU NVIDIA (Modelo Desconhecido)"
 	}
 
 	total, used, err := device.MemoryInfo()
 	var memoryStr string
 	if err != nil {
-		memoryStr = "Memory info unavailable"
+		memoryStr = "Informações de memória indisponíveis"
 		appErr := errors.NewAppError(coreEntities.ErrService, err.Error(), map[string]interface{}{"step": "MemoryInfo"}, err)
 		d.logger.LogError(context.Background(), "Failed to get NVIDIA memory info", appErr)
 	} else {

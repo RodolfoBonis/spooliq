@@ -15,7 +15,7 @@ DOCKER_COMPOSE=docker-compose
 BINARY_NAME=$(shell basename $(CURDIR))
 PROJECT_NAME=$(shell basename $(CURDIR))
 
-.PHONY: all build run test clean lint help infrastructure/raise infrastructure/down infrastructure/logs infrastructure/restart app/run app/down app/logs cache/test cache/status cache/clear
+.PHONY: all build run test clean lint help infrastructure/raise infrastructure/down infrastructure/logs infrastructure/restart app/run app/down app/logs cache/test cache/status cache/clear db/migrate db/seed db/reset
 
 all: help
 
@@ -124,6 +124,27 @@ cache/clear:
 	@docker exec spooliq_redis redis-cli --no-auth-warning -a redis123 flushdb
 	@echo "✅ Cache cleared!"
 
+# Database operations
+db/migrate:
+	@echo "📊 Running database migrations..."
+	@echo "Note: Migrations run automatically on app start"
+	@$(GORUN) main.go --migrate-only
+	@echo "✅ Migrations completed!"
+
+# Seed database with initial data
+db/seed:
+	@echo "🌱 Seeding database with initial data..."
+	@echo "Note: Seeds run automatically on app start"
+	@$(GORUN) main.go --seed-only
+	@echo "✅ Database seeded!"
+
+# Reset database (drop and recreate)
+db/reset:
+	@echo "⚠️  WARNING: This will delete all data!"
+	@echo "🗑️  Resetting database..."
+	@rm -f ./spooliq.db
+	@echo "🔄 Database reset completed. Run 'make run' to recreate with fresh data."
+
 # Docker image analysis
 docker/size:
 	@echo "🐳 Docker Image Size Analysis:"
@@ -201,6 +222,11 @@ help:
 	@echo "  make cache/test           - Test cache endpoints"
 	@echo "  make cache/status         - Show Redis status and cache keys"
 	@echo "  make cache/clear          - Clear all cache"
+	@echo ""
+	@echo "🗄️  Database Commands:"
+	@echo "  make db/migrate           - Run database migrations"
+	@echo "  make db/seed              - Seed database with initial data"
+	@echo "  make db/reset             - Reset database (SQLite only)"
 	@echo ""
 	@echo "🐳 Docker Commands:"
 	@echo "  make docker/build         - Build ultra-optimized image (scratch + UPX)"

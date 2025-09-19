@@ -1,8 +1,13 @@
+
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: spooliq
   description: "SpoolIq calcula o preço real das suas impressões 3D: filamento multi-cor (g/m), energia (kWh + bandeira), desgaste, overhead e mão-de-obra. Gera pacotes (só impressão, ajustes, modelagem), exporta PDF/CSV e guarda materiais."
+  links:
+    - url: https://api.spooliq.rodolfodebonis.com.br/v1/docs/index.html
+      title: Documentation
+      icon: article
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: RodolfoBonis/spooliq
@@ -14,8 +19,9 @@ metadata:
     - backstage:techdocs
     - spooliq
 spec:
-  type: service
+  type: openapi
   owner: default/rbtech
   lifecycle: production
+  system: spooliq
   definition:
-    $text: https://spooliq.rodolfodebonis.com.br/v1/docs/doc.json
+    $text: http://api.spooliq.rodolfodebonis.com.br/v1/docs/doc.json

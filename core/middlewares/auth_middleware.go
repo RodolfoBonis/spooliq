@@ -24,7 +24,7 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			authHeader := c.GetHeader("Authorization")
 
 			if len(authHeader) < 1 {
-				err := errors.NewAppError(entities.ErrInvalidToken, "Missing token", nil, nil)
+				err := errors.NewAppError(entities.ErrInvalidToken, "Token ausente", nil, nil)
 				httpError := err.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: missing token", err)
 				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
@@ -54,7 +54,7 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			isTokenValid := *rptResult.Active
 
 			if !isTokenValid {
-				err := errors.NewAppError(entities.ErrInvalidToken, "Token invalid", nil, nil)
+				err := errors.NewAppError(entities.ErrInvalidToken, "Token inválido", nil, nil)
 				httpError := err.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: token invalid", err)
 				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
@@ -109,7 +109,7 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			containsRole := userClaim.Roles.Contains(role)
 
 			if !containsRole {
-				appError := errors.NewAppError(entities.ErrUnauthorized, "Missing required role", nil, nil)
+				appError := errors.NewAppError(entities.ErrUnauthorized, "Perfil de acesso necessário ausente", nil, nil)
 				httpError := appError.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: missing required role", appError)
 				c.AbortWithStatusJSON(httpError.StatusCode, httpError)

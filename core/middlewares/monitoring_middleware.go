@@ -43,7 +43,7 @@ func (m *MonitoringMiddleware) LogMiddleware(ctx *gin.Context) {
 	ctxWithIP := context.WithValue(ctx.Request.Context(), contextKey("ip"), ctx.ClientIP())
 	ctx.Request = ctx.Request.WithContext(ctxWithIP)
 
-	m.logger.Info(ctx.Request.Context(), "Request started", logger.Fields{
+	m.logger.Info(ctx.Request.Context(), "Requisição iniciada", logger.Fields{
 		"request_id":   requestID,
 		"ip":           ctx.ClientIP(),
 		"method":       ctx.Request.Method,
@@ -69,9 +69,9 @@ func (m *MonitoringMiddleware) LogMiddleware(ctx *gin.Context) {
 	}
 
 	if isSuccessStatusCode(status) {
-		m.logger.Info(ctx.Request.Context(), "Request completed", logFields)
+		m.logger.Info(ctx.Request.Context(), "Requisição concluída", logFields)
 	} else {
-		m.logger.Error(ctx.Request.Context(), "Request failed", logFields)
+		m.logger.Error(ctx.Request.Context(), "Requisição falhou", logFields)
 	}
 }
 

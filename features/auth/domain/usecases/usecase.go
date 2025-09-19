@@ -17,6 +17,10 @@ type AuthUseCase interface {
 	RefreshAuthToken(c *gin.Context)
 	// ValidateToken valida o token de autenticação atual.
 	ValidateToken(c *gin.Context)
+	// RegisterUser creates a new user account.
+	RegisterUser(c *gin.Context)
+	// ForgotPassword handles password reset requests.
+	ForgotPassword(c *gin.Context)
 }
 
 // authUseCaseImpl é a implementação de AuthUseCase.

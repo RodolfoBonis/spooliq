@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/jinzhu/gorm"
 	"go.uber.org/fx"
 )
 
@@ -10,5 +11,8 @@ var Module = fx.Module("services",
 		NewAmqpService,
 		NewRedisService,
 		NewAuthService,
+		func() *gorm.DB {
+			return Connector
+		},
 	),
 ) 

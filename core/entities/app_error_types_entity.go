@@ -20,23 +20,25 @@ const (
 	ErrInvalidToken
 	ErrInvalidCredentials
 	ErrUnauthorized
+	ErrConflict
 )
 
 // AppErrorTypeToString maps AppErrorType to string representations.
 var AppErrorTypeToString = map[AppErrorType]string{
-	ErrDatabase:           "Database error",
-	ErrRepository:         "Repository error",
-	ErrUsecase:            "Usecase error",
-	ErrEntity:             "Entity error",
-	ErrModel:              "Model error",
-	ErrService:            "Service error",
-	ErrMiddleware:         "Middleware error",
-	ErrRoot:               "Root error",
-	ErrEnvironment:        "Environment error",
-	ErrNotFound:           "Resource not found",
-	ErrInvalidToken:       "Invalid token",
-	ErrInvalidCredentials: "Invalid credentials",
-	ErrUnauthorized:       "Unauthorized",
+	ErrDatabase:           "Erro de banco de dados",
+	ErrRepository:         "Erro de repositório",
+	ErrUsecase:            "Erro de caso de uso",
+	ErrEntity:             "Erro de entidade",
+	ErrModel:              "Erro de modelo",
+	ErrService:            "Erro de serviço",
+	ErrMiddleware:         "Erro de middleware",
+	ErrRoot:               "Erro raiz",
+	ErrEnvironment:        "Erro de ambiente",
+	ErrNotFound:           "Recurso não encontrado",
+	ErrInvalidToken:       "Token inválido",
+	ErrInvalidCredentials: "Credenciais inválidas",
+	ErrUnauthorized:       "Não autorizado",
+	ErrConflict:           "Conflito",
 }
 
 // AppErrorTypeToHTTP maps AppErrorType to HTTP status codes.
@@ -54,4 +56,5 @@ var AppErrorTypeToHTTP = map[AppErrorType]int{
 	ErrInvalidToken:       http.StatusUnauthorized,
 	ErrInvalidCredentials: http.StatusUnauthorized,
 	ErrUnauthorized:       http.StatusUnauthorized,
+	ErrConflict:           http.StatusConflict,
 }

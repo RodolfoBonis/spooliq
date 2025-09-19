@@ -1,6 +1,7 @@
 package export
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/export/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/export/presentation/handlers"
 	"github.com/gin-gonic/gin"
@@ -87,7 +88,7 @@ func Routes(route *gin.RouterGroup, exportService services.ExportService, protec
 
 	// Quote export routes (these should be registered within quotes group in the main router)
 	quotes := route.Group("/quotes")
-	quotes.POST("/:id/export/pdf", protectFactory(QuotePDFHandler(exportService), "user"))
-	quotes.POST("/:id/export/csv", protectFactory(QuoteCSVHandler(exportService), "user"))
-	quotes.POST("/:id/export/json", protectFactory(QuoteJSONHandler(exportService), "user"))
+	quotes.POST("/:id/export/pdf", protectFactory(QuotePDFHandler(exportService), roles.UserRole))
+	quotes.POST("/:id/export/csv", protectFactory(QuoteCSVHandler(exportService), roles.UserRole))
+	quotes.POST("/:id/export/json", protectFactory(QuoteJSONHandler(exportService), roles.UserRole))
 }

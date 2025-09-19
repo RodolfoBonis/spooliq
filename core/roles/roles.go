@@ -2,6 +2,12 @@ package roles
 
 import "github.com/RodolfoBonis/spooliq/core/entities"
 
+// System role constants
+const (
+	UserRole  = "user"
+	AdminRole = "admin"
+)
+
 // ExampleRoles provides example user roles for the system.
 var ExampleRoles = entities.Roles{
 	Search: "search-examples",

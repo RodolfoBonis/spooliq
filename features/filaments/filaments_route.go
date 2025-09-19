@@ -1,6 +1,7 @@
 package filaments
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	"github.com/gin-gonic/gin"
 )
@@ -152,8 +153,8 @@ func Routes(route *gin.RouterGroup, filamentsUC usecases.FilamentUseCase, protec
 	filaments.GET("/:id", GetFilamentHandler(filamentsUC))
 
 	// Protected routes (require authentication)
-	filaments.POST("", protectFactory(CreateFilamentHandler(filamentsUC), "user"))
-	filaments.GET("/my", protectFactory(GetUserFilamentsHandler(filamentsUC), "user"))
-	filaments.PUT("/:id", protectFactory(UpdateFilamentHandler(filamentsUC), "user"))
-	filaments.DELETE("/:id", protectFactory(DeleteFilamentHandler(filamentsUC), "user"))
+	filaments.POST("", protectFactory(CreateFilamentHandler(filamentsUC), roles.UserRole))
+	filaments.GET("/my", protectFactory(GetUserFilamentsHandler(filamentsUC), roles.UserRole))
+	filaments.PUT("/:id", protectFactory(UpdateFilamentHandler(filamentsUC), roles.UserRole))
+	filaments.DELETE("/:id", protectFactory(DeleteFilamentHandler(filamentsUC), roles.UserRole))
 }

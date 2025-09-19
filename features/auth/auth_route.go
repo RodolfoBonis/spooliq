@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	"github.com/gin-gonic/gin"
 )
@@ -75,6 +76,6 @@ func Routes(route *gin.RouterGroup, authUC usecases.AuthUseCase, protectFactory 
 	route.POST("/auth/register", RegisterHandler(authUC))
 	route.POST("/auth/forgot-password", ForgotPasswordHandler(authUC))
 	route.POST("/login", LoginHandler(authUC))
-	route.POST("/logout", protectFactory(authUC.Logout, "user"))
-	route.POST("/refresh", protectFactory(authUC.RefreshAuthToken, "user"))
+	route.POST("/logout", protectFactory(authUC.Logout, roles.UserRole))
+	route.POST("/refresh", protectFactory(authUC.RefreshAuthToken, roles.UserRole))
 }

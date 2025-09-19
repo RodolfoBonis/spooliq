@@ -1,6 +1,7 @@
 package users
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/users/presentation/handlers"
 	"github.com/gin-gonic/gin"
@@ -224,16 +225,16 @@ func Routes(route *gin.RouterGroup, userService services.UserService, protectFac
 	users := route.Group("/users")
 
 	// User self-management routes
-	users.GET("/me", protectFactory(GetCurrentUserHandler(userService), "user"))
+	users.GET("/me", protectFactory(GetCurrentUserHandler(userService), roles.UserRole))
 
 	// Admin-only routes
-	users.GET("", protectFactory(GetUsersHandler(userService), "admin"))
-	users.POST("", protectFactory(CreateUserHandler(userService), "admin"))
-	users.GET("/:id", protectFactory(GetUserByIDHandler(userService), "user"))
-	users.PATCH("/:id", protectFactory(UpdateUserHandler(userService), "user"))
-	users.DELETE("/:id", protectFactory(DeleteUserHandler(userService), "admin"))
-	users.PATCH("/:id/enabled", protectFactory(SetUserEnabledHandler(userService), "admin"))
-	users.PATCH("/:id/password", protectFactory(ResetUserPasswordHandler(userService), "admin"))
-	users.POST("/:id/roles", protectFactory(AddUserRoleHandler(userService), "admin"))
-	users.DELETE("/:id/roles/:role", protectFactory(RemoveUserRoleHandler(userService), "admin"))
+	users.GET("", protectFactory(GetUsersHandler(userService), roles.AdminRole))
+	users.POST("", protectFactory(CreateUserHandler(userService), roles.AdminRole))
+	users.GET("/:id", protectFactory(GetUserByIDHandler(userService), roles.UserRole))
+	users.PATCH("/:id", protectFactory(UpdateUserHandler(userService), roles.UserRole))
+	users.DELETE("/:id", protectFactory(DeleteUserHandler(userService), roles.AdminRole))
+	users.PATCH("/:id/enabled", protectFactory(SetUserEnabledHandler(userService), roles.AdminRole))
+	users.PATCH("/:id/password", protectFactory(ResetUserPasswordHandler(userService), roles.AdminRole))
+	users.POST("/:id/roles", protectFactory(AddUserRoleHandler(userService), roles.AdminRole))
+	users.DELETE("/:id/roles/:role", protectFactory(RemoveUserRoleHandler(userService), roles.AdminRole))
 }

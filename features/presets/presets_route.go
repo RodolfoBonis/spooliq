@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/presets/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/presets/presentation/handlers"
 	"github.com/gin-gonic/gin"
@@ -122,7 +123,7 @@ func Routes(route *gin.RouterGroup, presetService services.PresetService, protec
 	presets.GET("/energy", GetEnergyPresetsHandler(presetService))
 
 	// Admin-only routes
-	presets.POST("", protectFactory(CreatePresetHandler(presetService), "admin"))
-	presets.PUT("/:key", protectFactory(UpdatePresetHandler(presetService), "admin"))
-	presets.DELETE("/:key", protectFactory(DeletePresetHandler(presetService), "admin"))
+	presets.POST("", protectFactory(CreatePresetHandler(presetService), roles.AdminRole))
+	presets.PUT("/:key", protectFactory(UpdatePresetHandler(presetService), roles.AdminRole))
+	presets.DELETE("/:key", protectFactory(DeletePresetHandler(presetService), roles.AdminRole))
 }

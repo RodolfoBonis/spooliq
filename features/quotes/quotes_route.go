@@ -1,6 +1,7 @@
 package quotes
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/usecases"
 	_ "github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto" // Required for Swagger documentation
 	"github.com/gin-gonic/gin"
@@ -150,11 +151,11 @@ func Routes(route *gin.RouterGroup, quoteUC usecases.QuoteUseCase, protectFactor
 	quotes := route.Group("/quotes")
 
 	// Protected routes (require authentication)
-	quotes.POST("", protectFactory(CreateQuoteHandler(quoteUC), "user"))
-	quotes.GET("", protectFactory(GetUserQuotesHandler(quoteUC), "user"))
-	quotes.GET("/:id", protectFactory(GetQuoteHandler(quoteUC), "user"))
-	quotes.PUT("/:id", protectFactory(UpdateQuoteHandler(quoteUC), "user"))
-	quotes.DELETE("/:id", protectFactory(DeleteQuoteHandler(quoteUC), "user"))
-	quotes.POST("/:id/duplicate", protectFactory(DuplicateQuoteHandler(quoteUC), "user"))
-	quotes.POST("/:id/calculate", protectFactory(CalculateQuoteHandler(quoteUC), "user"))
+	quotes.POST("", protectFactory(CreateQuoteHandler(quoteUC), roles.UserRole))
+	quotes.GET("", protectFactory(GetUserQuotesHandler(quoteUC), roles.UserRole))
+	quotes.GET("/:id", protectFactory(GetQuoteHandler(quoteUC), roles.UserRole))
+	quotes.PUT("/:id", protectFactory(UpdateQuoteHandler(quoteUC), roles.UserRole))
+	quotes.DELETE("/:id", protectFactory(DeleteQuoteHandler(quoteUC), roles.UserRole))
+	quotes.POST("/:id/duplicate", protectFactory(DuplicateQuoteHandler(quoteUC), roles.UserRole))
+	quotes.POST("/:id/calculate", protectFactory(CalculateQuoteHandler(quoteUC), roles.UserRole))
 }

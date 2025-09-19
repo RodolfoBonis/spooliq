@@ -3,7 +3,10 @@
     "allow": [
       "Bash(go fmt:*)",
       "Bash(go install:*)",
-      "Bash(goimports:*)"
+      "Bash(goimports:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/generate-swagger.sh:*)",
+      "Bash(swag init:*)"
     ],
     "deny": [],
     "ask": []

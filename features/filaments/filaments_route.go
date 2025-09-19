@@ -5,6 +5,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// FilamentsListResponse represents the response for filament lists
+type FilamentsListResponse struct {
+	Filaments []usecases.FilamentResponse `json:"filaments"`
+}
+
 // CreateFilamentHandler handles creating a new filament.
 // @Summary Create Filament
 // @Schemes
@@ -14,9 +19,9 @@ import (
 // @Produce json
 // @Param request body usecases.CreateFilamentRequest true "Filament data"
 // @Success 201 {object} usecases.FilamentResponse "Successfully created filament"
-// @Failure 400 {object} gin.H
-// @Failure 401 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} errors.HTTPError
+// @Failure 401 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments [post]
 // @Security Bearer
 func CreateFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
@@ -34,9 +39,9 @@ func CreateFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc
 // @Produce json
 // @Param id path int true "Filament ID"
 // @Success 200 {object} usecases.FilamentResponse "Successfully retrieved filament"
-// @Failure 400 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments/{id} [get]
 func GetFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -51,8 +56,8 @@ func GetFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} gin.H{filaments=[]usecases.FilamentResponse} "Successfully retrieved filaments"
-// @Failure 500 {object} gin.H
+// @Success 200 {object} FilamentsListResponse "Successfully retrieved filaments"
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments [get]
 func GetAllFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -70,10 +75,10 @@ func GetAllFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFun
 // @Param id path int true "Filament ID"
 // @Param request body usecases.UpdateFilamentRequest true "Updated filament data"
 // @Success 200 {object} usecases.FilamentResponse "Successfully updated filament"
-// @Failure 400 {object} gin.H
-// @Failure 401 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} errors.HTTPError
+// @Failure 401 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments/{id} [put]
 // @Security Bearer
 func UpdateFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
@@ -91,10 +96,10 @@ func UpdateFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc
 // @Produce json
 // @Param id path int true "Filament ID"
 // @Success 204 "Successfully deleted filament"
-// @Failure 400 {object} gin.H
-// @Failure 401 {object} gin.H
-// @Failure 404 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Failure 400 {object} errors.HTTPError
+// @Failure 401 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments/{id} [delete]
 // @Security Bearer
 func DeleteFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
@@ -110,9 +115,9 @@ func DeleteFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} gin.H{filaments=[]usecases.FilamentResponse} "Successfully retrieved user filaments"
-// @Failure 401 {object} gin.H
-// @Failure 500 {object} gin.H
+// @Success 200 {object} FilamentsListResponse "Successfully retrieved user filaments"
+// @Failure 401 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments/my [get]
 // @Security Bearer
 func GetUserFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
@@ -128,8 +133,8 @@ func GetUserFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFu
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} gin.H{filaments=[]usecases.FilamentResponse} "Successfully retrieved global filaments"
-// @Failure 500 {object} gin.H
+// @Success 200 {object} FilamentsListResponse "Successfully retrieved global filaments"
+// @Failure 500 {object} errors.HTTPError
 // @Router /filaments/global [get]
 func GetGlobalFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 	return func(c *gin.Context) {

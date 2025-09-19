@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,8 +22,8 @@ func NewQuoteHandler(quoteUseCase usecases.QuoteUseCase) *QuoteHandler {
 // @Tags quotes
 // @Accept json
 // @Produce json
-// @Param quote body usecases.CreateQuoteRequest true "Quote data"
-// @Success 201 {object} usecases.QuoteResponse
+// @Param quote body dto.CreateQuoteRequest true "Quote data"
+// @Success 201 {object} dto.QuoteResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
@@ -38,7 +39,7 @@ func (h *QuoteHandler) CreateQuote(c *gin.Context) {
 // @Tags quotes
 // @Produce json
 // @Param id path int true "Quote ID"
-// @Success 200 {object} usecases.QuoteResponse
+// @Success 200 {object} dto.QuoteResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
@@ -69,8 +70,8 @@ func (h *QuoteHandler) GetUserQuotes(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Quote ID"
-// @Param quote body usecases.UpdateQuoteRequest true "Quote data"
-// @Success 200 {object} usecases.QuoteResponse
+// @Param quote body dto.UpdateQuoteRequest true "Quote data"
+// @Success 200 {object} dto.QuoteResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
@@ -103,7 +104,7 @@ func (h *QuoteHandler) DeleteQuote(c *gin.Context) {
 // @Tags quotes
 // @Produce json
 // @Param id path int true "Quote ID"
-// @Success 201 {object} usecases.QuoteResponse
+// @Success 201 {object} dto.QuoteResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
@@ -121,8 +122,8 @@ func (h *QuoteHandler) DuplicateQuote(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Quote ID"
-// @Param calculation body usecases.CalculateQuoteRequest true "Calculation parameters"
-// @Success 200 {object} usecases.CalculationResult
+// @Param calculation body dto.CalculateQuoteRequest true "Calculation parameters"
+// @Success 200 {object} dto.CalculationResult
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}

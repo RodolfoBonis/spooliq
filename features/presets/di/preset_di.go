@@ -23,6 +23,5 @@ var Module = fx.Module("presets",
 			presetServices.NewPresetService,
 			fx.As(new(domainServices.PresetService)),
 		),
-
 	),
 )

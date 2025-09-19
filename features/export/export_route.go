@@ -21,7 +21,7 @@ import (
 // @Failure 500 {object} errors.HTTPError
 // @Router /quotes/{id}/export/pdf [post]
 // @Security Bearer
-func ExportQuotePDFHandler(exportService services.ExportService) gin.HandlerFunc {
+func QuotePDFHandler(exportService services.ExportService) gin.HandlerFunc {
 	handler := handlers.NewExportHandler(exportService, nil)
 	return handler.ExportQuotePDF
 }
@@ -41,7 +41,7 @@ func ExportQuotePDFHandler(exportService services.ExportService) gin.HandlerFunc
 // @Failure 500 {object} errors.HTTPError
 // @Router /quotes/{id}/export/csv [post]
 // @Security Bearer
-func ExportQuoteCSVHandler(exportService services.ExportService) gin.HandlerFunc {
+func QuoteCSVHandler(exportService services.ExportService) gin.HandlerFunc {
 	handler := handlers.NewExportHandler(exportService, nil)
 	return handler.ExportQuoteCSV
 }
@@ -61,7 +61,7 @@ func ExportQuoteCSVHandler(exportService services.ExportService) gin.HandlerFunc
 // @Failure 500 {object} errors.HTTPError
 // @Router /quotes/{id}/export/json [post]
 // @Security Bearer
-func ExportQuoteJSONHandler(exportService services.ExportService) gin.HandlerFunc {
+func QuoteJSONHandler(exportService services.ExportService) gin.HandlerFunc {
 	handler := handlers.NewExportHandler(exportService, nil)
 	return handler.ExportQuoteJSON
 }
@@ -87,7 +87,7 @@ func Routes(route *gin.RouterGroup, exportService services.ExportService, protec
 
 	// Quote export routes (these should be registered within quotes group in the main router)
 	quotes := route.Group("/quotes")
-	quotes.POST("/:id/export/pdf", protectFactory(ExportQuotePDFHandler(exportService), "user"))
-	quotes.POST("/:id/export/csv", protectFactory(ExportQuoteCSVHandler(exportService), "user"))
-	quotes.POST("/:id/export/json", protectFactory(ExportQuoteJSONHandler(exportService), "user"))
+	quotes.POST("/:id/export/pdf", protectFactory(QuotePDFHandler(exportService), "user"))
+	quotes.POST("/:id/export/csv", protectFactory(QuoteCSVHandler(exportService), "user"))
+	quotes.POST("/:id/export/json", protectFactory(QuoteJSONHandler(exportService), "user"))
 }

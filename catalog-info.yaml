@@ -18,4 +18,4 @@ spec:
   owner: default/rbtech
   lifecycle: production
   definition:
-      : http://spooliq.rodolfodebonis.com.br/v1/docs/doc.json
+    $text: https://spooliq.rodolfodebonis.com.br/v1/docs/doc.json

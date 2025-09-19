@@ -7,6 +7,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
 )
 
+// JSONExportService provides JSON export functionality
 type JSONExportService struct{}
 
 // NewJSONExportService cria uma nova instância do serviço de export JSON

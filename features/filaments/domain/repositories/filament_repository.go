@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 )
 
+// FilamentRepository defines the interface for filament data access operations.
 type FilamentRepository interface {
 	Create(ctx context.Context, filament *entities.Filament) error
 	GetByID(ctx context.Context, id uint, userID *string) (*entities.Filament, error)

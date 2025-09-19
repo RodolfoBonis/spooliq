@@ -14,6 +14,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/users/presentation/dto"
 )
 
+// UserHandler handles HTTP requests for user-related operations.
 type UserHandler struct {
 	userService services.UserService
 	logger      logger.Logger

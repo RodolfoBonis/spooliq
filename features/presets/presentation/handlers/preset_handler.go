@@ -13,6 +13,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/presets/presentation/dto"
 )
 
+// PresetHandler handles HTTP requests for preset-related operations.
 type PresetHandler struct {
 	presetService services.PresetService
 	logger        logger.Logger

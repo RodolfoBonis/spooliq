@@ -24,6 +24,7 @@ type quoteUseCaseImpl struct {
 	validator          *validator.Validate
 }
 
+// NewQuoteUseCase creates a new instance of QuoteUseCase with the provided dependencies.
 func NewQuoteUseCase(
 	quoteRepo repositories.QuoteRepository,
 	calculationService calculationServices.CalculationService,
@@ -95,17 +96,16 @@ func (uc *quoteUseCaseImpl) CreateQuote(c *gin.Context) {
 				uc.logger.LogError(c.Request.Context(), "Automatic snapshot not implemented", appError)
 				c.JSON(httpError.StatusCode, httpError)
 				return
-			} else {
-				// Use manual snapshot data
-				line.FilamentSnapshotName = lineReq.FilamentSnapshotName
-				line.FilamentSnapshotBrand = lineReq.FilamentSnapshotBrand
-				line.FilamentSnapshotMaterial = lineReq.FilamentSnapshotMaterial
-				line.FilamentSnapshotColor = lineReq.FilamentSnapshotColor
-				line.FilamentSnapshotColorHex = lineReq.FilamentSnapshotColorHex
-				line.FilamentSnapshotPricePerKg = lineReq.FilamentSnapshotPricePerKg
-				line.FilamentSnapshotPricePerMeter = lineReq.FilamentSnapshotPricePerMeter
-				line.FilamentSnapshotURL = lineReq.FilamentSnapshotURL
 			}
+			// Use manual snapshot data
+			line.FilamentSnapshotName = lineReq.FilamentSnapshotName
+			line.FilamentSnapshotBrand = lineReq.FilamentSnapshotBrand
+			line.FilamentSnapshotMaterial = lineReq.FilamentSnapshotMaterial
+			line.FilamentSnapshotColor = lineReq.FilamentSnapshotColor
+			line.FilamentSnapshotColorHex = lineReq.FilamentSnapshotColorHex
+			line.FilamentSnapshotPricePerKg = lineReq.FilamentSnapshotPricePerKg
+			line.FilamentSnapshotPricePerMeter = lineReq.FilamentSnapshotPricePerMeter
+			line.FilamentSnapshotURL = lineReq.FilamentSnapshotURL
 
 			quote.FilamentLines = append(quote.FilamentLines, line)
 		}

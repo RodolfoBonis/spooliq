@@ -406,7 +406,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved filaments",
                         "schema": {
-                            "$ref": "#/definitions/filaments.FilamentsListResponse"
+                            "$ref": "#/definitions/filaments.ListResponse"
                         }
                     },
                     "500": {
@@ -490,7 +490,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved global filaments",
                         "schema": {
-                            "$ref": "#/definitions/filaments.FilamentsListResponse"
+                            "$ref": "#/definitions/filaments.ListResponse"
                         }
                     },
                     "500": {
@@ -524,7 +524,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved user filaments",
                         "schema": {
-                            "$ref": "#/definitions/filaments.FilamentsListResponse"
+                            "$ref": "#/definitions/filaments.ListResponse"
                         }
                     },
                     "401": {
@@ -3496,7 +3496,7 @@ const docTemplate = `{
                 }
             }
         },
-        "filaments.FilamentsListResponse": {
+        "filaments.ListResponse": {
             "type": "object",
             "properties": {
                 "filaments": {

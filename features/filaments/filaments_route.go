@@ -5,8 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// FilamentsListResponse represents the response for filament lists
-type FilamentsListResponse struct {
+// ListResponse represents the response for filament lists
+type ListResponse struct {
 	Filaments []usecases.FilamentResponse `json:"filaments"`
 }
 
@@ -56,7 +56,7 @@ func GetFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} FilamentsListResponse "Successfully retrieved filaments"
+// @Success 200 {object} ListResponse "Successfully retrieved filaments"
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments [get]
 func GetAllFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
@@ -115,7 +115,7 @@ func DeleteFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} FilamentsListResponse "Successfully retrieved user filaments"
+// @Success 200 {object} ListResponse "Successfully retrieved user filaments"
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments/my [get]
@@ -133,7 +133,7 @@ func GetUserFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFu
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} FilamentsListResponse "Successfully retrieved global filaments"
+// @Success 200 {object} ListResponse "Successfully retrieved global filaments"
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments/global [get]
 func GetGlobalFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {

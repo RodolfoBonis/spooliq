@@ -13,6 +13,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// ExportHandler handles HTTP requests for export operations
 type ExportHandler struct {
 	exportService services.ExportService
 	logger        logger.Logger
@@ -186,16 +187,19 @@ func (h *ExportHandler) exportQuote(c *gin.Context, format entities.ExportFormat
 
 // DTOs para requests e responses
 
+// ExportRequestDTO represents a request to export a quote
 type ExportRequestDTO struct {
 	IncludeCalculation bool   `json:"include_calculation"`
 	CustomTitle        string `json:"custom_title,omitempty"`
 	Notes              string `json:"notes,omitempty"`
 }
 
+// SupportedFormatsResponse represents the response containing supported export formats
 type SupportedFormatsResponse struct {
 	Formats []FormatInfo `json:"formats"`
 }
 
+// FormatInfo contains information about an export format
 type FormatInfo struct {
 	Format      string `json:"format"`
 	ContentType string `json:"content_type"`

@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 )
 
+// MarginProfileRepository defines the interface for margin profile data access operations.
 type MarginProfileRepository interface {
 	Create(ctx context.Context, profile *entities.MarginProfile) error
 	GetByID(ctx context.Context, id uint, userID *string) (*entities.MarginProfile, error)

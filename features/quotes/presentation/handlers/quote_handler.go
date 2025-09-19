@@ -2,14 +2,16 @@ package handlers
 
 import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/usecases"
-	_ "github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto"
+	_ "github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto" // Required for Swagger documentation
 	"github.com/gin-gonic/gin"
 )
 
+// QuoteHandler handles HTTP requests for quote operations
 type QuoteHandler struct {
 	quoteUseCase usecases.QuoteUseCase
 }
 
+// NewQuoteHandler creates a new instance of QuoteHandler
 func NewQuoteHandler(quoteUseCase usecases.QuoteUseCase) *QuoteHandler {
 	return &QuoteHandler{
 		quoteUseCase: quoteUseCase,

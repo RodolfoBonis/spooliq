@@ -11,8 +11,11 @@ import (
 type ExportFormat string
 
 const (
-	ExportFormatPDF  ExportFormat = "pdf"
-	ExportFormatCSV  ExportFormat = "csv"
+	// ExportFormatPDF represents PDF export format
+	ExportFormatPDF ExportFormat = "pdf"
+	// ExportFormatCSV represents CSV export format
+	ExportFormatCSV ExportFormat = "csv"
+	// ExportFormatJSON represents JSON export format
 	ExportFormatJSON ExportFormat = "json"
 )
 
@@ -57,7 +60,7 @@ type ExportResult struct {
 	Format      ExportFormat `json:"format"`
 }
 
-// IsValidFormat verifica se o formato é válido
+// IsValid verifies if the export format is valid
 func (f ExportFormat) IsValid() bool {
 	switch f {
 	case ExportFormatPDF, ExportFormatCSV, ExportFormatJSON:

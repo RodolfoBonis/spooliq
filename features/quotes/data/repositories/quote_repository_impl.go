@@ -14,6 +14,7 @@ type quoteRepositoryImpl struct {
 	db *gorm.DB
 }
 
+// NewQuoteRepository creates a new instance of QuoteRepository with the provided database connection.
 func NewQuoteRepository(db *gorm.DB) repositories.QuoteRepository {
 	return &quoteRepositoryImpl{
 		db: db,

@@ -13,6 +13,7 @@ type filamentRepositoryImpl struct {
 	db *gorm.DB
 }
 
+// NewFilamentRepository creates a new instance of FilamentRepository with the provided database connection.
 func NewFilamentRepository(db *gorm.DB) repositories.FilamentRepository {
 	return &filamentRepositoryImpl{db: db}
 }

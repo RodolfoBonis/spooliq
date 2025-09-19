@@ -57,7 +57,7 @@ var ErrorMessages = struct {
 	FailedToCalculateQuote: "Falha ao calcular orçamento",
 }
 
-// Helper functions para criar responses padronizadas
+// ErrorResponse creates a standardized error response map
 func ErrorResponse(message string, details ...string) map[string]interface{} {
 	response := map[string]interface{}{
 		"error": message,
@@ -70,10 +70,12 @@ func ErrorResponse(message string, details ...string) map[string]interface{} {
 	return response
 }
 
+// ValidationErrorResponse creates a validation error response
 func ValidationErrorResponse(details string) map[string]interface{} {
 	return ErrorResponse(ErrorMessages.ValidationFailed, details)
 }
 
+// InvalidRequestResponse creates an invalid request error response
 func InvalidRequestResponse(details string) map[string]interface{} {
 	return ErrorResponse(ErrorMessages.InvalidRequestFormat, details)
 }

@@ -9,6 +9,7 @@ import (
 	"go.uber.org/fx"
 )
 
+// FilamentsModule provides dependency injection for filament-related components.
 var FilamentsModule = fx.Module("filaments",
 	fx.Provide(
 		func(db *gorm.DB) domain_repositories.FilamentRepository {

@@ -118,7 +118,7 @@ func (req *UserListQueryRequest) ToEntity() entities.UserListQuery {
 	}
 }
 
-// FromEntity converts domain entity to UserResponse
+// UserResponseFromEntity converts domain entity to UserResponse
 func UserResponseFromEntity(user *entities.User) UserResponse {
 	response := UserResponse{
 		ID:         user.ID,
@@ -137,7 +137,7 @@ func UserResponseFromEntity(user *entities.User) UserResponse {
 	return response
 }
 
-// FromEntities converts slice of domain entities to UserResponse slice
+// UserResponsesFromEntities converts slice of domain entities to UserResponse slice
 func UserResponsesFromEntities(users []*entities.User) []UserResponse {
 	responses := make([]UserResponse, len(users))
 	for i, user := range users {

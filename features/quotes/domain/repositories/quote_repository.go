@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 )
 
+// QuoteRepository defines the interface for quote data access operations.
 type QuoteRepository interface {
 	Create(ctx context.Context, quote *entities.Quote) error
 	GetByID(ctx context.Context, id uint, userID string) (*entities.Quote, error)

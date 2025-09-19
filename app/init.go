@@ -12,6 +12,7 @@ import (
 	"go.uber.org/fx"
 )
 
+// InitAndRun initializes and runs the application using Fx lifecycle
 func InitAndRun() fx.Option {
 	return fx.Invoke(func(lc fx.Lifecycle, cfg *config.AppConfig, amqpService *services.AmqpService, app *gin.Engine, log logger.Logger) {
 		lc.Append(fx.Hook{

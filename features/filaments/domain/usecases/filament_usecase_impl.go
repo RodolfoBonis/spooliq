@@ -18,6 +18,7 @@ type filamentUseCaseImpl struct {
 	validator    *validator.Validate
 }
 
+// NewFilamentUseCase creates a new instance of FilamentUseCase with the provided repository and logger.
 func NewFilamentUseCase(filamentRepo repositories.FilamentRepository, logger logger.Logger) FilamentUseCase {
 	return &filamentUseCaseImpl{
 		filamentRepo: filamentRepo,

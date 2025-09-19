@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 )
 
+// MachineProfileRepository defines the interface for machine profile data access operations.
 type MachineProfileRepository interface {
 	Create(ctx context.Context, profile *entities.MachineProfile) error
 	GetByID(ctx context.Context, id uint, userID *string) (*entities.MachineProfile, error)

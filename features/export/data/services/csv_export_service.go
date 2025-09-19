@@ -10,6 +10,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/export/domain/entities"
 )
 
+// CSVExportService provides CSV export functionality
 type CSVExportService struct{}
 
 // NewCSVExportService cria uma nova instância do serviço de export CSV

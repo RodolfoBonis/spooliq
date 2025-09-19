@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// FilamentUseCase defines operations for filament management
 type FilamentUseCase interface {
 	CreateFilament(c *gin.Context)
 	GetFilament(c *gin.Context)
@@ -15,6 +16,7 @@ type FilamentUseCase interface {
 	GetGlobalFilaments(c *gin.Context)
 }
 
+// CreateFilamentRequest represents a request to create a new filament
 type CreateFilamentRequest struct {
 	Name          string   `json:"name" validate:"required,min=1,max=255"`
 	Brand         string   `json:"brand" validate:"required,min=1,max=255"`
@@ -26,6 +28,7 @@ type CreateFilamentRequest struct {
 	URL           string   `json:"url,omitempty" validate:"omitempty,url"`
 }
 
+// UpdateFilamentRequest represents a request to update a filament
 type UpdateFilamentRequest struct {
 	Name          string   `json:"name" validate:"required,min=1,max=255"`
 	Brand         string   `json:"brand" validate:"required,min=1,max=255"`
@@ -37,6 +40,7 @@ type UpdateFilamentRequest struct {
 	URL           string   `json:"url,omitempty" validate:"omitempty,url"`
 }
 
+// FilamentResponse represents a filament in API responses
 type FilamentResponse struct {
 	ID            uint     `json:"id"`
 	Name          string   `json:"name"`
@@ -52,6 +56,7 @@ type FilamentResponse struct {
 	UpdatedAt     string   `json:"updated_at"`
 }
 
+// ToFilamentResponse converts a filament entity to API response format
 func ToFilamentResponse(filament *entities.Filament) *FilamentResponse {
 	return &FilamentResponse{
 		ID:            filament.ID,

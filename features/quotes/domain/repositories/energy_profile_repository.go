@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 )
 
+// EnergyProfileRepository defines the interface for energy profile data access operations.
 type EnergyProfileRepository interface {
 	Create(ctx context.Context, profile *entities.EnergyProfile) error
 	GetByID(ctx context.Context, id uint, userID *string) (*entities.EnergyProfile, error)

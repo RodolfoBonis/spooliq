@@ -9,6 +9,7 @@ import (
 	"go.uber.org/fx"
 )
 
+// QuotesModule provides dependency injection for quote-related components.
 var QuotesModule = fx.Module("quotes",
 	// Include calculation service
 	calculationDI.Module,
@@ -26,6 +27,7 @@ var QuotesModule = fx.Module("quotes",
 	fx.Invoke(RegisterQuoteRoutes),
 )
 
+// RegisterQuoteRoutes registers all quote-related HTTP routes.
 func RegisterQuoteRoutes(
 	handler *quotesHandlers.QuoteHandler,
 	router *gin.Engine,

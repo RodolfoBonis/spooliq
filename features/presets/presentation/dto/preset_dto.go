@@ -66,7 +66,7 @@ type EnergyPresetsResponse struct {
 
 // Conversion methods
 
-// ToEnergyPresetEntity converts CreateEnergyPresetRequest to domain entity
+// ToEntity converts CreateEnergyPresetRequest to domain entity
 func (req *CreateEnergyPresetRequest) ToEntity() *entities.EnergyPreset {
 	return &entities.EnergyPreset{
 		BaseTariff:    req.BaseTariff,
@@ -77,7 +77,7 @@ func (req *CreateEnergyPresetRequest) ToEntity() *entities.EnergyPreset {
 	}
 }
 
-// ToMachinePresetEntity converts CreateMachinePresetRequest to domain entity
+// ToEntity converts CreateMachinePresetRequest to domain entity
 func (req *CreateMachinePresetRequest) ToEntity() *entities.MachinePreset {
 	return &entities.MachinePreset{
 		Name:        req.Name,

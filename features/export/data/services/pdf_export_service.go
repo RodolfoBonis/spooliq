@@ -10,6 +10,7 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
+// PDFExportService provides PDF export functionality
 type PDFExportService struct{}
 
 // NewPDFExportService cria uma nova instância do serviço de export PDF

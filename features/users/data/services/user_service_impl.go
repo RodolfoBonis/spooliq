@@ -22,6 +22,12 @@ func NewUserService(
 	userRepo repositories.UserRepository,
 	logger logger.Logger,
 ) services.UserService {
+	if userRepo == nil {
+		panic("userRepository cannot be nil")
+	}
+	if logger == nil {
+		panic("logger cannot be nil")
+	}
 	return &userServiceImpl{
 		userRepo:  userRepo,
 		logger:    logger,
@@ -31,6 +37,9 @@ func NewUserService(
 
 // GetUsers retrieves users with pagination and filtering (admin only)
 func (s *userServiceImpl) GetUsers(ctx context.Context, query entities.UserListQuery, requesterID string) ([]*entities.User, error) {
+	if s.userRepo == nil {
+		return nil, fmt.Errorf("user repository is not initialized")
+	}
 	// Verify requester is admin
 	requester, err := s.userRepo.GetUserByID(ctx, requesterID)
 	if err != nil {

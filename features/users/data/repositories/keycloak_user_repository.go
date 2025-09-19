@@ -26,6 +26,12 @@ func NewKeycloakUserRepository(
 	keycloakConfig entities.KeyCloakDataEntity,
 	logger logger.Logger,
 ) repositories.UserRepository {
+	if client == nil {
+		panic("gocloak client cannot be nil")
+	}
+	if logger == nil {
+		panic("logger cannot be nil")
+	}
 	return &keycloakUserRepository{
 		client:         client,
 		keycloakConfig: keycloakConfig,
@@ -35,6 +41,9 @@ func NewKeycloakUserRepository(
 
 // GetUsers retrieves users with optional filtering and pagination
 func (r *keycloakUserRepository) GetUsers(ctx context.Context, query userEntities.UserListQuery) ([]*userEntities.User, error) {
+	if r.client == nil {
+		return nil, fmt.Errorf("keycloak client is not initialized")
+	}
 	token, err := r.getAdminToken(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get admin token: %w", err)
@@ -75,6 +84,9 @@ func (r *keycloakUserRepository) GetUsers(ctx context.Context, query userEntitie
 
 // GetUserByID retrieves a user by their ID
 func (r *keycloakUserRepository) GetUserByID(ctx context.Context, userID string) (*userEntities.User, error) {
+	if r.client == nil {
+		return nil, fmt.Errorf("keycloak client is not initialized")
+	}
 	token, err := r.getAdminToken(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get admin token: %w", err)

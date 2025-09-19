@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
 	coreEntities "github.com/RodolfoBonis/spooliq/core/entities"
-	"github.com/RodolfoBonis/spooliq/core/errors"
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/services"
@@ -26,6 +27,12 @@ func NewUserHandler(
 	userService services.UserService,
 	logger logger.Logger,
 ) *UserHandler {
+	if userService == nil {
+		panic("userService cannot be nil")
+	}
+	if logger == nil {
+		panic("logger cannot be nil")
+	}
 	return &UserHandler{
 		userService: userService,
 		logger:      logger,
@@ -53,7 +60,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	// Get query parameters
 	var query dto.UserListQueryRequest
 	if err := c.ShouldBindQuery(&query); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid query parameters", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid query parameters", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Failed to bind query parameters", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -63,7 +70,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -76,10 +83,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	// Get users
 	users, err := h.userService.GetUsers(c.Request.Context(), domainQuery, requesterID)
 	if err != nil {
-		appError := h.mapDomainError(err)
-		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to get users", appError)
-		c.JSON(httpError.StatusCode, httpError)
+		h.handleError(c, err, "Failed to get users")
 		return
 	}
 
@@ -107,7 +111,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -117,7 +121,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -155,7 +159,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -197,7 +201,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	// Bind request
 	var req dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Failed to bind create user request", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -206,7 +210,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	// Validate request
 	if err := h.validator.Struct(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Create user request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -216,7 +220,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -262,7 +266,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -272,7 +276,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	// Bind request
 	var req dto.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Failed to bind update user request", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -281,7 +285,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	// Validate request
 	if err := h.validator.Struct(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Update user request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -291,7 +295,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -335,7 +339,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -345,7 +349,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -384,7 +388,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 func (h *UserHandler) SetUserEnabled(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -394,7 +398,7 @@ func (h *UserHandler) SetUserEnabled(c *gin.Context) {
 	// Bind request
 	var req dto.SetUserEnabledRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Failed to bind set enabled request", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -404,7 +408,7 @@ func (h *UserHandler) SetUserEnabled(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -443,7 +447,7 @@ func (h *UserHandler) SetUserEnabled(c *gin.Context) {
 func (h *UserHandler) ResetUserPassword(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -453,7 +457,7 @@ func (h *UserHandler) ResetUserPassword(c *gin.Context) {
 	// Bind request
 	var req dto.ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Failed to bind reset password request", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -462,7 +466,7 @@ func (h *UserHandler) ResetUserPassword(c *gin.Context) {
 
 	// Validate request
 	if err := h.validator.Struct(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Reset password request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -472,7 +476,7 @@ func (h *UserHandler) ResetUserPassword(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -511,7 +515,7 @@ func (h *UserHandler) ResetUserPassword(c *gin.Context) {
 func (h *UserHandler) AddUserRole(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -521,7 +525,7 @@ func (h *UserHandler) AddUserRole(c *gin.Context) {
 	// Bind request
 	var req dto.UserRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Failed to bind add role request", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -530,7 +534,7 @@ func (h *UserHandler) AddUserRole(c *gin.Context) {
 
 	// Validate request
 	if err := h.validator.Struct(&req); err != nil {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Add role request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -540,7 +544,7 @@ func (h *UserHandler) AddUserRole(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -581,7 +585,7 @@ func (h *UserHandler) RemoveUserRole(c *gin.Context) {
 	role := c.Param("role")
 
 	if userID == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -589,7 +593,7 @@ func (h *UserHandler) RemoveUserRole(c *gin.Context) {
 	}
 
 	if role == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Role is required", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Role is required", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Role is required", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -599,7 +603,7 @@ func (h *UserHandler) RemoveUserRole(c *gin.Context) {
 	// Get requester ID
 	requesterID := c.GetString("user_id")
 	if requesterID == "" {
-		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -621,19 +625,46 @@ func (h *UserHandler) RemoveUserRole(c *gin.Context) {
 
 // Helper methods
 
-func (h *UserHandler) mapDomainError(err error) *errors.AppError {
-	switch err {
-	case entities.ErrUserNotFound:
-		return errors.NewAppError(coreEntities.ErrNotFound, "User not found", nil, err)
-	case entities.ErrUserAlreadyExists:
-		return errors.NewAppError(coreEntities.ErrConflict, "User already exists", nil, err)
-	case entities.ErrUnauthorized:
-		return errors.NewAppError(coreEntities.ErrUnauthorized, "Unauthorized", nil, err)
-	case entities.ErrInvalidUserData:
-		return errors.NewAppError(coreEntities.ErrEntity, "Invalid user data", nil, err)
-	case entities.ErrPasswordTooWeak:
-		return errors.NewAppError(coreEntities.ErrEntity, "Password does not meet security requirements", nil, err)
-	default:
-		return errors.NewAppError(coreEntities.ErrService, "Internal server error", nil, err)
+func (h *UserHandler) handleError(c *gin.Context, err error, message string) {
+	appError := h.mapDomainError(err)
+	if appError == nil {
+		// Fallback for nil appError
+		appError = coreErrors.NewAppError(coreEntities.ErrService, "Internal server error", nil, err)
 	}
+	httpError := appError.ToHTTPError()
+	if httpError == nil {
+		// Fallback for nil httpError
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+	if h.logger != nil {
+		h.logger.LogError(c.Request.Context(), message, appError)
+	}
+	c.JSON(httpError.StatusCode, httpError)
+}
+
+func (h *UserHandler) mapDomainError(err error) *coreErrors.AppError {
+	if err == nil {
+		return coreErrors.NewAppError(coreEntities.ErrService, "Unknown error", nil, nil)
+	}
+
+	// Check for specific domain errors using errors.Is to handle wrapped errors
+	if errors.Is(err, entities.ErrUserNotFound) {
+		return coreErrors.NewAppError(coreEntities.ErrNotFound, "User not found", nil, err)
+	}
+	if errors.Is(err, entities.ErrUserAlreadyExists) {
+		return coreErrors.NewAppError(coreEntities.ErrConflict, "User already exists", nil, err)
+	}
+	if errors.Is(err, entities.ErrUnauthorized) {
+		return coreErrors.NewAppError(coreEntities.ErrUnauthorized, "Unauthorized", nil, err)
+	}
+	if errors.Is(err, entities.ErrInvalidUserData) {
+		return coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid user data", nil, err)
+	}
+	if errors.Is(err, entities.ErrPasswordTooWeak) {
+		return coreErrors.NewAppError(coreEntities.ErrEntity, "Password does not meet security requirements", nil, err)
+	}
+
+	// Default case for unknown errors
+	return coreErrors.NewAppError(coreEntities.ErrService, "Internal server error", nil, err)
 }

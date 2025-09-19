@@ -3,17 +3,17 @@ name: CD Pipeline - spooliq
 
 on:
   workflow_run:
-    workflows: ["CI/CD Pipeline - ${{ github.event.repository.name }}"]
+    workflows: ["CI/CD Pipeline - spooliq"]
     types:
       - completed
     branches: [main]
     path-ignore:
-      -
+      - version.txt
   workflow_dispatch:
 
 env:
   GO_VERSION: '1.23'
-  PACKAGE_NAME: ${{ github.event.repository.name }}
+  PACKAGE_NAME: spooliq
   REPOSITORY_OWNER: ${{ github.repository_owner }}
 
 jobs:

@@ -15,10 +15,10 @@ Este documento fornece um guia completo para desenvolver o frontend da aplicaç�
 ## 🛠️ Stack Tecnológica Recomendada
 
 ### Core Technologies
+- **Next.js 14+** com App Router
 - **React 18+** com TypeScript
-- **Vite** como bundler e dev server
 - **Tailwind CSS** para estilização
-- **React Router v6** para roteamento
+- **Next.js Router** para roteamento e navegação
 
 ### State Management & Data Fetching
 - **TanStack Query (React Query)** para cache e sincronização de dados
@@ -39,27 +39,211 @@ Este documento fornece um guia completo para desenvolver o frontend da aplicaç�
 
 ---
 
-## 🏗️ Estrutura do Projeto
+## 🚀 Getting Started com Next.js
+
+### Instalação do Projeto
+
+```bash
+# Criar novo projeto Next.js
+npx create-next-app@latest spooliq-frontend --typescript --tailwind --eslint --app
+
+# Navegar para o diretório
+cd spooliq-frontend
+
+# Instalar dependências adicionais
+npm install @tanstack/react-query axios zustand react-hook-form zod @hookform/resolvers
+npm install @headlessui/react lucide-react recharts date-fns react-hot-toast framer-motion
+npm install js-cookie
+npm install -D @types/js-cookie
+
+# Dependências de desenvolvimento
+npm install -D @tailwindcss/forms @tailwindcss/typography
+```
+
+### Estrutura Inicial do Projeto
+
+```bash
+# Criar estrutura de diretórios
+mkdir -p components/{ui,forms,tables,charts,layout,auth}
+mkdir -p hooks
+mkdir -p services
+mkdir -p stores
+mkdir -p types
+mkdir -p utils
+mkdir -p lib
+
+# Criar arquivos de configuração base
+touch middleware.ts
+touch lib/api-client.ts
+touch lib/auth.ts
+touch types/api.ts
+touch stores/auth-store.ts
+```
+
+### Comandos de Desenvolvimento
+
+```bash
+# Executar em modo de desenvolvimento
+npm run dev
+
+# Build para produção
+npm run build
+
+# Executar build de produção
+npm run start
+
+# Linting
+npm run lint
+npm run lint -- --fix
+
+# Type checking
+npm run type-check
+```
+
+---
+
+## 🏗️ Estrutura do Projeto Next.js
 
 ```
-src/
-├── components/          # Componentes reutilizáveis
-│   ├── ui/             # Componentes base (Button, Input, etc.)
-│   ├── forms/          # Componentes de formulário
-│   ├── tables/         # Componentes de tabela
-│   └── charts/         # Componentes de gráficos
-├── pages/              # Páginas da aplicação
-│   ├── auth/           # Páginas de autenticação
-│   ├── quotes/         # Páginas de orçamentos
-│   ├── filaments/      # Páginas de filamentos
-│   ├── users/          # Páginas de usuários (admin)
-│   └── settings/       # Páginas de configurações
-├── hooks/              # Custom hooks
-├── services/           # Serviços de API
-├── stores/             # Estado global
-├── types/              # Definições TypeScript
-├── utils/              # Utilitários
-└── layouts/            # Layouts da aplicação
+├── app/                 # App Router (Next.js 14+)
+│   ├── (auth)/         # Route Group - Páginas de autenticação
+│   │   ├── login/      # Página de login
+│   │   └── register/   # Página de registro
+│   ├── (dashboard)/    # Route Group - Área logada
+│   │   ├── quotes/     # Páginas de orçamentos
+│   │   ├── filaments/  # Páginas de filamentos
+│   │   ├── users/      # Páginas de usuários (admin)
+│   │   └── settings/   # Páginas de configurações
+│   ├── api/            # API Routes (Next.js)
+│   ├── globals.css     # Estilos globais
+│   ├── layout.tsx      # Layout raiz
+│   ├── loading.tsx     # Loading UI
+│   ├── error.tsx       # Error UI
+│   └── page.tsx        # Página inicial
+├── components/         # Componentes reutilizáveis
+│   ├── ui/            # Componentes base (Button, Input, etc.)
+│   ├── forms/         # Componentes de formulário
+│   ├── tables/        # Componentes de tabela
+│   └── charts/        # Componentes de gráficos
+├── hooks/             # Custom hooks
+├── services/          # Serviços de API
+├── stores/            # Estado global (Zustand)
+├── types/             # Definições TypeScript
+├── utils/             # Utilitários
+├── middleware.ts      # Middleware Next.js
+└── next.config.js     # Configuração Next.js
+```
+
+### Roteamento Next.js App Router
+
+O Next.js 14+ utiliza o App Router que é baseado em sistema de arquivos:
+
+```typescript
+// app/page.tsx - Página inicial (/)
+export default function HomePage() {
+  return (
+    <div>
+      <h1>Bem-vindo ao SpoolIQ</h1>
+      <Link href="/login">Fazer Login</Link>
+    </div>
+  );
+}
+
+// app/(auth)/login/page.tsx - Página de login (/login)
+export default function LoginPage() {
+  return <LoginForm />;
+}
+
+// app/(dashboard)/quotes/page.tsx - Página de orçamentos (/quotes)
+export default function QuotesPage() {
+  return <QuotesList />;
+}
+
+// app/(dashboard)/quotes/[id]/page.tsx - Orçamento específico (/quotes/[id])
+export default function QuoteDetailPage({ params }: { params: { id: string } }) {
+  return <QuoteDetail id={params.id} />;
+}
+```
+
+### Layouts Aninhados
+
+```typescript
+// app/layout.tsx - Layout raiz
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="pt-BR">
+      <body>
+        <ThemeProvider>
+          <QueryClientProvider>
+            {children}
+          </QueryClientProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+
+// app/(auth)/layout.tsx - Layout para páginas de autenticação
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// app/(dashboard)/layout.tsx - Layout para área logada
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider requireAuth>
+      <div className="flex h-screen">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto">
+          <Header />
+          <div className="p-6">{children}</div>
+        </main>
+      </div>
+    </AuthProvider>
+  );
+}
+```
+
+### Navegação Programática
+
+```typescript
+'use client';
+
+import { useRouter, useSearchParams } from 'next/navigation';
+
+export function NavigationExample() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handleNavigation = () => {
+    // Navegação programática
+    router.push('/quotes');
+    router.replace('/quotes'); // Substitui a entrada no histórico
+    router.back(); // Volta
+    router.forward(); // Avança
+
+    // Navegação com query parameters
+    router.push('/quotes?filter=active&sort=date');
+  };
+
+  // Lendo query parameters
+  const filter = searchParams.get('filter');
+  const sort = searchParams.get('sort');
+
+  return (
+    <div>
+      <button onClick={handleNavigation}>Navegar</button>
+      <p>Filtro: {filter}</p>
+      <p>Ordenação: {sort}</p>
+    </div>
+  );
+}
 ```
 
 ---
@@ -97,22 +281,74 @@ export const useAuth = () => {
 };
 ```
 
-### Protected Routes
+### Middleware para Proteção de Rotas (Next.js)
 
 ```typescript
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
-  const { isAuthenticated, user } = useAuth();
+// middleware.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from './lib/auth';
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth-token')?.value;
+  const { pathname } = request.nextUrl;
+
+  // Rotas públicas
+  const publicRoutes = ['/login', '/register', '/'];
+  if (publicRoutes.includes(pathname)) {
+    return NextResponse.next();
   }
 
-  if (requiredRole && !user?.roles.includes(requiredRole)) {
-    return <Navigate to="/unauthorized" replace />;
+  // Verificar autenticação
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  return children;
+  try {
+    const user = await verifyToken(token);
+
+    // Verificar permissões de admin
+    if (pathname.startsWith('/users') && !user.roles.includes('admin')) {
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    }
+
+    return NextResponse.next();
+  } catch {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+}
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
+```
+
+### Layout com Proteção de Rota
+
+```typescript
+// app/(dashboard)/layout.tsx
+import { AuthProvider } from '@/components/auth/AuthProvider';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthProvider requireAuth>
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+            {children}
+          </main>
+        </div>
+      </div>
+    </AuthProvider>
+  );
+}
 ```
 
 ---
@@ -174,15 +410,16 @@ export const queryKeys = {
 
 ## 🌐 Serviços de API
 
-### Base API Client
+### Base API Client (Next.js)
 
 ```typescript
+// lib/api-client.ts
 class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_URL,
+      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
       timeout: 10000,
     });
 
@@ -193,9 +430,16 @@ class ApiClient {
     // Request interceptor para adicionar auth token
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Para client-side, usar cookies
+        if (typeof window !== 'undefined') {
+          const token = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('auth-token='))
+            ?.split('=')[1];
+
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         return config;
       },
@@ -223,12 +467,12 @@ class ApiClient {
 // services/quotes.service.ts
 export class QuotesService {
   static async getQuotes(): Promise<Quote[]> {
-    const response = await apiClient.get('/v1/quotes');
+    const response = await apiClient.get('/quotes');
     return response.data.quotes;
   }
 
   static async createQuote(data: CreateQuoteRequest): Promise<Quote> {
-    const response = await apiClient.post('/v1/quotes', data);
+    const response = await apiClient.post('/quotes', data);
     return response.data;
   }
 
@@ -236,7 +480,7 @@ export class QuotesService {
     id: string,
     params: CalculateQuoteRequest
   ): Promise<CalculationResult> {
-    const response = await apiClient.post(`/v1/quotes/${id}/calculate`, params);
+    const response = await apiClient.post(`/quotes/${id}/calculate`, params);
     return response.data;
   }
 }
@@ -495,6 +739,12 @@ Inspirado no design system do Airbnb com suporte completo a modo claro e escuro:
 ```typescript
 // tailwind.config.js
 module.exports = {
+  content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
   darkMode: 'class',
   theme: {
     extend: {
@@ -1855,11 +2105,11 @@ describe('Button Component', () => {
 ```typescript
 // test/mocks/handlers.ts
 export const handlers = [
-  rest.get('/v1/quotes', (req, res, ctx) => {
+  rest.get('/quotes', (req, res, ctx) => {
     return res(ctx.json({ quotes: mockQuotes }));
   }),
 
-  rest.post('/v1/quotes', (req, res, ctx) => {
+  rest.post('/quotes', (req, res, ctx) => {
     return res(ctx.json(mockQuote));
   }),
 
@@ -1941,37 +2191,121 @@ const UserManagementButton = () => {
 
 ## 📦 Deploy e Build
 
-### Configuração de Ambiente
+### Configuração de Ambiente (Next.js)
 
-```typescript
-// .env.example
-VITE_API_URL=http://localhost:8000
-VITE_APP_NAME=SpoolIQ
-VITE_APP_VERSION=1.0.0
-VITE_ENABLE_MOCK=false
+```bash
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_NAME=SpoolIQ
+NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_ENABLE_MOCK=false
 
-// .env.production
-VITE_API_URL=https://api.spooliq.com
-VITE_APP_NAME=SpoolIQ
-VITE_APP_VERSION=1.0.0
-VITE_ENABLE_MOCK=false
+# Variáveis server-side (não expostas ao cliente)
+API_SECRET_KEY=your-secret-key
+DATABASE_URL=postgresql://...
+
+# .env.production
+NEXT_PUBLIC_API_URL=https://api.spooliq.com
+NEXT_PUBLIC_APP_NAME=SpoolIQ
+NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_ENABLE_MOCK=false
 ```
 
-### Scripts de Build
+### Next.js Configuration
+
+```javascript
+// next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    appDir: true,
+  },
+  images: {
+    domains: ['localhost', 'api.spooliq.com'],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
+        ],
+      },
+    ];
+  },
+};
+
+module.exports = nextConfig;
+```
+
+### Scripts de Build (Next.js)
 
 ```json
 {
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "build:staging": "tsc && vite build --mode staging",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    "type-check": "tsc --noEmit"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "export": "next export",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
+    "analyze": "cross-env ANALYZE=true next build",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  }
+}
+```
+
+### Package.json Dependencies
+
+```json
+{
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "axios": "^1.6.0",
+    "zustand": "^4.4.0",
+    "react-hook-form": "^7.48.0",
+    "zod": "^3.22.0",
+    "@hookform/resolvers": "^3.3.0",
+    "tailwindcss": "^3.3.0",
+    "@headlessui/react": "^1.7.0",
+    "lucide-react": "^0.294.0",
+    "recharts": "^2.8.0",
+    "date-fns": "^2.30.0",
+    "react-hot-toast": "^2.4.0",
+    "framer-motion": "^10.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "@tailwindcss/forms": "^0.5.0",
+    "@tailwindcss/typography": "^0.5.0",
+    "jest": "^29.7.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/jest-dom": "^6.1.0"
   }
 }
 ```

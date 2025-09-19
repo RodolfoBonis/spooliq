@@ -17,9 +17,7 @@ func InitAndRun() fx.Option {
 	return fx.Invoke(func(lc fx.Lifecycle, cfg *config.AppConfig, amqpService *services.AmqpService, app *gin.Engine, log logger.Logger) {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				// Initialize database connection
-				services.OpenConnection(log)
-				log.Info(ctx, "💿 Database connected successfully")
+				// Note: Database connection is handled by services module dependency injection
 
 				// Run database migrations
 				services.RunMigrations()
@@ -55,7 +53,9 @@ func InitAndRun() fx.Option {
 				docs.SwaggerInfo.Version = "1.0"
 
 				// Run the Gin server
-				go app.Run(":" + cfg.Port)
+				go func() {
+					_ = app.Run(":" + cfg.Port)
+				}()
 
 				return nil
 			},

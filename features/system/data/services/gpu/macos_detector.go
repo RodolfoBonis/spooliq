@@ -54,7 +54,7 @@ func (d *MacOSDetector) GetGPUInfo() (entities.GPU, *errors.AppError) {
 			}
 
 			if c, ok := gpu["sppci_cores"].(string); ok {
-				fmt.Sscanf(c, "%d", &cores)
+				_, _ = fmt.Sscanf(c, "%d", &cores)
 			}
 
 			if vm, err := mem.VirtualMemory(); err == nil {

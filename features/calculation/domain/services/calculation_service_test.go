@@ -60,8 +60,8 @@ func TestCalculationService_Calculate(t *testing.T) {
 
 	// Verificar resultados esperados
 	t.Run("Custo do Filamento", func(t *testing.T) {
-		expectedFilamentCost := (125.0 / 1000) * 63.53 // (price_per_kg / 1000) * grams
-		expectedFilamentCost = 7.94125                 // valor esperado
+		// expectedFilamentCost := (125.0 / 1000) * 63.53 // (price_per_kg / 1000) * grams
+		expectedFilamentCost := 7.94125 // valor esperado
 
 		if len(result.Results.FilamentCosts) != 1 {
 			t.Errorf("Esperado 1 linha de filamento, obtido %d", len(result.Results.FilamentCosts))
@@ -74,8 +74,8 @@ func TestCalculationService_Calculate(t *testing.T) {
 	})
 
 	t.Run("Consumo de Energia", func(t *testing.T) {
-		expectedKWh := (95.0 / 1000) * 7.233 // (watt / 1000) * hours_decimal
-		expectedKWh = 0.687135               // valor esperado
+		// expectedKWh := (95.0 / 1000) * 7.233 // (watt / 1000) * hours_decimal
+		expectedKWh := 0.687135 // valor esperado
 
 		if !floatEquals(result.Results.KWh, expectedKWh, 0.001) {
 			t.Errorf("kWh = %f, esperado %f", result.Results.KWh, expectedKWh)

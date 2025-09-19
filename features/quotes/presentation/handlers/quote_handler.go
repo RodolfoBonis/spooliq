@@ -29,7 +29,7 @@ func NewQuoteHandler(quoteUseCase usecases.QuoteUseCase) *QuoteHandler {
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/quotes [post]
+// @Router /quotes [post]
 // @Security BearerAuth
 func (h *QuoteHandler) CreateQuote(c *gin.Context) {
 	h.quoteUseCase.CreateQuote(c)
@@ -45,7 +45,7 @@ func (h *QuoteHandler) CreateQuote(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
-// @Router /v1/quotes/{id} [get]
+// @Router /quotes/{id} [get]
 // @Security BearerAuth
 func (h *QuoteHandler) GetQuote(c *gin.Context) {
 	h.quoteUseCase.GetQuote(c)
@@ -59,7 +59,7 @@ func (h *QuoteHandler) GetQuote(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/quotes [get]
+// @Router /quotes [get]
 // @Security BearerAuth
 func (h *QuoteHandler) GetUserQuotes(c *gin.Context) {
 	h.quoteUseCase.GetUserQuotes(c)
@@ -78,7 +78,7 @@ func (h *QuoteHandler) GetUserQuotes(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/quotes/{id} [put]
+// @Router /quotes/{id} [put]
 // @Security BearerAuth
 func (h *QuoteHandler) UpdateQuote(c *gin.Context) {
 	h.quoteUseCase.UpdateQuote(c)
@@ -94,7 +94,7 @@ func (h *QuoteHandler) UpdateQuote(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/quotes/{id} [delete]
+// @Router /quotes/{id} [delete]
 // @Security BearerAuth
 func (h *QuoteHandler) DeleteQuote(c *gin.Context) {
 	h.quoteUseCase.DeleteQuote(c)
@@ -111,7 +111,7 @@ func (h *QuoteHandler) DeleteQuote(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/quotes/{id}/duplicate [post]
+// @Router /quotes/{id}/duplicate [post]
 // @Security BearerAuth
 func (h *QuoteHandler) DuplicateQuote(c *gin.Context) {
 	h.quoteUseCase.DuplicateQuote(c)
@@ -130,7 +130,7 @@ func (h *QuoteHandler) DuplicateQuote(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/quotes/{id}/calculate [post]
+// @Router /quotes/{id}/calculate [post]
 // @Security BearerAuth
 func (h *QuoteHandler) CalculateQuote(c *gin.Context) {
 	h.quoteUseCase.CalculateQuote(c)

@@ -10,13 +10,17 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/auth/di"
 	auth_uc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	exportdi "github.com/RodolfoBonis/spooliq/features/export/di"
+	export_services "github.com/RodolfoBonis/spooliq/features/export/domain/services"
 	filamentsdi "github.com/RodolfoBonis/spooliq/features/filaments/di"
 	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	presetsdi "github.com/RodolfoBonis/spooliq/features/presets/di"
+	preset_services "github.com/RodolfoBonis/spooliq/features/presets/domain/services"
 	quotesdi "github.com/RodolfoBonis/spooliq/features/quotes/di"
+	quote_uc "github.com/RodolfoBonis/spooliq/features/quotes/domain/usecases"
 	systemdi "github.com/RodolfoBonis/spooliq/features/system/di"
 	system_uc "github.com/RodolfoBonis/spooliq/features/system/domain/usecases"
 	usersdi "github.com/RodolfoBonis/spooliq/features/users/di"
+	user_services "github.com/RodolfoBonis/spooliq/features/users/domain/services"
 	"github.com/RodolfoBonis/spooliq/routes"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
@@ -40,7 +44,7 @@ func NewFxApp() *fx.App {
 			gin.New,
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, systemUc system_uc.SystemUseCase, authUc auth_uc.AuthUseCase, filamentsUc filaments_uc.FilamentUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, systemUc system_uc.SystemUseCase, authUc auth_uc.AuthUseCase, filamentsUc filaments_uc.FilamentUseCase, quoteUc quote_uc.QuoteUseCase, userService user_services.UserService, presetService preset_services.PresetService, exportService export_services.ExportService, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -48,9 +52,8 @@ func NewFxApp() *fx.App {
 					})
 				}
 
-				routes.InitializeRoutes(router, systemUc, authUc, filamentsUc, protectFactory, cacheMiddleware, logger)
+				routes.InitializeRoutes(router, systemUc, authUc, filamentsUc, quoteUc, userService, presetService, exportService, protectFactory, cacheMiddleware, logger)
 				RegisterHooks(lc, router, logger, monitoring)
-				_ = services.OpenConnection(logger)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

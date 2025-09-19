@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/jinzhu/gorm"
 	"go.uber.org/fx"
 )
@@ -11,7 +12,10 @@ var Module = fx.Module("services",
 		NewAmqpService,
 		NewRedisService,
 		NewAuthService,
-		func() *gorm.DB {
+		func(logger logger.Logger) *gorm.DB {
+			if Connector == nil {
+				_ = OpenConnection(logger)
+			}
 			return Connector
 		},
 	),

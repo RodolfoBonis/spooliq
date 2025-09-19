@@ -6,7 +6,10 @@
       "Bash(goimports:*)",
       "Bash(chmod:*)",
       "Bash(./scripts/generate-swagger.sh:*)",
-      "Bash(swag init:*)"
+      "Bash(swag init:*)",
+      "Bash(golangci-lint run:*)",
+      "Bash(./.config/scripts/lint.sh:*)",
+      "Bash(gofmt:*)"
     ],
     "deny": [],
     "ask": []

@@ -77,11 +77,6 @@ func EnvDBDriver() string {
 	return GetEnv("DB_DRIVER", "postgres")
 }
 
-// EnvDBSQLitePath returns the SQLite database path from environment variables.
-func EnvDBSQLitePath() string {
-	return GetEnv("DB_SQLITE_PATH", "./spooliq.db")
-}
-
 // EnvRedisHost returns the Redis host from environment variables.
 func EnvRedisHost() string {
 	return GetEnv("REDIS_HOST", "localhost")

@@ -18,7 +18,6 @@ import (
 	"github.com/jinzhu/gorm"
 	// Drivers de banco de dados
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	_ "github.com/lib/pq"
 )
 
@@ -27,13 +26,12 @@ var Connector *gorm.DB
 
 // ConnectorConfig holds the configuration for the database connector.
 type ConnectorConfig struct {
-	Driver   string // "postgres" ou "sqlite"
+	Driver   string // "postgres"
 	Host     string
 	Port     string
 	User     string
 	DBName   string
 	Password string
-	Path     string // Para SQLite
 }
 
 func buildConnectorConfig() *ConnectorConfig {
@@ -47,16 +45,11 @@ func buildConnectorConfig() *ConnectorConfig {
 		User:     config.EnvDBUser(),
 		Password: config.EnvDBPassword(),
 		DBName:   config.EnvDBName(),
-		Path:     config.EnvDBSQLitePath(),
 	}
 	return &connectorConfig
 }
 
 func connectorURL(connectorConfig *ConnectorConfig) string {
-	if connectorConfig.Driver == "sqlite" {
-		return connectorConfig.Path
-	}
-
 	return fmt.Sprintf(
 		"host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
 		connectorConfig.Host,

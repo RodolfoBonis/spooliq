@@ -14,8 +14,8 @@ else
   echo "gofmt: OK"
 fi
 
-# 2. go vet (erros comuns)
-VET_OUT=$(go vet ./... 2>&1)
+# 2. go vet (erros comuns) - filtra warnings de dependências externas CGO
+VET_OUT=$(go vet ./... 2>&1 | grep -v "sqlite3-binding.c" | grep -v "warning:" | grep -v "note:")
 if [ -n "$VET_OUT" ]; then
   echo -e "\nProblemas encontrados pelo go vet:"
   echo "$VET_OUT"

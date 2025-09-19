@@ -5,7 +5,7 @@ import "github.com/RodolfoBonis/spooliq/core/entities"
 // System role constants
 const (
 	UserRole  = "user"
-	AdminRole = "admin"
+	AdminRole = "adm"
 )
 
 // ExampleRoles provides example user roles for the system.

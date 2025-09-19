@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ExportQuotePDFHandler handles exporting quote as PDF.
+// QuotePDFHandler handles exporting quote as PDF.
 // @Summary Export quote as PDF
 // @Schemes
 // @Description Exports a quote and its calculation results as PDF
@@ -27,7 +27,7 @@ func QuotePDFHandler(exportService services.ExportService) gin.HandlerFunc {
 	return handler.ExportQuotePDF
 }
 
-// ExportQuoteCSVHandler handles exporting quote as CSV.
+// QuoteCSVHandler handles exporting quote as CSV.
 // @Summary Export quote as CSV
 // @Schemes
 // @Description Exports a quote and its calculation results as CSV
@@ -47,7 +47,7 @@ func QuoteCSVHandler(exportService services.ExportService) gin.HandlerFunc {
 	return handler.ExportQuoteCSV
 }
 
-// ExportQuoteJSONHandler handles exporting quote as JSON.
+// QuoteJSONHandler handles exporting quote as JSON.
 // @Summary Export quote as JSON
 // @Schemes
 // @Description Exports a quote and its calculation results as JSON

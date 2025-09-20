@@ -132,13 +132,23 @@ var Migration002AddFilamentDiameterWeight = Migration{
 	Version: "002",
 	Name:    "Add Filament Diameter and Weight Fields",
 	Up: func(db *gorm.DB) error {
-		// Use AutoMigrate to add new columns to existing table
-		if err := db.AutoMigrate(&filamentsEntities.Filament{}).Error; err != nil {
+		// Add diameter column as nullable first
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS diameter DECIMAL(3,2)").Error; err != nil {
 			return err
 		}
 
-		// Set default diameter for existing records that don't have it
-		if err := db.Exec("UPDATE filaments SET diameter = 1.75 WHERE diameter IS NULL OR diameter = 0").Error; err != nil {
+		// Add weight column as nullable
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS weight DECIMAL(8,2)").Error; err != nil {
+			return err
+		}
+
+		// Set default diameter for existing records
+		if err := db.Exec("UPDATE filaments SET diameter = 1.75 WHERE diameter IS NULL").Error; err != nil {
+			return err
+		}
+
+		// Now make diameter NOT NULL
+		if err := db.Exec("ALTER TABLE filaments ALTER COLUMN diameter SET NOT NULL").Error; err != nil {
 			return err
 		}
 

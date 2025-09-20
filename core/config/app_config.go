@@ -28,6 +28,9 @@ type AppConfig struct {
 
 // NewAppConfig creates and returns a new AppConfig instance.
 func NewAppConfig() *AppConfig {
+	// Load environment variables from .env file
+	LoadEnvVars()
+
 	return &AppConfig{
 		Port:           EnvPort(),
 		Keycloak:       EnvKeyCloak(),

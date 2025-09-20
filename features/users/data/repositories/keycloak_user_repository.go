@@ -379,10 +379,10 @@ func (r *keycloakUserRepository) getAdminToken(ctx context.Context) (*gocloak.JW
 		return r.adminToken, nil
 	}
 
-	// Get new admin token
-	token, err := r.client.LoginAdmin(ctx, r.keycloakConfig.ClientID, r.keycloakConfig.ClientSecret, r.keycloakConfig.Realm)
+	// Get new admin token using client credentials
+	token, err := r.client.LoginClient(ctx, r.keycloakConfig.ClientID, r.keycloakConfig.ClientSecret, r.keycloakConfig.Realm)
 	if err != nil {
-		return nil, fmt.Errorf("failed to login as admin: %w", err)
+		return nil, fmt.Errorf("failed to login with client credentials: %w", err)
 	}
 
 	r.adminToken = token
@@ -397,9 +397,27 @@ func (r *keycloakUserRepository) getUserRoles(ctx context.Context, userID string
 		return nil, fmt.Errorf("failed to get admin token: %w", err)
 	}
 
-	roles, err := r.client.GetRealmRolesByUserID(ctx, token.AccessToken, r.keycloakConfig.Realm, userID)
+	// Try to get client roles using GetCompositeClientRolesByUserID which works with ClientID
+	roles, err := r.client.GetCompositeClientRolesByUserID(ctx, token.AccessToken, r.keycloakConfig.Realm, r.keycloakConfig.ClientID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user roles: %w", err)
+		// Fallback to realm roles if client roles fail
+		r.logger.Warning(ctx, "Failed to get client roles, falling back to realm roles", map[string]interface{}{
+			"user_id": userID,
+			"error":   err.Error(),
+		})
+
+		realmRoles, realmErr := r.client.GetRealmRolesByUserID(ctx, token.AccessToken, r.keycloakConfig.Realm, userID)
+		if realmErr != nil {
+			return nil, fmt.Errorf("failed to get user roles (client and realm): client_error=%w, realm_error=%w", err, realmErr)
+		}
+
+		var roleNames []string
+		for _, role := range realmRoles {
+			if role.Name != nil {
+				roleNames = append(roleNames, *role.Name)
+			}
+		}
+		return roleNames, nil
 	}
 
 	var roleNames []string

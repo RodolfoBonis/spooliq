@@ -4,6 +4,8 @@ import (
 	"errors"
 	"regexp"
 	"time"
+
+	"github.com/RodolfoBonis/spooliq/core/roles"
 )
 
 // User represents a user in the domain
@@ -92,7 +94,7 @@ func (u *User) HasRole(role string) bool {
 
 // IsAdmin checks if user has admin role
 func (u *User) IsAdmin() bool {
-	return u.HasRole("admin")
+	return u.HasRole(roles.AdminRole) || u.HasRole("Admin")
 }
 
 // CanModifyUser checks if current user can modify target user

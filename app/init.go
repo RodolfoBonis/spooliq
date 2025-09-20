@@ -20,7 +20,12 @@ func InitAndRun() fx.Option {
 				// Note: Database connection is handled by services module dependency injection
 
 				// Run database migrations
-				services.RunMigrations()
+				if err := services.RunMigrations(log); err != nil {
+					log.Error(ctx, "📊 Database migrations failed", map[string]interface{}{
+						"error": err.Error(),
+					})
+					return err
+				}
 				log.Info(ctx, "📊 Database migrations completed")
 
 				// Run seeds

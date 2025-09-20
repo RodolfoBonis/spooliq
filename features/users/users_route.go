@@ -1,6 +1,7 @@
 package users
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/users/presentation/handlers"
@@ -19,8 +20,8 @@ import (
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/me [get]
 // @Security Bearer
-func GetCurrentUserHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func GetCurrentUserHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.GetCurrentUser
 }
 
@@ -41,8 +42,8 @@ func GetCurrentUserHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users [get]
 // @Security Bearer
-func GetUsersHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func GetUsersHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.GetUsers
 }
 
@@ -62,8 +63,8 @@ func GetUsersHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users [post]
 // @Security Bearer
-func CreateUserHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func CreateUserHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.CreateUser
 }
 
@@ -83,8 +84,8 @@ func CreateUserHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id} [get]
 // @Security Bearer
-func GetUserByIDHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func GetUserByIDHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.GetUserByID
 }
 
@@ -106,8 +107,8 @@ func GetUserByIDHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id} [patch]
 // @Security Bearer
-func UpdateUserHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func UpdateUserHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.UpdateUser
 }
 
@@ -127,8 +128,8 @@ func UpdateUserHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id} [delete]
 // @Security Bearer
-func DeleteUserHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func DeleteUserHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.DeleteUser
 }
 
@@ -149,8 +150,8 @@ func DeleteUserHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id}/enabled [patch]
 // @Security Bearer
-func SetUserEnabledHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func SetUserEnabledHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.SetUserEnabled
 }
 
@@ -171,8 +172,8 @@ func SetUserEnabledHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id}/password [patch]
 // @Security Bearer
-func ResetUserPasswordHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func ResetUserPasswordHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.ResetUserPassword
 }
 
@@ -193,8 +194,8 @@ func ResetUserPasswordHandler(userService services.UserService) gin.HandlerFunc 
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id}/roles [post]
 // @Security Bearer
-func AddUserRoleHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func AddUserRoleHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.AddUserRole
 }
 
@@ -215,26 +216,26 @@ func AddUserRoleHandler(userService services.UserService) gin.HandlerFunc {
 // @Failure 500 {object} errors.HTTPError
 // @Router /users/{id}/roles/{role} [delete]
 // @Security Bearer
-func RemoveUserRoleHandler(userService services.UserService) gin.HandlerFunc {
-	handler := handlers.NewUserHandler(userService, nil)
+func RemoveUserRoleHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
 	return handler.RemoveUserRole
 }
 
 // Routes registers user routes for the application.
-func Routes(route *gin.RouterGroup, userService services.UserService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, userService services.UserService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 	users := route.Group("/users")
 
 	// User self-management routes
-	users.GET("/me", protectFactory(GetCurrentUserHandler(userService), roles.UserRole))
+	users.GET("/me", protectFactory(GetCurrentUserHandler(userService, logger), roles.UserRole))
 
 	// Admin-only routes
-	users.GET("", protectFactory(GetUsersHandler(userService), roles.AdminRole))
-	users.POST("", protectFactory(CreateUserHandler(userService), roles.AdminRole))
-	users.GET("/:id", protectFactory(GetUserByIDHandler(userService), roles.UserRole))
-	users.PATCH("/:id", protectFactory(UpdateUserHandler(userService), roles.UserRole))
-	users.DELETE("/:id", protectFactory(DeleteUserHandler(userService), roles.AdminRole))
-	users.PATCH("/:id/enabled", protectFactory(SetUserEnabledHandler(userService), roles.AdminRole))
-	users.PATCH("/:id/password", protectFactory(ResetUserPasswordHandler(userService), roles.AdminRole))
-	users.POST("/:id/roles", protectFactory(AddUserRoleHandler(userService), roles.AdminRole))
-	users.DELETE("/:id/roles/:role", protectFactory(RemoveUserRoleHandler(userService), roles.AdminRole))
+	users.GET("", protectFactory(GetUsersHandler(userService, logger), roles.AdminRole))
+	users.POST("", protectFactory(CreateUserHandler(userService, logger), roles.AdminRole))
+	users.GET("/:id", protectFactory(GetUserByIDHandler(userService, logger), roles.UserRole))
+	users.PATCH("/:id", protectFactory(UpdateUserHandler(userService, logger), roles.UserRole))
+	users.DELETE("/:id", protectFactory(DeleteUserHandler(userService, logger), roles.AdminRole))
+	users.PATCH("/:id/enabled", protectFactory(SetUserEnabledHandler(userService, logger), roles.AdminRole))
+	users.PATCH("/:id/password", protectFactory(ResetUserPasswordHandler(userService, logger), roles.AdminRole))
+	users.POST("/:id/roles", protectFactory(AddUserRoleHandler(userService, logger), roles.AdminRole))
+	users.DELETE("/:id/roles/:role", protectFactory(RemoveUserRoleHandler(userService, logger), roles.AdminRole))
 }

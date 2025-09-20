@@ -17,7 +17,8 @@
       "Bash(tasklist)",
       "Bash(powershell:*)",
       "Bash(set PORT=8001)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(del \"core\\migrations\\files\\001_initial_schema.go\")"
     ],
     "deny": [],
     "ask": []

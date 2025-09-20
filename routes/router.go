@@ -49,7 +49,7 @@ func InitializeRoutes(
 	system.Routes(root, systemUc, cacheMiddleware)
 	filaments.Routes(root, filamentsUc, protectFactory)
 	quotes.Routes(root, quoteUc, protectFactory)
-	users.Routes(root, userService, protectFactory)
+	users.Routes(root, userService, protectFactory, logger)
 	presets.Routes(root, presetService, protectFactory)
 	export.Routes(root, exportService, protectFactory)
 }

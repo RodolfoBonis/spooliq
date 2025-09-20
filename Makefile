@@ -15,7 +15,7 @@ DOCKER_COMPOSE=docker-compose
 BINARY_NAME=$(shell basename $(CURDIR))
 PROJECT_NAME=$(shell basename $(CURDIR))
 
-.PHONY: all build run test clean lint help infrastructure/raise infrastructure/down infrastructure/logs infrastructure/restart app/run app/down app/logs cache/test cache/status cache/clear db/migrate db/seed db/reset
+.PHONY: all build run test clean lint help infrastructure/raise infrastructure/down infrastructure/logs infrastructure/restart app/run app/down app/logs cache/test cache/status cache/clear db/migrate db/rollback db/status db/dry-run db/seed db/reset
 
 all: help
 
@@ -127,9 +127,24 @@ cache/clear:
 # Database operations
 db/migrate:
 	@echo "📊 Running database migrations..."
-	@echo "Note: Migrations run automatically on app start"
-	@$(GORUN) main.go --migrate-only
+	@$(GORUN) cmd/migrate.go up
 	@echo "✅ Migrations completed!"
+
+# Rollback last migration
+db/rollback:
+	@echo "⏪ Rolling back last migration..."
+	@$(GORUN) cmd/migrate.go down
+	@echo "✅ Rollback completed!"
+
+# Show migration status
+db/status:
+	@echo "📋 Checking migration status..."
+	@$(GORUN) cmd/migrate.go status
+
+# Show pending migrations (dry run)
+db/dry-run:
+	@echo "👁️  Showing pending migrations (dry run)..."
+	@$(GORUN) cmd/migrate.go dry-run
 
 # Seed database with initial data
 db/seed:
@@ -225,6 +240,9 @@ help:
 	@echo ""
 	@echo "🗄️  Database Commands:"
 	@echo "  make db/migrate           - Run database migrations"
+	@echo "  make db/rollback          - Rollback last migration"
+	@echo "  make db/status            - Show migration status"
+	@echo "  make db/dry-run           - Show pending migrations (dry run)"
 	@echo "  make db/seed              - Seed database with initial data"
 	@echo "  make db/reset             - Reset database (SQLite only)"
 	@echo ""

@@ -9,11 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
-
-	// Entidades do SpoolIq
-	filamentsEntities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
-	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
-	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
+	"github.com/RodolfoBonis/spooliq/core/migrations"
 
 	"github.com/jinzhu/gorm"
 	// Drivers de banco de dados
@@ -148,22 +144,27 @@ func RetryHandler(n int, f func() (bool, error)) error {
 	return er
 }
 
-// RunMigrations runs the database migrations.
-func RunMigrations() {
-	// Executar migrações automáticas
-	Connector.AutoMigrate(
-		// Filaments
-		&filamentsEntities.Filament{},
+// RunMigrations runs the database migrations using the new migration system.
+func RunMigrations(logger logger.Logger) error {
+	ctx := context.Background()
 
-		// Quotes e relacionados
-		&quotesEntities.Quote{},
-		&quotesEntities.QuoteFilamentLine{},
-		&quotesEntities.MachineProfile{},
-		&quotesEntities.EnergyProfile{},
-		&quotesEntities.CostProfile{},
-		&quotesEntities.MarginProfile{},
+	logger.Info(ctx, "Initializing migration system...", nil)
 
-		// Presets
-		&presetsEntities.Preset{},
-	)
+	// Create migration service
+	migrationService := migrations.NewMigrationService(Connector, logger)
+
+	// Register all migrations
+	allMigrations := migrations.GetAllMigrations()
+	migrationService.RegisterMigrations(allMigrations)
+
+	// Run migrations
+	if err := migrationService.Run(); err != nil {
+		logger.Error(ctx, "Failed to run migrations", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	logger.Info(ctx, "Migration system completed successfully", nil)
+	return nil
 }

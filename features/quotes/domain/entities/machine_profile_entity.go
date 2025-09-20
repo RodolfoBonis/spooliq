@@ -9,19 +9,19 @@ import (
 // MachineProfile representa um perfil de máquina para cálculos de custo
 // @Description Perfil de máquina/impressora 3D
 type MachineProfile struct {
-	ID           uint       `gorm:"primary_key;auto_increment" json:"id"`
-	QuoteID      uint       `gorm:"index" json:"quote_id,omitempty"`
-	Name         string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
-	Brand        string     `gorm:"type:varchar(255);not null" json:"brand" validate:"required,min=1,max=255"`
-	Model        string     `gorm:"type:varchar(255);not null" json:"model" validate:"required,min=1,max=255"`
-	Watt         float64    `gorm:"type:decimal(10,2);not null" json:"watt" validate:"required,min=1"`              // Consumo em watts
-	IdleFactor   float64    `gorm:"type:decimal(3,2);default:0" json:"idle_factor" validate:"min=0,max=1"`         // Fator de consumo em idle (0-1)
-	Description  string     `gorm:"type:text" json:"description"`
-	URL          string     `gorm:"type:text" json:"url" validate:"omitempty,url"`
-	OwnerUserID  *string    `gorm:"type:varchar(255);index" json:"owner_user_id,omitempty"` // null = catálogo global (admin)
-	CreatedAt    time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt    time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
-	DeletedAt    *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID          uint       `gorm:"primary_key;auto_increment" json:"id"`
+	QuoteID     uint       `gorm:"index" json:"quote_id,omitempty"`
+	Name        string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
+	Brand       string     `gorm:"type:varchar(255);not null" json:"brand" validate:"required,min=1,max=255"`
+	Model       string     `gorm:"type:varchar(255);not null" json:"model" validate:"required,min=1,max=255"`
+	Watt        float64    `gorm:"type:decimal(10,2);not null" json:"watt" validate:"required,min=1"`     // Consumo em watts
+	IdleFactor  float64    `gorm:"type:decimal(3,2);default:0" json:"idle_factor" validate:"min=0,max=1"` // Fator de consumo em idle (0-1)
+	Description string     `gorm:"type:text" json:"description"`
+	URL         string     `gorm:"type:text" json:"url" validate:"omitempty,url"`
+	OwnerUserID *string    `gorm:"type:varchar(255);index" json:"owner_user_id,omitempty"` // null = catálogo global (admin)
+	CreatedAt   time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt   time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
+	DeletedAt   *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // TableName especifica o nome da tabela para o GORM

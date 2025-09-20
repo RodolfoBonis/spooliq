@@ -12,10 +12,10 @@ type EnergyProfile struct {
 	ID            uint       `gorm:"primary_key;auto_increment" json:"id"`
 	QuoteID       uint       `gorm:"index" json:"quote_id,omitempty"`
 	Name          string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
-	BaseTariff    float64    `gorm:"type:decimal(10,4);not null" json:"base_tariff" validate:"required,min=0"`    // Tarifa base em R$/kWh
-	FlagSurcharge float64    `gorm:"type:decimal(10,4);default:0" json:"flag_surcharge" validate:"min=0"`         // Adicional da bandeira tarifária
-	Location      string     `gorm:"type:varchar(255)" json:"location"`                                           // Cidade/Estado
-	Year          int        `gorm:"type:integer" json:"year"`                                                     // Ano da tarifa
+	BaseTariff    float64    `gorm:"type:decimal(10,4);not null" json:"base_tariff" validate:"required,min=0"` // Tarifa base em R$/kWh
+	FlagSurcharge float64    `gorm:"type:decimal(10,4);default:0" json:"flag_surcharge" validate:"min=0"`      // Adicional da bandeira tarifária
+	Location      string     `gorm:"type:varchar(255)" json:"location"`                                        // Cidade/Estado
+	Year          int        `gorm:"type:integer" json:"year"`                                                 // Ano da tarifa
 	Description   string     `gorm:"type:text" json:"description"`
 	OwnerUserID   *string    `gorm:"type:varchar(255);index" json:"owner_user_id,omitempty"` // null = catálogo global (admin)
 	CreatedAt     time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`

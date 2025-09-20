@@ -23,6 +23,8 @@ type CreateFilamentRequest struct {
 	Material      string   `json:"material" validate:"required,min=1,max=100"`
 	Color         string   `json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string   `json:"color_hex,omitempty" validate:"omitempty,hexcolor"`
+	Diameter      float64  `json:"diameter" validate:"required,min=0,max=10"`
+	Weight        *float64 `json:"weight,omitempty" validate:"omitempty,min=0"`
 	PricePerKg    float64  `json:"price_per_kg" validate:"required,min=0"`
 	PricePerMeter *float64 `json:"price_per_meter,omitempty" validate:"omitempty,min=0"`
 	URL           string   `json:"url,omitempty" validate:"omitempty,url"`
@@ -35,6 +37,8 @@ type UpdateFilamentRequest struct {
 	Material      string   `json:"material" validate:"required,min=1,max=100"`
 	Color         string   `json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string   `json:"color_hex,omitempty" validate:"omitempty,hexcolor"`
+	Diameter      float64  `json:"diameter" validate:"required,min=0,max=10"`
+	Weight        *float64 `json:"weight,omitempty" validate:"omitempty,min=0"`
 	PricePerKg    float64  `json:"price_per_kg" validate:"required,min=0"`
 	PricePerMeter *float64 `json:"price_per_meter,omitempty" validate:"omitempty,min=0"`
 	URL           string   `json:"url,omitempty" validate:"omitempty,url"`
@@ -48,6 +52,8 @@ type FilamentResponse struct {
 	Material      string   `json:"material"`
 	Color         string   `json:"color"`
 	ColorHex      string   `json:"color_hex,omitempty"`
+	Diameter      float64  `json:"diameter"`
+	Weight        *float64 `json:"weight,omitempty"`
 	PricePerKg    float64  `json:"price_per_kg"`
 	PricePerMeter *float64 `json:"price_per_meter,omitempty"`
 	URL           string   `json:"url,omitempty"`
@@ -70,6 +76,8 @@ func ToFilamentResponse(filament *entities.Filament) *FilamentResponse {
 		Material:      filament.Material,
 		Color:         filament.Color,
 		ColorHex:      filament.ColorHex,
+		Diameter:      filament.Diameter,
+		Weight:        filament.Weight,
 		PricePerKg:    filament.PricePerKg,
 		PricePerMeter: filament.PricePerMeter,
 		URL:           filament.URL,

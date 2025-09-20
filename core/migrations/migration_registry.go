@@ -11,6 +11,7 @@ import (
 func GetAllMigrations() []Migration {
 	return []Migration{
 		Migration001InitialSchema,
+		Migration002AddFilamentDiameterWeight,
 		// Add new migrations here in version order
 	}
 }
@@ -119,6 +120,38 @@ var Migration001InitialSchema = Migration{
 		}
 
 		if err := db.DropTableIfExists(&filamentsEntities.Filament{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// Migration002AddFilamentDiameterWeight adds diameter and weight columns to filaments table
+var Migration002AddFilamentDiameterWeight = Migration{
+	Version: "002",
+	Name:    "Add Filament Diameter and Weight Fields",
+	Up: func(db *gorm.DB) error {
+		// Use AutoMigrate to add new columns to existing table
+		if err := db.AutoMigrate(&filamentsEntities.Filament{}).Error; err != nil {
+			return err
+		}
+
+		// Set default diameter for existing records that don't have it
+		if err := db.Exec("UPDATE filaments SET diameter = 1.75 WHERE diameter IS NULL OR diameter = 0").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+	Down: func(db *gorm.DB) error {
+		// Remove weight column using raw SQL
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS weight").Error; err != nil {
+			return err
+		}
+
+		// Remove diameter column using raw SQL
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS diameter").Error; err != nil {
 			return err
 		}
 

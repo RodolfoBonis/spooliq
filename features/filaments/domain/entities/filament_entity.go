@@ -16,6 +16,8 @@ type Filament struct {
 	Material      string     `gorm:"type:varchar(100);not null" json:"material" validate:"required,min=1,max=100"`
 	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
+	Diameter      float64    `gorm:"type:decimal(3,2);not null" json:"diameter" validate:"required,min=0,max=10"`
+	Weight        *float64   `gorm:"type:decimal(8,2)" json:"weight,omitempty" validate:"omitempty,min=0"`
 	PricePerKg    float64    `gorm:"type:decimal(10,2);not null" json:"price_per_kg" validate:"required,min=0"`
 	PricePerMeter *float64   `gorm:"type:decimal(10,4)" json:"price_per_meter,omitempty" validate:"omitempty,min=0"`
 	URL           string     `gorm:"type:text" json:"url" validate:"omitempty,url"`

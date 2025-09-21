@@ -180,6 +180,16 @@ var Migration003AddColorHexField = Migration{
 			return err
 		}
 
+		// Also ensure price_per_meter column exists (it might be missing too)
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS price_per_meter DECIMAL(10,4)").Error; err != nil {
+			return err
+		}
+
+		// Ensure URL column exists
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS url TEXT").Error; err != nil {
+			return err
+		}
+
 		return nil
 	},
 	Down: func(db *gorm.DB) error {
@@ -187,6 +197,8 @@ var Migration003AddColorHexField = Migration{
 		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS color_hex").Error; err != nil {
 			return err
 		}
+
+		// Note: Not removing price_per_meter and url as they might have been there before
 
 		return nil
 	},

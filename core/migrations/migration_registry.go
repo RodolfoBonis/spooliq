@@ -12,6 +12,7 @@ func GetAllMigrations() []Migration {
 	return []Migration{
 		Migration001InitialSchema,
 		Migration002AddFilamentDiameterWeight,
+		Migration003AddColorHexField,
 		// Add new migrations here in version order
 	}
 }
@@ -162,6 +163,28 @@ var Migration002AddFilamentDiameterWeight = Migration{
 
 		// Remove diameter column using raw SQL
 		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS diameter").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// Migration003AddColorHexField adds the missing color_hex column to filaments table
+var Migration003AddColorHexField = Migration{
+	Version: "003",
+	Name:    "Add ColorHex Field to Filaments",
+	Up: func(db *gorm.DB) error {
+		// Add color_hex column to filaments table
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS color_hex VARCHAR(7)").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+	Down: func(db *gorm.DB) error {
+		// Remove color_hex column from filaments table
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS color_hex").Error; err != nil {
 			return err
 		}
 

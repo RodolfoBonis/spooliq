@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	_ "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
 )
 

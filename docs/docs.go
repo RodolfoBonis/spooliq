@@ -1404,6 +1404,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/presets/cost": {
+            "get": {
+                "description": "Retrieves all available cost presets",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Get cost presets",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved cost presets",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CostPresetsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/presets/energy": {
             "get": {
                 "description": "Retrieves energy presets, optionally filtered by location",
@@ -1479,6 +1505,32 @@ const docTemplate = `{
                         "description": "Successfully retrieved machine presets",
                         "schema": {
                             "$ref": "#/definitions/dto.MachinePresetsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/margin": {
+            "get": {
+                "description": "Retrieves all available margin presets",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Get margin presets",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved margin presets",
+                        "schema": {
+                            "$ref": "#/definitions/dto.MarginPresetsResponse"
                         }
                     },
                     "500": {
@@ -2944,6 +2996,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.BuildVolumeDTO": {
+            "type": "object",
+            "properties": {
+                "x": {
+                    "type": "number"
+                },
+                "y": {
+                    "type": "number"
+                },
+                "z": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.CalculateQuoteRequest": {
             "type": "object",
             "required": [
@@ -3008,6 +3074,46 @@ const docTemplate = `{
                 },
                 "wear_cost": {
                     "type": "number"
+                }
+            }
+        },
+        "dto.CostPresetResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "overhead_amount": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "wear_percentage": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.CostPresetsResponse": {
+            "type": "object",
+            "properties": {
+                "cost_presets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CostPresetResponse"
+                    }
                 }
             }
         },
@@ -3288,13 +3394,34 @@ const docTemplate = `{
                 "base_tariff": {
                     "type": "number"
                 },
+                "city": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
                 "flag_surcharge": {
                     "type": "number"
                 },
+                "flag_type": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
                 "location": {
+                    "type": "string"
+                },
+                "month": {
+                    "type": "integer"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 },
                 "year": {
@@ -3398,16 +3525,37 @@ const docTemplate = `{
                 "brand": {
                     "type": "string"
                 },
+                "build_volume": {
+                    "$ref": "#/definitions/dto.BuildVolumeDTO"
+                },
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
+                "heated_bed": {
+                    "type": "boolean"
+                },
                 "idle_factor": {
                     "type": "number"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "max_temperature": {
+                    "type": "integer"
                 },
                 "model": {
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "updated_at": {
                     "type": "string"
                 },
                 "url": {
@@ -3464,6 +3612,55 @@ const docTemplate = `{
                 },
                 "watt": {
                     "type": "number"
+                }
+            }
+        },
+        "dto.MarginPresetResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "full_service_margin": {
+                    "type": "number"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "modeler_rate_per_hour": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "operator_rate_per_hour": {
+                    "type": "number"
+                },
+                "printing_only_margin": {
+                    "type": "number"
+                },
+                "printing_plus_margin": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.MarginPresetsResponse": {
+            "type": "object",
+            "properties": {
+                "margin_presets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.MarginPresetResponse"
+                    }
                 }
             }
         },

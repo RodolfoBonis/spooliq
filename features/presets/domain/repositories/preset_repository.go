@@ -17,6 +17,12 @@ type PresetRepository interface {
 	// GetMachinePresets retrieves all machine presets
 	GetMachinePresets(ctx context.Context) ([]*entities.Preset, error)
 
+	// GetCostPresets retrieves all cost presets
+	GetCostPresets(ctx context.Context) ([]*entities.Preset, error)
+
+	// GetMarginPresets retrieves all margin presets
+	GetMarginPresets(ctx context.Context) ([]*entities.Preset, error)
+
 	// GetPresetByKey retrieves a preset by its key
 	GetPresetByKey(ctx context.Context, key string) (*entities.Preset, error)
 

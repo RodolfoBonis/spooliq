@@ -17,11 +17,23 @@ type PresetService interface {
 	// GetEnergyPresets retrieves energy presets, optionally filtered by location
 	GetEnergyPresets(ctx context.Context, location string) ([]*entities.EnergyPreset, error)
 
+	// GetCostPresets retrieves all cost presets
+	GetCostPresets(ctx context.Context) ([]*entities.CostPreset, error)
+
+	// GetMarginPresets retrieves all margin presets
+	GetMarginPresets(ctx context.Context) ([]*entities.MarginPreset, error)
+
 	// CreateEnergyPreset creates a new energy preset (admin only)
 	CreateEnergyPreset(ctx context.Context, preset *entities.EnergyPreset, requesterID string) error
 
 	// CreateMachinePreset creates a new machine preset (admin only)
 	CreateMachinePreset(ctx context.Context, preset *entities.MachinePreset, requesterID string) error
+
+	// CreateCostPreset creates a new cost preset (admin only)
+	CreateCostPreset(ctx context.Context, preset *entities.CostPreset, requesterID string) error
+
+	// CreateMarginPreset creates a new margin preset (admin only)
+	CreateMarginPreset(ctx context.Context, preset *entities.MarginPreset, requesterID string) error
 
 	// UpdatePreset updates an existing preset (admin only)
 	UpdatePreset(ctx context.Context, key string, data interface{}, requesterID string) error

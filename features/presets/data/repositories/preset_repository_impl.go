@@ -96,6 +96,30 @@ func (r *presetRepositoryImpl) GetMachinePresets(ctx context.Context) ([]*entiti
 	return presets, nil
 }
 
+// GetCostPresets retrieves all cost presets
+func (r *presetRepositoryImpl) GetCostPresets(ctx context.Context) ([]*entities.Preset, error) {
+	var presets []*entities.Preset
+	err := r.db.Where("key LIKE ?", "cost_%").Find(&presets).Error
+	if err != nil {
+		r.logger.LogError(ctx, "Failed to get cost presets", err)
+		return nil, fmt.Errorf("failed to get cost presets: %w", err)
+	}
+
+	return presets, nil
+}
+
+// GetMarginPresets retrieves all margin presets
+func (r *presetRepositoryImpl) GetMarginPresets(ctx context.Context) ([]*entities.Preset, error) {
+	var presets []*entities.Preset
+	err := r.db.Where("key LIKE ?", "margin_%").Find(&presets).Error
+	if err != nil {
+		r.logger.LogError(ctx, "Failed to get margin presets", err)
+		return nil, fmt.Errorf("failed to get margin presets: %w", err)
+	}
+
+	return presets, nil
+}
+
 // GetPresetByKey retrieves a preset by its key
 func (r *presetRepositoryImpl) GetPresetByKey(ctx context.Context, key string) (*entities.Preset, error) {
 	var preset entities.Preset

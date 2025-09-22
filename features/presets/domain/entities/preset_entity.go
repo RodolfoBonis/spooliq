@@ -73,20 +73,68 @@ func (p *Preset) MarshalDataFrom(source interface{}) error {
 
 // EnergyPreset representa um preset de tarifa energética
 type EnergyPreset struct {
+	Key           string  `json:"key,omitempty"`
 	BaseTariff    float64 `json:"base_tariff" validate:"required,min=0"`
 	FlagSurcharge float64 `json:"flag_surcharge" validate:"min=0"`
 	Location      string  `json:"location" validate:"required"`
-	Year          int     `json:"year" validate:"required,min=2020"`
+	State         string  `json:"state,omitempty"`
+	City          string  `json:"city,omitempty"`
+	Year          int     `json:"year" validate:"required,min=2020,max=2030"`
+	Month         *int    `json:"month,omitempty" validate:"omitempty,min=1,max=12"`
+	FlagType      string  `json:"flag_type,omitempty" validate:"omitempty,oneof=green yellow red"`
 	Description   string  `json:"description,omitempty"`
+	CreatedAt     string  `json:"created_at,omitempty"`
+	UpdatedAt     string  `json:"updated_at,omitempty"`
 }
 
 // MachinePreset representa um preset de máquina/impressora
 type MachinePreset struct {
-	Name        string  `json:"name" validate:"required"`
-	Brand       string  `json:"brand" validate:"required"`
-	Model       string  `json:"model" validate:"required"`
-	Watt        float64 `json:"watt" validate:"required,min=0"`
-	IdleFactor  float64 `json:"idle_factor" validate:"min=0,max=1"`
-	Description string  `json:"description,omitempty"`
-	URL         string  `json:"url,omitempty"`
+	Key            string       `json:"key,omitempty"`
+	Name           string       `json:"name" validate:"required"`
+	Brand          string       `json:"brand" validate:"required"`
+	Model          string       `json:"model" validate:"required"`
+	Watt           float64      `json:"watt" validate:"required,min=0"`
+	IdleFactor     float64      `json:"idle_factor" validate:"min=0,max=1"`
+	Description    string       `json:"description,omitempty"`
+	URL            string       `json:"url,omitempty"`
+	BuildVolume    *BuildVolume `json:"build_volume,omitempty"`
+	NozzleDiameter float64      `json:"nozzle_diameter,omitempty" validate:"omitempty,min=0"`
+	MaxTemperature int          `json:"max_temperature,omitempty" validate:"omitempty,min=0"`
+	HeatedBed      bool         `json:"heated_bed,omitempty"`
+	CreatedAt      string       `json:"created_at,omitempty"`
+	UpdatedAt      string       `json:"updated_at,omitempty"`
+}
+
+// BuildVolume representa o volume de construção de uma impressora
+type BuildVolume struct {
+	X float64 `json:"x" validate:"required,min=0"`
+	Y float64 `json:"y" validate:"required,min=0"`
+	Z float64 `json:"z" validate:"required,min=0"`
+}
+
+// CostPreset representa um preset de custos operacionais
+type CostPreset struct {
+	Key             string  `json:"key,omitempty"`
+	Name            string  `json:"name" validate:"required,min=1,max=100"`
+	Description     string  `json:"description,omitempty"`
+	OverheadAmount  float64 `json:"overhead_amount" validate:"required,min=0"`
+	WearPercentage  float64 `json:"wear_percentage" validate:"required,min=0,max=100"`
+	IsDefault       bool    `json:"is_default,omitempty"`
+	CreatedAt       string  `json:"created_at,omitempty"`
+	UpdatedAt       string  `json:"updated_at,omitempty"`
+}
+
+// MarginPreset representa um preset de margens de lucro
+type MarginPreset struct {
+	Key                   string  `json:"key,omitempty"`
+	Name                  string  `json:"name" validate:"required,min=1,max=100"`
+	Description           string  `json:"description,omitempty"`
+	PrintingOnlyMargin    float64 `json:"printing_only_margin" validate:"required,min=0"`
+	PrintingPlusMargin    float64 `json:"printing_plus_margin" validate:"required,min=0"`
+	FullServiceMargin     float64 `json:"full_service_margin" validate:"required,min=0"`
+	OperatorRatePerHour   float64 `json:"operator_rate_per_hour" validate:"required,min=0"`
+	ModelerRatePerHour    float64 `json:"modeler_rate_per_hour" validate:"required,min=0"`
+	IsDefault             bool    `json:"is_default,omitempty"`
+	CreatedAt             string  `json:"created_at,omitempty"`
+	UpdatedAt             string  `json:"updated_at,omitempty"`
 }

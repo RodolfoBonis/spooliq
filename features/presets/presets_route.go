@@ -113,6 +113,34 @@ func DeletePresetHandler(presetService services.PresetService) gin.HandlerFunc {
 	return handler.DeletePreset
 }
 
+// GetCostPresetsHandler handles getting cost presets.
+// @Summary Get cost presets
+// @Schemes
+// @Description Retrieves all available cost presets
+// @Tags Presets
+// @Produce json
+// @Success 200 {object} dto.CostPresetsResponse "Successfully retrieved cost presets"
+// @Failure 500 {object} errors.HTTPError
+// @Router /presets/cost [get]
+func GetCostPresetsHandler(presetService services.PresetService) gin.HandlerFunc {
+	handler := handlers.NewPresetHandler(presetService, nil)
+	return handler.GetCostPresets
+}
+
+// GetMarginPresetsHandler handles getting margin presets.
+// @Summary Get margin presets
+// @Schemes
+// @Description Retrieves all available margin presets
+// @Tags Presets
+// @Produce json
+// @Success 200 {object} dto.MarginPresetsResponse "Successfully retrieved margin presets"
+// @Failure 500 {object} errors.HTTPError
+// @Router /presets/margin [get]
+func GetMarginPresetsHandler(presetService services.PresetService) gin.HandlerFunc {
+	handler := handlers.NewPresetHandler(presetService, nil)
+	return handler.GetMarginPresets
+}
+
 // Routes registers preset routes for the application.
 func Routes(route *gin.RouterGroup, presetService services.PresetService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
 	presets := route.Group("/presets")
@@ -121,6 +149,8 @@ func Routes(route *gin.RouterGroup, presetService services.PresetService, protec
 	presets.GET("/energy/locations", GetEnergyLocationsHandler(presetService))
 	presets.GET("/machines", GetMachinePresetsHandler(presetService))
 	presets.GET("/energy", GetEnergyPresetsHandler(presetService))
+	presets.GET("/cost", GetCostPresetsHandler(presetService))
+	presets.GET("/margin", GetMarginPresetsHandler(presetService))
 
 	// Admin-only routes
 	presets.POST("", protectFactory(CreatePresetHandler(presetService), roles.AdminRole))

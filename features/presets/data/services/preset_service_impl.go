@@ -61,6 +61,11 @@ func (s *presetServiceImpl) GetMachinePresets(ctx context.Context) ([]*entities.
 			continue
 		}
 
+		// Set key and timestamps from preset entity
+		machinePreset.Key = preset.Key
+		machinePreset.CreatedAt = preset.CreatedAt.Format("2006-01-02T15:04:05Z07:00")
+		machinePreset.UpdatedAt = preset.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")
+
 		machinePresets = append(machinePresets, &machinePreset)
 	}
 
@@ -86,10 +91,75 @@ func (s *presetServiceImpl) GetEnergyPresets(ctx context.Context, location strin
 			continue
 		}
 
+		// Set key and timestamps from preset entity
+		energyPreset.Key = preset.Key
+		energyPreset.CreatedAt = preset.CreatedAt.Format("2006-01-02T15:04:05Z07:00")
+		energyPreset.UpdatedAt = preset.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")
+
 		energyPresets = append(energyPresets, &energyPreset)
 	}
 
 	return energyPresets, nil
+}
+
+// GetCostPresets retrieves all cost presets
+func (s *presetServiceImpl) GetCostPresets(ctx context.Context) ([]*entities.CostPreset, error) {
+	presets, err := s.presetRepo.GetCostPresets(ctx)
+	if err != nil {
+		s.logger.LogError(ctx, "Failed to get cost presets", err)
+		return nil, fmt.Errorf("failed to get cost presets: %w", err)
+	}
+
+	var costPresets []*entities.CostPreset
+	for _, preset := range presets {
+		var costPreset entities.CostPreset
+		if err := preset.UnmarshalDataTo(&costPreset); err != nil {
+			s.logger.Warning(ctx, "Failed to unmarshal cost preset", map[string]interface{}{
+				"preset_key": preset.Key,
+				"error":      err.Error(),
+			})
+			continue
+		}
+
+		// Set key and timestamps from preset entity
+		costPreset.Key = preset.Key
+		costPreset.CreatedAt = preset.CreatedAt.Format("2006-01-02T15:04:05Z07:00")
+		costPreset.UpdatedAt = preset.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")
+
+		costPresets = append(costPresets, &costPreset)
+	}
+
+	return costPresets, nil
+}
+
+// GetMarginPresets retrieves all margin presets
+func (s *presetServiceImpl) GetMarginPresets(ctx context.Context) ([]*entities.MarginPreset, error) {
+	presets, err := s.presetRepo.GetMarginPresets(ctx)
+	if err != nil {
+		s.logger.LogError(ctx, "Failed to get margin presets", err)
+		return nil, fmt.Errorf("failed to get margin presets: %w", err)
+	}
+
+	var marginPresets []*entities.MarginPreset
+	for _, preset := range presets {
+		var marginPreset entities.MarginPreset
+		if err := preset.UnmarshalDataTo(&marginPreset); err != nil {
+			s.logger.Warning(ctx, "Failed to unmarshal margin preset", map[string]interface{}{
+				"preset_key": preset.Key,
+				"error":      err.Error(),
+			})
+			continue
+		}
+
+		// Set key and timestamps from preset entity
+		marginPreset.Key = preset.Key
+		marginPreset.CreatedAt = preset.CreatedAt.Format("2006-01-02T15:04:05Z07:00")
+		marginPreset.UpdatedAt = preset.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")
+
+		marginPresets = append(marginPresets, &marginPreset)
+	}
+
+	return marginPresets, nil
 }
 
 // CreateEnergyPreset creates a new energy preset (admin only)
@@ -171,6 +241,88 @@ func (s *presetServiceImpl) CreateMachinePreset(ctx context.Context, preset *ent
 		"name":         preset.Name,
 		"brand":        preset.Brand,
 		"model":        preset.Model,
+		"requester_id": requesterID,
+	})
+
+	return nil
+}
+
+// CreateCostPreset creates a new cost preset (admin only)
+func (s *presetServiceImpl) CreateCostPreset(ctx context.Context, preset *entities.CostPreset, requesterID string) error {
+	// Validate admin permissions
+	if err := s.ValidateAdminPermissions(ctx, requesterID); err != nil {
+		return err
+	}
+
+	// Validate preset data
+	if err := s.validator.Struct(preset); err != nil {
+		s.logger.LogError(ctx, "Cost preset validation failed", err)
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Generate unique key
+	key := s.generateCostPresetKey(preset)
+
+	// Create preset entity
+	presetEntity := &entities.Preset{
+		Key: key,
+	}
+
+	if err := presetEntity.MarshalDataFrom(preset); err != nil {
+		s.logger.LogError(ctx, "Failed to marshal cost preset data", err)
+		return fmt.Errorf("failed to marshal preset data: %w", err)
+	}
+
+	// Create in repository
+	if err := s.presetRepo.CreatePreset(ctx, presetEntity); err != nil {
+		s.logger.LogError(ctx, "Failed to create cost preset", err)
+		return fmt.Errorf("failed to create cost preset: %w", err)
+	}
+
+	s.logger.Info(ctx, "Cost preset created successfully", map[string]interface{}{
+		"preset_key":   key,
+		"name":         preset.Name,
+		"requester_id": requesterID,
+	})
+
+	return nil
+}
+
+// CreateMarginPreset creates a new margin preset (admin only)
+func (s *presetServiceImpl) CreateMarginPreset(ctx context.Context, preset *entities.MarginPreset, requesterID string) error {
+	// Validate admin permissions
+	if err := s.ValidateAdminPermissions(ctx, requesterID); err != nil {
+		return err
+	}
+
+	// Validate preset data
+	if err := s.validator.Struct(preset); err != nil {
+		s.logger.LogError(ctx, "Margin preset validation failed", err)
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Generate unique key
+	key := s.generateMarginPresetKey(preset)
+
+	// Create preset entity
+	presetEntity := &entities.Preset{
+		Key: key,
+	}
+
+	if err := presetEntity.MarshalDataFrom(preset); err != nil {
+		s.logger.LogError(ctx, "Failed to marshal margin preset data", err)
+		return fmt.Errorf("failed to marshal preset data: %w", err)
+	}
+
+	// Create in repository
+	if err := s.presetRepo.CreatePreset(ctx, presetEntity); err != nil {
+		s.logger.LogError(ctx, "Failed to create margin preset", err)
+		return fmt.Errorf("failed to create margin preset: %w", err)
+	}
+
+	s.logger.Info(ctx, "Margin preset created successfully", map[string]interface{}{
+		"preset_key":   key,
+		"name":         preset.Name,
 		"requester_id": requesterID,
 	})
 
@@ -266,4 +418,18 @@ func (s *presetServiceImpl) generateMachinePresetKey(preset *entities.MachinePre
 
 	timestamp := time.Now().Unix()
 	return fmt.Sprintf("machine_%s_%s_%s_%d", name, brand, model, timestamp)
+}
+
+func (s *presetServiceImpl) generateCostPresetKey(preset *entities.CostPreset) string {
+	// Generate key like: cost_001 or cost_premium_001
+	name := strings.ToLower(strings.ReplaceAll(preset.Name, " ", "_"))
+	timestamp := time.Now().Unix()
+	return fmt.Sprintf("cost_%s_%d", name, timestamp)
+}
+
+func (s *presetServiceImpl) generateMarginPresetKey(preset *entities.MarginPreset) string {
+	// Generate key like: margin_001 or margin_premium_001
+	name := strings.ToLower(strings.ReplaceAll(preset.Name, " ", "_"))
+	timestamp := time.Now().Unix()
+	return fmt.Sprintf("margin_%s_%d", name, timestamp)
 }

@@ -110,14 +110,64 @@ func (h *PresetHandler) GetEnergyPresets(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetCostPresets retrieves all cost presets
+// @Summary Get cost presets
+// @Description Retrieves all available cost presets
+// @Tags presets
+// @Produce json
+// @Success 200 {object} dto.CostPresetsResponse
+// @Failure 500 {object} errors.HTTPError
+// @Router /presets/cost [get]
+func (h *PresetHandler) GetCostPresets(c *gin.Context) {
+	costPresets, err := h.presetService.GetCostPresets(c.Request.Context())
+	if err != nil {
+		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get cost presets", nil, err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to get cost presets", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	response := dto.CostPresetsResponse{
+		CostPresets: dto.FromCostPresetEntities(costPresets),
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetMarginPresets retrieves all margin presets
+// @Summary Get margin presets
+// @Description Retrieves all available margin presets
+// @Tags presets
+// @Produce json
+// @Success 200 {object} dto.MarginPresetsResponse
+// @Failure 500 {object} errors.HTTPError
+// @Router /presets/margin [get]
+func (h *PresetHandler) GetMarginPresets(c *gin.Context) {
+	marginPresets, err := h.presetService.GetMarginPresets(c.Request.Context())
+	if err != nil {
+		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get margin presets", nil, err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to get margin presets", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	response := dto.MarginPresetsResponse{
+		MarginPresets: dto.FromMarginPresetEntities(marginPresets),
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // CreatePreset creates a new preset (admin only)
 // @Summary Create preset
-// @Description Creates a new energy or machine preset (admin only)
+// @Description Creates a new preset of specified type (admin only)
 // @Tags presets
 // @Accept json
 // @Produce json
-// @Param type query string true "Preset type: 'energy' or 'machine'"
-// @Param request body interface{} true "Preset data (CreateEnergyPresetRequest or CreateMachinePresetRequest)"
+// @Param type query string true "Preset type: 'energy', 'machine', 'cost', or 'margin'"
+// @Param request body interface{} true "Preset data (CreateEnergyPresetRequest, CreateMachinePresetRequest, CreateCostPresetRequest, or CreateMarginPresetRequest)"
 // @Success 201 "Preset created successfully"
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
@@ -129,7 +179,7 @@ func (h *PresetHandler) GetEnergyPresets(c *gin.Context) {
 func (h *PresetHandler) CreatePreset(c *gin.Context) {
 	presetType := c.Query("type")
 	if presetType == "" {
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Preset type is required (energy or machine)", nil, nil)
+		appError := errors.NewAppError(coreEntities.ErrEntity, "Preset type is required (energy, machine, cost, or margin)", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Preset type not specified", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -151,8 +201,12 @@ func (h *PresetHandler) CreatePreset(c *gin.Context) {
 		h.createEnergyPreset(c, requesterID)
 	case "machine":
 		h.createMachinePreset(c, requesterID)
+	case "cost":
+		h.createCostPreset(c, requesterID)
+	case "margin":
+		h.createMarginPreset(c, requesterID)
 	default:
-		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid preset type. Must be 'energy' or 'machine'", nil, nil)
+		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid preset type. Must be 'energy', 'machine', 'cost', or 'margin'", nil, nil)
 		httpError := appError.ToHTTPError()
 		h.logger.LogError(c.Request.Context(), "Invalid preset type", appError)
 		c.JSON(httpError.StatusCode, httpError)
@@ -239,6 +293,88 @@ func (h *PresetHandler) createMachinePreset(c *gin.Context, requesterID string) 
 		"name":         machinePreset.Name,
 		"brand":        machinePreset.Brand,
 		"model":        machinePreset.Model,
+		"requester_id": requesterID,
+	})
+
+	c.Status(http.StatusCreated)
+}
+
+func (h *PresetHandler) createCostPreset(c *gin.Context, requesterID string) {
+	// Bind request
+	var req dto.CreateCostPresetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to bind cost preset request", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Struct(&req); err != nil {
+		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Cost preset request validation failed", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	// Convert to domain entity
+	costPreset := req.ToEntity()
+
+	// Create preset
+	err := h.presetService.CreateCostPreset(c.Request.Context(), costPreset, requesterID)
+	if err != nil {
+		appError := h.mapDomainError(err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to create cost preset", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	h.logger.Info(c.Request.Context(), "Cost preset created successfully", map[string]interface{}{
+		"name":         costPreset.Name,
+		"requester_id": requesterID,
+	})
+
+	c.Status(http.StatusCreated)
+}
+
+func (h *PresetHandler) createMarginPreset(c *gin.Context, requesterID string) {
+	// Bind request
+	var req dto.CreateMarginPresetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to bind margin preset request", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Struct(&req); err != nil {
+		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Margin preset request validation failed", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	// Convert to domain entity
+	marginPreset := req.ToEntity()
+
+	// Create preset
+	err := h.presetService.CreateMarginPreset(c.Request.Context(), marginPreset, requesterID)
+	if err != nil {
+		appError := h.mapDomainError(err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to create margin preset", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	h.logger.Info(c.Request.Context(), "Margin preset created successfully", map[string]interface{}{
+		"name":         marginPreset.Name,
 		"requester_id": requesterID,
 	})
 

@@ -2,10 +2,10 @@ package di
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	metadataRepos "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/repositories"
 	data_repositories "github.com/RodolfoBonis/spooliq/features/filaments/data/repositories"
 	domain_repositories "github.com/RodolfoBonis/spooliq/features/filaments/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
-	metadataRepos "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/repositories"
 	"github.com/jinzhu/gorm"
 	"go.uber.org/fx"
 )

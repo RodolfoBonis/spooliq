@@ -11,16 +11,16 @@ import (
 // @Description Filamento para impressão 3D
 // @Example {"id": 1, "name": "PLA Branco", "brand": "SUNLU", "material": "PLA", "color": "Branco", "price_per_kg": 125.0, "url": "https://amazon.com.br/dp/B07PGYHYV8"}
 type Filament struct {
-	ID            uint       `gorm:"primary_key;auto_increment" json:"id"`
-	Name          string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
+	ID   uint   `gorm:"primary_key;auto_increment" json:"id"`
+	Name string `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
 
 	// Foreign keys para metadados
-	BrandID       uint       `gorm:"not null;index" json:"brand_id" validate:"required"`
-	MaterialID    uint       `gorm:"not null;index" json:"material_id" validate:"required"`
+	BrandID    uint `gorm:"not null;index" json:"brand_id" validate:"required"`
+	MaterialID uint `gorm:"not null;index" json:"material_id" validate:"required"`
 
 	// Relacionamentos
-	Brand         metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID" json:"brand"`
-	Material      metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID" json:"material"`
+	Brand    metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID" json:"brand"`
+	Material metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID" json:"material"`
 
 	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`

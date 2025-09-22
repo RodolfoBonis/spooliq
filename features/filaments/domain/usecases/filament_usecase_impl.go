@@ -15,11 +15,11 @@ import (
 )
 
 type filamentUseCaseImpl struct {
-	filamentRepo  repositories.FilamentRepository
-	brandRepo     metadataRepos.BrandRepository
-	materialRepo  metadataRepos.MaterialRepository
-	logger        logger.Logger
-	validator     *validator.Validate
+	filamentRepo repositories.FilamentRepository
+	brandRepo    metadataRepos.BrandRepository
+	materialRepo metadataRepos.MaterialRepository
+	logger       logger.Logger
+	validator    *validator.Validate
 }
 
 // NewFilamentUseCase creates a new instance of FilamentUseCase with the provided repositories and logger.

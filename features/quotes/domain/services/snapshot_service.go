@@ -62,8 +62,8 @@ func (s *snapshotServiceImpl) CreateFilamentSnapshot(ctx context.Context, req *d
 
 		// Create snapshot from current filament data
 		line.FilamentSnapshotName = filament.Name
-		line.FilamentSnapshotBrand = filament.Brand
-		line.FilamentSnapshotMaterial = filament.Material
+		line.FilamentSnapshotBrand = filament.Brand.Name
+		line.FilamentSnapshotMaterial = filament.Material.Name
 		line.FilamentSnapshotColor = filament.Color
 		line.FilamentSnapshotColorHex = filament.ColorHex
 		line.FilamentSnapshotPricePerKg = filament.PricePerKg

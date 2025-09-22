@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 
 	coreEntities "github.com/RodolfoBonis/spooliq/core/entities"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -110,11 +111,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 // @Security BearerAuth
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	userID := c.Param("id")
-	if userID == "" {
-		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
-		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
-		c.JSON(httpError.StatusCode, httpError)
+	if !h.validateUserID(c, userID) {
 		return
 	}
 
@@ -623,6 +620,51 @@ func (h *UserHandler) RemoveUserRole(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetUserStats retrieves user statistics (admin only)
+// @Summary Get user statistics
+// @Description Retrieves user statistics including total, active, inactive, suspended, and admin counts (admin only)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.UserStatsResponse
+// @Failure 401 {object} errors.HTTPError
+// @Failure 403 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /users/stats [get]
+// @Security BearerAuth
+func (h *UserHandler) GetUserStats(c *gin.Context) {
+	// Get requester ID
+	requesterID := c.GetString("user_id")
+	if requesterID == "" {
+		appError := coreErrors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	// Get user stats
+	stats, err := h.userService.GetUserStats(c.Request.Context(), requesterID)
+	if err != nil {
+		appError := h.mapDomainError(err)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Failed to get user stats", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return
+	}
+
+	// Convert to response
+	response := dto.UserStatsResponse{
+		Total:     stats.Total,
+		Active:    stats.Active,
+		Inactive:  stats.Inactive,
+		Suspended: stats.Suspended,
+		Admins:    stats.Admins,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // Helper methods
 
 func (h *UserHandler) handleError(c *gin.Context, err error, message string) {
@@ -667,4 +709,25 @@ func (h *UserHandler) mapDomainError(err error) *coreErrors.AppError {
 
 	// Default case for unknown errors
 	return coreErrors.NewAppError(coreEntities.ErrService, "Internal server error", nil, err)
+}
+
+// validateUserID validates that the given ID is a valid UUID format
+func (h *UserHandler) validateUserID(c *gin.Context, userID string) bool {
+	if userID == "" {
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "User ID is required", nil, nil)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "User ID is required", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return false
+	}
+
+	if _, err := uuid.Parse(userID); err != nil {
+		appError := coreErrors.NewAppError(coreEntities.ErrEntity, "Invalid user ID format - must be a valid UUID", nil, nil)
+		httpError := appError.ToHTTPError()
+		h.logger.LogError(c.Request.Context(), "Invalid user ID format", appError)
+		c.JSON(httpError.StatusCode, httpError)
+		return false
+	}
+
+	return true
 }

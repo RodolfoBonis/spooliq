@@ -35,4 +35,7 @@ type UserService interface {
 	// ManageUserRole adds or removes roles from a user (admin only)
 	AddUserRole(ctx context.Context, userID string, role string, requesterID string) error
 	RemoveUserRole(ctx context.Context, userID string, role string, requesterID string) error
+
+	// GetUserStats retrieves user statistics (admin only)
+	GetUserStats(ctx context.Context, requesterID string) (*entities.UserStats, error)
 }

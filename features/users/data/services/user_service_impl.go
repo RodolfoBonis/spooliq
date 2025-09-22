@@ -441,3 +441,64 @@ func (s *userServiceImpl) RemoveUserRole(ctx context.Context, userID string, rol
 
 	return nil
 }
+
+// GetUserStats retrieves user statistics (admin only)
+func (s *userServiceImpl) GetUserStats(ctx context.Context, requesterID string) (*entities.UserStats, error) {
+	// Verify requester is admin
+	requester, err := s.userRepo.GetUserByID(ctx, requesterID)
+	if err != nil {
+		s.logger.LogError(ctx, "Failed to get requester user", err)
+		return nil, fmt.Errorf("failed to verify requester: %w", err)
+	}
+
+	if !requester.IsAdmin() {
+		s.logger.Warning(ctx, "Non-admin user attempted to get user statistics", map[string]interface{}{
+			"requester_id": requesterID,
+		})
+		return nil, entities.ErrUnauthorized
+	}
+
+	// Get all users
+	query := entities.UserListQuery{Max: 10000} // Large enough to get all users
+	users, err := s.userRepo.GetUsers(ctx, query)
+	if err != nil {
+		s.logger.LogError(ctx, "Failed to get users for statistics", err)
+		return nil, fmt.Errorf("failed to get users: %w", err)
+	}
+
+	// Calculate statistics
+	stats := &entities.UserStats{
+		Total:     len(users),
+		Active:    0,
+		Inactive:  0,
+		Suspended: 0,
+		Admins:    0,
+	}
+
+	for _, user := range users {
+		// Count total admins
+		if user.IsAdmin() {
+			stats.Admins++
+		}
+
+		// Count by enabled status
+		if user.Enabled {
+			stats.Active++
+		} else {
+			// For Keycloak, disabled users are considered inactive
+			// In a more complex scenario, you might want to distinguish between
+			// inactive and suspended based on additional attributes
+			stats.Inactive++
+		}
+	}
+
+	s.logger.Info(ctx, "User statistics retrieved successfully", map[string]interface{}{
+		"requester_id": requesterID,
+		"total":        stats.Total,
+		"active":       stats.Active,
+		"inactive":     stats.Inactive,
+		"admins":       stats.Admins,
+	})
+
+	return stats, nil
+}

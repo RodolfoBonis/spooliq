@@ -48,6 +48,15 @@ type UserListQuery struct {
 	Max    int    `json:"max,omitempty"`
 }
 
+// UserStats represents user statistics in the domain
+type UserStats struct {
+	Total     int `json:"total"`
+	Active    int `json:"active"`
+	Inactive  int `json:"inactive"`
+	Suspended int `json:"suspended"`
+	Admins    int `json:"admins"`
+}
+
 // Business validation methods
 
 // ValidateCreate validates user creation request

@@ -221,6 +221,24 @@ func RemoveUserRoleHandler(userService services.UserService, logger logger.Logge
 	return handler.RemoveUserRole
 }
 
+// GetUserStatsHandler handles getting user statistics.
+// @Summary Get user statistics
+// @Schemes
+// @Description Retrieves user statistics including total, active, inactive, suspended, and admin counts (admin only)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.UserStatsResponse "Successfully retrieved user statistics"
+// @Failure 401 {object} errors.HTTPError
+// @Failure 403 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /users/stats [get]
+// @Security Bearer
+func GetUserStatsHandler(userService services.UserService, logger logger.Logger) gin.HandlerFunc {
+	handler := handlers.NewUserHandler(userService, logger)
+	return handler.GetUserStats
+}
+
 // Routes registers user routes for the application.
 func Routes(route *gin.RouterGroup, userService services.UserService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 	users := route.Group("/users")
@@ -230,6 +248,7 @@ func Routes(route *gin.RouterGroup, userService services.UserService, protectFac
 
 	// Admin-only routes
 	users.GET("", protectFactory(GetUsersHandler(userService, logger), roles.AdminRole))
+	users.GET("/stats", protectFactory(GetUserStatsHandler(userService, logger), roles.AdminRole))
 	users.POST("", protectFactory(CreateUserHandler(userService, logger), roles.AdminRole))
 	users.GET("/:id", protectFactory(GetUserByIDHandler(userService, logger), roles.UserRole))
 	users.PATCH("/:id", protectFactory(UpdateUserHandler(userService, logger), roles.UserRole))

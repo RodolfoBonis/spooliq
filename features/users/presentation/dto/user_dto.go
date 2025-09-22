@@ -71,6 +71,15 @@ type UserRoleRequest struct {
 	Role string `json:"role" validate:"required"`
 }
 
+// UserStatsResponse represents user statistics in API responses
+type UserStatsResponse struct {
+	Total     int `json:"total"`
+	Active    int `json:"active"`
+	Inactive  int `json:"inactive"`
+	Suspended int `json:"suspended"`
+	Admins    int `json:"admins"`
+}
+
 // Conversion methods
 
 // ToEntity converts CreateUserRequest to domain entity

@@ -92,6 +92,12 @@ func (r *keycloakUserRepository) GetUserByID(ctx context.Context, userID string)
 		return nil, fmt.Errorf("failed to get admin token: %w", err)
 	}
 
+	r.logger.Info(ctx, "Attempting to get user from Keycloak", map[string]interface{}{
+		"user_id": userID,
+		"realm":   r.keycloakConfig.Realm,
+		"host":    r.keycloakConfig.Host,
+	})
+
 	kcUser, err := r.client.GetUserByID(ctx, token.AccessToken, r.keycloakConfig.Realm, userID)
 	if err != nil {
 		r.logger.LogError(ctx, "Failed to get user by ID from Keycloak", err)
@@ -398,12 +404,18 @@ func (r *keycloakUserRepository) getUserRoles(ctx context.Context, userID string
 	}
 
 	// Try to get client roles using GetCompositeClientRolesByUserID which works with ClientID
+	r.logger.Info(ctx, "Attempting to get client roles", map[string]interface{}{
+		"user_id":   userID,
+		"realm":     r.keycloakConfig.Realm,
+		"client_id": r.keycloakConfig.ClientID,
+	})
+
 	roles, err := r.client.GetCompositeClientRolesByUserID(ctx, token.AccessToken, r.keycloakConfig.Realm, r.keycloakConfig.ClientID, userID)
 	if err != nil {
 		// Fallback to realm roles if client roles fail
 		r.logger.Warning(ctx, "Failed to get client roles, falling back to realm roles", map[string]interface{}{
-			"user_id": userID,
-			"error":   err.Error(),
+			"user_id":   userID,
+			"error":     err.Error(),
 		})
 
 		realmRoles, realmErr := r.client.GetRealmRolesByUserID(ctx, token.AccessToken, r.keycloakConfig.Realm, userID)

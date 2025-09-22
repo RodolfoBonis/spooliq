@@ -43,7 +43,11 @@
       "Bash(set PORT=8010)",
       "Bash(psql:*)",
       "Bash(pkill:*)",
-      "Bash(set PORT=8011)"
+      "Bash(set PORT=8011)",
+      "Bash(set PORT=8080)",
+      "Bash(set PORT=8000)",
+      "Bash(set PORT=9999)",
+      "Bash(./spooliq-test.exe)"
     ],
     "deny": [],
     "ask": []

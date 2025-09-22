@@ -6,7 +6,6 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	metadataEntities "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/entities"
 	metadataRepos "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/repositories"
@@ -33,39 +32,6 @@ func NewFilamentUseCase(filamentRepo repositories.FilamentRepository, brandRepo 
 	}
 }
 
-// resolveBrandID resolves brand name to brand ID, creating the brand if it doesn't exist
-func (uc *filamentUseCaseImpl) resolveBrandID(ctx *gin.Context, brandName string) (uint, error) {
-	brand, err := uc.brandRepo.GetByName(ctx.Request.Context(), brandName)
-	if err != nil {
-		// Brand doesn't exist, create it
-		newBrand := &metadataEntities.FilamentBrand{
-			Name:   brandName,
-			Active: true,
-		}
-		if err := uc.brandRepo.Create(ctx.Request.Context(), newBrand); err != nil {
-			return 0, err
-		}
-		return newBrand.ID, nil
-	}
-	return brand.ID, nil
-}
-
-// resolveMaterialID resolves material name to material ID, creating the material if it doesn't exist
-func (uc *filamentUseCaseImpl) resolveMaterialID(ctx *gin.Context, materialName string) (uint, error) {
-	material, err := uc.materialRepo.GetByName(ctx.Request.Context(), materialName)
-	if err != nil {
-		// Material doesn't exist, create it
-		newMaterial := &metadataEntities.FilamentMaterial{
-			Name:   materialName,
-			Active: true,
-		}
-		if err := uc.materialRepo.Create(ctx.Request.Context(), newMaterial); err != nil {
-			return 0, err
-		}
-		return newMaterial.ID, nil
-	}
-	return material.ID, nil
-}
 
 func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 	var request CreateFilamentRequest

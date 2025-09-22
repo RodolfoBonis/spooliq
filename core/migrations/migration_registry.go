@@ -2,6 +2,7 @@ package migrations
 
 import (
 	filamentsEntities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
+	metadataEntities "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/entities"
 	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
 	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 	"github.com/jinzhu/gorm"
@@ -13,6 +14,7 @@ func GetAllMigrations() []Migration {
 		Migration001InitialSchema,
 		Migration002AddFilamentDiameterWeight,
 		Migration003AddColorHexField,
+		Migration004CreateFilamentMetadataTables,
 		// Add new migrations here in version order
 	}
 }
@@ -199,6 +201,73 @@ var Migration003AddColorHexField = Migration{
 		}
 
 		// Note: Not removing price_per_meter and url as they might have been there before
+
+		return nil
+	},
+}
+
+// Migration004CreateFilamentMetadataTables creates filament brands and materials tables
+var Migration004CreateFilamentMetadataTables = Migration{
+	Version: "004",
+	Name:    "Create Filament Metadata Tables",
+	Up: func(db *gorm.DB) error {
+		// Create FilamentBrand table if it doesn't exist
+		if !db.HasTable(&metadataEntities.FilamentBrand{}) {
+			if err := db.CreateTable(&metadataEntities.FilamentBrand{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// Create FilamentMaterial table if it doesn't exist
+		if !db.HasTable(&metadataEntities.FilamentMaterial{}) {
+			if err := db.CreateTable(&metadataEntities.FilamentMaterial{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// Insert default brands from existing data
+		brands := []string{"SUNLU", "Creality", "Polymaker", "Prusament", "eSUN", "PETG", "Overture", "ANYCUBIC", "Hatchbox", "Amazon Basics"}
+		for _, brandName := range brands {
+			var count int
+			db.Model(&metadataEntities.FilamentBrand{}).Where("name = ?", brandName).Count(&count)
+			if count == 0 {
+				brand := &metadataEntities.FilamentBrand{
+					Name:   brandName,
+					Active: true,
+				}
+				if err := db.Create(brand).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		// Insert default materials from existing data
+		materials := []string{"PLA", "ABS", "PETG", "TPU", "WOOD", "ASA", "PC", "NYLON", "PVA", "HIPS"}
+		for _, materialName := range materials {
+			var count int
+			db.Model(&metadataEntities.FilamentMaterial{}).Where("name = ?", materialName).Count(&count)
+			if count == 0 {
+				material := &metadataEntities.FilamentMaterial{
+					Name:   materialName,
+					Active: true,
+				}
+				if err := db.Create(material).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	},
+	Down: func(db *gorm.DB) error {
+		// Drop tables
+		if err := db.DropTableIfExists(&metadataEntities.FilamentMaterial{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.DropTableIfExists(&metadataEntities.FilamentBrand{}).Error; err != nil {
+			return err
+		}
 
 		return nil
 	},

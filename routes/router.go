@@ -10,6 +10,8 @@ import (
 	export_services "github.com/RodolfoBonis/spooliq/features/export/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/filaments"
 	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
+	filament_metadata "github.com/RodolfoBonis/spooliq/features/filament-metadata"
+	metadata_uc "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/presets"
 	preset_services "github.com/RodolfoBonis/spooliq/features/presets/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/quotes"
@@ -30,6 +32,8 @@ func InitializeRoutes(
 	systemUc system_uc.SystemUseCase,
 	authUc auth_uc.AuthUseCase,
 	filamentsUc filaments_uc.FilamentUseCase,
+	brandUc metadata_uc.BrandUseCase,
+	materialUc metadata_uc.MaterialUseCase,
 	quoteUc quote_uc.QuoteUseCase,
 	userService user_services.UserService,
 	presetService preset_services.PresetService,
@@ -48,6 +52,7 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, protectFactory)
 	system.Routes(root, systemUc, cacheMiddleware)
 	filaments.Routes(root, filamentsUc, protectFactory)
+	filament_metadata.Routes(root, brandUc, materialUc, protectFactory)
 	quotes.Routes(root, quoteUc, protectFactory)
 	users.Routes(root, userService, protectFactory, logger)
 	presets.Routes(root, presetService, protectFactory)

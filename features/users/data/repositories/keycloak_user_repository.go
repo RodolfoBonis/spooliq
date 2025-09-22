@@ -414,8 +414,8 @@ func (r *keycloakUserRepository) getUserRoles(ctx context.Context, userID string
 	if err != nil {
 		// Fallback to realm roles if client roles fail
 		r.logger.Warning(ctx, "Failed to get client roles, falling back to realm roles", map[string]interface{}{
-			"user_id":   userID,
-			"error":     err.Error(),
+			"user_id": userID,
+			"error":   err.Error(),
 		})
 
 		realmRoles, realmErr := r.client.GetRealmRolesByUserID(ctx, token.AccessToken, r.keycloakConfig.Realm, userID)

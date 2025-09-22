@@ -114,27 +114,27 @@ type BuildVolume struct {
 
 // CostPreset representa um preset de custos operacionais
 type CostPreset struct {
-	Key             string  `json:"key,omitempty"`
-	Name            string  `json:"name" validate:"required,min=1,max=100"`
-	Description     string  `json:"description,omitempty"`
-	OverheadAmount  float64 `json:"overhead_amount" validate:"required,min=0"`
-	WearPercentage  float64 `json:"wear_percentage" validate:"required,min=0,max=100"`
-	IsDefault       bool    `json:"is_default,omitempty"`
-	CreatedAt       string  `json:"created_at,omitempty"`
-	UpdatedAt       string  `json:"updated_at,omitempty"`
+	Key            string  `json:"key,omitempty"`
+	Name           string  `json:"name" validate:"required,min=1,max=100"`
+	Description    string  `json:"description,omitempty"`
+	OverheadAmount float64 `json:"overhead_amount" validate:"required,min=0"`
+	WearPercentage float64 `json:"wear_percentage" validate:"required,min=0,max=100"`
+	IsDefault      bool    `json:"is_default,omitempty"`
+	CreatedAt      string  `json:"created_at,omitempty"`
+	UpdatedAt      string  `json:"updated_at,omitempty"`
 }
 
 // MarginPreset representa um preset de margens de lucro
 type MarginPreset struct {
-	Key                   string  `json:"key,omitempty"`
-	Name                  string  `json:"name" validate:"required,min=1,max=100"`
-	Description           string  `json:"description,omitempty"`
-	PrintingOnlyMargin    float64 `json:"printing_only_margin" validate:"required,min=0"`
-	PrintingPlusMargin    float64 `json:"printing_plus_margin" validate:"required,min=0"`
-	FullServiceMargin     float64 `json:"full_service_margin" validate:"required,min=0"`
-	OperatorRatePerHour   float64 `json:"operator_rate_per_hour" validate:"required,min=0"`
-	ModelerRatePerHour    float64 `json:"modeler_rate_per_hour" validate:"required,min=0"`
-	IsDefault             bool    `json:"is_default,omitempty"`
-	CreatedAt             string  `json:"created_at,omitempty"`
-	UpdatedAt             string  `json:"updated_at,omitempty"`
+	Key                 string  `json:"key,omitempty"`
+	Name                string  `json:"name" validate:"required,min=1,max=100"`
+	Description         string  `json:"description,omitempty"`
+	PrintingOnlyMargin  float64 `json:"printing_only_margin" validate:"required,min=0"`
+	PrintingPlusMargin  float64 `json:"printing_plus_margin" validate:"required,min=0"`
+	FullServiceMargin   float64 `json:"full_service_margin" validate:"required,min=0"`
+	OperatorRatePerHour float64 `json:"operator_rate_per_hour" validate:"required,min=0"`
+	ModelerRatePerHour  float64 `json:"modeler_rate_per_hour" validate:"required,min=0"`
+	IsDefault           bool    `json:"is_default,omitempty"`
+	CreatedAt           string  `json:"created_at,omitempty"`
+	UpdatedAt           string  `json:"updated_at,omitempty"`
 }

@@ -11,20 +11,20 @@ type EnergyLocationResponse struct {
 
 // MachinePresetResponse represents machine preset in API responses
 type MachinePresetResponse struct {
-	Key            string            `json:"key,omitempty"`
-	Name           string            `json:"name"`
-	Brand          string            `json:"brand"`
-	Model          string            `json:"model"`
-	Watt           float64           `json:"watt"`
-	IdleFactor     float64           `json:"idle_factor"`
-	Description    string            `json:"description,omitempty"`
-	URL            string            `json:"url,omitempty"`
-	BuildVolume    *BuildVolumeDTO   `json:"build_volume,omitempty"`
-	NozzleDiameter float64           `json:"nozzle_diameter,omitempty"`
-	MaxTemperature int               `json:"max_temperature,omitempty"`
-	HeatedBed      bool              `json:"heated_bed,omitempty"`
-	CreatedAt      string            `json:"created_at,omitempty"`
-	UpdatedAt      string            `json:"updated_at,omitempty"`
+	Key            string          `json:"key,omitempty"`
+	Name           string          `json:"name"`
+	Brand          string          `json:"brand"`
+	Model          string          `json:"model"`
+	Watt           float64         `json:"watt"`
+	IdleFactor     float64         `json:"idle_factor"`
+	Description    string          `json:"description,omitempty"`
+	URL            string          `json:"url,omitempty"`
+	BuildVolume    *BuildVolumeDTO `json:"build_volume,omitempty"`
+	NozzleDiameter float64         `json:"nozzle_diameter,omitempty"`
+	MaxTemperature int             `json:"max_temperature,omitempty"`
+	HeatedBed      bool            `json:"heated_bed,omitempty"`
+	CreatedAt      string          `json:"created_at,omitempty"`
+	UpdatedAt      string          `json:"updated_at,omitempty"`
 }
 
 // BuildVolumeDTO represents build volume in DTOs
@@ -36,7 +36,7 @@ type BuildVolumeDTO struct {
 
 // EnergyPresetResponse represents energy preset in API responses
 type EnergyPresetResponse struct {
-	Key           string `json:"key,omitempty"`
+	Key           string  `json:"key,omitempty"`
 	BaseTariff    float64 `json:"base_tariff"`
 	FlagSurcharge float64 `json:"flag_surcharge"`
 	Location      string  `json:"location"`
@@ -87,29 +87,29 @@ type EnergyPresetsResponse struct {
 
 // CostPresetResponse represents cost preset in API responses
 type CostPresetResponse struct {
-	Key             string  `json:"key,omitempty"`
-	Name            string  `json:"name"`
-	Description     string  `json:"description,omitempty"`
-	OverheadAmount  float64 `json:"overhead_amount"`
-	WearPercentage  float64 `json:"wear_percentage"`
-	IsDefault       bool    `json:"is_default,omitempty"`
-	CreatedAt       string  `json:"created_at,omitempty"`
-	UpdatedAt       string  `json:"updated_at,omitempty"`
+	Key            string  `json:"key,omitempty"`
+	Name           string  `json:"name"`
+	Description    string  `json:"description,omitempty"`
+	OverheadAmount float64 `json:"overhead_amount"`
+	WearPercentage float64 `json:"wear_percentage"`
+	IsDefault      bool    `json:"is_default,omitempty"`
+	CreatedAt      string  `json:"created_at,omitempty"`
+	UpdatedAt      string  `json:"updated_at,omitempty"`
 }
 
 // MarginPresetResponse represents margin preset in API responses
 type MarginPresetResponse struct {
-	Key                   string  `json:"key,omitempty"`
-	Name                  string  `json:"name"`
-	Description           string  `json:"description,omitempty"`
-	PrintingOnlyMargin    float64 `json:"printing_only_margin"`
-	PrintingPlusMargin    float64 `json:"printing_plus_margin"`
-	FullServiceMargin     float64 `json:"full_service_margin"`
-	OperatorRatePerHour   float64 `json:"operator_rate_per_hour"`
-	ModelerRatePerHour    float64 `json:"modeler_rate_per_hour"`
-	IsDefault             bool    `json:"is_default,omitempty"`
-	CreatedAt             string  `json:"created_at,omitempty"`
-	UpdatedAt             string  `json:"updated_at,omitempty"`
+	Key                 string  `json:"key,omitempty"`
+	Name                string  `json:"name"`
+	Description         string  `json:"description,omitempty"`
+	PrintingOnlyMargin  float64 `json:"printing_only_margin"`
+	PrintingPlusMargin  float64 `json:"printing_plus_margin"`
+	FullServiceMargin   float64 `json:"full_service_margin"`
+	OperatorRatePerHour float64 `json:"operator_rate_per_hour"`
+	ModelerRatePerHour  float64 `json:"modeler_rate_per_hour"`
+	IsDefault           bool    `json:"is_default,omitempty"`
+	CreatedAt           string  `json:"created_at,omitempty"`
+	UpdatedAt           string  `json:"updated_at,omitempty"`
 }
 
 // CostPresetsResponse represents cost presets list response
@@ -124,23 +124,23 @@ type MarginPresetsResponse struct {
 
 // CreateCostPresetRequest represents request to create cost preset
 type CreateCostPresetRequest struct {
-	Name            string  `json:"name" validate:"required,min=1,max=100"`
-	Description     string  `json:"description,omitempty"`
-	OverheadAmount  float64 `json:"overhead_amount" validate:"required,min=0"`
-	WearPercentage  float64 `json:"wear_percentage" validate:"required,min=0,max=100"`
-	IsDefault       bool    `json:"is_default,omitempty"`
+	Name           string  `json:"name" validate:"required,min=1,max=100"`
+	Description    string  `json:"description,omitempty"`
+	OverheadAmount float64 `json:"overhead_amount" validate:"required,min=0"`
+	WearPercentage float64 `json:"wear_percentage" validate:"required,min=0,max=100"`
+	IsDefault      bool    `json:"is_default,omitempty"`
 }
 
 // CreateMarginPresetRequest represents request to create margin preset
 type CreateMarginPresetRequest struct {
-	Name                  string  `json:"name" validate:"required,min=1,max=100"`
-	Description           string  `json:"description,omitempty"`
-	PrintingOnlyMargin    float64 `json:"printing_only_margin" validate:"required,min=0"`
-	PrintingPlusMargin    float64 `json:"printing_plus_margin" validate:"required,min=0"`
-	FullServiceMargin     float64 `json:"full_service_margin" validate:"required,min=0"`
-	OperatorRatePerHour   float64 `json:"operator_rate_per_hour" validate:"required,min=0"`
-	ModelerRatePerHour    float64 `json:"modeler_rate_per_hour" validate:"required,min=0"`
-	IsDefault             bool    `json:"is_default,omitempty"`
+	Name                string  `json:"name" validate:"required,min=1,max=100"`
+	Description         string  `json:"description,omitempty"`
+	PrintingOnlyMargin  float64 `json:"printing_only_margin" validate:"required,min=0"`
+	PrintingPlusMargin  float64 `json:"printing_plus_margin" validate:"required,min=0"`
+	FullServiceMargin   float64 `json:"full_service_margin" validate:"required,min=0"`
+	OperatorRatePerHour float64 `json:"operator_rate_per_hour" validate:"required,min=0"`
+	ModelerRatePerHour  float64 `json:"modeler_rate_per_hour" validate:"required,min=0"`
+	IsDefault           bool    `json:"is_default,omitempty"`
 }
 
 // Conversion methods
@@ -237,56 +237,56 @@ func FromEnergyPresetEntities(entities []*entities.EnergyPreset) []EnergyPresetR
 // ToEntity converts CreateCostPresetRequest to domain entity
 func (req *CreateCostPresetRequest) ToEntity() *entities.CostPreset {
 	return &entities.CostPreset{
-		Name:            req.Name,
-		Description:     req.Description,
-		OverheadAmount:  req.OverheadAmount,
-		WearPercentage:  req.WearPercentage,
-		IsDefault:       req.IsDefault,
+		Name:           req.Name,
+		Description:    req.Description,
+		OverheadAmount: req.OverheadAmount,
+		WearPercentage: req.WearPercentage,
+		IsDefault:      req.IsDefault,
 	}
 }
 
 // ToEntity converts CreateMarginPresetRequest to domain entity
 func (req *CreateMarginPresetRequest) ToEntity() *entities.MarginPreset {
 	return &entities.MarginPreset{
-		Name:                  req.Name,
-		Description:           req.Description,
-		PrintingOnlyMargin:    req.PrintingOnlyMargin,
-		PrintingPlusMargin:    req.PrintingPlusMargin,
-		FullServiceMargin:     req.FullServiceMargin,
-		OperatorRatePerHour:   req.OperatorRatePerHour,
-		ModelerRatePerHour:    req.ModelerRatePerHour,
-		IsDefault:             req.IsDefault,
+		Name:                req.Name,
+		Description:         req.Description,
+		PrintingOnlyMargin:  req.PrintingOnlyMargin,
+		PrintingPlusMargin:  req.PrintingPlusMargin,
+		FullServiceMargin:   req.FullServiceMargin,
+		OperatorRatePerHour: req.OperatorRatePerHour,
+		ModelerRatePerHour:  req.ModelerRatePerHour,
+		IsDefault:           req.IsDefault,
 	}
 }
 
 // FromCostPresetEntity converts domain entity to response DTO
 func FromCostPresetEntity(entity *entities.CostPreset) CostPresetResponse {
 	return CostPresetResponse{
-		Key:             entity.Key,
-		Name:            entity.Name,
-		Description:     entity.Description,
-		OverheadAmount:  entity.OverheadAmount,
-		WearPercentage:  entity.WearPercentage,
-		IsDefault:       entity.IsDefault,
-		CreatedAt:       entity.CreatedAt,
-		UpdatedAt:       entity.UpdatedAt,
+		Key:            entity.Key,
+		Name:           entity.Name,
+		Description:    entity.Description,
+		OverheadAmount: entity.OverheadAmount,
+		WearPercentage: entity.WearPercentage,
+		IsDefault:      entity.IsDefault,
+		CreatedAt:      entity.CreatedAt,
+		UpdatedAt:      entity.UpdatedAt,
 	}
 }
 
 // FromMarginPresetEntity converts domain entity to response DTO
 func FromMarginPresetEntity(entity *entities.MarginPreset) MarginPresetResponse {
 	return MarginPresetResponse{
-		Key:                   entity.Key,
-		Name:                  entity.Name,
-		Description:           entity.Description,
-		PrintingOnlyMargin:    entity.PrintingOnlyMargin,
-		PrintingPlusMargin:    entity.PrintingPlusMargin,
-		FullServiceMargin:     entity.FullServiceMargin,
-		OperatorRatePerHour:   entity.OperatorRatePerHour,
-		ModelerRatePerHour:    entity.ModelerRatePerHour,
-		IsDefault:             entity.IsDefault,
-		CreatedAt:             entity.CreatedAt,
-		UpdatedAt:             entity.UpdatedAt,
+		Key:                 entity.Key,
+		Name:                entity.Name,
+		Description:         entity.Description,
+		PrintingOnlyMargin:  entity.PrintingOnlyMargin,
+		PrintingPlusMargin:  entity.PrintingPlusMargin,
+		FullServiceMargin:   entity.FullServiceMargin,
+		OperatorRatePerHour: entity.OperatorRatePerHour,
+		ModelerRatePerHour:  entity.ModelerRatePerHour,
+		IsDefault:           entity.IsDefault,
+		CreatedAt:           entity.CreatedAt,
+		UpdatedAt:           entity.UpdatedAt,
 	}
 }
 

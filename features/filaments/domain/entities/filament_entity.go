@@ -3,6 +3,7 @@ package entities
 import (
 	"time"
 
+	metadataEntities "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/entities"
 	"github.com/jinzhu/gorm"
 )
 
@@ -12,8 +13,19 @@ import (
 type Filament struct {
 	ID            uint       `gorm:"primary_key;auto_increment" json:"id"`
 	Name          string     `gorm:"type:varchar(255);not null" json:"name" validate:"required,min=1,max=255"`
-	Brand         string     `gorm:"type:varchar(255);not null" json:"brand" validate:"required,min=1,max=255"`
-	Material      string     `gorm:"type:varchar(100);not null" json:"material" validate:"required,min=1,max=100"`
+
+	// Foreign keys para metadados
+	BrandID       uint       `gorm:"not null;index" json:"brand_id" validate:"required"`
+	MaterialID    uint       `gorm:"not null;index" json:"material_id" validate:"required"`
+
+	// Relacionamentos
+	Brand         metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID" json:"brand"`
+	Material      metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID" json:"material"`
+
+	// Campos mantidos para compatibilidade (deprecated, usar Brand.Name e Material.Name)
+	BrandName     string     `gorm:"type:varchar(255)" json:"brand_name,omitempty"`
+	MaterialName  string     `gorm:"type:varchar(100)" json:"material_name,omitempty"`
+
 	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
 	Diameter      float64    `gorm:"type:decimal(3,2);not null" json:"diameter" validate:"required,min=0,max=10"`

@@ -46,17 +46,18 @@ func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 	}
 
 	filament := &entities.Filament{
-		Name:          request.Name,
-		Brand:         request.Brand,
-		Material:      request.Material,
-		Color:         request.Color,
-		ColorHex:      request.ColorHex,
-		Diameter:      request.Diameter,
-		Weight:        request.Weight,
-		PricePerKg:    request.PricePerKg,
+		Name:         request.Name,
+		BrandName:    request.Brand,
+		MaterialName: request.Material,
+		Color:        request.Color,
+		ColorHex:     request.ColorHex,
+		Diameter:     request.Diameter,
+		Weight:       request.Weight,
+		PricePerKg:   request.PricePerKg,
 		PricePerMeter: request.PricePerMeter,
-		URL:           request.URL,
-		OwnerUserID:   ownerUserID,
+		URL:          request.URL,
+		OwnerUserID:  ownerUserID,
+		// TODO: Resolver brand_id e material_id baseado nos nomes
 	}
 
 	if err := uc.filamentRepo.Create(c.Request.Context(), filament); err != nil {
@@ -149,17 +150,18 @@ func (uc *filamentUseCaseImpl) UpdateFilament(c *gin.Context) {
 	}
 
 	filament := &entities.Filament{
-		ID:            uint(id),
-		Name:          request.Name,
-		Brand:         request.Brand,
-		Material:      request.Material,
-		Color:         request.Color,
-		ColorHex:      request.ColorHex,
-		Diameter:      request.Diameter,
-		Weight:        request.Weight,
-		PricePerKg:    request.PricePerKg,
+		ID:           uint(id),
+		Name:         request.Name,
+		BrandName:    request.Brand,
+		MaterialName: request.Material,
+		Color:        request.Color,
+		ColorHex:     request.ColorHex,
+		Diameter:     request.Diameter,
+		Weight:       request.Weight,
+		PricePerKg:   request.PricePerKg,
 		PricePerMeter: request.PricePerMeter,
-		URL:           request.URL,
+		URL:          request.URL,
+		// TODO: Resolver brand_id e material_id baseado nos nomes
 	}
 
 	if err := uc.filamentRepo.Update(c.Request.Context(), filament, userIDPtr); err != nil {

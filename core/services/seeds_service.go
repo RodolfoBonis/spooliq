@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	filamentsEntities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
+	_ "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
 )
 
@@ -18,8 +18,7 @@ func RunSeeds(logger logger.Logger) {
 	seedEnergyPresets(logger)
 	seedMachinePresets(logger)
 
-	// Seeds de filamentos
-	seedFilaments(logger)
+	// Seeds de filamentos removidos - usar filament_metadata
 
 	logger.Info(ctx, "Seeds concluídos com sucesso!")
 }
@@ -170,66 +169,6 @@ func seedMachinePresets(logger logger.Logger) {
 				logger.Info(ctx, "Preset de máquina criado", map[string]interface{}{
 					"key":  presetData.Key,
 					"name": presetData.Data.Name,
-				})
-			}
-		}
-	}
-}
-
-// seedFilaments cria filamentos iniciais baseados nos ASINs fornecidos
-func seedFilaments(logger logger.Logger) {
-	ctx := context.Background()
-
-	filaments := []filamentsEntities.Filament{
-		{
-			Name:       "PLA Branco SUNLU",
-			Brand:      "SUNLU",
-			Material:   "PLA",
-			Color:      "Branco",
-			ColorHex:   "#FFFFFF",
-			PricePerKg: 125.0,
-			URL:        "https://www.amazon.com.br/dp/B07PGYHYV8",
-			// OwnerUserID null = catálogo global
-		},
-		{
-			Name:       "PETG Transparente SUNLU",
-			Brand:      "SUNLU",
-			Material:   "PETG",
-			Color:      "Transparente",
-			ColorHex:   "#F0F0F0",
-			PricePerKg: 139.90,
-			URL:        "https://www.amazon.com.br/dp/B078N8BYX8",
-			// OwnerUserID null = catálogo global
-		},
-		{
-			Name:       "ABS Preto SUNLU",
-			Brand:      "SUNLU",
-			Material:   "ABS",
-			Color:      "Preto",
-			ColorHex:   "#000000",
-			PricePerKg: 135.0,
-			URL:        "https://www.amazon.com.br/dp/B074DKZP1S",
-			// OwnerUserID null = catálogo global
-		},
-	}
-
-	for _, filament := range filaments {
-		var existingFilament filamentsEntities.Filament
-		result := Connector.Where("name = ? AND brand = ? AND material = ? AND color = ?",
-			filament.Name, filament.Brand, filament.Material, filament.Color).First(&existingFilament)
-
-		if result.RecordNotFound() {
-			if err := Connector.Create(&filament).Error; err != nil {
-				logger.Error(ctx, "Erro ao criar filamento", map[string]interface{}{
-					"name":  filament.Name,
-					"error": err.Error(),
-				})
-			} else {
-				logger.Info(ctx, "Filamento criado", map[string]interface{}{
-					"name":     filament.Name,
-					"brand":    filament.Brand,
-					"material": filament.Material,
-					"color":    filament.Color,
 				})
 			}
 		}

@@ -72,8 +72,8 @@ func ToFilamentResponse(filament *entities.Filament) *FilamentResponse {
 	return &FilamentResponse{
 		ID:            filament.ID,
 		Name:          filament.Name,
-		Brand:         filament.Brand,
-		Material:      filament.Material,
+		Brand:         filament.BrandName,
+		Material:      filament.MaterialName,
 		Color:         filament.Color,
 		ColorHex:      filament.ColorHex,
 		Diameter:      filament.Diameter,

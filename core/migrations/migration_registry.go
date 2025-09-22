@@ -15,6 +15,7 @@ func GetAllMigrations() []Migration {
 		Migration002AddFilamentDiameterWeight,
 		Migration003AddColorHexField,
 		Migration004CreateFilamentMetadataTables,
+		Migration005IntegrateFilamentsWithMetadata,
 		// Add new migrations here in version order
 	}
 }
@@ -266,6 +267,143 @@ var Migration004CreateFilamentMetadataTables = Migration{
 		}
 
 		if err := db.DropTableIfExists(&metadataEntities.FilamentBrand{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// Migration005IntegrateFilamentsWithMetadata integrates filaments with filament_metadata tables
+var Migration005IntegrateFilamentsWithMetadata = Migration{
+	Version: "005",
+	Name:    "Integrate Filaments with Metadata",
+	Up: func(db *gorm.DB) error {
+		// Add foreign key columns to filaments table
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS brand_id INTEGER").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS material_id INTEGER").Error; err != nil {
+			return err
+		}
+
+		// Add compatibility columns for brand_name and material_name
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS brand_name VARCHAR(255)").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS material_name VARCHAR(100)").Error; err != nil {
+			return err
+		}
+
+		// Populate brand_id and brand_name from existing brand column
+		brands := []string{}
+		if err := db.Raw("SELECT DISTINCT brand FROM filaments WHERE brand IS NOT NULL AND brand != ''").Pluck("brand", &brands).Error; err != nil {
+			return err
+		}
+
+		for _, brandName := range brands {
+			var brand metadataEntities.FilamentBrand
+			result := db.Where("name = ?", brandName).First(&brand)
+
+			if result.RecordNotFound() {
+				// Create brand if it doesn't exist
+				brand = metadataEntities.FilamentBrand{
+					Name:   brandName,
+					Active: true,
+				}
+				if err := db.Create(&brand).Error; err != nil {
+					return err
+				}
+			}
+
+			// Update filaments with brand_id and brand_name
+			if err := db.Exec("UPDATE filaments SET brand_id = ?, brand_name = ? WHERE brand = ?", brand.ID, brandName, brandName).Error; err != nil {
+				return err
+			}
+		}
+
+		// Populate material_id and material_name from existing material column
+		materials := []string{}
+		if err := db.Raw("SELECT DISTINCT material FROM filaments WHERE material IS NOT NULL AND material != ''").Pluck("material", &materials).Error; err != nil {
+			return err
+		}
+
+		for _, materialName := range materials {
+			var material metadataEntities.FilamentMaterial
+			result := db.Where("name = ?", materialName).First(&material)
+
+			if result.RecordNotFound() {
+				// Create material if it doesn't exist
+				material = metadataEntities.FilamentMaterial{
+					Name:   materialName,
+					Active: true,
+				}
+				if err := db.Create(&material).Error; err != nil {
+					return err
+				}
+			}
+
+			// Update filaments with material_id and material_name
+			if err := db.Exec("UPDATE filaments SET material_id = ?, material_name = ? WHERE material = ?", material.ID, materialName, materialName).Error; err != nil {
+				return err
+			}
+		}
+
+		// Add foreign key constraints after populating data
+		if err := db.Exec("ALTER TABLE filaments ADD CONSTRAINT fk_filaments_brand FOREIGN KEY (brand_id) REFERENCES filament_brands(id)").Error; err != nil {
+			// Ignore if constraint already exists
+		}
+
+		if err := db.Exec("ALTER TABLE filaments ADD CONSTRAINT fk_filaments_material FOREIGN KEY (material_id) REFERENCES filament_materials(id)").Error; err != nil {
+			// Ignore if constraint already exists
+		}
+
+		// Add indexes for performance
+		if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_filaments_brand_id ON filaments(brand_id)").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_filaments_material_id ON filaments(material_id)").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+	Down: func(db *gorm.DB) error {
+		// Remove foreign key constraints
+		if err := db.Exec("ALTER TABLE filaments DROP CONSTRAINT IF EXISTS fk_filaments_brand").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments DROP CONSTRAINT IF EXISTS fk_filaments_material").Error; err != nil {
+			return err
+		}
+
+		// Remove indexes
+		if err := db.Exec("DROP INDEX IF EXISTS idx_filaments_brand_id").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("DROP INDEX IF EXISTS idx_filaments_material_id").Error; err != nil {
+			return err
+		}
+
+		// Remove columns
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS brand_id").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS material_id").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS brand_name").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS material_name").Error; err != nil {
 			return err
 		}
 

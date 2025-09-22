@@ -8,7 +8,7 @@ import (
 	auth_uc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/export"
 	export_services "github.com/RodolfoBonis/spooliq/features/export/domain/services"
-	filament_metadata "github.com/RodolfoBonis/spooliq/features/filament-metadata"
+	filamentmetadata "github.com/RodolfoBonis/spooliq/features/filament-metadata"
 	metadata_uc "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/filaments"
 	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
@@ -53,7 +53,7 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, protectFactory)
 	system.Routes(root, systemUc, cacheMiddleware)
 	filaments.Routes(root, filamentsUc, protectFactory, optionalAuthMiddleware)
-	filament_metadata.Routes(root, brandUc, materialUc, protectFactory)
+	filamentmetadata.Routes(root, brandUc, materialUc, protectFactory)
 	quotes.Routes(root, quoteUc, protectFactory)
 	users.Routes(root, userService, protectFactory, logger)
 	presets.Routes(root, presetService, protectFactory)

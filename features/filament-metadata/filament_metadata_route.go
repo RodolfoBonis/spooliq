@@ -1,4 +1,4 @@
-package filament_metadata
+package filamentmetadata
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/roles"

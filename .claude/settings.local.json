@@ -36,7 +36,10 @@
       "Bash(.spooliq-test.exe)",
       "Bash(spooliq-test.exe)",
       "Bash(del spooliq-test.exe)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(set PORT=8005)",
+      "Bash(set PORT=8006)",
+      "Bash(set PORT=8007)"
     ],
     "deny": [],
     "ask": []

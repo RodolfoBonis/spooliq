@@ -16,6 +16,7 @@ func GetAllMigrations() []Migration {
 		Migration003AddColorHexField,
 		Migration004CreateFilamentMetadataTables,
 		Migration005IntegrateFilamentsWithMetadata,
+		Migration006RemoveLegacyFilamentColumns,
 		// Add new migrations here in version order
 	}
 }
@@ -226,38 +227,6 @@ var Migration004CreateFilamentMetadataTables = Migration{
 			}
 		}
 
-		// Insert default brands from existing data
-		brands := []string{"SUNLU", "Creality", "Polymaker", "Prusament", "eSUN", "PETG", "Overture", "ANYCUBIC", "Hatchbox", "Amazon Basics"}
-		for _, brandName := range brands {
-			var count int
-			db.Model(&metadataEntities.FilamentBrand{}).Where("name = ?", brandName).Count(&count)
-			if count == 0 {
-				brand := &metadataEntities.FilamentBrand{
-					Name:   brandName,
-					Active: true,
-				}
-				if err := db.Create(brand).Error; err != nil {
-					return err
-				}
-			}
-		}
-
-		// Insert default materials from existing data
-		materials := []string{"PLA", "ABS", "PETG", "TPU", "WOOD", "ASA", "PC", "NYLON", "PVA", "HIPS"}
-		for _, materialName := range materials {
-			var count int
-			db.Model(&metadataEntities.FilamentMaterial{}).Where("name = ?", materialName).Count(&count)
-			if count == 0 {
-				material := &metadataEntities.FilamentMaterial{
-					Name:   materialName,
-					Active: true,
-				}
-				if err := db.Create(material).Error; err != nil {
-					return err
-				}
-			}
-		}
-
 		return nil
 	},
 	Down: func(db *gorm.DB) error {
@@ -415,6 +384,35 @@ var Migration005IntegrateFilamentsWithMetadata = Migration{
 		}
 
 		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS material_name").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// Migration006RemoveLegacyFilamentColumns removes legacy brand and material VARCHAR columns
+var Migration006RemoveLegacyFilamentColumns = Migration{
+	Up: func(db *gorm.DB) error {
+		// Remove legacy brand column (VARCHAR) - keeping brand_id (foreign key)
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS brand").Error; err != nil {
+			return err
+		}
+
+		// Remove legacy material column (VARCHAR) - keeping material_id (foreign key)
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS material").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+	Down: func(db *gorm.DB) error {
+		// Re-add legacy columns for rollback
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS brand VARCHAR(255)").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS material VARCHAR(100)").Error; err != nil {
 			return err
 		}
 

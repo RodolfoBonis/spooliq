@@ -24,7 +24,7 @@ func (r *filamentRepositoryImpl) Create(ctx context.Context, filament *entities.
 
 func (r *filamentRepositoryImpl) GetByID(ctx context.Context, id uint, userID *string) (*entities.Filament, error) {
 	var filament entities.Filament
-	query := r.db
+	query := r.db.Preload("Brand").Preload("Material")
 
 	if userID != nil {
 		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", *userID)
@@ -45,7 +45,7 @@ func (r *filamentRepositoryImpl) GetByID(ctx context.Context, id uint, userID *s
 
 func (r *filamentRepositoryImpl) GetAll(ctx context.Context, userID *string) ([]*entities.Filament, error) {
 	var filaments []*entities.Filament
-	query := r.db
+	query := r.db.Preload("Brand").Preload("Material")
 
 	if userID != nil {
 		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", *userID)
@@ -93,12 +93,12 @@ func (r *filamentRepositoryImpl) Delete(ctx context.Context, id uint, userID *st
 
 func (r *filamentRepositoryImpl) GetByOwner(ctx context.Context, userID string) ([]*entities.Filament, error) {
 	var filaments []*entities.Filament
-	err := r.db.Where("owner_user_id = ?", userID).Order("created_at DESC").Find(&filaments).Error
+	err := r.db.Preload("Brand").Preload("Material").Where("owner_user_id = ?", userID).Order("created_at DESC").Find(&filaments).Error
 	return filaments, err
 }
 
 func (r *filamentRepositoryImpl) GetGlobal(ctx context.Context) ([]*entities.Filament, error) {
 	var filaments []*entities.Filament
-	err := r.db.Where("owner_user_id IS NULL").Order("created_at DESC").Find(&filaments).Error
+	err := r.db.Preload("Brand").Preload("Material").Where("owner_user_id IS NULL").Order("created_at DESC").Find(&filaments).Error
 	return filaments, err
 }

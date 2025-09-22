@@ -39,7 +39,8 @@
       "Bash(go test:*)",
       "Bash(set PORT=8005)",
       "Bash(set PORT=8006)",
-      "Bash(set PORT=8007)"
+      "Bash(set PORT=8007)",
+      "Bash(set PORT=8010)"
     ],
     "deny": [],
     "ask": []

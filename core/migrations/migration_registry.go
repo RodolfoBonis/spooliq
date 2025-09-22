@@ -393,6 +393,8 @@ var Migration005IntegrateFilamentsWithMetadata = Migration{
 
 // Migration006RemoveLegacyFilamentColumns removes legacy brand and material VARCHAR columns
 var Migration006RemoveLegacyFilamentColumns = Migration{
+	Version: "006",
+	Name:    "Remove Legacy Filament Columns",
 	Up: func(db *gorm.DB) error {
 		// Remove legacy brand column (VARCHAR) - keeping brand_id (foreign key)
 		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS brand").Error; err != nil {

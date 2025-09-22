@@ -19,8 +19,8 @@ type Filament struct {
 	MaterialID uint `gorm:"not null;index" json:"material_id" validate:"required"`
 
 	// Relacionamentos
-	Brand    metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID" json:"brand"`
-	Material metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID" json:"material"`
+	Brand    metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;-" json:"brand"`
+	Material metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;-" json:"material"`
 
 	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`

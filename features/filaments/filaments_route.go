@@ -139,11 +139,11 @@ func GetGlobalFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.Handler
 }
 
 // Routes registers filament routes for the application.
-func Routes(route *gin.RouterGroup, filamentsUC usecases.FilamentUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, filamentsUC usecases.FilamentUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, optionalAuthMiddleware gin.HandlerFunc) {
 	filaments := route.Group("/filaments")
 
 	// Public routes (can be accessed without authentication, but will show different data based on auth status)
-	filaments.GET("", GetAllFilamentsHandler(filamentsUC))
+	filaments.GET("", optionalAuthMiddleware, GetAllFilamentsHandler(filamentsUC))
 	filaments.GET("/global", GetGlobalFilamentsHandler(filamentsUC))
 	filaments.GET("/:id", GetFilamentHandler(filamentsUC))
 

@@ -8,10 +8,10 @@ import (
 	auth_uc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/export"
 	export_services "github.com/RodolfoBonis/spooliq/features/export/domain/services"
-	"github.com/RodolfoBonis/spooliq/features/filaments"
-	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	filament_metadata "github.com/RodolfoBonis/spooliq/features/filament-metadata"
 	metadata_uc "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/filaments"
+	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/presets"
 	preset_services "github.com/RodolfoBonis/spooliq/features/presets/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/quotes"
@@ -40,6 +40,7 @@ func InitializeRoutes(
 	exportService export_services.ExportService,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
+	optionalAuthMiddleware gin.HandlerFunc,
 	logger logger.Logger,
 ) {
 
@@ -51,7 +52,7 @@ func InitializeRoutes(
 	health.Routes(root, logger)
 	auth.Routes(root, authUc, protectFactory)
 	system.Routes(root, systemUc, cacheMiddleware)
-	filaments.Routes(root, filamentsUc, protectFactory)
+	filaments.Routes(root, filamentsUc, protectFactory, optionalAuthMiddleware)
 	filament_metadata.Routes(root, brandUc, materialUc, protectFactory)
 	quotes.Routes(root, quoteUc, protectFactory)
 	users.Routes(root, userService, protectFactory, logger)

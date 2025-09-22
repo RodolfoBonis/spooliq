@@ -28,7 +28,7 @@ func (FilamentBrand) TableName() string {
 func (fb *FilamentBrand) BeforeCreate(scope *gorm.Scope) error {
 	fb.CreatedAt = time.Now()
 	fb.UpdatedAt = time.Now()
-	if fb.Active == false {
+	if !fb.Active {
 		fb.Active = true // Default para ativo
 	}
 	return nil

@@ -21,16 +21,16 @@ var ErrorMessages = struct {
 	FailedToGetGlobalFilaments string
 
 	// Marcas e Materiais
-	BrandNotFound           string
-	MaterialNotFound        string
-	FailedToCreateBrand     string
-	FailedToUpdateBrand     string
-	FailedToDeleteBrand     string
-	FailedToGetBrands       string
-	FailedToCreateMaterial  string
-	FailedToUpdateMaterial  string
-	FailedToDeleteMaterial  string
-	FailedToGetMaterials    string
+	BrandNotFound          string
+	MaterialNotFound       string
+	FailedToCreateBrand    string
+	FailedToUpdateBrand    string
+	FailedToDeleteBrand    string
+	FailedToGetBrands      string
+	FailedToCreateMaterial string
+	FailedToUpdateMaterial string
+	FailedToDeleteMaterial string
+	FailedToGetMaterials   string
 
 	// Orçamentos
 	QuoteNotFound          string
@@ -60,16 +60,16 @@ var ErrorMessages = struct {
 	FailedToGetGlobalFilaments: "Falha ao buscar filamentos globais",
 
 	// Marcas e Materiais
-	BrandNotFound:           "Marca não encontrada",
-	MaterialNotFound:        "Material não encontrado",
-	FailedToCreateBrand:     "Falha ao criar marca",
-	FailedToUpdateBrand:     "Falha ao atualizar marca",
-	FailedToDeleteBrand:     "Falha ao excluir marca",
-	FailedToGetBrands:       "Falha ao buscar marcas",
-	FailedToCreateMaterial:  "Falha ao criar material",
-	FailedToUpdateMaterial:  "Falha ao atualizar material",
-	FailedToDeleteMaterial:  "Falha ao excluir material",
-	FailedToGetMaterials:    "Falha ao buscar materiais",
+	BrandNotFound:          "Marca não encontrada",
+	MaterialNotFound:       "Material não encontrado",
+	FailedToCreateBrand:    "Falha ao criar marca",
+	FailedToUpdateBrand:    "Falha ao atualizar marca",
+	FailedToDeleteBrand:    "Falha ao excluir marca",
+	FailedToGetBrands:      "Falha ao buscar marcas",
+	FailedToCreateMaterial: "Falha ao criar material",
+	FailedToUpdateMaterial: "Falha ao atualizar material",
+	FailedToDeleteMaterial: "Falha ao excluir material",
+	FailedToGetMaterials:   "Falha ao buscar materiais",
 
 	// Orçamentos
 	QuoteNotFound:          "Orçamento não encontrado",

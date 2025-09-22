@@ -11,10 +11,10 @@ import (
 	auth_uc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	exportdi "github.com/RodolfoBonis/spooliq/features/export/di"
 	export_services "github.com/RodolfoBonis/spooliq/features/export/domain/services"
-	filamentsdi "github.com/RodolfoBonis/spooliq/features/filaments/di"
-	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	metadatadi "github.com/RodolfoBonis/spooliq/features/filament-metadata/di"
 	metadata_uc "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/usecases"
+	filamentsdi "github.com/RodolfoBonis/spooliq/features/filaments/di"
+	filaments_uc "github.com/RodolfoBonis/spooliq/features/filaments/domain/usecases"
 	presetsdi "github.com/RodolfoBonis/spooliq/features/presets/di"
 	preset_services "github.com/RodolfoBonis/spooliq/features/presets/domain/services"
 	quotesdi "github.com/RodolfoBonis/spooliq/features/quotes/di"
@@ -47,7 +47,7 @@ func NewFxApp() *fx.App {
 			gin.New,
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, systemUc system_uc.SystemUseCase, authUc auth_uc.AuthUseCase, filamentsUc filaments_uc.FilamentUseCase, brandUc metadata_uc.BrandUseCase, materialUc metadata_uc.MaterialUseCase, quoteUc quote_uc.QuoteUseCase, userService user_services.UserService, presetService preset_services.PresetService, exportService export_services.ExportService, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, systemUc system_uc.SystemUseCase, authUc auth_uc.AuthUseCase, filamentsUc filaments_uc.FilamentUseCase, brandUc metadata_uc.BrandUseCase, materialUc metadata_uc.MaterialUseCase, quoteUc quote_uc.QuoteUseCase, userService user_services.UserService, presetService preset_services.PresetService, exportService export_services.ExportService, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, optionalAuthMiddleware gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -55,7 +55,7 @@ func NewFxApp() *fx.App {
 					})
 				}
 
-				routes.InitializeRoutes(router, systemUc, authUc, filamentsUc, brandUc, materialUc, quoteUc, userService, presetService, exportService, protectFactory, cacheMiddleware, logger)
+				routes.InitializeRoutes(router, systemUc, authUc, filamentsUc, brandUc, materialUc, quoteUc, userService, presetService, exportService, protectFactory, cacheMiddleware, optionalAuthMiddleware, logger)
 				RegisterHooks(lc, router, logger, monitoring)
 			},
 		),

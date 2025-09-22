@@ -29,7 +29,7 @@ func (FilamentMaterial) TableName() string {
 func (fm *FilamentMaterial) BeforeCreate(scope *gorm.Scope) error {
 	fm.CreatedAt = time.Now()
 	fm.UpdatedAt = time.Now()
-	if fm.Active == false {
+	if !fm.Active {
 		fm.Active = true // Default para ativo
 	}
 	return nil

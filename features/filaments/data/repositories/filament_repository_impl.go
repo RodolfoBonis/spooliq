@@ -62,7 +62,7 @@ func (r *filamentRepositoryImpl) Update(ctx context.Context, filament *entities.
 		return errors.New("cannot update filament: user authentication required")
 	}
 
-	result := r.db.Model(filament).Where("owner_user_id = ? AND id = ?", *userID, filament.ID).Updates(filament)
+	result := r.db.Model(filament).Where("(owner_user_id IS NULL OR owner_user_id = ?) AND id = ?", *userID, filament.ID).Updates(filament)
 	if result.Error != nil {
 		return result.Error
 	}

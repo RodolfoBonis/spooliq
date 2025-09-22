@@ -1,6 +1,8 @@
 package usecases
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -69,6 +71,20 @@ func NewMaterialUseCase(materialRepo repositories.MaterialRepository, validator 
 	}
 }
 
+// validateJSONProperties validates that the properties field contains valid JSON or is empty
+func validateJSONProperties(properties *string) error {
+	if properties == nil || *properties == "" {
+		return nil
+	}
+
+	var temp interface{}
+	if err := json.Unmarshal([]byte(*properties), &temp); err != nil {
+		return fmt.Errorf("properties field must contain valid JSON")
+	}
+
+	return nil
+}
+
 func (uc *materialUseCaseImpl) CreateMaterial(c *gin.Context) {
 	var request CreateMaterialRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -77,6 +93,12 @@ func (uc *materialUseCaseImpl) CreateMaterial(c *gin.Context) {
 	}
 
 	if err := uc.validator.Struct(request); err != nil {
+		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+		return
+	}
+
+	// Validate JSON properties
+	if err := validateJSONProperties(request.Properties); err != nil {
 		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
 		return
 	}
@@ -178,6 +200,12 @@ func (uc *materialUseCaseImpl) UpdateMaterial(c *gin.Context) {
 	}
 
 	if err := uc.validator.Struct(request); err != nil {
+		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+		return
+	}
+
+	// Validate JSON properties
+	if err := validateJSONProperties(request.Properties); err != nil {
 		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
 		return
 	}

@@ -145,7 +145,7 @@ func Routes(route *gin.RouterGroup, filamentsUC usecases.FilamentUseCase, protec
 	// Public routes (can be accessed without authentication, but will show different data based on auth status)
 	filaments.GET("", optionalAuthMiddleware, GetAllFilamentsHandler(filamentsUC))
 	filaments.GET("/global", GetGlobalFilamentsHandler(filamentsUC))
-	filaments.GET("/:id", GetFilamentHandler(filamentsUC))
+	filaments.GET("/:id", optionalAuthMiddleware, GetFilamentHandler(filamentsUC))
 
 	// Protected routes (require authentication)
 	filaments.POST("", protectFactory(CreateFilamentHandler(filamentsUC), roles.UserRole))

@@ -27,8 +27,38 @@ func (r *filamentRepositoryImpl) GetByID(ctx context.Context, id uint, userID *s
 	query := r.db.Preload("Brand").Preload("Material")
 
 	if userID != nil {
-		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", *userID)
+		// Allow access to filaments that are either global (no owner) or owned by the user
+		// Support both UUID format (new) and username format (legacy data)
+		query = query.Where("owner_user_id IS NULL OR owner_user_id = ?", *userID)
 	} else {
+		// If no user context, only show global filaments
+		query = query.Where("owner_user_id IS NULL")
+	}
+
+	err := query.Where("id = ?", id).First(&filament).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, errors.New("filament not found")
+		}
+		return nil, err
+	}
+
+	return &filament, nil
+}
+
+func (r *filamentRepositoryImpl) GetByIDWithUserCheck(ctx context.Context, id uint, userID *string, username string) (*entities.Filament, error) {
+	var filament entities.Filament
+	query := r.db.Preload("Brand").Preload("Material")
+
+	if userID != nil && username != "" {
+		// Allow access to filaments that are either global (no owner) or owned by the user
+		// Check both UUID format (userID) and username format for backward compatibility
+		query = query.Where("owner_user_id IS NULL OR owner_user_id = ? OR owner_user_id = ?", *userID, username)
+	} else if userID != nil {
+		// Fallback to UUID only
+		query = query.Where("owner_user_id IS NULL OR owner_user_id = ?", *userID)
+	} else {
+		// If no user context, only show global filaments
 		query = query.Where("owner_user_id IS NULL")
 	}
 

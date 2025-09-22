@@ -107,15 +107,18 @@ func (uc *filamentUseCaseImpl) GetFilament(c *gin.Context) {
 	}
 
 	userID := c.GetString("user_id")
+	username := c.GetString("user_username")
 	var userIDPtr *string
 	if userID != "" {
 		userIDPtr = &userID
 	}
 
-	filament, err := uc.filamentRepo.GetByID(c.Request.Context(), uint(id), userIDPtr)
+	filament, err := uc.filamentRepo.GetByIDWithUserCheck(c.Request.Context(), uint(id), userIDPtr, username)
 	if err != nil {
 		uc.logger.Error(c.Request.Context(), "Failed to get filament", map[string]interface{}{
 			"filament_id": id,
+			"user_id":     userID,
+			"username":    username,
 			"error":       err.Error(),
 		})
 		c.JSON(http.StatusNotFound, errors.ErrorResponse(errors.ErrorMessages.FilamentNotFound))

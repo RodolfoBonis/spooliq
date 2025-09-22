@@ -129,6 +129,7 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			// Set claims and individual user data for easy access
 			c.Set("claims", userClaim)
 			c.Set("user_id", userClaim.ID.String())
+			c.Set("user_username", userClaim.Username)
 			c.Set("user_email", userClaim.Email)
 			c.Set("user_role", role)
 			c.Set("user_roles", userClaim.Roles)
@@ -229,6 +230,7 @@ func NewOptionalAuthMiddleware(logger logger.Logger, authService *services.AuthS
 		// Set user information for use in handlers
 		c.Set("claims", userClaim)
 		c.Set("user_id", userClaim.ID.String())
+		c.Set("user_username", userClaim.Username)
 		c.Set("user_email", userClaim.Email)
 		c.Set("user_roles", userClaim.Roles)
 

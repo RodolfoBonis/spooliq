@@ -22,8 +22,14 @@ type Filament struct {
 	Brand    metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID" json:"brand"`
 	Material metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID" json:"material"`
 
-	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
-	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
+	// Legacy color fields (maintained for backward compatibility)
+	Color    string `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
+	ColorHex string `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
+
+	// Advanced color system
+	ColorType     ColorType  `gorm:"type:varchar(20);default:'solid'" json:"color_type" validate:"omitempty"`
+	ColorData     string     `gorm:"type:text" json:"color_data,omitempty"`
+	ColorPreview  string     `gorm:"type:text" json:"color_preview,omitempty"`
 	Diameter      float64    `gorm:"type:decimal(3,2);not null" json:"diameter" validate:"required,min=0,max=10"`
 	Weight        *float64   `gorm:"type:decimal(8,2)" json:"weight,omitempty" validate:"omitempty,min=0"`
 	PricePerKg    float64    `gorm:"type:decimal(10,2);not null" json:"price_per_kg" validate:"required,min=0"`
@@ -70,4 +76,55 @@ func (f *Filament) CanUserAccess(userID string, isAdmin bool) bool {
 	}
 	// Usuário pode acessar seus próprios filamentos
 	return f.OwnerUserID != nil && *f.OwnerUserID == userID
+}
+
+// GetColorData parses and returns the structured color data
+func (f *Filament) GetColorData() (ColorData, error) {
+	if f.ColorData == "" || f.ColorType == "" {
+		// Return legacy color data for backward compatibility
+		return &SolidColorData{Color: f.ColorHex}, nil
+	}
+
+	return ParseColorData(f.ColorType, []byte(f.ColorData))
+}
+
+// SetColorData sets the color data from a ColorData interface
+func (f *Filament) SetColorData(colorData ColorData) error {
+	f.ColorType = colorData.GetType()
+
+	dataBytes, err := MarshalColorData(colorData)
+	if err != nil {
+		return err
+	}
+	f.ColorData = string(dataBytes)
+
+	f.ColorPreview = colorData.GenerateCSS()
+
+	// Update legacy fields for backward compatibility
+	f.ColorHex = GenerateLegacyColorHex(f.ColorType, colorData)
+
+	return nil
+}
+
+// IsLegacyColor checks if this filament uses the legacy color system
+func (f *Filament) IsLegacyColor() bool {
+	return f.ColorType == "" || f.ColorType == ColorTypeSolid && f.ColorData == ""
+}
+
+// MigrateToAdvancedColor migrates legacy color data to the new system
+func (f *Filament) MigrateToAdvancedColor() error {
+	if !f.IsLegacyColor() {
+		return nil // Already using advanced system
+	}
+
+	// Create solid color data from legacy fields
+	solidColor := &SolidColorData{
+		Color: f.ColorHex,
+	}
+
+	if solidColor.Color == "" {
+		solidColor.Color = "#000000" // Default to black if no color
+	}
+
+	return f.SetColorData(solidColor)
 }

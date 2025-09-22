@@ -389,6 +389,562 @@ const docTemplate = `{
                 }
             }
         },
+        "/filament-brands": {
+            "get": {
+                "description": "Get all filament brands",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Get All Brands",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter only active brands",
+                        "name": "active_only",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved brands",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.BrandListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new filament brand",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Create Brand",
+                "parameters": [
+                    {
+                        "description": "Brand data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateBrandRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created brand",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.BrandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filament-brands/{id}": {
+            "get": {
+                "description": "Get a brand by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Get Brand",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Brand ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved brand",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.BrandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing brand (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Update Brand",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Brand ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated brand data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateBrandRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated brand",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.BrandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete/deactivate a brand (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Delete Brand",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Brand ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted brand"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filament-materials": {
+            "get": {
+                "description": "Get all filament materials",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Get All Materials",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter only active materials",
+                        "name": "active_only",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved materials",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.MaterialListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new filament material",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Create Material",
+                "parameters": [
+                    {
+                        "description": "Material data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateMaterialRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created material",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.MaterialResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filament-materials/{id}": {
+            "get": {
+                "description": "Get a material by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Get Material",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Material ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved material",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.MaterialResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing material (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Update Material",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Material ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated material data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateMaterialRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated material",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.MaterialResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete/deactivate a material (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Metadata"
+                ],
+                "summary": "Delete Material",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Material ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted material"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/filaments": {
             "get": {
                 "description": "Get all filaments accessible to the user (global + user's own)",
@@ -406,7 +962,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved filaments",
                         "schema": {
-                            "$ref": "#/definitions/filaments.ListResponse"
+                            "$ref": "#/definitions/usecases.ListResponse"
                         }
                     },
                     "500": {
@@ -490,7 +1046,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved global filaments",
                         "schema": {
-                            "$ref": "#/definitions/filaments.ListResponse"
+                            "$ref": "#/definitions/usecases.ListResponse"
                         }
                     },
                     "500": {
@@ -524,7 +1080,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved user filaments",
                         "schema": {
-                            "$ref": "#/definitions/filaments.ListResponse"
+                            "$ref": "#/definitions/usecases.ListResponse"
                         }
                     },
                     "401": {
@@ -688,6 +1244,67 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "Successfully deleted filament"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/{id}/migrate-color": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Migrate a filament from legacy color system to advanced color system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Migrate Filament Color System",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filament ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully migrated filament",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.FilamentResponse"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -3269,6 +3886,21 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.ColorType": {
+            "type": "string",
+            "enum": [
+                "solid",
+                "gradient",
+                "duo",
+                "rainbow"
+            ],
+            "x-enum-varnames": [
+                "ColorTypeSolid",
+                "ColorTypeGradient",
+                "ColorTypeDuo",
+                "ColorTypeRainbow"
+            ]
+        },
         "entities.ForgotPasswordRequestEntity": {
             "description": "Forgot password request data",
             "type": "object",
@@ -3496,17 +4128,6 @@ const docTemplate = `{
                 }
             }
         },
-        "filaments.ListResponse": {
-            "type": "object",
-            "properties": {
-                "filaments": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/usecases.FilamentResponse"
-                    }
-                }
-            }
-        },
         "handlers.ExportRequestDTO": {
             "type": "object",
             "properties": {
@@ -3546,135 +4167,419 @@ const docTemplate = `{
                 }
             }
         },
-        "usecases.CreateFilamentRequest": {
+        "usecases.BrandListResponse": {
             "type": "object",
-            "required": [
-                "brand",
-                "color",
-                "material",
-                "name",
-                "price_per_kg"
-            ],
             "properties": {
-                "brand": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                },
-                "color": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                },
-                "color_hex": {
-                    "type": "string"
-                },
-                "material": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                },
-                "price_per_kg": {
-                    "type": "number",
-                    "minimum": 0
-                },
-                "price_per_meter": {
-                    "type": "number",
-                    "minimum": 0
-                },
-                "url": {
-                    "type": "string"
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.BrandResponse"
+                    }
                 }
             }
         },
-        "usecases.FilamentResponse": {
+        "usecases.BrandResponse": {
             "type": "object",
             "properties": {
-                "brand": {
-                    "type": "string"
-                },
-                "color": {
-                    "type": "string"
-                },
-                "color_hex": {
-                    "type": "string"
+                "active": {
+                    "type": "boolean"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "material": {
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 },
-                "owner_user_id": {
-                    "type": "string"
-                },
-                "price_per_kg": {
-                    "type": "number"
-                },
-                "price_per_meter": {
-                    "type": "number"
-                },
                 "updated_at": {
-                    "type": "string"
-                },
-                "url": {
                     "type": "string"
                 }
             }
         },
-        "usecases.UpdateFilamentRequest": {
+        "usecases.CreateBrandRequest": {
             "type": "object",
             "required": [
-                "brand",
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                }
+            }
+        },
+        "usecases.CreateFilamentRequest": {
+            "description": "Request body for creating a new filament with support for both legacy and advanced color systems",
+            "type": "object",
+            "required": [
+                "brand_id",
                 "color",
-                "material",
+                "diameter",
+                "material_id",
                 "name",
                 "price_per_kg"
             ],
             "properties": {
-                "brand": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
+                "brand_id": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "color": {
+                    "description": "Legacy color fields (maintained for backward compatibility)",
                     "type": "string",
                     "maxLength": 100,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "White"
+                },
+                "color_data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "color_hex": {
-                    "type": "string"
-                },
-                "material": {
                     "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
+                    "example": "#FFFFFF"
+                },
+                "color_type": {
+                    "description": "Advanced color system (optional, takes precedence over legacy fields if provided)",
+                    "enum": [
+                        "solid",
+                        "gradient",
+                        "duo",
+                        "rainbow"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ColorType"
+                        }
+                    ],
+                    "example": "solid"
+                },
+                "diameter": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0,
+                    "example": 1.75
+                },
+                "material_id": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "name": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "PLA Premium White"
                 },
                 "price_per_kg": {
                     "type": "number",
-                    "minimum": 0
+                    "minimum": 0,
+                    "example": 125.5
                 },
                 "price_per_meter": {
                     "type": "number",
-                    "minimum": 0
+                    "minimum": 0,
+                    "example": 0.05
                 },
                 "url": {
+                    "type": "string",
+                    "example": "https://example.com/filament"
+                },
+                "weight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 1000
+                }
+            }
+        },
+        "usecases.CreateMaterialRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                },
+                "properties": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.FilamentResponse": {
+            "description": "Response object for filament data with support for both legacy and advanced color systems",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string",
+                    "example": "SUNLU"
+                },
+                "color": {
+                    "description": "Legacy color fields (always provided for backward compatibility)",
+                    "type": "string",
+                    "example": "White"
+                },
+                "color_data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "color_hex": {
+                    "type": "string",
+                    "example": "#FFFFFF"
+                },
+                "color_preview": {
+                    "type": "string",
+                    "example": "#FFFFFF"
+                },
+                "color_type": {
+                    "description": "Advanced color system (provided when available)",
+                    "enum": [
+                        "solid",
+                        "gradient",
+                        "duo",
+                        "rainbow"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ColorType"
+                        }
+                    ],
+                    "example": "solid"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                },
+                "diameter": {
+                    "type": "number",
+                    "example": 1.75
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "material": {
+                    "type": "string",
+                    "example": "PLA"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "PLA Premium White"
+                },
+                "owner_user_id": {
+                    "type": "string",
+                    "example": "user-uuid-123"
+                },
+                "price_per_kg": {
+                    "type": "number",
+                    "example": 125.5
+                },
+                "price_per_meter": {
+                    "type": "number",
+                    "example": 0.05
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://example.com/filament"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 1000
+                }
+            }
+        },
+        "usecases.ListResponse": {
+            "description": "Response object containing a list of filaments",
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.FilamentResponse"
+                    }
+                }
+            }
+        },
+        "usecases.MaterialListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.MaterialResponse"
+                    }
+                }
+            }
+        },
+        "usecases.MaterialResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.UpdateBrandRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                }
+            }
+        },
+        "usecases.UpdateFilamentRequest": {
+            "description": "Request body for updating an existing filament with support for both legacy and advanced color systems",
+            "type": "object",
+            "required": [
+                "brand_id",
+                "color",
+                "diameter",
+                "material_id",
+                "name",
+                "price_per_kg"
+            ],
+            "properties": {
+                "brand_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "color": {
+                    "description": "Legacy color fields (maintained for backward compatibility)",
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "White"
+                },
+                "color_data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "color_hex": {
+                    "type": "string",
+                    "example": "#FFFFFF"
+                },
+                "color_type": {
+                    "description": "Advanced color system (optional, takes precedence over legacy fields if provided)",
+                    "enum": [
+                        "solid",
+                        "gradient",
+                        "duo",
+                        "rainbow"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ColorType"
+                        }
+                    ],
+                    "example": "gradient"
+                },
+                "diameter": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0,
+                    "example": 1.75
+                },
+                "material_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "PLA Premium White"
+                },
+                "price_per_kg": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 125.5
+                },
+                "price_per_meter": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 0.05
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://example.com/filament"
+                },
+                "weight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 1000
+                }
+            }
+        },
+        "usecases.UpdateMaterialRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                },
+                "properties": {
                     "type": "string"
                 }
             }

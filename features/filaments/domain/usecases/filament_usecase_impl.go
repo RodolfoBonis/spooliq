@@ -44,6 +44,12 @@ func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 		return
 	}
 
+	// Validate advanced color data if provided
+	if err := request.ValidateColorData(); err != nil {
+		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+		return
+	}
+
 	userID := c.GetString("user_id")
 	var ownerUserID *string
 	if userID != "" {
@@ -84,6 +90,26 @@ func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 		PricePerMeter: request.PricePerMeter,
 		URL:           request.URL,
 		OwnerUserID:   ownerUserID,
+	}
+
+	// Handle advanced color system if provided
+	if request.IsUsingAdvancedColor() {
+		colorData, err := request.GetColorData()
+		if err != nil {
+			uc.logger.Error(c.Request.Context(), "Failed to parse color data", map[string]interface{}{
+				"error": err.Error(),
+			})
+			c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+			return
+		}
+
+		if err := filament.SetColorData(colorData); err != nil {
+			uc.logger.Error(c.Request.Context(), "Failed to set color data", map[string]interface{}{
+				"error": err.Error(),
+			})
+			c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to process color data"))
+			return
+		}
 	}
 
 	if err := uc.filamentRepo.Create(c.Request.Context(), filament); err != nil {
@@ -172,6 +198,12 @@ func (uc *filamentUseCaseImpl) UpdateFilament(c *gin.Context) {
 		return
 	}
 
+	// Validate advanced color data if provided
+	if err := request.ValidateColorData(); err != nil {
+		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+		return
+	}
+
 	userID := c.GetString("user_id")
 	var userIDPtr *string
 	if userID != "" {
@@ -212,6 +244,26 @@ func (uc *filamentUseCaseImpl) UpdateFilament(c *gin.Context) {
 		PricePerKg:    request.PricePerKg,
 		PricePerMeter: request.PricePerMeter,
 		URL:           request.URL,
+	}
+
+	// Handle advanced color system if provided
+	if request.IsUsingAdvancedColor() {
+		colorData, err := request.GetColorData()
+		if err != nil {
+			uc.logger.Error(c.Request.Context(), "Failed to parse color data", map[string]interface{}{
+				"error": err.Error(),
+			})
+			c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+			return
+		}
+
+		if err := filament.SetColorData(colorData); err != nil {
+			uc.logger.Error(c.Request.Context(), "Failed to set color data", map[string]interface{}{
+				"error": err.Error(),
+			})
+			c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to process color data"))
+			return
+		}
 	}
 
 	if err := uc.filamentRepo.Update(c.Request.Context(), filament, userIDPtr); err != nil {
@@ -294,4 +346,62 @@ func (uc *filamentUseCaseImpl) GetGlobalFilaments(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ListResponse{Data: responses})
+}
+
+func (uc *filamentUseCaseImpl) MigrateFilamentToAdvancedColor(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errors.ErrorResponse("ID do filamento inválido"))
+		return
+	}
+
+	userID := c.GetString("user_id")
+	username := c.GetString("user_username")
+	var userIDPtr *string
+	if userID != "" {
+		userIDPtr = &userID
+	}
+
+	// Get the filament first to check permissions and current state
+	filament, err := uc.filamentRepo.GetByIDWithUserCheck(c.Request.Context(), uint(id), userIDPtr, username)
+	if err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to get filament for migration", map[string]interface{}{
+			"filament_id": id,
+			"user_id":     userID,
+			"username":    username,
+			"error":       err.Error(),
+		})
+		c.JSON(http.StatusNotFound, errors.ErrorResponse(errors.ErrorMessages.FilamentNotFound))
+		return
+	}
+
+	// Check if filament is already using advanced color system
+	if !filament.IsLegacyColor() {
+		c.JSON(http.StatusBadRequest, errors.ErrorResponse("Filament already uses advanced color system"))
+		return
+	}
+
+	// Migrate to advanced color system
+	if err := filament.MigrateToAdvancedColor(); err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to migrate filament color data", map[string]interface{}{
+			"filament_id": id,
+			"error":       err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to migrate color data"))
+		return
+	}
+
+	// Update the filament in the database
+	if err := uc.filamentRepo.Update(c.Request.Context(), filament, userIDPtr); err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to save migrated filament", map[string]interface{}{
+			"filament_id": id,
+			"error":       err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to save migrated filament"))
+		return
+	}
+
+	response := ToFilamentResponse(filament)
+	c.JSON(http.StatusOK, response)
 }

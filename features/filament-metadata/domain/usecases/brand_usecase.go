@@ -58,10 +58,10 @@ type brandUseCaseImpl struct {
 }
 
 // NewBrandUseCase creates a new instance of brand use case
-func NewBrandUseCase(brandRepo repositories.BrandRepository, validator *validator.Validate, logger logger.Logger) BrandUseCase {
+func NewBrandUseCase(brandRepo repositories.BrandRepository, logger logger.Logger) BrandUseCase {
 	return &brandUseCaseImpl{
 		brandRepo: brandRepo,
-		validator: validator,
+		validator: validator.New(),
 		logger:    logger,
 	}
 }

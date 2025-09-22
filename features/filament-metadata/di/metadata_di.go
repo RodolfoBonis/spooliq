@@ -5,7 +5,6 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/filament-metadata/data/repositories"
 	domainRepositories "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/usecases"
-	"github.com/go-playground/validator/v10"
 	"github.com/jinzhu/gorm"
 	"go.uber.org/fx"
 )
@@ -28,12 +27,12 @@ var Module = fx.Module("filament-metadata",
 		// Use Cases
 		fx.Annotate(
 			func(brandRepo domainRepositories.BrandRepository, logger logger.Logger) usecases.BrandUseCase {
-				return usecases.NewBrandUseCase(brandRepo, validator.New(), logger)
+				return usecases.NewBrandUseCase(brandRepo, logger)
 			},
 		),
 		fx.Annotate(
 			func(materialRepo domainRepositories.MaterialRepository, logger logger.Logger) usecases.MaterialUseCase {
-				return usecases.NewMaterialUseCase(materialRepo, validator.New(), logger)
+				return usecases.NewMaterialUseCase(materialRepo, logger)
 			},
 		),
 	),

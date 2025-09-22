@@ -17,6 +17,7 @@ func GetAllMigrations() []Migration {
 		Migration004CreateFilamentMetadataTables,
 		Migration005IntegrateFilamentsWithMetadata,
 		Migration006RemoveLegacyFilamentColumns,
+		Migration007AddAdvancedColorSystem,
 		// Add new migrations here in version order
 	}
 }
@@ -415,6 +416,88 @@ var Migration006RemoveLegacyFilamentColumns = Migration{
 		}
 
 		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS material VARCHAR(100)").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// Migration007AddAdvancedColorSystem adds advanced color system fields to filaments table
+var Migration007AddAdvancedColorSystem = Migration{
+	Version: "007",
+	Name:    "Add Advanced Color System",
+	Up: func(db *gorm.DB) error {
+		// Add color_type column with default 'solid'
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS color_type VARCHAR(20) DEFAULT 'solid'").Error; err != nil {
+			return err
+		}
+
+		// Add color_data column for JSON color configuration
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS color_data TEXT").Error; err != nil {
+			return err
+		}
+
+		// Add color_preview column for generated CSS
+		if err := db.Exec("ALTER TABLE filaments ADD COLUMN IF NOT EXISTS color_preview TEXT").Error; err != nil {
+			return err
+		}
+
+		// Migrate existing data: set color_type to 'solid' for existing records
+		if err := db.Exec("UPDATE filaments SET color_type = 'solid' WHERE color_type IS NULL OR color_type = ''").Error; err != nil {
+			return err
+		}
+
+		// Migrate existing color_hex data to the new system for records with color_hex
+		if err := db.Exec(`
+			UPDATE filaments
+			SET
+				color_data = '{"color":"' || COALESCE(color_hex, '#000000') || '"}',
+				color_preview = COALESCE(color_hex, '#000000')
+			WHERE
+				color_hex IS NOT NULL
+				AND color_hex != ''
+				AND (color_data IS NULL OR color_data = '')
+		`).Error; err != nil {
+			return err
+		}
+
+		// Set default values for records without color_hex
+		if err := db.Exec(`
+			UPDATE filaments
+			SET
+				color_data = '{"color":"#000000"}',
+				color_preview = '#000000'
+			WHERE
+				(color_hex IS NULL OR color_hex = '')
+				AND (color_data IS NULL OR color_data = '')
+		`).Error; err != nil {
+			return err
+		}
+
+		// Add index for color_type for performance
+		if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_filaments_color_type ON filaments(color_type)").Error; err != nil {
+			return err
+		}
+
+		return nil
+	},
+	Down: func(db *gorm.DB) error {
+		// Remove index
+		if err := db.Exec("DROP INDEX IF EXISTS idx_filaments_color_type").Error; err != nil {
+			return err
+		}
+
+		// Remove added columns
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS color_preview").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS color_data").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments DROP COLUMN IF EXISTS color_type").Error; err != nil {
 			return err
 		}
 

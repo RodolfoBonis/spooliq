@@ -63,10 +63,10 @@ type materialUseCaseImpl struct {
 }
 
 // NewMaterialUseCase creates a new instance of material use case
-func NewMaterialUseCase(materialRepo repositories.MaterialRepository, validator *validator.Validate, logger logger.Logger) MaterialUseCase {
+func NewMaterialUseCase(materialRepo repositories.MaterialRepository, logger logger.Logger) MaterialUseCase {
 	return &materialUseCaseImpl{
 		materialRepo: materialRepo,
-		validator:    validator,
+		validator:    validator.New(),
 		logger:       logger,
 	}
 }

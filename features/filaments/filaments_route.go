@@ -111,7 +111,7 @@ func DeleteFilamentHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} ListResponse "Successfully retrieved user filaments"
+// @Success 200 {object} usecases.ListResponse "Successfully retrieved user filaments"
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments/my [get]
@@ -129,12 +129,33 @@ func GetUserFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFu
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Success 200 {object} ListResponse "Successfully retrieved global filaments"
+// @Success 200 {object} usecases.ListResponse "Successfully retrieved global filaments"
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments/global [get]
 func GetGlobalFilamentsHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		filamentsUc.GetGlobalFilaments(c)
+	}
+}
+
+// MigrateFilamentToAdvancedColorHandler handles migrating a filament from legacy to advanced color system.
+// @Summary Migrate Filament Color System
+// @Schemes
+// @Description Migrate a filament from legacy color system to advanced color system
+// @Tags Filaments
+// @Accept json
+// @Produce json
+// @Param id path int true "Filament ID"
+// @Success 200 {object} usecases.FilamentResponse "Successfully migrated filament"
+// @Failure 400 {object} errors.HTTPError
+// @Failure 401 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /filaments/{id}/migrate-color [post]
+// @Security Bearer
+func MigrateFilamentToAdvancedColorHandler(filamentsUc usecases.FilamentUseCase) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		filamentsUc.MigrateFilamentToAdvancedColor(c)
 	}
 }
 
@@ -152,4 +173,5 @@ func Routes(route *gin.RouterGroup, filamentsUC usecases.FilamentUseCase, protec
 	filaments.GET("/my", protectFactory(GetUserFilamentsHandler(filamentsUC), roles.UserRole))
 	filaments.PUT("/:id", protectFactory(UpdateFilamentHandler(filamentsUC), roles.UserRole))
 	filaments.DELETE("/:id", protectFactory(DeleteFilamentHandler(filamentsUC), roles.UserRole))
+	filaments.POST("/:id/migrate-color", protectFactory(MigrateFilamentToAdvancedColorHandler(filamentsUC), roles.UserRole))
 }

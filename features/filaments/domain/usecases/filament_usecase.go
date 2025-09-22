@@ -19,8 +19,8 @@ type FilamentUseCase interface {
 // CreateFilamentRequest represents a request to create a new filament
 type CreateFilamentRequest struct {
 	Name          string   `json:"name" validate:"required,min=1,max=255"`
-	Brand         string   `json:"brand" validate:"required,min=1,max=255"`
-	Material      string   `json:"material" validate:"required,min=1,max=100"`
+	BrandID       uint     `json:"brand_id" validate:"required"`
+	MaterialID    uint     `json:"material_id" validate:"required"`
 	Color         string   `json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string   `json:"color_hex,omitempty" validate:"omitempty,hexcolor"`
 	Diameter      float64  `json:"diameter" validate:"required,min=0,max=10"`
@@ -33,8 +33,8 @@ type CreateFilamentRequest struct {
 // UpdateFilamentRequest represents a request to update a filament
 type UpdateFilamentRequest struct {
 	Name          string   `json:"name" validate:"required,min=1,max=255"`
-	Brand         string   `json:"brand" validate:"required,min=1,max=255"`
-	Material      string   `json:"material" validate:"required,min=1,max=100"`
+	BrandID       uint     `json:"brand_id" validate:"required"`
+	MaterialID    uint     `json:"material_id" validate:"required"`
 	Color         string   `json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string   `json:"color_hex,omitempty" validate:"omitempty,hexcolor"`
 	Diameter      float64  `json:"diameter" validate:"required,min=0,max=10"`

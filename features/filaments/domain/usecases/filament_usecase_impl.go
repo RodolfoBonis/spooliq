@@ -85,32 +85,32 @@ func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 		ownerUserID = &userID
 	}
 
-	// Resolve brand_id from brand name
-	brandID, err := uc.resolveBrandID(c, request.Brand)
+	// Validate brand_id exists
+	_, err := uc.brandRepo.GetByID(c.Request.Context(), request.BrandID)
 	if err != nil {
-		uc.logger.Error(c.Request.Context(), "Failed to resolve brand ID", map[string]interface{}{
-			"brand": request.Brand,
-			"error": err.Error(),
+		uc.logger.Error(c.Request.Context(), "Invalid brand ID", map[string]interface{}{
+			"brand_id": request.BrandID,
+			"error":    err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve brand"))
+		c.JSON(http.StatusBadRequest, errors.ErrorResponse("Invalid brand ID"))
 		return
 	}
 
-	// Resolve material_id from material name
-	materialID, err := uc.resolveMaterialID(c, request.Material)
+	// Validate material_id exists
+	_, err = uc.materialRepo.GetByID(c.Request.Context(), request.MaterialID)
 	if err != nil {
-		uc.logger.Error(c.Request.Context(), "Failed to resolve material ID", map[string]interface{}{
-			"material": request.Material,
-			"error":    err.Error(),
+		uc.logger.Error(c.Request.Context(), "Invalid material ID", map[string]interface{}{
+			"material_id": request.MaterialID,
+			"error":       err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve material"))
+		c.JSON(http.StatusBadRequest, errors.ErrorResponse("Invalid material ID"))
 		return
 	}
 
 	filament := &entities.Filament{
 		Name:          request.Name,
-		BrandID:       brandID,
-		MaterialID:    materialID,
+		BrandID:       request.BrandID,
+		MaterialID:    request.MaterialID,
 		Color:         request.Color,
 		ColorHex:      request.ColorHex,
 		Diameter:      request.Diameter,
@@ -210,33 +210,33 @@ func (uc *filamentUseCaseImpl) UpdateFilament(c *gin.Context) {
 		userIDPtr = &userID
 	}
 
-	// Resolve brand_id from brand name
-	brandID, err := uc.resolveBrandID(c, request.Brand)
+	// Validate brand_id exists
+	_, err = uc.brandRepo.GetByID(c.Request.Context(), request.BrandID)
 	if err != nil {
-		uc.logger.Error(c.Request.Context(), "Failed to resolve brand ID", map[string]interface{}{
-			"brand": request.Brand,
-			"error": err.Error(),
+		uc.logger.Error(c.Request.Context(), "Invalid brand ID", map[string]interface{}{
+			"brand_id": request.BrandID,
+			"error":    err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve brand"))
+		c.JSON(http.StatusBadRequest, errors.ErrorResponse("Invalid brand ID"))
 		return
 	}
 
-	// Resolve material_id from material name
-	materialID, err := uc.resolveMaterialID(c, request.Material)
+	// Validate material_id exists
+	_, err = uc.materialRepo.GetByID(c.Request.Context(), request.MaterialID)
 	if err != nil {
-		uc.logger.Error(c.Request.Context(), "Failed to resolve material ID", map[string]interface{}{
-			"material": request.Material,
-			"error":    err.Error(),
+		uc.logger.Error(c.Request.Context(), "Invalid material ID", map[string]interface{}{
+			"material_id": request.MaterialID,
+			"error":       err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve material"))
+		c.JSON(http.StatusBadRequest, errors.ErrorResponse("Invalid material ID"))
 		return
 	}
 
 	filament := &entities.Filament{
 		ID:            uint(id),
 		Name:          request.Name,
-		BrandID:       brandID,
-		MaterialID:    materialID,
+		BrandID:       request.BrandID,
+		MaterialID:    request.MaterialID,
 		Color:         request.Color,
 		ColorHex:      request.ColorHex,
 		Diameter:      request.Diameter,

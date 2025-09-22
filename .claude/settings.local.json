@@ -40,7 +40,10 @@
       "Bash(set PORT=8005)",
       "Bash(set PORT=8006)",
       "Bash(set PORT=8007)",
-      "Bash(set PORT=8010)"
+      "Bash(set PORT=8010)",
+      "Bash(psql:*)",
+      "Bash(pkill:*)",
+      "Bash(set PORT=8011)"
     ],
     "deny": [],
     "ask": []

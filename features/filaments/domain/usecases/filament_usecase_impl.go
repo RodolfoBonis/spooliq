@@ -32,7 +32,6 @@ func NewFilamentUseCase(filamentRepo repositories.FilamentRepository, brandRepo 
 	}
 }
 
-
 func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 	var request CreateFilamentRequest
 	if err := c.ShouldBindJSON(&request); err != nil {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,19 @@ func NewPresetHandler(
 	}
 }
 
+// Helper functions for safe logging
+func (h *PresetHandler) logError(ctx context.Context, message string, err error) {
+	if h.logger != nil {
+		h.logger.LogError(ctx, message, err)
+	}
+}
+
+func (h *PresetHandler) logInfo(ctx context.Context, message string, fields map[string]interface{}) {
+	if h.logger != nil {
+		h.logger.Info(ctx, message, fields)
+	}
+}
+
 // GetEnergyLocations retrieves all available energy preset locations
 // @Summary Get energy locations
 // @Description Retrieves all available locations for energy presets
@@ -45,7 +59,7 @@ func (h *PresetHandler) GetEnergyLocations(c *gin.Context) {
 	if err != nil {
 		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get energy locations", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to get energy locations", appError)
+		h.logError(c.Request.Context(), "Failed to get energy locations", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -70,7 +84,7 @@ func (h *PresetHandler) GetMachinePresets(c *gin.Context) {
 	if err != nil {
 		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get machine presets", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to get machine presets", appError)
+		h.logError(c.Request.Context(), "Failed to get machine presets", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -98,7 +112,7 @@ func (h *PresetHandler) GetEnergyPresets(c *gin.Context) {
 	if err != nil {
 		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get energy presets", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to get energy presets", appError)
+		h.logError(c.Request.Context(), "Failed to get energy presets", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -123,7 +137,7 @@ func (h *PresetHandler) GetCostPresets(c *gin.Context) {
 	if err != nil {
 		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get cost presets", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to get cost presets", appError)
+		h.logError(c.Request.Context(), "Failed to get cost presets", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -148,7 +162,7 @@ func (h *PresetHandler) GetMarginPresets(c *gin.Context) {
 	if err != nil {
 		appError := errors.NewAppError(coreEntities.ErrService, "Failed to get margin presets", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to get margin presets", appError)
+		h.logError(c.Request.Context(), "Failed to get margin presets", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -181,7 +195,7 @@ func (h *PresetHandler) CreatePreset(c *gin.Context) {
 	if presetType == "" {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Preset type is required (energy, machine, cost, or margin)", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Preset type not specified", appError)
+		h.logError(c.Request.Context(), "Preset type not specified", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -191,7 +205,7 @@ func (h *PresetHandler) CreatePreset(c *gin.Context) {
 	if requesterID == "" {
 		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
+		h.logError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -208,7 +222,7 @@ func (h *PresetHandler) CreatePreset(c *gin.Context) {
 	default:
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid preset type. Must be 'energy', 'machine', 'cost', or 'margin'", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Invalid preset type", appError)
+		h.logError(c.Request.Context(), "Invalid preset type", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -220,7 +234,7 @@ func (h *PresetHandler) createEnergyPreset(c *gin.Context, requesterID string) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to bind energy preset request", appError)
+		h.logError(c.Request.Context(), "Failed to bind energy preset request", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -229,7 +243,7 @@ func (h *PresetHandler) createEnergyPreset(c *gin.Context, requesterID string) {
 	if err := h.validator.Struct(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Energy preset request validation failed", appError)
+		h.logError(c.Request.Context(), "Energy preset request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -242,12 +256,12 @@ func (h *PresetHandler) createEnergyPreset(c *gin.Context, requesterID string) {
 	if err != nil {
 		appError := h.mapDomainError(err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to create energy preset", appError)
+		h.logError(c.Request.Context(), "Failed to create energy preset", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
 
-	h.logger.Info(c.Request.Context(), "Energy preset created successfully", map[string]interface{}{
+	h.logInfo(c.Request.Context(), "Energy preset created successfully", map[string]interface{}{
 		"location":     energyPreset.Location,
 		"year":         energyPreset.Year,
 		"requester_id": requesterID,
@@ -262,7 +276,7 @@ func (h *PresetHandler) createMachinePreset(c *gin.Context, requesterID string) 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to bind machine preset request", appError)
+		h.logError(c.Request.Context(), "Failed to bind machine preset request", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -271,7 +285,7 @@ func (h *PresetHandler) createMachinePreset(c *gin.Context, requesterID string) 
 	if err := h.validator.Struct(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Machine preset request validation failed", appError)
+		h.logError(c.Request.Context(), "Machine preset request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -284,12 +298,12 @@ func (h *PresetHandler) createMachinePreset(c *gin.Context, requesterID string) 
 	if err != nil {
 		appError := h.mapDomainError(err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to create machine preset", appError)
+		h.logError(c.Request.Context(), "Failed to create machine preset", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
 
-	h.logger.Info(c.Request.Context(), "Machine preset created successfully", map[string]interface{}{
+	h.logInfo(c.Request.Context(), "Machine preset created successfully", map[string]interface{}{
 		"name":         machinePreset.Name,
 		"brand":        machinePreset.Brand,
 		"model":        machinePreset.Model,
@@ -305,7 +319,7 @@ func (h *PresetHandler) createCostPreset(c *gin.Context, requesterID string) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to bind cost preset request", appError)
+		h.logError(c.Request.Context(), "Failed to bind cost preset request", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -314,7 +328,7 @@ func (h *PresetHandler) createCostPreset(c *gin.Context, requesterID string) {
 	if err := h.validator.Struct(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Cost preset request validation failed", appError)
+		h.logError(c.Request.Context(), "Cost preset request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -327,12 +341,12 @@ func (h *PresetHandler) createCostPreset(c *gin.Context, requesterID string) {
 	if err != nil {
 		appError := h.mapDomainError(err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to create cost preset", appError)
+		h.logError(c.Request.Context(), "Failed to create cost preset", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
 
-	h.logger.Info(c.Request.Context(), "Cost preset created successfully", map[string]interface{}{
+	h.logInfo(c.Request.Context(), "Cost preset created successfully", map[string]interface{}{
 		"name":         costPreset.Name,
 		"requester_id": requesterID,
 	})
@@ -346,7 +360,7 @@ func (h *PresetHandler) createMarginPreset(c *gin.Context, requesterID string) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to bind margin preset request", appError)
+		h.logError(c.Request.Context(), "Failed to bind margin preset request", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -355,7 +369,7 @@ func (h *PresetHandler) createMarginPreset(c *gin.Context, requesterID string) {
 	if err := h.validator.Struct(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Validation failed", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Margin preset request validation failed", appError)
+		h.logError(c.Request.Context(), "Margin preset request validation failed", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -368,12 +382,12 @@ func (h *PresetHandler) createMarginPreset(c *gin.Context, requesterID string) {
 	if err != nil {
 		appError := h.mapDomainError(err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to create margin preset", appError)
+		h.logError(c.Request.Context(), "Failed to create margin preset", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
 
-	h.logger.Info(c.Request.Context(), "Margin preset created successfully", map[string]interface{}{
+	h.logInfo(c.Request.Context(), "Margin preset created successfully", map[string]interface{}{
 		"name":         marginPreset.Name,
 		"requester_id": requesterID,
 	})
@@ -402,7 +416,7 @@ func (h *PresetHandler) UpdatePreset(c *gin.Context) {
 	if key == "" {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Preset key is required", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Preset key not provided", appError)
+		h.logError(c.Request.Context(), "Preset key not provided", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -412,7 +426,7 @@ func (h *PresetHandler) UpdatePreset(c *gin.Context) {
 	if requesterID == "" {
 		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
+		h.logError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -422,7 +436,7 @@ func (h *PresetHandler) UpdatePreset(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Invalid request format", nil, err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to bind update preset request", appError)
+		h.logError(c.Request.Context(), "Failed to bind update preset request", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -432,7 +446,7 @@ func (h *PresetHandler) UpdatePreset(c *gin.Context) {
 	if err != nil {
 		appError := h.mapDomainError(err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to update preset", appError)
+		h.logError(c.Request.Context(), "Failed to update preset", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -458,7 +472,7 @@ func (h *PresetHandler) DeletePreset(c *gin.Context) {
 	if key == "" {
 		appError := errors.NewAppError(coreEntities.ErrEntity, "Preset key is required", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Preset key not provided", appError)
+		h.logError(c.Request.Context(), "Preset key not provided", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -468,7 +482,7 @@ func (h *PresetHandler) DeletePreset(c *gin.Context) {
 	if requesterID == "" {
 		appError := errors.NewAppError(coreEntities.ErrUnauthorized, "User not authenticated", nil, nil)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "User not authenticated", appError)
+		h.logError(c.Request.Context(), "User not authenticated", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -478,7 +492,7 @@ func (h *PresetHandler) DeletePreset(c *gin.Context) {
 	if err != nil {
 		appError := h.mapDomainError(err)
 		httpError := appError.ToHTTPError()
-		h.logger.LogError(c.Request.Context(), "Failed to delete preset", appError)
+		h.logError(c.Request.Context(), "Failed to delete preset", appError)
 		c.JSON(httpError.StatusCode, httpError)
 		return
 	}

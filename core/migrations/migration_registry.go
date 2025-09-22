@@ -351,6 +351,15 @@ var Migration005IntegrateFilamentsWithMetadata = Migration{
 			}
 		}
 
+		// Make brand_id and material_id NOT NULL after populating data
+		if err := db.Exec("ALTER TABLE filaments ALTER COLUMN brand_id SET NOT NULL").Error; err != nil {
+			return err
+		}
+
+		if err := db.Exec("ALTER TABLE filaments ALTER COLUMN material_id SET NOT NULL").Error; err != nil {
+			return err
+		}
+
 		// Add foreign key constraints after populating data
 		if err := db.Exec("ALTER TABLE filaments ADD CONSTRAINT fk_filaments_brand FOREIGN KEY (brand_id) REFERENCES filament_brands(id)").Error; err != nil {
 			// Ignore if constraint already exists

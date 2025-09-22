@@ -6,6 +6,8 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	metadataEntities "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/entities"
+	metadataRepos "github.com/RodolfoBonis/spooliq/features/filament-metadata/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/filaments/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -13,18 +15,56 @@ import (
 )
 
 type filamentUseCaseImpl struct {
-	filamentRepo repositories.FilamentRepository
-	logger       logger.Logger
-	validator    *validator.Validate
+	filamentRepo  repositories.FilamentRepository
+	brandRepo     metadataRepos.BrandRepository
+	materialRepo  metadataRepos.MaterialRepository
+	logger        logger.Logger
+	validator     *validator.Validate
 }
 
-// NewFilamentUseCase creates a new instance of FilamentUseCase with the provided repository and logger.
-func NewFilamentUseCase(filamentRepo repositories.FilamentRepository, logger logger.Logger) FilamentUseCase {
+// NewFilamentUseCase creates a new instance of FilamentUseCase with the provided repositories and logger.
+func NewFilamentUseCase(filamentRepo repositories.FilamentRepository, brandRepo metadataRepos.BrandRepository, materialRepo metadataRepos.MaterialRepository, logger logger.Logger) FilamentUseCase {
 	return &filamentUseCaseImpl{
 		filamentRepo: filamentRepo,
+		brandRepo:    brandRepo,
+		materialRepo: materialRepo,
 		logger:       logger,
 		validator:    validator.New(),
 	}
+}
+
+// resolveBrandID resolves brand name to brand ID, creating the brand if it doesn't exist
+func (uc *filamentUseCaseImpl) resolveBrandID(ctx *gin.Context, brandName string) (uint, error) {
+	brand, err := uc.brandRepo.GetByName(ctx.Request.Context(), brandName)
+	if err != nil {
+		// Brand doesn't exist, create it
+		newBrand := &metadataEntities.FilamentBrand{
+			Name:   brandName,
+			Active: true,
+		}
+		if err := uc.brandRepo.Create(ctx.Request.Context(), newBrand); err != nil {
+			return 0, err
+		}
+		return newBrand.ID, nil
+	}
+	return brand.ID, nil
+}
+
+// resolveMaterialID resolves material name to material ID, creating the material if it doesn't exist
+func (uc *filamentUseCaseImpl) resolveMaterialID(ctx *gin.Context, materialName string) (uint, error) {
+	material, err := uc.materialRepo.GetByName(ctx.Request.Context(), materialName)
+	if err != nil {
+		// Material doesn't exist, create it
+		newMaterial := &metadataEntities.FilamentMaterial{
+			Name:   materialName,
+			Active: true,
+		}
+		if err := uc.materialRepo.Create(ctx.Request.Context(), newMaterial); err != nil {
+			return 0, err
+		}
+		return newMaterial.ID, nil
+	}
+	return material.ID, nil
 }
 
 func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
@@ -45,19 +85,40 @@ func (uc *filamentUseCaseImpl) CreateFilament(c *gin.Context) {
 		ownerUserID = &userID
 	}
 
+	// Resolve brand_id from brand name
+	brandID, err := uc.resolveBrandID(c, request.Brand)
+	if err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to resolve brand ID", map[string]interface{}{
+			"brand": request.Brand,
+			"error": err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve brand"))
+		return
+	}
+
+	// Resolve material_id from material name
+	materialID, err := uc.resolveMaterialID(c, request.Material)
+	if err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to resolve material ID", map[string]interface{}{
+			"material": request.Material,
+			"error":    err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve material"))
+		return
+	}
+
 	filament := &entities.Filament{
-		Name:         request.Name,
-		BrandName:    request.Brand,
-		MaterialName: request.Material,
-		Color:        request.Color,
-		ColorHex:     request.ColorHex,
-		Diameter:     request.Diameter,
-		Weight:       request.Weight,
-		PricePerKg:   request.PricePerKg,
+		Name:          request.Name,
+		BrandID:       brandID,
+		MaterialID:    materialID,
+		Color:         request.Color,
+		ColorHex:      request.ColorHex,
+		Diameter:      request.Diameter,
+		Weight:        request.Weight,
+		PricePerKg:    request.PricePerKg,
 		PricePerMeter: request.PricePerMeter,
-		URL:          request.URL,
-		OwnerUserID:  ownerUserID,
-		// TODO: Resolver brand_id e material_id baseado nos nomes
+		URL:           request.URL,
+		OwnerUserID:   ownerUserID,
 	}
 
 	if err := uc.filamentRepo.Create(c.Request.Context(), filament); err != nil {
@@ -149,19 +210,40 @@ func (uc *filamentUseCaseImpl) UpdateFilament(c *gin.Context) {
 		userIDPtr = &userID
 	}
 
+	// Resolve brand_id from brand name
+	brandID, err := uc.resolveBrandID(c, request.Brand)
+	if err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to resolve brand ID", map[string]interface{}{
+			"brand": request.Brand,
+			"error": err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve brand"))
+		return
+	}
+
+	// Resolve material_id from material name
+	materialID, err := uc.resolveMaterialID(c, request.Material)
+	if err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to resolve material ID", map[string]interface{}{
+			"material": request.Material,
+			"error":    err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, errors.ErrorResponse("Failed to resolve material"))
+		return
+	}
+
 	filament := &entities.Filament{
-		ID:           uint(id),
-		Name:         request.Name,
-		BrandName:    request.Brand,
-		MaterialName: request.Material,
-		Color:        request.Color,
-		ColorHex:     request.ColorHex,
-		Diameter:     request.Diameter,
-		Weight:       request.Weight,
-		PricePerKg:   request.PricePerKg,
+		ID:            uint(id),
+		Name:          request.Name,
+		BrandID:       brandID,
+		MaterialID:    materialID,
+		Color:         request.Color,
+		ColorHex:      request.ColorHex,
+		Diameter:      request.Diameter,
+		Weight:        request.Weight,
+		PricePerKg:    request.PricePerKg,
 		PricePerMeter: request.PricePerMeter,
-		URL:          request.URL,
-		// TODO: Resolver brand_id e material_id baseado nos nomes
+		URL:           request.URL,
 	}
 
 	if err := uc.filamentRepo.Update(c.Request.Context(), filament, userIDPtr); err != nil {

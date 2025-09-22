@@ -22,10 +22,6 @@ type Filament struct {
 	Brand         metadataEntities.FilamentBrand    `gorm:"foreignkey:BrandID" json:"brand"`
 	Material      metadataEntities.FilamentMaterial `gorm:"foreignkey:MaterialID" json:"material"`
 
-	// Campos mantidos para compatibilidade (deprecated, usar Brand.Name e Material.Name)
-	BrandName     string     `gorm:"type:varchar(255)" json:"brand_name,omitempty"`
-	MaterialName  string     `gorm:"type:varchar(100)" json:"material_name,omitempty"`
-
 	Color         string     `gorm:"type:varchar(100);not null" json:"color" validate:"required,min=1,max=100"`
 	ColorHex      string     `gorm:"type:varchar(7)" json:"color_hex" validate:"omitempty,hexcolor"`
 	Diameter      float64    `gorm:"type:decimal(3,2);not null" json:"diameter" validate:"required,min=0,max=10"`

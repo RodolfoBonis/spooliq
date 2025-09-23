@@ -71,6 +71,13 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 		return appErr
 	}
 
+	// Test the connection immediately
+	if err := db.DB().Ping(); err != nil {
+		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to ping database after connection", map[string]interface{}{"error": err.Error()}, err)
+		logger.LogError(context.Background(), "Database ping failed", appErr)
+		return appErr
+	}
+
 	environment := config.EnvironmentConfig()
 	isDevelopment := environment == entities.Environment.Development
 
@@ -144,27 +151,71 @@ func RetryHandler(n int, f func() (bool, error)) error {
 	return er
 }
 
-// RunMigrations runs the database migrations using the new migration system.
+// RunMigrations runs the database migrations using the new SQL migration system.
 func RunMigrations(logger logger.Logger) error {
 	ctx := context.Background()
 
-	logger.Info(ctx, "Initializing migration system...", nil)
+	logger.Info(ctx, "Initializing SQL migration system...", nil)
 
-	// Create migration service
-	migrationService := migrations.NewMigrationService(Connector, logger)
-
-	// Register all migrations
-	allMigrations := migrations.GetAllMigrations()
-	migrationService.RegisterMigrations(allMigrations)
-
-	// Run migrations
-	if err := migrationService.Run(); err != nil {
-		logger.Error(ctx, "Failed to run migrations", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return fmt.Errorf("failed to run migrations: %w", err)
+	// Ensure database connection is valid
+	if Connector == nil {
+		return fmt.Errorf("database connection not established")
 	}
 
-	logger.Info(ctx, "Migration system completed successfully", nil)
+	// Test database connection before running migrations
+	if err := Connector.DB().Ping(); err != nil {
+		logger.Error(ctx, "Database connection test failed before migrations", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("database not ready for migrations: %w", err)
+	}
+
+	// Get migrations path
+	migrationsPath := getMigrationsPath()
+	
+	// Create SQL migration executor
+	executor := migrations.NewSQLMigrationExecutor(Connector, logger, migrationsPath)
+
+	// Run migrations with retry logic
+	var migrationErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		logger.Info(ctx, "Attempting to run SQL migrations", map[string]interface{}{
+			"attempt": attempt,
+		})
+		
+		migrationErr = executor.RunAll()
+		if migrationErr == nil {
+			break
+		}
+		
+		logger.Error(ctx, "Migration attempt failed", map[string]interface{}{
+			"attempt": attempt,
+			"error":   migrationErr.Error(),
+		})
+		
+		if attempt < 3 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+	}
+
+	if migrationErr != nil {
+		logger.Error(ctx, "Failed to run migrations after all attempts", map[string]interface{}{
+			"error": migrationErr.Error(),
+		})
+		return fmt.Errorf("failed to run migrations: %w", migrationErr)
+	}
+
+	logger.Info(ctx, "SQL migration system completed successfully", nil)
 	return nil
+}
+
+// getMigrationsPath returns the path to the migrations directory
+func getMigrationsPath() string {
+	// Check if custom path is set
+	if path := config.EnvMigrationsPath(); path != "" {
+		return path
+	}
+	
+	// Default to migrations directory in project root
+	return "migrations"
 }

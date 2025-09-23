@@ -27,21 +27,63 @@ func NewMigrationRepository(db *gorm.DB, logger logger.Logger) *MigrationReposit
 func (r *MigrationRepository) EnsureMigrationTableExists() error {
 	ctx := context.Background()
 
-	// Check if table exists
-	if r.db.HasTable(&SchemaMigration{}) {
+	// First, test the database connection
+	if err := r.db.DB().Ping(); err != nil {
+		r.logger.Error(ctx, "Database connection test failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("database connection not ready: %w", err)
+	}
+
+	// Check if table exists using raw SQL for better reliability
+	var tableExists bool
+	query := `
+		SELECT EXISTS (
+			SELECT FROM information_schema.tables 
+			WHERE table_name = 'schema_migrations'
+		);
+	`
+	if err := r.db.Raw(query).Row().Scan(&tableExists); err != nil {
+		r.logger.Warning(ctx, "Could not check if schema_migrations table exists, assuming it doesn't", map[string]interface{}{
+			"error": err.Error(),
+		})
+		tableExists = false
+	}
+
+	if tableExists {
 		r.logger.Info(ctx, "Migration table already exists", nil)
+		// Ensure the table structure is correct
+		if err := r.db.AutoMigrate(&SchemaMigration{}).Error; err != nil {
+			r.logger.Warning(ctx, "Failed to auto-migrate schema_migrations table", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
 		return nil
 	}
 
+	r.logger.Info(ctx, "Creating schema_migrations table", nil)
+
+	// Use a transaction for table creation
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("failed to begin transaction: %w", tx.Error)
+	}
+
 	// Create the migrations table
-	if err := r.db.CreateTable(&SchemaMigration{}).Error; err != nil {
+	if err := tx.CreateTable(&SchemaMigration{}).Error; err != nil {
+		tx.Rollback()
 		r.logger.Error(ctx, "Failed to create schema_migrations table", map[string]interface{}{
 			"error": err.Error(),
 		})
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)
 	}
 
-	r.logger.Info(ctx, "Created schema_migrations table", nil)
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit schema_migrations table creation: %w", err)
+	}
+
+	r.logger.Info(ctx, "Successfully created schema_migrations table", nil)
 	return nil
 }
 

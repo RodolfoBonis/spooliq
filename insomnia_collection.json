@@ -1,0 +1,1807 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-09-23T09:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "req_health_check",
+      "parentId": "fld_health",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/health_check",
+      "name": "Health Check",
+      "description": "Check if the API is running",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_register",
+      "parentId": "fld_auth",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/auth/register",
+      "name": "Register User",
+      "description": "Register a new user account",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"username\": \"johndoe\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/login",
+      "name": "Login",
+      "description": "Authenticate user and get access token",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_forgot_password",
+      "parentId": "fld_auth",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/auth/forgot-password",
+      "name": "Forgot Password",
+      "description": "Request password reset",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"user@example.com\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_logout",
+      "parentId": "fld_auth",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/logout",
+      "name": "Logout",
+      "description": "Logout current user",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_refresh_token",
+      "parentId": "fld_auth",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/refresh",
+      "name": "Refresh Token",
+      "description": "Refresh access token",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refresh_token\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_system_status",
+      "parentId": "fld_system",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/system",
+      "name": "Get System Status",
+      "description": "Get system status and information",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_all_filaments",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments",
+      "name": "Get All Filaments",
+      "description": "Get all filaments with optional filters",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": true
+        },
+        {
+          "name": "limit",
+          "value": "10",
+          "disabled": true
+        },
+        {
+          "name": "search",
+          "value": "",
+          "disabled": true
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_global_filaments",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments/global",
+      "name": "Get Global Filaments",
+      "description": "Get all global filaments",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_my_filaments",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments/my",
+      "name": "Get My Filaments",
+      "description": "Get current user's filaments",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_filament_by_id",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments/1",
+      "name": "Get Filament by ID",
+      "description": "Get specific filament by ID",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_filament",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments",
+      "name": "Create Filament",
+      "description": "Create a new filament",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"PLA Premium\",\n  \"color\": \"Red\",\n  \"color_hex\": \"#FF0000\",\n  \"price_per_kg\": 29.99,\n  \"density\": 1.24,\n  \"diameter\": 1.75,\n  \"weight\": 1000,\n  \"temperature\": 210,\n  \"brand_id\": 1,\n  \"material_id\": 1,\n  \"brand_name\": \"eSUN\",\n  \"material_name\": \"PLA\",\n  \"color_type\": \"solid\",\n  \"color_data\": \"{\\\"color\\\":\\\"#FF0000\\\"}\",\n  \"color_preview\": \"#FF0000\",\n  \"price_per_meter\": 0.035,\n  \"url\": \"https://example.com/filament\",\n  \"is_global\": false\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_filament",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments/1",
+      "name": "Update Filament",
+      "description": "Update an existing filament",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"PLA Premium Updated\",\n  \"color\": \"Blue\",\n  \"color_hex\": \"#0000FF\",\n  \"price_per_kg\": 32.99,\n  \"density\": 1.24,\n  \"diameter\": 1.75,\n  \"weight\": 1000,\n  \"temperature\": 205\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466300000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_filament",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments/1",
+      "name": "Delete Filament",
+      "description": "Delete a filament",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_migrate_filament_color",
+      "parentId": "fld_filaments",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filaments/1/migrate-color",
+      "name": "Migrate Filament Color",
+      "description": "Migrate filament color to new system",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"color_type\": \"gradient\",\n  \"color_data\": \"{\\\"type\\\":\\\"gradient\\\",\\\"colors\\\":[\\\"#FF0000\\\",\\\"#00FF00\\\"]}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466100000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_all_brands",
+      "parentId": "fld_brands",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-brands",
+      "name": "Get All Brands",
+      "description": "Get all filament brands",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_brand_by_id",
+      "parentId": "fld_brands",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-brands/1",
+      "name": "Get Brand by ID",
+      "description": "Get specific brand by ID",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_brand",
+      "parentId": "fld_brands",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-brands",
+      "name": "Create Brand",
+      "description": "Create a new filament brand",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Premium Filaments Co\",\n  \"website_url\": \"https://premiumfilaments.com\",\n  \"description\": \"High quality 3D printing filaments\",\n  \"logo_url\": \"https://premiumfilaments.com/logo.png\",\n  \"active\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_brand",
+      "parentId": "fld_brands",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-brands/1",
+      "name": "Update Brand",
+      "description": "Update an existing brand",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Premium Filaments Co Updated\",\n  \"website_url\": \"https://premiumfilaments.com\",\n  \"description\": \"The best quality 3D printing filaments\",\n  \"active\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_brand",
+      "parentId": "fld_brands",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-brands/1",
+      "name": "Delete Brand",
+      "description": "Delete a brand",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_all_materials",
+      "parentId": "fld_materials",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-materials",
+      "name": "Get All Materials",
+      "description": "Get all filament materials",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_material_by_id",
+      "parentId": "fld_materials",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-materials/1",
+      "name": "Get Material by ID",
+      "description": "Get specific material by ID",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_material",
+      "parentId": "fld_materials",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-materials",
+      "name": "Create Material",
+      "description": "Create a new filament material",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"PETG\",\n  \"category\": \"Engineering Plastics\",\n  \"density\": 1.27,\n  \"melting_point\": 245,\n  \"glass_transition_temp\": 80,\n  \"recommended_print_temp_min\": 220,\n  \"recommended_print_temp_max\": 250,\n  \"recommended_bed_temp\": 80,\n  \"shore_hardness\": \"D85\",\n  \"tensile_strength\": 50.0,\n  \"elongation_at_break\": 120.0,\n  \"flexural_modulus\": 2100.0,\n  \"impact_strength\": 85.0,\n  \"heat_deflection_temp\": 70,\n  \"chemical_resistance\": \"Good resistance to acids and bases\",\n  \"uv_resistance\": false,\n  \"food_safe\": true,\n  \"biodegradable\": false,\n  \"recyclable\": true,\n  \"properties\": \"Clear, chemical resistant, tough\",\n  \"applications\": \"Bottles, containers, mechanical parts\",\n  \"active\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_material",
+      "parentId": "fld_materials",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-materials/1",
+      "name": "Update Material",
+      "description": "Update an existing material",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"PETG Premium\",\n  \"category\": \"Engineering Plastics\",\n  \"density\": 1.27,\n  \"recommended_print_temp_min\": 225,\n  \"recommended_print_temp_max\": 255,\n  \"active\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_material",
+      "parentId": "fld_materials",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/filament-materials/1",
+      "name": "Delete Material",
+      "description": "Delete a material",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_all_quotes",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes",
+      "name": "Get All Quotes",
+      "description": "Get all user's quotes",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_quote_by_id",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1",
+      "name": "Get Quote by ID",
+      "description": "Get specific quote by ID",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_quote",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes",
+      "name": "Create Quote",
+      "description": "Create a new quote",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Custom Miniature Set\",\n  \"customer_name\": \"John Smith\",\n  \"customer_email\": \"john@example.com\",\n  \"customer_phone\": \"+1234567890\",\n  \"notes\": \"High detail miniatures for tabletop gaming\",\n  \"machine_profile_id\": 1,\n  \"energy_profile_id\": 1,\n  \"cost_profile_id\": 1,\n  \"margin_profile_id\": 1,\n  \"filament_lines\": [\n    {\n      \"filament_id\": 1,\n      \"weight_grams\": 25.5,\n      \"print_time_minutes\": 180\n    },\n    {\n      \"filament_id\": 2,\n      \"weight_grams\": 15.2,\n      \"print_time_minutes\": 120\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_quote",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1",
+      "name": "Update Quote",
+      "description": "Update an existing quote",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Custom Miniature Set - Updated\",\n  \"customer_name\": \"John Smith\",\n  \"customer_email\": \"john.smith@example.com\",\n  \"status\": \"approved\",\n  \"notes\": \"High detail miniatures with premium finish\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_quote",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1",
+      "name": "Delete Quote",
+      "description": "Delete a quote",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_duplicate_quote",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1/duplicate",
+      "name": "Duplicate Quote",
+      "description": "Create a copy of an existing quote",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Copy of Custom Miniature Set\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466300000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_calculate_quote",
+      "parentId": "fld_quotes",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1/calculate",
+      "name": "Calculate Quote",
+      "description": "Calculate quote totals and pricing",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_current_user",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/me",
+      "name": "Get Current User",
+      "description": "Get current user information",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_all_users",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users",
+      "name": "Get All Users",
+      "description": "Get all users (admin only)",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_user_stats",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/stats",
+      "name": "Get User Statistics",
+      "description": "Get user statistics",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_user",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users",
+      "name": "Create User",
+      "description": "Create a new user (admin only)",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"username\": \"janedoe\",\n  \"enabled\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_user_by_id",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here",
+      "name": "Get User by ID",
+      "description": "Get specific user by ID",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_user",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here",
+      "name": "Update User",
+      "description": "Update user information",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"firstName\": \"Jane Updated\",\n  \"lastName\": \"Doe Updated\",\n  \"email\": \"jane.updated@example.com\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466300000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_user",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here",
+      "name": "Delete User",
+      "description": "Delete a user",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_enable_disable_user",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here/enabled",
+      "name": "Enable/Disable User",
+      "description": "Enable or disable a user",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"enabled\": false\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466100000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_change_user_password",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here/password",
+      "name": "Change User Password",
+      "description": "Change user password",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"password\": \"newpassword123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_add_user_role",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here/roles",
+      "name": "Add User Role",
+      "description": "Add role to user",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role\": \"admin\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695465900000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_remove_user_role",
+      "parentId": "fld_users",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/users/user-id-here/roles/admin",
+      "name": "Remove User Role",
+      "description": "Remove role from user",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695465800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_energy_locations",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/energy/locations",
+      "name": "Get Energy Locations",
+      "description": "Get available energy preset locations",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_machine_presets",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/machines",
+      "name": "Get Machine Presets",
+      "description": "Get all machine presets",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_energy_presets",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/energy",
+      "name": "Get Energy Presets",
+      "description": "Get all energy presets",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_cost_presets",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/cost",
+      "name": "Get Cost Presets",
+      "description": "Get all cost presets",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_margin_presets",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/margin",
+      "name": "Get Margin Presets",
+      "description": "Get all margin presets",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_preset",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets",
+      "name": "Create Preset",
+      "description": "Create a new preset",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"key\": \"custom_energy_preset\",\n  \"name\": \"Custom Energy Preset\",\n  \"type\": \"energy\",\n  \"data\": {\n    \"baseTariff\": 0.95,\n    \"flagSurcharge\": 0.05,\n    \"location\": \"Custom Location\",\n    \"year\": 2025,\n    \"description\": \"Custom energy preset for testing\"\n  },\n  \"is_default\": false\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466300000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_preset",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/custom_energy_preset",
+      "name": "Update Preset",
+      "description": "Update an existing preset",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Updated Custom Energy Preset\",\n  \"data\": {\n    \"baseTariff\": 1.05,\n    \"flagSurcharge\": 0.08,\n    \"location\": \"Updated Location\",\n    \"year\": 2025,\n    \"description\": \"Updated custom energy preset\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_preset",
+      "parentId": "fld_presets",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/presets/custom_energy_preset",
+      "name": "Delete Preset",
+      "description": "Delete a preset",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466100000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_export_formats",
+      "parentId": "fld_export",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/exports/formats",
+      "name": "Get Export Formats",
+      "description": "Get supported export formats",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1695466800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_export_quote_pdf",
+      "parentId": "fld_export",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1/export/pdf",
+      "name": "Export Quote to PDF",
+      "description": "Export quote as PDF",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"template\": \"standard\",\n  \"include_details\": true,\n  \"include_breakdown\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466700000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_export_quote_csv",
+      "parentId": "fld_export",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1/export/csv",
+      "name": "Export Quote to CSV",
+      "description": "Export quote as CSV",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"include_headers\": true,\n  \"delimiter\": \",\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466600000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_export_quote_json",
+      "parentId": "fld_export",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "url": "{{ _.base_url }}/v1/quotes/1/export/json",
+      "name": "Export Quote to JSON",
+      "description": "Export quote as JSON",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pretty_print\": true,\n  \"include_metadata\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1695466500000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_health",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Health & System",
+      "description": "Health check and system status endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466800000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Authentication",
+      "description": "User authentication and authorization endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466700000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_system",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "System",
+      "description": "System status and information",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466600000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_filaments",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Filaments",
+      "description": "Filament management endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466500000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_brands",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Filament Brands",
+      "description": "Filament brand management endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466400000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_materials",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Filament Materials",
+      "description": "Filament material management endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466300000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_quotes",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Quotes",
+      "description": "Quote management and calculation endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466200000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_users",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "User Management",
+      "description": "User management endpoints (admin)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466100000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_presets",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Presets",
+      "description": "Configuration presets for energy, machines, etc.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695466000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_export",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Export",
+      "description": "Export quotes in various formats",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1695465900000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "wrk_spooliq",
+      "parentId": null,
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Spooliq API",
+      "description": "Complete API collection for Spooliq 3D printing cost calculator",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base_environment",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000",
+        "access_token": "",
+        "refresh_token": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "access_token",
+          "refresh_token"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1695466800000,
+      "_type": "environment"
+    },
+    {
+      "_id": "jar_cookies",
+      "parentId": "wrk_spooliq",
+      "modified": 1695466800000,
+      "created": 1695466800000,
+      "name": "Default Jar",
+      "cookies": [],
+      "_type": "cookie_jar"
+    }
+  ]
+}

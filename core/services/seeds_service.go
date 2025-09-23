@@ -2,31 +2,94 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
+	"github.com/schollz/progressbar/v3"
 )
 
 // RunSeeds executa todos os seeds iniciais do sistema
 func RunSeeds(logger logger.Logger) {
 	ctx := context.Background()
 
-	logger.Info(ctx, "Iniciando seeds do sistema...")
+	// Temporarily disable SQL logging
+	Connector.LogMode(false)
+	defer func() {
+		Connector.LogMode(true)
+	}()
+
+	// Count total seeds
+	totalSeeds := countTotalSeeds()
+
+	if totalSeeds == 0 {
+		logger.Info(ctx, "✅ All seeds already exist")
+		return
+	}
+
+	// Create progress bar
+	bar := progressbar.NewOptions(totalSeeds,
+		progressbar.OptionSetDescription("🌱 Running seeds..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "█",
+			SaucerHead:    "█",
+			SaucerPadding: "░",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionShowCount(),
+		progressbar.OptionSetWidth(50),
+		progressbar.OptionThrottle(100*time.Millisecond),
+	)
 
 	// Seeds de presets
-	seedEnergyPresets(logger)
-	seedMachinePresets(logger)
+	bar.Describe("🌱 Seeding energy presets...")
+	seedEnergyPresetsWithProgress(logger, bar)
 
-	// Seeds de filamentos removidos - usar filament_metadata
+	bar.Describe("🌱 Seeding machine presets...")
+	seedMachinePresetsWithProgress(logger, bar)
 
-	logger.Info(ctx, "Seeds concluídos com sucesso!")
+	bar.Describe("✅ Seeds completed successfully!")
+	bar.Finish()
+	fmt.Println()
+
+	logger.Info(ctx, "Seeds completed successfully!")
 }
 
-// seedEnergyPresets cria presets de energia/tarifa
-func seedEnergyPresets(logger logger.Logger) {
-	ctx := context.Background()
+// countTotalSeeds counts how many seeds need to be inserted
+func countTotalSeeds() int {
+	count := 0
 
-	energyPresets := []struct {
+	// Count energy presets
+	energyPresets := getEnergyPresets()
+	for _, presetData := range energyPresets {
+		var existingPreset presetsEntities.Preset
+		result := Connector.Where("key = ?", presetData.Key).First(&existingPreset)
+		if result.RecordNotFound() {
+			count++
+		}
+	}
+
+	// Count machine presets
+	machinePresets := getMachinePresets()
+	for _, presetData := range machinePresets {
+		var existingPreset presetsEntities.Preset
+		result := Connector.Where("key = ?", presetData.Key).First(&existingPreset)
+		if result.RecordNotFound() {
+			count++
+		}
+	}
+
+	return count
+}
+
+// getEnergyPresets returns the energy presets data
+func getEnergyPresets() []struct {
+	Key  string
+	Data presetsEntities.EnergyPreset
+} {
+	return []struct {
 		Key  string
 		Data presetsEntities.EnergyPreset
 	}{
@@ -61,6 +124,11 @@ func seedEnergyPresets(logger logger.Logger) {
 			},
 		},
 	}
+}
+
+// seedEnergyPresets cria presets de energia/tarifa
+func seedEnergyPresets(logger logger.Logger) {
+	energyPresets := getEnergyPresets()
 
 	for _, presetData := range energyPresets {
 		var existingPreset presetsEntities.Preset
@@ -73,33 +141,44 @@ func seedEnergyPresets(logger logger.Logger) {
 
 			err := preset.MarshalDataFrom(presetData.Data)
 			if err != nil {
-				logger.Error(ctx, "Erro ao serializar preset de energia", map[string]interface{}{
-					"key":   presetData.Key,
-					"error": err.Error(),
-				})
 				continue
 			}
 
-			if err := Connector.Create(&preset).Error; err != nil {
-				logger.Error(ctx, "Erro ao criar preset de energia", map[string]interface{}{
-					"key":   presetData.Key,
-					"error": err.Error(),
-				})
-			} else {
-				logger.Info(ctx, "Preset de energia criado", map[string]interface{}{
-					"key":      presetData.Key,
-					"location": presetData.Data.Location,
-				})
-			}
+			Connector.Create(&preset)
 		}
 	}
 }
 
-// seedMachinePresets cria presets de máquinas/impressoras
-func seedMachinePresets(logger logger.Logger) {
-	ctx := context.Background()
+// seedEnergyPresetsWithProgress cria presets de energia/tarifa com barra de progresso
+func seedEnergyPresetsWithProgress(logger logger.Logger, bar *progressbar.ProgressBar) {
+	energyPresets := getEnergyPresets()
 
-	machinePresets := []struct {
+	for _, presetData := range energyPresets {
+		var existingPreset presetsEntities.Preset
+		result := Connector.Where("key = ?", presetData.Key).First(&existingPreset)
+
+		if result.RecordNotFound() {
+			preset := presetsEntities.Preset{
+				Key: presetData.Key,
+			}
+
+			err := preset.MarshalDataFrom(presetData.Data)
+			if err != nil {
+				continue
+			}
+
+			Connector.Create(&preset)
+			bar.Add(1)
+		}
+	}
+}
+
+// getMachinePresets returns the machine presets data
+func getMachinePresets() []struct {
+	Key  string
+	Data presetsEntities.MachinePreset
+} {
+	return []struct {
 		Key  string
 		Data presetsEntities.MachinePreset
 	}{
@@ -140,6 +219,11 @@ func seedMachinePresets(logger logger.Logger) {
 			},
 		},
 	}
+}
+
+// seedMachinePresets cria presets de máquinas/impressoras
+func seedMachinePresets(logger logger.Logger) {
+	machinePresets := getMachinePresets()
 
 	for _, presetData := range machinePresets {
 		var existingPreset presetsEntities.Preset
@@ -152,24 +236,34 @@ func seedMachinePresets(logger logger.Logger) {
 
 			err := preset.MarshalDataFrom(presetData.Data)
 			if err != nil {
-				logger.Error(ctx, "Erro ao serializar preset de máquina", map[string]interface{}{
-					"key":   presetData.Key,
-					"error": err.Error(),
-				})
 				continue
 			}
 
-			if err := Connector.Create(&preset).Error; err != nil {
-				logger.Error(ctx, "Erro ao criar preset de máquina", map[string]interface{}{
-					"key":   presetData.Key,
-					"error": err.Error(),
-				})
-			} else {
-				logger.Info(ctx, "Preset de máquina criado", map[string]interface{}{
-					"key":  presetData.Key,
-					"name": presetData.Data.Name,
-				})
+			Connector.Create(&preset)
+		}
+	}
+}
+
+// seedMachinePresetsWithProgress cria presets de máquinas/impressoras com barra de progresso
+func seedMachinePresetsWithProgress(logger logger.Logger, bar *progressbar.ProgressBar) {
+	machinePresets := getMachinePresets()
+
+	for _, presetData := range machinePresets {
+		var existingPreset presetsEntities.Preset
+		result := Connector.Where("key = ?", presetData.Key).First(&existingPreset)
+
+		if result.RecordNotFound() {
+			preset := presetsEntities.Preset{
+				Key: presetData.Key,
 			}
+
+			err := preset.MarshalDataFrom(presetData.Data)
+			if err != nil {
+				continue
+			}
+
+			Connector.Create(&preset)
+			bar.Add(1)
 		}
 	}
 }

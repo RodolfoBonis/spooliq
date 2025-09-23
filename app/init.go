@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/entities"
@@ -18,15 +19,37 @@ func InitAndRun() fx.Option {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				// Note: Database connection is handled by services module dependency injection
+				
+				// Verify database connection is ready
+				if services.Connector == nil {
+					log.Error(ctx, "📊 Database connection not initialized", nil)
+					return fmt.Errorf("database connection not initialized")
+				}
+				
+				// Test database connection
+				if err := services.Connector.DB().Ping(); err != nil {
+					log.Error(ctx, "📊 Database ping failed", map[string]interface{}{
+						"error": err.Error(),
+					})
+					return fmt.Errorf("database not accessible: %w", err)
+				}
+				log.Info(ctx, "📊 Database connection verified")
 
 				// Run database migrations
+				log.Info(ctx, "📊 Starting database migrations...", nil)
 				if err := services.RunMigrations(log); err != nil {
 					log.Error(ctx, "📊 Database migrations failed", map[string]interface{}{
 						"error": err.Error(),
 					})
-					return err
+					// Log more details about the failure
+					log.Error(ctx, "📊 Migration failure details", map[string]interface{}{
+						"database_host": config.EnvDBHost(),
+						"database_name": config.EnvDBName(),
+						"database_user": config.EnvDBUser(),
+					})
+					return fmt.Errorf("migrations failed: %w", err)
 				}
-				log.Info(ctx, "📊 Database migrations completed")
+				log.Info(ctx, "📊 Database migrations completed successfully")
 
 				// Run seeds
 				services.RunSeeds(log)

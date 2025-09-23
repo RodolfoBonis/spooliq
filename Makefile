@@ -124,27 +124,65 @@ cache/clear:
 	@docker exec spooliq_redis redis-cli --no-auth-warning -a redis123 flushdb
 	@echo "✅ Cache cleared!"
 
-# Database operations
+# Database operations - New SQL Migration System
 db/migrate:
 	@echo "📊 Running database migrations..."
-	@$(GORUN) cmd/migrate.go up
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate up
 	@echo "✅ Migrations completed!"
 
-# Rollback last migration
+# Rollback last migration (or specify COUNT=n)
 db/rollback:
 	@echo "⏪ Rolling back last migration..."
-	@$(GORUN) cmd/migrate.go down
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate down $(COUNT)
 	@echo "✅ Rollback completed!"
 
 # Show migration status
 db/status:
 	@echo "📋 Checking migration status..."
-	@$(GORUN) cmd/migrate.go status
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate status
 
-# Show pending migrations (dry run)
+# Create new migration
+db/create:
+	@if [ -z "$(NAME)" ]; then \
+		echo "❌ Error: Migration name required"; \
+		echo "Usage: make db/create NAME=\"your_migration_name\""; \
+		exit 1; \
+	fi
+	@echo "📝 Creating migration: $(NAME)"
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate create "$(NAME)"
+
+# List all migrations
+db/list:
+	@echo "📄 Available migrations:"
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate list
+
+# Fresh migration (DESTRUCTIVE - drops all tables)
+db/fresh:
+	@echo "⚠️  WARNING: This will destroy all data!"
+	@echo "Use 'make db/fresh-confirm' if you're sure"
+
+db/fresh-confirm:
+	@echo "🔥 Running fresh migration..."
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate fresh
+
+# Reset migrations (rollback all and rerun)
+db/reset-migrations:
+	@echo "🔄 Resetting migrations..."
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate reset
+
+
+# Show pending migrations (dry run) - keeping for compatibility
 db/dry-run:
-	@echo "👁️  Showing pending migrations (dry run)..."
-	@$(GORUN) cmd/migrate.go dry-run
+	@echo "👁️  Showing available migrations..."
+	@$(GOBUILD) -o migrate cmd/migrate.go
+	@./migrate list
 
 # Seed database with initial data
 db/seed:
@@ -238,11 +276,14 @@ help:
 	@echo "  make cache/status         - Show Redis status and cache keys"
 	@echo "  make cache/clear          - Clear all cache"
 	@echo ""
-	@echo "🗄️  Database Commands:"
-	@echo "  make db/migrate           - Run database migrations"
-	@echo "  make db/rollback          - Rollback last migration"
+	@echo "🗄️  Database Commands (New SQL Migration System):"
+	@echo "  make db/migrate           - Run all pending migrations"
+	@echo "  make db/rollback          - Rollback last migration (use COUNT=n for multiple)"
 	@echo "  make db/status            - Show migration status"
-	@echo "  make db/dry-run           - Show pending migrations (dry run)"
+	@echo "  make db/create NAME=\"name\" - Create new migration with given name"
+	@echo "  make db/list              - List all available migrations"
+	@echo "  make db/fresh-confirm     - Drop all tables and rerun migrations (DESTRUCTIVE)"
+	@echo "  make db/reset-migrations  - Rollback all migrations and rerun them"
 	@echo "  make db/seed              - Seed database with initial data"
 	@echo "  make db/reset             - Reset database (SQLite only)"
 	@echo ""

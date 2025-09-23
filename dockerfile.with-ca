@@ -60,6 +60,10 @@ LABEL maintainer="RodolfoBonis"
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/spooliq /spooliq
 
+# Copy migrations directory for SQL migration system
+COPY --from=builder /app/migrations /migrations
+
+
 # Expose port
 EXPOSE 8000
 

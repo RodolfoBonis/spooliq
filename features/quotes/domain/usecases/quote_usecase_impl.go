@@ -12,6 +12,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/quotes/data/mappers"
 	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/quotes/domain/repositories"
+	"github.com/RodolfoBonis/spooliq/features/quotes/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -20,6 +21,7 @@ import (
 type quoteUseCaseImpl struct {
 	quoteRepo          repositories.QuoteRepository
 	calculationService calculationServices.CalculationService
+	snapshotService    services.SnapshotService
 	logger             logger.Logger
 	validator          *validator.Validate
 }
@@ -28,11 +30,13 @@ type quoteUseCaseImpl struct {
 func NewQuoteUseCase(
 	quoteRepo repositories.QuoteRepository,
 	calculationService calculationServices.CalculationService,
+	snapshotService services.SnapshotService,
 	logger logger.Logger,
 ) QuoteUseCase {
 	return &quoteUseCaseImpl{
 		quoteRepo:          quoteRepo,
 		calculationService: calculationService,
+		snapshotService:    snapshotService,
 		logger:             logger,
 		validator:          validator.New(),
 	}
@@ -73,41 +77,17 @@ func (uc *quoteUseCaseImpl) CreateQuote(c *gin.Context) {
 	if len(req.FilamentLines) > 0 {
 		quote.FilamentLines = make([]quotesEntities.QuoteFilamentLine, 0, len(req.FilamentLines))
 		for _, lineReq := range req.FilamentLines {
-			// Validate filament line request
-			if err := lineReq.Validate(); err != nil {
-				appError := errors.NewAppError(entities.ErrEntity, "Dados de linha de filamento inválidos", nil, err)
+			// Use SnapshotService to create filament line (handles both automatic and manual snapshots)
+			line, err := uc.snapshotService.CreateFilamentSnapshot(c.Request.Context(), &lineReq, userID)
+			if err != nil {
+				appError := errors.NewAppError(entities.ErrEntity, "Erro ao criar snapshot de filamento", nil, err)
 				httpError := appError.ToHTTPError()
-				uc.logger.LogError(c.Request.Context(), "Filament line validation failed", appError)
+				uc.logger.LogError(c.Request.Context(), "Failed to create filament snapshot", appError)
 				c.JSON(httpError.StatusCode, httpError)
 				return
 			}
 
-			// Create filament line with snapshot
-			var line quotesEntities.QuoteFilamentLine
-			line.WeightGrams = lineReq.WeightGrams
-			line.LengthMeters = lineReq.LengthMeters
-
-			// Handle automatic or manual snapshot
-			if lineReq.FilamentID != nil {
-				// TODO: Implement automatic snapshot from filament ID
-				// For now, we'll require manual snapshot data
-				appError := errors.NewAppError(entities.ErrEntity, "Snapshot automático ainda não implementado", nil, nil)
-				httpError := appError.ToHTTPError()
-				uc.logger.LogError(c.Request.Context(), "Automatic snapshot not implemented", appError)
-				c.JSON(httpError.StatusCode, httpError)
-				return
-			}
-			// Use manual snapshot data
-			line.FilamentSnapshotName = lineReq.FilamentSnapshotName
-			line.FilamentSnapshotBrand = lineReq.FilamentSnapshotBrand
-			line.FilamentSnapshotMaterial = lineReq.FilamentSnapshotMaterial
-			line.FilamentSnapshotColor = lineReq.FilamentSnapshotColor
-			line.FilamentSnapshotColorHex = lineReq.FilamentSnapshotColorHex
-			line.FilamentSnapshotPricePerKg = lineReq.FilamentSnapshotPricePerKg
-			line.FilamentSnapshotPricePerMeter = lineReq.FilamentSnapshotPricePerMeter
-			line.FilamentSnapshotURL = lineReq.FilamentSnapshotURL
-
-			quote.FilamentLines = append(quote.FilamentLines, line)
+			quote.FilamentLines = append(quote.FilamentLines, *line)
 		}
 	}
 

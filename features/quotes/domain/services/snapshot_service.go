@@ -19,12 +19,12 @@ type SnapshotService interface {
 }
 
 type snapshotServiceImpl struct {
-	filamentRepo FilamentRepository // We'll need to create this interface
+	filamentRepo FilamentRepository
 }
 
 // FilamentRepository defines the interface for accessing filament data
 type FilamentRepository interface {
-	GetByID(ctx context.Context, id uint) (*filamentEntities.Filament, error)
+	GetByID(ctx context.Context, id uint, userID *string) (*filamentEntities.Filament, error)
 }
 
 // NewSnapshotService creates a new snapshot service
@@ -49,7 +49,8 @@ func (s *snapshotServiceImpl) CreateFilamentSnapshot(ctx context.Context, req *d
 
 	// Handle automatic snapshot from filament ID
 	if req.FilamentID != nil {
-		filament, err := s.filamentRepo.GetByID(ctx, *req.FilamentID)
+		// Pass userID to repository for access control
+		filament, err := s.filamentRepo.GetByID(ctx, *req.FilamentID, &userID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get filament %d: %w", *req.FilamentID, err)
 		}
@@ -86,7 +87,7 @@ func (s *snapshotServiceImpl) CreateFilamentSnapshot(ctx context.Context, req *d
 
 // ValidateFilamentAccess validates if a user can access a filament for snapshotting
 func (s *snapshotServiceImpl) ValidateFilamentAccess(ctx context.Context, filamentID uint, userID string, isAdmin bool) error {
-	filament, err := s.filamentRepo.GetByID(ctx, filamentID)
+	filament, err := s.filamentRepo.GetByID(ctx, filamentID, &userID)
 	if err != nil {
 		return fmt.Errorf("filament not found: %w", err)
 	}

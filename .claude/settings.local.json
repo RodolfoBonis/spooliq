@@ -65,7 +65,12 @@
       "Bash(./migrate create simple_test)",
       "Bash(cat:*)",
       "Bash(grep:*)",
-      "Bash(./migrate fresh)"
+      "Bash(./migrate fresh)",
+      "Bash(CGO_ENABLED=0 go build -o schema-check cmd/schema-check.go)",
+      "Bash(./schema-check full)",
+      "Bash(./migrate create test_idempotent_constraints)",
+      "Bash(./schema-check constraints)",
+      "Bash(CGO_ENABLED=0 go build -o schema-check cmd/schema-check/main.go)"
     ],
     "deny": [],
     "ask": []

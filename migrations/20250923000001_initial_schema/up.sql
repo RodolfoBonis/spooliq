@@ -185,12 +185,37 @@ CREATE INDEX IF NOT EXISTS idx_filament_brands_active ON filament_brands(active)
 CREATE INDEX IF NOT EXISTS idx_filament_materials_name ON filament_materials(name);
 CREATE INDEX IF NOT EXISTS idx_filament_materials_active ON filament_materials(active);
 
--- Add foreign key constraints after all tables are created
+-- Add foreign key constraints after all tables are created (idempotent)
+-- PostgreSQL doesn't support IF NOT EXISTS for constraints directly, so we use a different approach
+
+-- Add fk_filaments_brand constraint if it doesn't exist
+ALTER TABLE filaments DROP CONSTRAINT IF EXISTS fk_filaments_brand;
 ALTER TABLE filaments ADD CONSTRAINT fk_filaments_brand FOREIGN KEY (brand_id) REFERENCES filament_brands(id);
+
+-- Add fk_filaments_material constraint if it doesn't exist
+ALTER TABLE filaments DROP CONSTRAINT IF EXISTS fk_filaments_material;
 ALTER TABLE filaments ADD CONSTRAINT fk_filaments_material FOREIGN KEY (material_id) REFERENCES filament_materials(id);
+
+-- Add fk_quotes_machine_profile constraint if it doesn't exist
+ALTER TABLE quotes DROP CONSTRAINT IF EXISTS fk_quotes_machine_profile;
 ALTER TABLE quotes ADD CONSTRAINT fk_quotes_machine_profile FOREIGN KEY (machine_profile_id) REFERENCES machine_profiles(id);
+
+-- Add fk_quotes_energy_profile constraint if it doesn't exist
+ALTER TABLE quotes DROP CONSTRAINT IF EXISTS fk_quotes_energy_profile;
 ALTER TABLE quotes ADD CONSTRAINT fk_quotes_energy_profile FOREIGN KEY (energy_profile_id) REFERENCES energy_profiles(id);
+
+-- Add fk_quotes_cost_profile constraint if it doesn't exist
+ALTER TABLE quotes DROP CONSTRAINT IF EXISTS fk_quotes_cost_profile;
 ALTER TABLE quotes ADD CONSTRAINT fk_quotes_cost_profile FOREIGN KEY (cost_profile_id) REFERENCES cost_profiles(id);
+
+-- Add fk_quotes_margin_profile constraint if it doesn't exist
+ALTER TABLE quotes DROP CONSTRAINT IF EXISTS fk_quotes_margin_profile;
 ALTER TABLE quotes ADD CONSTRAINT fk_quotes_margin_profile FOREIGN KEY (margin_profile_id) REFERENCES margin_profiles(id);
+
+-- Add fk_quote_filament_lines_quote constraint if it doesn't exist
+ALTER TABLE quote_filament_lines DROP CONSTRAINT IF EXISTS fk_quote_filament_lines_quote;
 ALTER TABLE quote_filament_lines ADD CONSTRAINT fk_quote_filament_lines_quote FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE;
+
+-- Add fk_quote_filament_lines_filament constraint if it doesn't exist
+ALTER TABLE quote_filament_lines DROP CONSTRAINT IF EXISTS fk_quote_filament_lines_filament;
 ALTER TABLE quote_filament_lines ADD CONSTRAINT fk_quote_filament_lines_filament FOREIGN KEY (filament_id) REFERENCES filaments(id);

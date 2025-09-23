@@ -15,7 +15,7 @@ else
 fi
 
 # 2. go vet (erros comuns)
-VET_OUT=$(go vet ./... 2>&1)
+VET_OUT=$(go vet ./... 2>&1 | grep -v "github.com/shoenig/go-m1cpu")
 if [ -n "$VET_OUT" ]; then
   echo -e "\nProblemas encontrados pelo go vet:"
   echo "$VET_OUT"

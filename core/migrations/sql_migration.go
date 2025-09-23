@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -37,7 +37,7 @@ func (s *SQLMigrationScanner) ScanMigrations() ([]SQLMigration, error) {
 	var migrations []SQLMigration
 
 	// Read directory
-	entries, err := ioutil.ReadDir(s.migrationsPath)
+	entries, err := os.ReadDir(s.migrationsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
 	}
@@ -67,14 +67,14 @@ func (s *SQLMigrationScanner) ScanMigrations() ([]SQLMigration, error) {
 
 		// Read up.sql
 		upPath := filepath.Join(s.migrationsPath, entry.Name(), "up.sql")
-		upSQL, err := ioutil.ReadFile(upPath)
+		upSQL, err := os.ReadFile(upPath)
 		if err != nil {
 			continue // Skip if up.sql doesn't exist
 		}
 
 		// Read down.sql (optional)
 		downPath := filepath.Join(s.migrationsPath, entry.Name(), "down.sql")
-		downSQL, _ := ioutil.ReadFile(downPath) // Ignore error, down.sql is optional
+		downSQL, _ := os.ReadFile(downPath) // Ignore error, down.sql is optional
 
 		migrations = append(migrations, SQLMigration{
 			Version:   timestamp,
@@ -98,11 +98,11 @@ func (s *SQLMigrationScanner) ScanMigrations() ([]SQLMigration, error) {
 func (s *SQLMigrationScanner) CreateMigration(name string) (*SQLMigration, error) {
 	// Generate timestamp
 	timestamp := time.Now().Format("20060102150405")
-	
+
 	// Clean name (remove spaces, special chars)
 	cleanName := regexp.MustCompile(`[^a-zA-Z0-9_]+`).ReplaceAllString(name, "_")
 	cleanName = strings.ToLower(cleanName)
-	
+
 	// Create directory name
 	dirName := fmt.Sprintf("%s_%s", timestamp, cleanName)
 	dirPath := filepath.Join(s.migrationsPath, dirName)
@@ -122,7 +122,7 @@ func (s *SQLMigrationScanner) CreateMigration(name string) (*SQLMigration, error
 
 `, cleanName, name, time.Now().Format("2006-01-02 15:04:05"))
 
-	if err := ioutil.WriteFile(upPath, []byte(upTemplate), 0644); err != nil {
+	if err := os.WriteFile(upPath, []byte(upTemplate), 0644); err != nil {
 		return nil, fmt.Errorf("failed to create up.sql: %w", err)
 	}
 
@@ -136,7 +136,7 @@ func (s *SQLMigrationScanner) CreateMigration(name string) (*SQLMigration, error
 
 `, cleanName, name, time.Now().Format("2006-01-02 15:04:05"))
 
-	if err := ioutil.WriteFile(downPath, []byte(downTemplate), 0644); err != nil {
+	if err := os.WriteFile(downPath, []byte(downTemplate), 0644); err != nil {
 		return nil, fmt.Errorf("failed to create down.sql: %w", err)
 	}
 

@@ -126,29 +126,6 @@ func getEnergyPresets() []struct {
 	}
 }
 
-// seedEnergyPresets cria presets de energia/tarifa
-func seedEnergyPresets(logger logger.Logger) {
-	energyPresets := getEnergyPresets()
-
-	for _, presetData := range energyPresets {
-		var existingPreset presetsEntities.Preset
-		result := Connector.Where("key = ?", presetData.Key).First(&existingPreset)
-
-		if result.RecordNotFound() {
-			preset := presetsEntities.Preset{
-				Key: presetData.Key,
-			}
-
-			err := preset.MarshalDataFrom(presetData.Data)
-			if err != nil {
-				continue
-			}
-
-			Connector.Create(&preset)
-		}
-	}
-}
-
 // seedEnergyPresetsWithProgress cria presets de energia/tarifa com barra de progresso
 func seedEnergyPresetsWithProgress(logger logger.Logger, bar *progressbar.ProgressBar) {
 	energyPresets := getEnergyPresets()
@@ -218,29 +195,6 @@ func getMachinePresets() []struct {
 				URL:         "https://www.prusa3d.com/product/original-prusa-i3-mk4-3d-printer/",
 			},
 		},
-	}
-}
-
-// seedMachinePresets cria presets de máquinas/impressoras
-func seedMachinePresets(logger logger.Logger) {
-	machinePresets := getMachinePresets()
-
-	for _, presetData := range machinePresets {
-		var existingPreset presetsEntities.Preset
-		result := Connector.Where("key = ?", presetData.Key).First(&existingPreset)
-
-		if result.RecordNotFound() {
-			preset := presetsEntities.Preset{
-				Key: presetData.Key,
-			}
-
-			err := preset.MarshalDataFrom(presetData.Data)
-			if err != nil {
-				continue
-			}
-
-			Connector.Create(&preset)
-		}
 	}
 }
 

@@ -130,7 +130,6 @@ func main() {
 		}
 		printMigrationList(migrations)
 
-
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()
@@ -166,14 +165,14 @@ func getMigrationsPath() string {
 	if path := os.Getenv("MIGRATIONS_PATH"); path != "" {
 		return path
 	}
-	
+
 	// Default to migrations directory in project root
 	return "migrations"
 }
 
 func createMigration(migrationsPath, name string, log logger.Logger) {
 	ctx := context.Background()
-	
+
 	scanner := migrations.NewSQLMigrationScanner(migrationsPath)
 	migration, err := scanner.CreateMigration(name)
 	if err != nil {
@@ -182,7 +181,7 @@ func createMigration(migrationsPath, name string, log logger.Logger) {
 		})
 		os.Exit(1)
 	}
-	
+
 	fmt.Println("✅ Migration created successfully!")
 	fmt.Printf("📁 Location: %s\n", migration.Path)
 	fmt.Printf("📝 Version: %s\n", migration.Version)
@@ -198,27 +197,27 @@ func createMigration(migrationsPath, name string, log logger.Logger) {
 func printMigrationStatus(statuses []migrations.MigrationStatus) {
 	fmt.Println("\nMigration Status")
 	fmt.Println("================")
-	
+
 	if len(statuses) == 0 {
 		fmt.Println("No migrations found")
 		return
 	}
-	
+
 	for _, status := range statuses {
 		icon := "⬜"
 		if status.Applied {
 			icon = "✅"
 		}
-		
+
 		fmt.Printf("%s %s - %s", icon, status.Version, status.Name)
-		
+
 		if status.AppliedAt != nil {
 			fmt.Printf(" (applied: %s)", status.AppliedAt.Format("2006-01-02 15:04:05"))
 		}
-		
+
 		fmt.Println()
 	}
-	
+
 	// Count summary
 	applied := 0
 	pending := 0
@@ -229,7 +228,7 @@ func printMigrationStatus(statuses []migrations.MigrationStatus) {
 			pending++
 		}
 	}
-	
+
 	fmt.Println("\n---")
 	fmt.Printf("Total: %d | Applied: %d | Pending: %d\n", len(statuses), applied, pending)
 }
@@ -237,21 +236,21 @@ func printMigrationStatus(statuses []migrations.MigrationStatus) {
 func printMigrationList(migrations []migrations.SQLMigration) {
 	fmt.Println("\nAvailable Migrations")
 	fmt.Println("====================")
-	
+
 	if len(migrations) == 0 {
 		fmt.Println("No migrations found")
 		fmt.Println("\nCreate your first migration with: migrate create <name>")
 		return
 	}
-	
+
 	for _, m := range migrations {
 		fmt.Printf("📄 %s - %s\n", m.Version, m.Name)
 		fmt.Printf("   Path: %s\n", m.Path)
 		fmt.Printf("   Created: %s\n", m.Timestamp.Format("2006-01-02 15:04:05"))
-		
+
 		hasUp := m.UpSQL != ""
 		hasDown := m.DownSQL != ""
-		
+
 		if hasUp && hasDown {
 			fmt.Println("   Files: ✅ up.sql ✅ down.sql")
 		} else if hasUp {
@@ -262,4 +261,3 @@ func printMigrationList(migrations []migrations.SQLMigration) {
 		fmt.Println()
 	}
 }
-

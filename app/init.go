@@ -19,13 +19,13 @@ func InitAndRun() fx.Option {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				// Note: Database connection is handled by services module dependency injection
-				
+
 				// Verify database connection is ready
 				if services.Connector == nil {
 					log.Error(ctx, "📊 Database connection not initialized", nil)
 					return fmt.Errorf("database connection not initialized")
 				}
-				
+
 				// Test database connection
 				if err := services.Connector.DB().Ping(); err != nil {
 					log.Error(ctx, "📊 Database ping failed", map[string]interface{}{

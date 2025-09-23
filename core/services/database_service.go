@@ -172,7 +172,7 @@ func RunMigrations(logger logger.Logger) error {
 
 	// Get migrations path
 	migrationsPath := getMigrationsPath()
-	
+
 	// Create SQL migration executor
 	executor := migrations.NewSQLMigrationExecutor(Connector, logger, migrationsPath)
 
@@ -182,17 +182,17 @@ func RunMigrations(logger logger.Logger) error {
 		logger.Info(ctx, "Attempting to run SQL migrations", map[string]interface{}{
 			"attempt": attempt,
 		})
-		
+
 		migrationErr = executor.RunAll()
 		if migrationErr == nil {
 			break
 		}
-		
+
 		logger.Error(ctx, "Migration attempt failed", map[string]interface{}{
 			"attempt": attempt,
 			"error":   migrationErr.Error(),
 		})
-		
+
 		if attempt < 3 {
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
@@ -215,7 +215,7 @@ func getMigrationsPath() string {
 	if path := config.EnvMigrationsPath(); path != "" {
 		return path
 	}
-	
+
 	// Default to migrations directory in project root
 	return "migrations"
 }

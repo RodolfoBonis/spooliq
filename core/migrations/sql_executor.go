@@ -161,7 +161,7 @@ func (e *SQLMigrationExecutor) RunUp(count int) error {
 	}
 
 	e.logger.Info(ctx, "Migrations completed", map[string]interface{}{
-		"executed": executed,
+		"executed":  executed,
 		"requested": count,
 	})
 
@@ -199,7 +199,7 @@ func (e *SQLMigrationExecutor) RunDown(count int) error {
 	rolled := 0
 	for i := len(appliedMigrations) - 1; i >= 0 && rolled < count; i-- {
 		applied := appliedMigrations[i]
-		
+
 		migration, exists := migrationMap[applied.Version]
 		if !exists {
 			e.logger.Warning(ctx, "Migration file not found for rollback", map[string]interface{}{
@@ -406,9 +406,9 @@ func (e *SQLMigrationExecutor) GetStatus() ([]MigrationStatus, error) {
 // Fresh drops all tables and reruns all migrations
 func (e *SQLMigrationExecutor) Fresh() error {
 	ctx := context.Background()
-	
+
 	e.logger.Warning(ctx, "Dropping all tables and starting fresh", nil)
-	
+
 	// Get all table names
 	var tables []string
 	query := `
@@ -416,13 +416,13 @@ func (e *SQLMigrationExecutor) Fresh() error {
 		FROM pg_tables 
 		WHERE schemaname = 'public'
 	`
-	
+
 	rows, err := e.db.Raw(query).Rows()
 	if err != nil {
 		return fmt.Errorf("failed to get table list: %w", err)
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var tableName string
 		if err := rows.Scan(&tableName); err != nil {
@@ -430,7 +430,7 @@ func (e *SQLMigrationExecutor) Fresh() error {
 		}
 		tables = append(tables, tableName)
 	}
-	
+
 	// Drop all tables
 	for _, table := range tables {
 		e.logger.Info(ctx, "Dropping table", map[string]interface{}{"table": table})
@@ -441,7 +441,7 @@ func (e *SQLMigrationExecutor) Fresh() error {
 			})
 		}
 	}
-	
+
 	// Run all migrations
 	return e.RunAll()
 }
@@ -449,22 +449,22 @@ func (e *SQLMigrationExecutor) Fresh() error {
 // Reset rolls back all migrations and reruns them
 func (e *SQLMigrationExecutor) Reset() error {
 	ctx := context.Background()
-	
+
 	e.logger.Info(ctx, "Resetting all migrations", nil)
-	
+
 	// Get count of applied migrations
 	appliedMigrations, err := e.repository.GetAppliedMigrations()
 	if err != nil {
 		return fmt.Errorf("failed to get applied migrations: %w", err)
 	}
-	
+
 	// Rollback all
 	if len(appliedMigrations) > 0 {
 		if err := e.RunDown(len(appliedMigrations)); err != nil {
 			return fmt.Errorf("failed to rollback migrations: %w", err)
 		}
 	}
-	
+
 	// Run all migrations
 	return e.RunAll()
 }
@@ -474,7 +474,7 @@ func splitSQLStatements(sql string) []string {
 	// Simple split by semicolon
 	// TODO: Improve to handle semicolons inside strings
 	statements := strings.Split(sql, ";")
-	
+
 	var result []string
 	for _, stmt := range statements {
 		stmt = strings.TrimSpace(stmt)
@@ -482,7 +482,7 @@ func splitSQLStatements(sql string) []string {
 			result = append(result, stmt)
 		}
 	}
-	
+
 	return result
 }
 

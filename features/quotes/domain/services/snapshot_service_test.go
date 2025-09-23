@@ -101,6 +101,11 @@ func TestSnapshotService_CreateFilamentSnapshot_AutomaticSnapshot(t *testing.T) 
 	if result.WeightGrams != 125.5 {
 		t.Errorf("Expected weight 125.5, got: %f", result.WeightGrams)
 	}
+
+	// CRITICAL: Verify FilamentID is set correctly
+	if result.FilamentID != 1 {
+		t.Errorf("Expected FilamentID 1, got: %d", result.FilamentID)
+	}
 }
 
 func TestSnapshotService_CreateFilamentSnapshot_ManualSnapshot(t *testing.T) {
@@ -152,5 +157,10 @@ func TestSnapshotService_CreateFilamentSnapshot_ManualSnapshot(t *testing.T) {
 
 	if result.WeightGrams != 75.2 {
 		t.Errorf("Expected weight 75.2, got: %f", result.WeightGrams)
+	}
+
+	// CRITICAL: Verify FilamentID is 0 for manual snapshot
+	if result.FilamentID != 0 {
+		t.Errorf("Expected FilamentID 0 for manual snapshot, got: %d", result.FilamentID)
 	}
 }

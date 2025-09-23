@@ -28,6 +28,7 @@ func ModelToEntity(model *models.QuoteModel) *entities.Quote {
 			entity.FilamentLines = append(entity.FilamentLines, entities.QuoteFilamentLine{
 				ID:                            lineModel.ID,
 				QuoteID:                       lineModel.QuoteID,
+				FilamentID:                    lineModel.FilamentID,
 				FilamentSnapshotName:          lineModel.FilamentSnapshotName,
 				FilamentSnapshotBrand:         lineModel.FilamentSnapshotBrand,
 				FilamentSnapshotMaterial:      lineModel.FilamentSnapshotMaterial,
@@ -127,6 +128,7 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 			model.FilamentLines = append(model.FilamentLines, models.QuoteFilamentLineModel{
 				ID:                            lineEntity.ID,
 				QuoteID:                       lineEntity.QuoteID,
+				FilamentID:                    lineEntity.FilamentID,
 				FilamentSnapshotName:          lineEntity.FilamentSnapshotName,
 				FilamentSnapshotBrand:         lineEntity.FilamentSnapshotBrand,
 				FilamentSnapshotMaterial:      lineEntity.FilamentSnapshotMaterial,

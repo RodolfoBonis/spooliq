@@ -61,6 +61,9 @@ func (s *snapshotServiceImpl) CreateFilamentSnapshot(ctx context.Context, req *d
 			return nil, fmt.Errorf("user %s does not have access to filament %d", userID, *req.FilamentID)
 		}
 
+		// Set the FilamentID reference (CRITICAL: this was missing!)
+		line.FilamentID = *req.FilamentID
+
 		// Create snapshot from current filament data
 		line.FilamentSnapshotName = filament.Name
 		line.FilamentSnapshotBrand = filament.Brand.Name
@@ -71,7 +74,10 @@ func (s *snapshotServiceImpl) CreateFilamentSnapshot(ctx context.Context, req *d
 		line.FilamentSnapshotPricePerMeter = filament.PricePerMeter
 		line.FilamentSnapshotURL = filament.URL
 	} else {
-		// Use manual snapshot data
+		// Use manual snapshot data (no specific filament reference)
+		// Set FilamentID to 0 to indicate this is a manual snapshot without filament reference
+		line.FilamentID = 0
+
 		line.FilamentSnapshotName = req.FilamentSnapshotName
 		line.FilamentSnapshotBrand = req.FilamentSnapshotBrand
 		line.FilamentSnapshotMaterial = req.FilamentSnapshotMaterial

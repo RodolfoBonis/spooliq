@@ -3200,6 +3200,7 @@
             "required": [
                 "base_tariff",
                 "location",
+                "name",
                 "year"
             ],
             "properties": {
@@ -3216,6 +3217,11 @@
                 },
                 "location": {
                     "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "year": {
                     "type": "integer",
@@ -3494,6 +3500,9 @@
                     "type": "integer"
                 },
                 "location": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "quote_id": {
@@ -3820,6 +3829,7 @@
             "required": [
                 "base_tariff",
                 "location",
+                "name",
                 "year"
             ],
             "properties": {
@@ -3836,6 +3846,11 @@
                 },
                 "location": {
                     "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "year": {
                     "type": "integer",

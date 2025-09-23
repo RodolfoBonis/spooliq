@@ -66,11 +66,13 @@ func ModelToEntity(model *models.QuoteModel) *entities.Quote {
 		entity.EnergyProfile = &entities.EnergyProfile{
 			ID:            model.EnergyProfile.ID,
 			QuoteID:       model.EnergyProfile.QuoteID,
+			Name:          model.EnergyProfile.Name,
 			BaseTariff:    model.EnergyProfile.BaseTariff,
 			FlagSurcharge: model.EnergyProfile.FlagSurcharge,
 			Location:      model.EnergyProfile.Location,
 			Year:          model.EnergyProfile.Year,
 			Description:   model.EnergyProfile.Description,
+			OwnerUserID:   model.EnergyProfile.OwnerUserID,
 			CreatedAt:     model.EnergyProfile.CreatedAt,
 			UpdatedAt:     model.EnergyProfile.UpdatedAt,
 		}
@@ -166,11 +168,13 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 		model.EnergyProfile = &models.EnergyProfileModel{
 			ID:            entity.EnergyProfile.ID,
 			QuoteID:       entity.EnergyProfile.QuoteID,
+			Name:          entity.EnergyProfile.Name,
 			BaseTariff:    entity.EnergyProfile.BaseTariff,
 			FlagSurcharge: entity.EnergyProfile.FlagSurcharge,
 			Location:      entity.EnergyProfile.Location,
 			Year:          entity.EnergyProfile.Year,
 			Description:   entity.EnergyProfile.Description,
+			OwnerUserID:   entity.EnergyProfile.OwnerUserID,
 			CreatedAt:     entity.EnergyProfile.CreatedAt,
 			UpdatedAt:     entity.EnergyProfile.UpdatedAt,
 		}
@@ -238,11 +242,13 @@ func CreateRequestToEntity(req *dto.CreateQuoteRequest, ownerUserID string) *ent
 
 	if req.EnergyProfile != nil {
 		entity.EnergyProfile = &entities.EnergyProfile{
+			Name:          req.EnergyProfile.Name,
 			BaseTariff:    req.EnergyProfile.BaseTariff,
 			FlagSurcharge: req.EnergyProfile.FlagSurcharge,
 			Location:      req.EnergyProfile.Location,
 			Year:          req.EnergyProfile.Year,
 			Description:   req.EnergyProfile.Description,
+			OwnerUserID:   &ownerUserID, // Set owner to the quote creator
 		}
 	}
 

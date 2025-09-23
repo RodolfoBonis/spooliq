@@ -94,11 +94,13 @@ func (MachineProfileModel) TableName() string {
 type EnergyProfileModel struct {
 	ID            uint       `gorm:"primary_key;auto_increment"`
 	QuoteID       uint       `gorm:"not null;index"`
+	Name          string     `gorm:"type:varchar(255);not null"`
 	BaseTariff    float64    `gorm:"type:decimal(10,4);not null"`
 	FlagSurcharge float64    `gorm:"type:decimal(10,4);not null;default:0"`
 	Location      string     `gorm:"type:varchar(255);not null"`
 	Year          int        `gorm:"not null"`
 	Description   string     `gorm:"type:text"`
+	OwnerUserID   *string    `gorm:"type:varchar(255);index"`
 	CreatedAt     time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
 	UpdatedAt     time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
 	DeletedAt     *time.Time `gorm:"index"`

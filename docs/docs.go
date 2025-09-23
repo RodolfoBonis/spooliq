@@ -3211,6 +3211,7 @@ const docTemplate = `{
             "required": [
                 "base_tariff",
                 "location",
+                "name",
                 "year"
             ],
             "properties": {
@@ -3227,6 +3228,11 @@ const docTemplate = `{
                 },
                 "location": {
                     "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "year": {
                     "type": "integer",
@@ -3505,6 +3511,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "location": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "quote_id": {
@@ -3831,6 +3840,7 @@ const docTemplate = `{
             "required": [
                 "base_tariff",
                 "location",
+                "name",
                 "year"
             ],
             "properties": {
@@ -3847,6 +3857,11 @@ const docTemplate = `{
                 },
                 "location": {
                     "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "year": {
                     "type": "integer",

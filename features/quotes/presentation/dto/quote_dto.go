@@ -88,6 +88,7 @@ type UpdateMachineProfileRequest struct {
 
 // CreateEnergyProfileRequest representa a requisição para criar um perfil de energia
 type CreateEnergyProfileRequest struct {
+	Name          string  `json:"name" validate:"required,min=1,max=255"`
 	BaseTariff    float64 `json:"base_tariff" validate:"required,min=0"`
 	FlagSurcharge float64 `json:"flag_surcharge" validate:"min=0"`
 	Location      string  `json:"location" validate:"required"`
@@ -97,6 +98,7 @@ type CreateEnergyProfileRequest struct {
 
 // UpdateEnergyProfileRequest representa a requisição para atualizar um perfil de energia
 type UpdateEnergyProfileRequest struct {
+	Name          string  `json:"name" validate:"required,min=1,max=255"`
 	BaseTariff    float64 `json:"base_tariff" validate:"required,min=0"`
 	FlagSurcharge float64 `json:"flag_surcharge" validate:"min=0"`
 	Location      string  `json:"location" validate:"required"`
@@ -198,6 +200,7 @@ type MachineProfileResponse struct {
 type EnergyProfileResponse struct {
 	ID            uint    `json:"id"`
 	QuoteID       uint    `json:"quote_id"`
+	Name          string  `json:"name"`
 	BaseTariff    float64 `json:"base_tariff"`
 	FlagSurcharge float64 `json:"flag_surcharge"`
 	Location      string  `json:"location"`
@@ -302,6 +305,7 @@ func ToQuoteResponse(quote *entities.Quote) *QuoteResponse {
 		response.EnergyProfile = &EnergyProfileResponse{
 			ID:            quote.EnergyProfile.ID,
 			QuoteID:       quote.EnergyProfile.QuoteID,
+			Name:          quote.EnergyProfile.Name,
 			BaseTariff:    quote.EnergyProfile.BaseTariff,
 			FlagSurcharge: quote.EnergyProfile.FlagSurcharge,
 			Location:      quote.EnergyProfile.Location,

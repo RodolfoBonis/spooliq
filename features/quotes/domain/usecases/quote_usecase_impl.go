@@ -50,7 +50,7 @@ func NewQuoteUseCase(
 		costProfileService:    costProfileService,
 		marginProfileService:  marginProfileService,
 		logger:                logger,
-		validator:          validator.New(),
+		validator:             validator.New(),
 	}
 }
 

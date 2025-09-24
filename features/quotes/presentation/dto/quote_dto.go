@@ -69,7 +69,7 @@ type UpdateFilamentLineRequest struct {
 type CreateMachineProfileRequest struct {
 	// Opção 1: Referenciar um preset existente
 	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
-	
+
 	// Opção 2: Dados customizados (todos campos abaixo)
 	Name        string  `json:"name,omitempty" validate:"omitempty"`
 	Brand       string  `json:"brand,omitempty" validate:"omitempty"`
@@ -96,7 +96,7 @@ type UpdateMachineProfileRequest struct {
 type CreateEnergyProfileRequest struct {
 	// Opção 1: Referenciar um preset existente
 	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
-	
+
 	// Opção 2: Dados customizados (todos campos abaixo)
 	Name          string  `json:"name,omitempty" validate:"omitempty,min=1,max=255"`
 	BaseTariff    float64 `json:"base_tariff,omitempty" validate:"omitempty,min=0"`
@@ -121,7 +121,7 @@ type UpdateEnergyProfileRequest struct {
 type CreateCostProfileRequest struct {
 	// Opção 1: Referenciar um preset existente
 	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
-	
+
 	// Opção 2: Dados customizados (todos campos abaixo)
 	WearPercentage float64 `json:"wear_percentage,omitempty" validate:"omitempty,min=0,max=100"`
 	OverheadAmount float64 `json:"overhead_amount,omitempty" validate:"omitempty,min=0"`
@@ -140,7 +140,7 @@ type UpdateCostProfileRequest struct {
 type CreateMarginProfileRequest struct {
 	// Opção 1: Referenciar um preset existente
 	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
-	
+
 	// Opção 2: Dados customizados (todos campos abaixo)
 	PrintingOnlyMargin  float64 `json:"printing_only_margin,omitempty" validate:"omitempty,min=0"`
 	PrintingPlusMargin  float64 `json:"printing_plus_margin,omitempty" validate:"omitempty,min=0"`
@@ -376,7 +376,7 @@ func (req *CreateEnergyProfileRequest) Validate() error {
 		}
 		return nil
 	}
-	
+
 	// Option 2: Custom data - at least location and year are required
 	if req.Location == "" {
 		return fmt.Errorf("location is required when not using preset_key")
@@ -387,7 +387,7 @@ func (req *CreateEnergyProfileRequest) Validate() error {
 	if req.BaseTariff == 0 {
 		return fmt.Errorf("base_tariff is required when not using preset_key")
 	}
-	
+
 	// Name can be auto-generated if not provided
 	return nil
 }
@@ -434,7 +434,7 @@ func (req *CreateMachineProfileRequest) Validate() error {
 		}
 		return nil
 	}
-	
+
 	// Option 2: Custom data - name, brand, model and watt are required
 	if req.Name == "" {
 		return fmt.Errorf("name is required when not using preset_key")
@@ -448,7 +448,7 @@ func (req *CreateMachineProfileRequest) Validate() error {
 	if req.Watt == 0 {
 		return fmt.Errorf("watt is required when not using preset_key")
 	}
-	
+
 	return nil
 }
 
@@ -462,12 +462,12 @@ func (req *CreateCostProfileRequest) Validate() error {
 		}
 		return nil
 	}
-	
+
 	// Option 2: Custom data - both fields are required for cost profile
 	if req.WearPercentage == 0 && req.OverheadAmount == 0 {
 		return fmt.Errorf("either wear_percentage or overhead_amount must be provided when not using preset_key")
 	}
-	
+
 	return nil
 }
 
@@ -481,7 +481,7 @@ func (req *CreateMarginProfileRequest) Validate() error {
 		}
 		return nil
 	}
-	
+
 	// Option 2: Custom data - all margin fields are required
 	if req.PrintingOnlyMargin == 0 {
 		return fmt.Errorf("printing_only_margin is required when not using preset_key")
@@ -492,6 +492,6 @@ func (req *CreateMarginProfileRequest) Validate() error {
 	if req.FullServiceMargin == 0 {
 		return fmt.Errorf("full_service_margin is required when not using preset_key")
 	}
-	
+
 	return nil
 }

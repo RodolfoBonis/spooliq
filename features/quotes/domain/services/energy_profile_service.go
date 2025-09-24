@@ -62,20 +62,20 @@ func (s *energyProfileServiceImpl) CreateEnergyProfileFromRequest(ctx context.Co
 	}
 
 	var profile quotesEntities.EnergyProfile
-	
+
 	// Option 1: Load from preset
 	if req.PresetKey != "" {
 		preset, err := s.presetRepo.GetPresetByKey(ctx, req.PresetKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get energy preset '%s': %w", req.PresetKey, err)
 		}
-		
+
 		// Parse preset data as EnergyPreset
 		var energyPreset presetsEntities.EnergyPreset
 		if err := preset.UnmarshalDataTo(&energyPreset); err != nil {
 			return nil, fmt.Errorf("preset '%s' is not a valid energy preset: %w", req.PresetKey, err)
 		}
-		
+
 		// Map preset data to profile
 		profile.Name = fmt.Sprintf("%s %d", energyPreset.Location, energyPreset.Year)
 		profile.BaseTariff = energyPreset.BaseTariff
@@ -90,7 +90,7 @@ func (s *energyProfileServiceImpl) CreateEnergyProfileFromRequest(ctx context.Co
 		profile.Location = req.Location
 		profile.Year = req.Year
 		profile.Description = req.Description
-		
+
 		// Auto-generate name if not provided
 		if req.Name != "" {
 			profile.Name = req.Name
@@ -98,10 +98,10 @@ func (s *energyProfileServiceImpl) CreateEnergyProfileFromRequest(ctx context.Co
 			profile.Name = fmt.Sprintf("%s %d", req.Location, req.Year)
 		}
 	}
-	
+
 	// Set owner
 	profile.OwnerUserID = &ownerUserID
-	
+
 	return &profile, nil
 }
 

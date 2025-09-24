@@ -19,12 +19,15 @@ import (
 )
 
 type quoteUseCaseImpl struct {
-	quoteRepo            repositories.QuoteRepository
-	calculationService   calculationServices.CalculationService
-	snapshotService      services.SnapshotService
-	energyProfileService services.EnergyProfileService
-	logger               logger.Logger
-	validator            *validator.Validate
+	quoteRepo             repositories.QuoteRepository
+	calculationService    calculationServices.CalculationService
+	snapshotService       services.SnapshotService
+	energyProfileService  services.EnergyProfileService
+	machineProfileService services.MachineProfileService
+	costProfileService    services.CostProfileService
+	marginProfileService  services.MarginProfileService
+	logger                logger.Logger
+	validator             *validator.Validate
 }
 
 // NewQuoteUseCase creates a new instance of QuoteUseCase with the provided dependencies.
@@ -33,14 +36,20 @@ func NewQuoteUseCase(
 	calculationService calculationServices.CalculationService,
 	snapshotService services.SnapshotService,
 	energyProfileService services.EnergyProfileService,
+	machineProfileService services.MachineProfileService,
+	costProfileService services.CostProfileService,
+	marginProfileService services.MarginProfileService,
 	logger logger.Logger,
 ) QuoteUseCase {
 	return &quoteUseCaseImpl{
-		quoteRepo:            quoteRepo,
-		calculationService:   calculationService,
-		snapshotService:      snapshotService,
-		energyProfileService: energyProfileService,
-		logger:               logger,
+		quoteRepo:             quoteRepo,
+		calculationService:    calculationService,
+		snapshotService:       snapshotService,
+		energyProfileService:  energyProfileService,
+		machineProfileService: machineProfileService,
+		costProfileService:    costProfileService,
+		marginProfileService:  marginProfileService,
+		logger:                logger,
 		validator:          validator.New(),
 	}
 }
@@ -105,6 +114,45 @@ func (uc *quoteUseCaseImpl) CreateQuote(c *gin.Context) {
 			return
 		}
 		quote.EnergyProfile = energyProfile
+	}
+
+	// Process machine profile with machine profile service (handles presets and custom data)
+	if req.MachineProfile != nil {
+		machineProfile, err := uc.machineProfileService.CreateMachineProfileFromRequest(c.Request.Context(), req.MachineProfile)
+		if err != nil {
+			appError := errors.NewAppError(entities.ErrEntity, "Erro ao criar perfil de máquina", nil, err)
+			httpError := appError.ToHTTPError()
+			uc.logger.LogError(c.Request.Context(), "Failed to create machine profile", appError)
+			c.JSON(httpError.StatusCode, httpError)
+			return
+		}
+		quote.MachineProfile = machineProfile
+	}
+
+	// Process cost profile with cost profile service (handles presets and custom data)
+	if req.CostProfile != nil {
+		costProfile, err := uc.costProfileService.CreateCostProfileFromRequest(c.Request.Context(), req.CostProfile)
+		if err != nil {
+			appError := errors.NewAppError(entities.ErrEntity, "Erro ao criar perfil de custos", nil, err)
+			httpError := appError.ToHTTPError()
+			uc.logger.LogError(c.Request.Context(), "Failed to create cost profile", appError)
+			c.JSON(httpError.StatusCode, httpError)
+			return
+		}
+		quote.CostProfile = costProfile
+	}
+
+	// Process margin profile with margin profile service (handles presets and custom data)
+	if req.MarginProfile != nil {
+		marginProfile, err := uc.marginProfileService.CreateMarginProfileFromRequest(c.Request.Context(), req.MarginProfile)
+		if err != nil {
+			appError := errors.NewAppError(entities.ErrEntity, "Erro ao criar perfil de margens", nil, err)
+			httpError := appError.ToHTTPError()
+			uc.logger.LogError(c.Request.Context(), "Failed to create margin profile", appError)
+			c.JSON(httpError.StatusCode, httpError)
+			return
+		}
+		quote.MarginProfile = marginProfile
 	}
 
 	// Validate business rules

@@ -30,11 +30,26 @@ var QuotesModule = fx.Module("quotes",
 		return quotesServices.NewSnapshotService(filamentRepo)
 	}),
 	
-	// Services - EnergyProfileService depends on PresetRepository (provided by PresetsModule)
+	// Services - All Profile Services depend on PresetRepository (provided by PresetsModule)
 	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.EnergyProfileService {
 		// Create adapter that implements the PresetRepository interface expected by EnergyProfileService
 		adapter := &presetRepositoryAdapter{repo: presetRepo}
 		return quotesServices.NewEnergyProfileService(adapter)
+	}),
+	
+	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.MachineProfileService {
+		adapter := &presetRepositoryAdapter{repo: presetRepo}
+		return quotesServices.NewMachineProfileService(adapter)
+	}),
+	
+	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.CostProfileService {
+		adapter := &presetRepositoryAdapter{repo: presetRepo}
+		return quotesServices.NewCostProfileService(adapter)
+	}),
+	
+	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.MarginProfileService {
+		adapter := &presetRepositoryAdapter{repo: presetRepo}
+		return quotesServices.NewMarginProfileService(adapter)
 	}),
 
 	// Use Cases

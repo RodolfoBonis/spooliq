@@ -212,7 +212,7 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 
 // CreateRequestToEntity converte CreateQuoteRequest para Quote entity
 // Note: This function now only handles the basic quote data.
-// Filament line processing with snapshots and energy profile processing should be handled in the service layer.
+// All profile processing (filament lines, energy, machine, cost, margin) is handled in the service layer.
 func CreateRequestToEntity(req *dto.CreateQuoteRequest, ownerUserID string) *entities.Quote {
 	if req == nil {
 		return nil
@@ -224,45 +224,12 @@ func CreateRequestToEntity(req *dto.CreateQuoteRequest, ownerUserID string) *ent
 		OwnerUserID: ownerUserID,
 	}
 
-	// Note: FilamentLines are now processed separately in the service layer
-	// to support both automatic snapshots and manual snapshot data
-	
-	// Note: EnergyProfile is now processed separately in the service layer
-	// to support both presets and custom data
-
-	// Convert profiles (except energy profile which is handled by service)
-	if req.MachineProfile != nil {
-		entity.MachineProfile = &entities.MachineProfile{
-			Name:        req.MachineProfile.Name,
-			Brand:       req.MachineProfile.Brand,
-			Model:       req.MachineProfile.Model,
-			Watt:        req.MachineProfile.Watt,
-			IdleFactor:  req.MachineProfile.IdleFactor,
-			Description: req.MachineProfile.Description,
-			URL:         req.MachineProfile.URL,
-		}
-	}
-
-	// EnergyProfile is handled by EnergyProfileService in the service layer
-
-	if req.CostProfile != nil {
-		entity.CostProfile = &entities.CostProfile{
-			WearPercentage: req.CostProfile.WearPercentage,
-			OverheadAmount: req.CostProfile.OverheadAmount,
-			Description:    req.CostProfile.Description,
-		}
-	}
-
-	if req.MarginProfile != nil {
-		entity.MarginProfile = &entities.MarginProfile{
-			PrintingOnlyMargin:  req.MarginProfile.PrintingOnlyMargin,
-			PrintingPlusMargin:  req.MarginProfile.PrintingPlusMargin,
-			FullServiceMargin:   req.MarginProfile.FullServiceMargin,
-			OperatorRatePerHour: req.MarginProfile.OperatorRatePerHour,
-			ModelerRatePerHour:  req.MarginProfile.ModelerRatePerHour,
-			Description:         req.MarginProfile.Description,
-		}
-	}
+	// Note: All profiles are now processed separately in the service layer:
+	// - FilamentLines: SnapshotService (supports automatic snapshots and manual snapshot data)
+	// - EnergyProfile: EnergyProfileService (supports presets and custom data)
+	// - MachineProfile: MachineProfileService (supports presets and custom data)
+	// - CostProfile: CostProfileService (supports presets and custom data)
+	// - MarginProfile: MarginProfileService (supports presets and custom data)
 
 	return entity
 }

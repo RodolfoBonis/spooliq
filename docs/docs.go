@@ -3199,7 +3199,12 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
+                "preset_key": {
+                    "description": "Opção 1: Referenciar um preset existente",
+                    "type": "string"
+                },
                 "wear_percentage": {
+                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
                     "type": "number",
                     "maximum": 100,
                     "minimum": 0
@@ -3291,12 +3296,6 @@ const docTemplate = `{
         },
         "dto.CreateMachineProfileRequest": {
             "type": "object",
-            "required": [
-                "brand",
-                "model",
-                "name",
-                "watt"
-            ],
             "properties": {
                 "brand": {
                     "type": "string"
@@ -3313,6 +3312,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
+                    "type": "string"
+                },
+                "preset_key": {
+                    "description": "Opção 1: Referenciar um preset existente",
                     "type": "string"
                 },
                 "url": {
@@ -3342,7 +3346,12 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
+                "preset_key": {
+                    "description": "Opção 1: Referenciar um preset existente",
+                    "type": "string"
+                },
                 "printing_only_margin": {
+                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
                     "type": "number",
                     "minimum": 0
                 },

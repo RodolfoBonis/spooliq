@@ -65,12 +65,17 @@ type UpdateFilamentLineRequest struct {
 }
 
 // CreateMachineProfileRequest representa a requisição para criar um perfil de máquina
+// Pode usar um preset existente (via preset_key) OU fornecer dados customizados
 type CreateMachineProfileRequest struct {
-	Name        string  `json:"name" validate:"required"`
-	Brand       string  `json:"brand" validate:"required"`
-	Model       string  `json:"model" validate:"required"`
-	Watt        float64 `json:"watt" validate:"required,min=0"`
-	IdleFactor  float64 `json:"idle_factor" validate:"min=0,max=1"`
+	// Opção 1: Referenciar um preset existente
+	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
+	
+	// Opção 2: Dados customizados (todos campos abaixo)
+	Name        string  `json:"name,omitempty" validate:"omitempty"`
+	Brand       string  `json:"brand,omitempty" validate:"omitempty"`
+	Model       string  `json:"model,omitempty" validate:"omitempty"`
+	Watt        float64 `json:"watt,omitempty" validate:"omitempty,min=0"`
+	IdleFactor  float64 `json:"idle_factor,omitempty" validate:"omitempty,min=0,max=1"`
 	Description string  `json:"description,omitempty"`
 	URL         string  `json:"url,omitempty" validate:"omitempty,url"`
 }
@@ -112,9 +117,14 @@ type UpdateEnergyProfileRequest struct {
 }
 
 // CreateCostProfileRequest representa a requisição para criar um perfil de custos
+// Pode usar um preset existente (via preset_key) OU fornecer dados customizados
 type CreateCostProfileRequest struct {
-	WearPercentage float64 `json:"wear_percentage" validate:"min=0,max=100"`
-	OverheadAmount float64 `json:"overhead_amount" validate:"min=0"`
+	// Opção 1: Referenciar um preset existente
+	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
+	
+	// Opção 2: Dados customizados (todos campos abaixo)
+	WearPercentage float64 `json:"wear_percentage,omitempty" validate:"omitempty,min=0,max=100"`
+	OverheadAmount float64 `json:"overhead_amount,omitempty" validate:"omitempty,min=0"`
 	Description    string  `json:"description,omitempty"`
 }
 
@@ -126,12 +136,17 @@ type UpdateCostProfileRequest struct {
 }
 
 // CreateMarginProfileRequest representa a requisição para criar um perfil de margens
+// Pode usar um preset existente (via preset_key) OU fornecer dados customizados
 type CreateMarginProfileRequest struct {
-	PrintingOnlyMargin  float64 `json:"printing_only_margin" validate:"min=0"`
-	PrintingPlusMargin  float64 `json:"printing_plus_margin" validate:"min=0"`
-	FullServiceMargin   float64 `json:"full_service_margin" validate:"min=0"`
-	OperatorRatePerHour float64 `json:"operator_rate_per_hour" validate:"min=0"`
-	ModelerRatePerHour  float64 `json:"modeler_rate_per_hour" validate:"min=0"`
+	// Opção 1: Referenciar um preset existente
+	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
+	
+	// Opção 2: Dados customizados (todos campos abaixo)
+	PrintingOnlyMargin  float64 `json:"printing_only_margin,omitempty" validate:"omitempty,min=0"`
+	PrintingPlusMargin  float64 `json:"printing_plus_margin,omitempty" validate:"omitempty,min=0"`
+	FullServiceMargin   float64 `json:"full_service_margin,omitempty" validate:"omitempty,min=0"`
+	OperatorRatePerHour float64 `json:"operator_rate_per_hour,omitempty" validate:"omitempty,min=0"`
+	ModelerRatePerHour  float64 `json:"modeler_rate_per_hour,omitempty" validate:"omitempty,min=0"`
 	Description         string  `json:"description,omitempty"`
 }
 
@@ -406,5 +421,77 @@ func (req *CreateFilamentLineRequest) Validate() error {
 		return fmt.Errorf("filament_snapshot_price_per_kg must be greater than 0 when filament_id is not provided")
 	}
 
+	return nil
+}
+
+// Validate validates the CreateMachineProfileRequest ensuring either PresetKey or complete data is provided
+func (req *CreateMachineProfileRequest) Validate() error {
+	// Option 1: Using a preset
+	if req.PresetKey != "" {
+		// If using preset, no other fields should be provided
+		if req.Name != "" || req.Brand != "" || req.Model != "" || req.Watt != 0 {
+			return fmt.Errorf("when using preset_key, other fields should not be provided")
+		}
+		return nil
+	}
+	
+	// Option 2: Custom data - name, brand, model and watt are required
+	if req.Name == "" {
+		return fmt.Errorf("name is required when not using preset_key")
+	}
+	if req.Brand == "" {
+		return fmt.Errorf("brand is required when not using preset_key")
+	}
+	if req.Model == "" {
+		return fmt.Errorf("model is required when not using preset_key")
+	}
+	if req.Watt == 0 {
+		return fmt.Errorf("watt is required when not using preset_key")
+	}
+	
+	return nil
+}
+
+// Validate validates the CreateCostProfileRequest ensuring either PresetKey or complete data is provided
+func (req *CreateCostProfileRequest) Validate() error {
+	// Option 1: Using a preset
+	if req.PresetKey != "" {
+		// If using preset, no other fields should be provided
+		if req.WearPercentage != 0 || req.OverheadAmount != 0 {
+			return fmt.Errorf("when using preset_key, other fields should not be provided")
+		}
+		return nil
+	}
+	
+	// Option 2: Custom data - both fields are required for cost profile
+	if req.WearPercentage == 0 && req.OverheadAmount == 0 {
+		return fmt.Errorf("either wear_percentage or overhead_amount must be provided when not using preset_key")
+	}
+	
+	return nil
+}
+
+// Validate validates the CreateMarginProfileRequest ensuring either PresetKey or complete data is provided
+func (req *CreateMarginProfileRequest) Validate() error {
+	// Option 1: Using a preset
+	if req.PresetKey != "" {
+		// If using preset, no other fields should be provided
+		if req.PrintingOnlyMargin != 0 || req.PrintingPlusMargin != 0 || req.FullServiceMargin != 0 || req.OperatorRatePerHour != 0 || req.ModelerRatePerHour != 0 {
+			return fmt.Errorf("when using preset_key, other fields should not be provided")
+		}
+		return nil
+	}
+	
+	// Option 2: Custom data - all margin fields are required
+	if req.PrintingOnlyMargin == 0 {
+		return fmt.Errorf("printing_only_margin is required when not using preset_key")
+	}
+	if req.PrintingPlusMargin == 0 {
+		return fmt.Errorf("printing_plus_margin is required when not using preset_key")
+	}
+	if req.FullServiceMargin == 0 {
+		return fmt.Errorf("full_service_margin is required when not using preset_key")
+	}
+	
 	return nil
 }

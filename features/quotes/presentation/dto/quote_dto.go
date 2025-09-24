@@ -123,6 +123,7 @@ type CreateCostProfileRequest struct {
 	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
 
 	// Opção 2: Dados customizados (todos campos abaixo)
+	Name           string  `json:"name,omitempty" validate:"omitempty,min=1,max=255"`
 	WearPercentage float64 `json:"wear_percentage,omitempty" validate:"omitempty,min=0,max=100"`
 	OverheadAmount float64 `json:"overhead_amount,omitempty" validate:"omitempty,min=0"`
 	Description    string  `json:"description,omitempty"`
@@ -142,6 +143,7 @@ type CreateMarginProfileRequest struct {
 	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
 
 	// Opção 2: Dados customizados (todos campos abaixo)
+	Name                string  `json:"name,omitempty" validate:"omitempty,min=1,max=255"`
 	PrintingOnlyMargin  float64 `json:"printing_only_margin,omitempty" validate:"omitempty,min=0"`
 	PrintingPlusMargin  float64 `json:"printing_plus_margin,omitempty" validate:"omitempty,min=0"`
 	FullServiceMargin   float64 `json:"full_service_margin,omitempty" validate:"omitempty,min=0"`

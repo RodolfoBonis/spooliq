@@ -3195,6 +3195,12 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "name": {
+                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
                 "overhead_amount": {
                     "type": "number",
                     "minimum": 0
@@ -3204,7 +3210,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "wear_percentage": {
-                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
                     "type": "number",
                     "maximum": 100,
                     "minimum": 0
@@ -3342,6 +3347,12 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
+                "name": {
+                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
                 "operator_rate_per_hour": {
                     "type": "number",
                     "minimum": 0
@@ -3351,7 +3362,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "printing_only_margin": {
-                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
                     "type": "number",
                     "minimum": 0
                 },

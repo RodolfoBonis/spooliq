@@ -193,6 +193,7 @@ func (s *costProfileServiceImpl) CreateCostProfileFromRequest(ctx context.Contex
 		}
 
 		// Map preset data to profile
+		profile.Name = costPreset.Name
 		profile.WearPercentage = costPreset.WearPercentage
 		profile.OverheadAmount = costPreset.OverheadAmount
 		profile.Description = costPreset.Description
@@ -201,6 +202,13 @@ func (s *costProfileServiceImpl) CreateCostProfileFromRequest(ctx context.Contex
 		profile.WearPercentage = req.WearPercentage
 		profile.OverheadAmount = req.OverheadAmount
 		profile.Description = req.Description
+
+		// Auto-generate name if not provided
+		if req.Name != "" {
+			profile.Name = req.Name
+		} else {
+			profile.Name = fmt.Sprintf("Custom Cost Profile - Wear %.1f%% Overhead %.2f", req.WearPercentage, req.OverheadAmount)
+		}
 	}
 
 	return &profile, nil
@@ -242,6 +250,7 @@ func (s *marginProfileServiceImpl) CreateMarginProfileFromRequest(ctx context.Co
 		}
 
 		// Map preset data to profile
+		profile.Name = marginPreset.Name
 		profile.PrintingOnlyMargin = marginPreset.PrintingOnlyMargin
 		profile.PrintingPlusMargin = marginPreset.PrintingPlusMargin
 		profile.FullServiceMargin = marginPreset.FullServiceMargin
@@ -256,6 +265,13 @@ func (s *marginProfileServiceImpl) CreateMarginProfileFromRequest(ctx context.Co
 		profile.OperatorRatePerHour = req.OperatorRatePerHour
 		profile.ModelerRatePerHour = req.ModelerRatePerHour
 		profile.Description = req.Description
+
+		// Auto-generate name if not provided
+		if req.Name != "" {
+			profile.Name = req.Name
+		} else {
+			profile.Name = fmt.Sprintf("Custom Margin Profile - Print %.1f%% Service %.1f%%", req.PrintingOnlyMargin, req.FullServiceMargin)
+		}
 	}
 
 	return &profile, nil

@@ -1,13 +1,8 @@
 package di
 
 import (
-	"context"
-
 	calculationDI "github.com/RodolfoBonis/spooliq/features/calculation/di"
 	filamentsRepos "github.com/RodolfoBonis/spooliq/features/filaments/domain/repositories"
-	presetsDI "github.com/RodolfoBonis/spooliq/features/presets/di"
-	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
-	presetsRepos "github.com/RodolfoBonis/spooliq/features/presets/domain/repositories"
 	quotesRepositories "github.com/RodolfoBonis/spooliq/features/quotes/data/repositories"
 	quotesServices "github.com/RodolfoBonis/spooliq/features/quotes/domain/services"
 	quotesUseCases "github.com/RodolfoBonis/spooliq/features/quotes/domain/usecases"
@@ -19,9 +14,6 @@ var QuotesModule = fx.Module("quotes",
 	// Include calculation service
 	calculationDI.Module,
 
-	// Include presets module for preset repository
-	presetsDI.Module,
-
 	// Repositories
 	fx.Provide(quotesRepositories.NewQuoteRepository),
 
@@ -30,38 +22,12 @@ var QuotesModule = fx.Module("quotes",
 		return quotesServices.NewSnapshotService(filamentRepo)
 	}),
 
-	// Services - All Profile Services depend on PresetRepository (provided by PresetsModule)
-	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.EnergyProfileService {
-		// Create adapter that implements the PresetRepository interface expected by EnergyProfileService
-		adapter := &presetRepositoryAdapter{repo: presetRepo}
-		return quotesServices.NewEnergyProfileService(adapter)
-	}),
-
-	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.MachineProfileService {
-		adapter := &presetRepositoryAdapter{repo: presetRepo}
-		return quotesServices.NewMachineProfileService(adapter)
-	}),
-
-	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.CostProfileService {
-		adapter := &presetRepositoryAdapter{repo: presetRepo}
-		return quotesServices.NewCostProfileService(adapter)
-	}),
-
-	fx.Provide(func(presetRepo presetsRepos.PresetRepository) quotesServices.MarginProfileService {
-		adapter := &presetRepositoryAdapter{repo: presetRepo}
-		return quotesServices.NewMarginProfileService(adapter)
-	}),
+	// Services - All Profile Services depend on PresetRepository (provided by PresetsModule at app level)
+	fx.Provide(quotesServices.NewEnergyProfileService),
+	fx.Provide(quotesServices.NewMachineProfileService),
+	fx.Provide(quotesServices.NewCostProfileService),
+	fx.Provide(quotesServices.NewMarginProfileService),
 
 	// Use Cases
 	fx.Provide(quotesUseCases.NewQuoteUseCase),
 )
-
-// presetRepositoryAdapter adapts the presets repository to the interface expected by EnergyProfileService
-type presetRepositoryAdapter struct {
-	repo presetsRepos.PresetRepository
-}
-
-// GetPresetByKey implements the PresetRepository interface expected by EnergyProfileService
-func (a *presetRepositoryAdapter) GetPresetByKey(ctx context.Context, key string) (*presetsEntities.Preset, error) {
-	return a.repo.GetPresetByKey(ctx, key)
-}

@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/errors"
@@ -30,15 +28,6 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Log
 				router.Use(gin.Logger())
 				router.Use(gin.Recovery())
 				router.Use(gin.ErrorLogger())
-				runPort := fmt.Sprintf(":%s", config.EnvPort())
-				go func() {
-					err = router.Run(runPort)
-					if err != nil && err != http.ErrServerClosed {
-						appError := errors.RootError(err.Error(), nil)
-						logger.LogError(ctx, "Erro ao subir servidor HTTP", appError)
-						panic(err)
-					}
-				}()
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {

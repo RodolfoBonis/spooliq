@@ -2,10 +2,13 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/entities"
+	appErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/docs"
@@ -80,9 +83,14 @@ func InitAndRun() fx.Option {
 				docs.SwaggerInfo.Description = "SpoolIq calcula o preço real das suas impressões 3D: filamento multi-cor (g/m), energia (kWh + bandeira), desgaste, overhead e mão-de-obra. Gera pacotes (só impressão, ajustes, modelagem), exporta PDF/CSV e guarda materiais."
 				docs.SwaggerInfo.Version = "1.0"
 
-				// Run the Gin server
+				runPort := fmt.Sprintf(":%s", cfg.Port)
 				go func() {
-					_ = app.Run(":" + cfg.Port)
+					err = app.Run(runPort)
+					if err != nil && !errors.Is(err, http.ErrServerClosed) {
+						appError := appErrors.RootError(err.Error(), nil)
+						log.LogError(ctx, "Erro ao subir servidor HTTP", appError)
+						panic(err)
+					}
 				}()
 
 				return nil

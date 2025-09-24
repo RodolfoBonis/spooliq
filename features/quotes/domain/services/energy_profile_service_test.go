@@ -50,6 +50,43 @@ func (m *MockPresetRepository) GetPresetByKey(_ context.Context, key string) (*p
 	return preset, nil
 }
 
+// Implement other methods to satisfy the interface (not used in tests)
+func (m *MockPresetRepository) GetEnergyLocations(_ context.Context) ([]string, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) GetEnergyPresets(_ context.Context, _ string) ([]*presetsEntities.Preset, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) GetMachinePresets(_ context.Context) ([]*presetsEntities.Preset, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) GetCostPresets(_ context.Context) ([]*presetsEntities.Preset, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) GetMarginPresets(_ context.Context) ([]*presetsEntities.Preset, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) CreatePreset(_ context.Context, _ *presetsEntities.Preset) error {
+	return fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) UpdatePreset(_ context.Context, _ *presetsEntities.Preset) error {
+	return fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) DeletePreset(_ context.Context, _ string) error {
+	return fmt.Errorf("not implemented")
+}
+
+func (m *MockPresetRepository) GetPresetsByKeyPrefix(_ context.Context, _ string) ([]*presetsEntities.Preset, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func TestEnergyProfileService_CreateFromPreset(t *testing.T) {
 	// Arrange
 	mockRepo := NewMockPresetRepository()

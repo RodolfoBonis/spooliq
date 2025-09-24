@@ -70,7 +70,10 @@
       "Bash(./schema-check full)",
       "Bash(./migrate create test_idempotent_constraints)",
       "Bash(./schema-check constraints)",
-      "Bash(CGO_ENABLED=0 go build -o schema-check cmd/schema-check/main.go)"
+      "Bash(CGO_ENABLED=0 go build -o schema-check cmd/schema-check/main.go)",
+      "Bash(find:*)",
+      "Bash(go vet:*)",
+      "Bash(staticcheck:*)"
     ],
     "deny": [],
     "ask": []

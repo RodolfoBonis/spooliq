@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	presetsEntities "github.com/RodolfoBonis/spooliq/features/presets/domain/entities"
+	presetsRepos "github.com/RodolfoBonis/spooliq/features/presets/domain/repositories"
 	quotesEntities "github.com/RodolfoBonis/spooliq/features/quotes/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/quotes/presentation/dto"
 )
@@ -37,18 +38,12 @@ type MarginProfileService interface {
 	CreateMarginProfileFromRequest(ctx context.Context, req *dto.CreateMarginProfileRequest) (*quotesEntities.MarginProfile, error)
 }
 
-// PresetRepository defines the interface for accessing preset data
-type PresetRepository interface {
-	// GetPresetByKey retrieves a preset by its key
-	GetPresetByKey(ctx context.Context, key string) (*presetsEntities.Preset, error)
-}
-
 type energyProfileServiceImpl struct {
-	presetRepo PresetRepository
+	presetRepo presetsRepos.PresetRepository
 }
 
 // NewEnergyProfileService creates a new energy profile service
-func NewEnergyProfileService(presetRepo PresetRepository) EnergyProfileService {
+func NewEnergyProfileService(presetRepo presetsRepos.PresetRepository) EnergyProfileService {
 	return &energyProfileServiceImpl{
 		presetRepo: presetRepo,
 	}
@@ -108,11 +103,11 @@ func (s *energyProfileServiceImpl) CreateEnergyProfileFromRequest(ctx context.Co
 // Machine Profile Service Implementation
 
 type machineProfileServiceImpl struct {
-	presetRepo PresetRepository
+	presetRepo presetsRepos.PresetRepository
 }
 
 // NewMachineProfileService creates a new machine profile service
-func NewMachineProfileService(presetRepo PresetRepository) MachineProfileService {
+func NewMachineProfileService(presetRepo presetsRepos.PresetRepository) MachineProfileService {
 	return &machineProfileServiceImpl{
 		presetRepo: presetRepo,
 	}
@@ -165,11 +160,11 @@ func (s *machineProfileServiceImpl) CreateMachineProfileFromRequest(ctx context.
 // Cost Profile Service Implementation
 
 type costProfileServiceImpl struct {
-	presetRepo PresetRepository
+	presetRepo presetsRepos.PresetRepository
 }
 
 // NewCostProfileService creates a new cost profile service
-func NewCostProfileService(presetRepo PresetRepository) CostProfileService {
+func NewCostProfileService(presetRepo presetsRepos.PresetRepository) CostProfileService {
 	return &costProfileServiceImpl{
 		presetRepo: presetRepo,
 	}
@@ -214,11 +209,11 @@ func (s *costProfileServiceImpl) CreateCostProfileFromRequest(ctx context.Contex
 // Margin Profile Service Implementation
 
 type marginProfileServiceImpl struct {
-	presetRepo PresetRepository
+	presetRepo presetsRepos.PresetRepository
 }
 
 // NewMarginProfileService creates a new margin profile service
-func NewMarginProfileService(presetRepo PresetRepository) MarginProfileService {
+func NewMarginProfileService(presetRepo presetsRepos.PresetRepository) MarginProfileService {
 	return &marginProfileServiceImpl{
 		presetRepo: presetRepo,
 	}

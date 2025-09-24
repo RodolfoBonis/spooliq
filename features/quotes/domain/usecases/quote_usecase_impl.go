@@ -19,11 +19,12 @@ import (
 )
 
 type quoteUseCaseImpl struct {
-	quoteRepo          repositories.QuoteRepository
-	calculationService calculationServices.CalculationService
-	snapshotService    services.SnapshotService
-	logger             logger.Logger
-	validator          *validator.Validate
+	quoteRepo            repositories.QuoteRepository
+	calculationService   calculationServices.CalculationService
+	snapshotService      services.SnapshotService
+	energyProfileService services.EnergyProfileService
+	logger               logger.Logger
+	validator            *validator.Validate
 }
 
 // NewQuoteUseCase creates a new instance of QuoteUseCase with the provided dependencies.
@@ -31,13 +32,15 @@ func NewQuoteUseCase(
 	quoteRepo repositories.QuoteRepository,
 	calculationService calculationServices.CalculationService,
 	snapshotService services.SnapshotService,
+	energyProfileService services.EnergyProfileService,
 	logger logger.Logger,
 ) QuoteUseCase {
 	return &quoteUseCaseImpl{
-		quoteRepo:          quoteRepo,
-		calculationService: calculationService,
-		snapshotService:    snapshotService,
-		logger:             logger,
+		quoteRepo:            quoteRepo,
+		calculationService:   calculationService,
+		snapshotService:      snapshotService,
+		energyProfileService: energyProfileService,
+		logger:               logger,
 		validator:          validator.New(),
 	}
 }
@@ -70,7 +73,7 @@ func (uc *quoteUseCaseImpl) CreateQuote(c *gin.Context) {
 		return
 	}
 
-	// Convert DTO to entity (without filament lines)
+	// Convert DTO to entity (without filament lines and energy profile)
 	quote := mappers.CreateRequestToEntity(&req, userID)
 
 	// Process filament lines with snapshot service
@@ -89,6 +92,19 @@ func (uc *quoteUseCaseImpl) CreateQuote(c *gin.Context) {
 
 			quote.FilamentLines = append(quote.FilamentLines, *line)
 		}
+	}
+
+	// Process energy profile with energy profile service (handles presets and custom data)
+	if req.EnergyProfile != nil {
+		energyProfile, err := uc.energyProfileService.CreateEnergyProfileFromRequest(c.Request.Context(), req.EnergyProfile, userID)
+		if err != nil {
+			appError := errors.NewAppError(entities.ErrEntity, "Erro ao criar perfil de energia", nil, err)
+			httpError := appError.ToHTTPError()
+			uc.logger.LogError(c.Request.Context(), "Failed to create energy profile", appError)
+			c.JSON(httpError.StatusCode, httpError)
+			return
+		}
+		quote.EnergyProfile = energyProfile
 	}
 
 	// Validate business rules

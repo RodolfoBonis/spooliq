@@ -212,7 +212,7 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 
 // CreateRequestToEntity converte CreateQuoteRequest para Quote entity
 // Note: This function now only handles the basic quote data.
-// Filament line processing with snapshots should be handled in the service layer.
+// Filament line processing with snapshots and energy profile processing should be handled in the service layer.
 func CreateRequestToEntity(req *dto.CreateQuoteRequest, ownerUserID string) *entities.Quote {
 	if req == nil {
 		return nil
@@ -226,8 +226,11 @@ func CreateRequestToEntity(req *dto.CreateQuoteRequest, ownerUserID string) *ent
 
 	// Note: FilamentLines are now processed separately in the service layer
 	// to support both automatic snapshots and manual snapshot data
+	
+	// Note: EnergyProfile is now processed separately in the service layer
+	// to support both presets and custom data
 
-	// Convert profiles
+	// Convert profiles (except energy profile which is handled by service)
 	if req.MachineProfile != nil {
 		entity.MachineProfile = &entities.MachineProfile{
 			Name:        req.MachineProfile.Name,
@@ -240,17 +243,7 @@ func CreateRequestToEntity(req *dto.CreateQuoteRequest, ownerUserID string) *ent
 		}
 	}
 
-	if req.EnergyProfile != nil {
-		entity.EnergyProfile = &entities.EnergyProfile{
-			Name:          req.EnergyProfile.Name,
-			BaseTariff:    req.EnergyProfile.BaseTariff,
-			FlagSurcharge: req.EnergyProfile.FlagSurcharge,
-			Location:      req.EnergyProfile.Location,
-			Year:          req.EnergyProfile.Year,
-			Description:   req.EnergyProfile.Description,
-			OwnerUserID:   &ownerUserID, // Set owner to the quote creator
-		}
-	}
+	// EnergyProfile is handled by EnergyProfileService in the service layer
 
 	if req.CostProfile != nil {
 		entity.CostProfile = &entities.CostProfile{

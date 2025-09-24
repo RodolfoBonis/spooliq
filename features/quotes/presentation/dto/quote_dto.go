@@ -87,12 +87,17 @@ type UpdateMachineProfileRequest struct {
 }
 
 // CreateEnergyProfileRequest representa a requisição para criar um perfil de energia
+// Pode usar um preset existente (via preset_key) OU fornecer dados customizados
 type CreateEnergyProfileRequest struct {
-	Name          string  `json:"name" validate:"required,min=1,max=255"`
-	BaseTariff    float64 `json:"base_tariff" validate:"required,min=0"`
-	FlagSurcharge float64 `json:"flag_surcharge" validate:"min=0"`
-	Location      string  `json:"location" validate:"required"`
-	Year          int     `json:"year" validate:"required,min=2020,max=2030"`
+	// Opção 1: Referenciar um preset existente
+	PresetKey string `json:"preset_key,omitempty" validate:"omitempty"`
+	
+	// Opção 2: Dados customizados (todos campos abaixo)
+	Name          string  `json:"name,omitempty" validate:"omitempty,min=1,max=255"`
+	BaseTariff    float64 `json:"base_tariff,omitempty" validate:"omitempty,min=0"`
+	FlagSurcharge float64 `json:"flag_surcharge,omitempty" validate:"omitempty,min=0"`
+	Location      string  `json:"location,omitempty" validate:"omitempty"`
+	Year          int     `json:"year,omitempty" validate:"omitempty,min=2020,max=2030"`
 	Description   string  `json:"description,omitempty"`
 }
 
@@ -344,6 +349,32 @@ func ToQuoteResponse(quote *entities.Quote) *QuoteResponse {
 	}
 
 	return response
+}
+
+// Validate validates the CreateEnergyProfileRequest ensuring either PresetKey or complete data is provided
+func (req *CreateEnergyProfileRequest) Validate() error {
+	// Option 1: Using a preset
+	if req.PresetKey != "" {
+		// If using preset, no other fields should be provided
+		if req.Name != "" || req.BaseTariff != 0 || req.Location != "" || req.Year != 0 {
+			return fmt.Errorf("when using preset_key, other fields should not be provided")
+		}
+		return nil
+	}
+	
+	// Option 2: Custom data - at least location and year are required
+	if req.Location == "" {
+		return fmt.Errorf("location is required when not using preset_key")
+	}
+	if req.Year == 0 {
+		return fmt.Errorf("year is required when not using preset_key")
+	}
+	if req.BaseTariff == 0 {
+		return fmt.Errorf("base_tariff is required when not using preset_key")
+	}
+	
+	// Name can be auto-generated if not provided
+	return nil
 }
 
 // Validate validates the CreateFilamentLineRequest ensuring either FilamentID or manual snapshot data is provided

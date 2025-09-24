@@ -3208,12 +3208,6 @@ const docTemplate = `{
         },
         "dto.CreateEnergyProfileRequest": {
             "type": "object",
-            "required": [
-                "base_tariff",
-                "location",
-                "name",
-                "year"
-            ],
             "properties": {
                 "base_tariff": {
                     "type": "number",
@@ -3230,9 +3224,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "description": "Opção 2: Dados customizados (todos campos abaixo)",
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 1
+                },
+                "preset_key": {
+                    "description": "Opção 1: Referenciar um preset existente",
+                    "type": "string"
                 },
                 "year": {
                     "type": "integer",

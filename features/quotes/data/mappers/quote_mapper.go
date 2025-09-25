@@ -17,8 +17,23 @@ func ModelToEntity(model *models.QuoteModel) *entities.Quote {
 		Title:       model.Title,
 		Notes:       model.Notes,
 		OwnerUserID: model.OwnerUserID,
-		CreatedAt:   model.CreatedAt,
-		UpdatedAt:   model.UpdatedAt,
+
+		// Calculation fields
+		CalculationMaterialCost:     model.CalculationMaterialCost,
+		CalculationEnergyCost:       model.CalculationEnergyCost,
+		CalculationWearCost:         model.CalculationWearCost,
+		CalculationLaborCost:        model.CalculationLaborCost,
+		CalculationDirectCost:       model.CalculationDirectCost,
+		CalculationFinalPrice:       model.CalculationFinalPrice,
+		CalculationPrintTimeHours:   model.CalculationPrintTimeHours,
+		CalculationOperatorMinutes:  model.CalculationOperatorMinutes,
+		CalculationModelerMinutes:   model.CalculationModelerMinutes,
+		CalculationServiceType:      model.CalculationServiceType,
+		CalculationAppliedMargin:    model.CalculationAppliedMargin,
+		CalculationCalculatedAt:     model.CalculationCalculatedAt,
+
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
 	}
 
 	// Convert filament lines
@@ -122,8 +137,23 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 		Title:       entity.Title,
 		Notes:       entity.Notes,
 		OwnerUserID: entity.OwnerUserID,
-		CreatedAt:   entity.CreatedAt,
-		UpdatedAt:   entity.UpdatedAt,
+
+		// Calculation fields
+		CalculationMaterialCost:     entity.CalculationMaterialCost,
+		CalculationEnergyCost:       entity.CalculationEnergyCost,
+		CalculationWearCost:         entity.CalculationWearCost,
+		CalculationLaborCost:        entity.CalculationLaborCost,
+		CalculationDirectCost:       entity.CalculationDirectCost,
+		CalculationFinalPrice:       entity.CalculationFinalPrice,
+		CalculationPrintTimeHours:   entity.CalculationPrintTimeHours,
+		CalculationOperatorMinutes:  entity.CalculationOperatorMinutes,
+		CalculationModelerMinutes:   entity.CalculationModelerMinutes,
+		CalculationServiceType:      entity.CalculationServiceType,
+		CalculationAppliedMargin:    entity.CalculationAppliedMargin,
+		CalculationCalculatedAt:     entity.CalculationCalculatedAt,
+
+		CreatedAt: entity.CreatedAt,
+		UpdatedAt: entity.UpdatedAt,
 	}
 
 	// Convert filament lines

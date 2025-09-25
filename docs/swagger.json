@@ -3714,6 +3714,47 @@
                 }
             }
         },
+        "dto.QuoteCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "applied_margin": {
+                    "type": "number"
+                },
+                "calculated_at": {
+                    "type": "string"
+                },
+                "direct_cost": {
+                    "type": "number"
+                },
+                "energy_cost": {
+                    "type": "number"
+                },
+                "final_price": {
+                    "type": "number"
+                },
+                "labor_cost": {
+                    "type": "number"
+                },
+                "material_cost": {
+                    "type": "number"
+                },
+                "modeler_minutes": {
+                    "type": "number"
+                },
+                "operator_minutes": {
+                    "type": "number"
+                },
+                "print_time_hours": {
+                    "type": "number"
+                },
+                "service_type": {
+                    "type": "string"
+                },
+                "wear_cost": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.QuoteFilamentResponse": {
             "type": "object",
             "properties": {
@@ -3795,6 +3836,9 @@
         "dto.QuoteResponse": {
             "type": "object",
             "properties": {
+                "calculation": {
+                    "$ref": "#/definitions/dto.QuoteCalculationResponse"
+                },
                 "cost_profile": {
                     "$ref": "#/definitions/dto.CostProfileResponse"
                 },

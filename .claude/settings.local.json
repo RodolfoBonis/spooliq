@@ -73,7 +73,10 @@
       "Bash(CGO_ENABLED=0 go build -o schema-check cmd/schema-check/main.go)",
       "Bash(find:*)",
       "Bash(go vet:*)",
-      "Bash(staticcheck:*)"
+      "Bash(staticcheck:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(./migrate create add_calculation_fields_to_quotes)"
     ],
     "deny": [],
     "ask": []

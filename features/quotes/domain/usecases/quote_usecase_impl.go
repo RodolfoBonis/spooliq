@@ -3,6 +3,7 @@ package usecases
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
@@ -422,6 +423,30 @@ func (uc *quoteUseCaseImpl) CalculateQuote(c *gin.Context) {
 		ModelerMinutes:  req.ModelerMinutes,
 		ServiceType:     req.ServiceType,
 		AppliedMargin:   appliedMargin,
+	}
+
+	// Save calculation result to quote
+	now := time.Now()
+	quote.CalculationMaterialCost = &response.MaterialCost
+	quote.CalculationEnergyCost = &response.EnergyCost
+	quote.CalculationWearCost = &response.WearCost
+	quote.CalculationLaborCost = &response.LaborCost
+	quote.CalculationDirectCost = &response.DirectCost
+	quote.CalculationFinalPrice = &response.FinalPrice
+	quote.CalculationPrintTimeHours = &response.PrintTimeHours
+	quote.CalculationOperatorMinutes = &response.OperatorMinutes
+	quote.CalculationModelerMinutes = &response.ModelerMinutes
+	quote.CalculationServiceType = &response.ServiceType
+	quote.CalculationAppliedMargin = &response.AppliedMargin
+	quote.CalculationCalculatedAt = &now
+
+	// Update quote in database with calculation results
+	if err := uc.quoteRepo.Update(c.Request.Context(), quote, userID); err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to save calculation results", map[string]interface{}{
+			"quote_id": id,
+			"error":    err.Error(),
+		})
+		// Don't fail the request if we can't save - just log the error
 	}
 
 	uc.logger.Info(c.Request.Context(), "Quote calculated successfully", map[string]interface{}{

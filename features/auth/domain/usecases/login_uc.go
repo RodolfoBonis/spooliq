@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ValidateLogin realiza a validação do login do usuário.
 // Login validates user credentials and returns access and refresh tokens.
 // @Summary User Login
 // @Schemes
@@ -27,8 +28,6 @@ import (
 // @Router /auth/login [post]
 // @Example request {"email": "user@example.com", "password": "string"}
 // @Example response {"accessToken": "jwt-token", "refreshToken": "refresh-token", "expiresIn": 3600}
-
-// ValidateLogin realiza a validação do login do usuário.
 func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 	ctx := c.Request.Context()
 	loginData := new(entities.RequestLoginEntity)

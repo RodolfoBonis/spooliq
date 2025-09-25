@@ -112,11 +112,6 @@ func EnvServiceName() string {
 	return GetEnv("SERVICE_NAME", "spooliq")
 }
 
-// EnvMigrationsPath returns the migrations path from environment variables.
-func EnvMigrationsPath() string {
-	return GetEnv("MIGRATIONS_PATH", "")
-}
-
 func envUserAmqp() string {
 	return GetEnv("USER_AMQP", "guest")
 }

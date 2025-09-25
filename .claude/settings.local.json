@@ -76,7 +76,11 @@
       "Bash(staticcheck:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(./migrate create add_calculation_fields_to_quotes)"
+      "Bash(./migrate create add_calculation_fields_to_quotes)",
+      "Bash(rm:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm start)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []

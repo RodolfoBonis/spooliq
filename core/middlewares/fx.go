@@ -10,6 +10,5 @@ var Module = fx.Module("middlewares",
 		NewMonitoringMiddleware,
 		NewProtectMiddleware,
 		NewCacheMiddleware,
-		NewOptionalAuthMiddleware,
 	),
 )

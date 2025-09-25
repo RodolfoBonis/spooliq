@@ -7,9 +7,8 @@ import (
 
 // AppConfig holds the application configuration.
 type AppConfig struct {
-	Port     string
-	Keycloak entities.KeyCloakDataEntity
-	// ServiceID is the unique identifier for the service.
+	Port           string
+	Keycloak       entities.KeyCloakDataEntity
 	ServiceID      string
 	SentryDSN      string
 	DBHost         string

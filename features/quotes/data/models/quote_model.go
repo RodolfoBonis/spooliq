@@ -9,24 +9,24 @@ import (
 
 // QuoteModel representa um orçamento de impressão 3D no banco de dados
 type QuoteModel struct {
-	ID          uint       `gorm:"primary_key;auto_increment"`
-	Title       string     `gorm:"type:varchar(255);not null"`
-	Notes       string     `gorm:"type:text"`
-	OwnerUserID string     `gorm:"type:varchar(255);not null;index"` // Keycloak User ID
+	ID          uint   `gorm:"primary_key;auto_increment"`
+	Title       string `gorm:"type:varchar(255);not null"`
+	Notes       string `gorm:"type:text"`
+	OwnerUserID string `gorm:"type:varchar(255);not null;index"` // Keycloak User ID
 
 	// Calculation result fields - saved when quote is calculated
-	CalculationMaterialCost     *float64   `gorm:"type:decimal(10,2)"`
-	CalculationEnergyCost       *float64   `gorm:"type:decimal(10,2)"`
-	CalculationWearCost         *float64   `gorm:"type:decimal(10,2)"`
-	CalculationLaborCost        *float64   `gorm:"type:decimal(10,2)"`
-	CalculationDirectCost       *float64   `gorm:"type:decimal(10,2)"`
-	CalculationFinalPrice       *float64   `gorm:"type:decimal(10,2)"`
-	CalculationPrintTimeHours   *float64   `gorm:"type:decimal(8,2)"`
-	CalculationOperatorMinutes  *float64   `gorm:"type:decimal(8,2)"`
-	CalculationModelerMinutes   *float64   `gorm:"type:decimal(8,2)"`
-	CalculationServiceType      *string    `gorm:"type:varchar(50)"`
-	CalculationAppliedMargin    *float64   `gorm:"type:decimal(5,2)"`
-	CalculationCalculatedAt     *time.Time `gorm:"type:timestamp"`
+	CalculationMaterialCost    *float64   `gorm:"type:decimal(10,2)"`
+	CalculationEnergyCost      *float64   `gorm:"type:decimal(10,2)"`
+	CalculationWearCost        *float64   `gorm:"type:decimal(10,2)"`
+	CalculationLaborCost       *float64   `gorm:"type:decimal(10,2)"`
+	CalculationDirectCost      *float64   `gorm:"type:decimal(10,2)"`
+	CalculationFinalPrice      *float64   `gorm:"type:decimal(10,2)"`
+	CalculationPrintTimeHours  *float64   `gorm:"type:decimal(8,2)"`
+	CalculationOperatorMinutes *float64   `gorm:"type:decimal(8,2)"`
+	CalculationModelerMinutes  *float64   `gorm:"type:decimal(8,2)"`
+	CalculationServiceType     *string    `gorm:"type:varchar(50)"`
+	CalculationAppliedMargin   *float64   `gorm:"type:decimal(5,2)"`
+	CalculationCalculatedAt    *time.Time `gorm:"type:timestamp"`
 
 	CreatedAt time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
 	UpdatedAt time.Time  `gorm:"default:CURRENT_TIMESTAMP"`

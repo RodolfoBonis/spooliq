@@ -9,39 +9,39 @@ import (
 // Quote representa um orçamento de impressão 3D
 // @Description Orçamento de impressão 3D
 type Quote struct {
-	ID               uint                `gorm:"primary_key;auto_increment" json:"id"`
-	Title            string              `gorm:"type:varchar(255);not null" json:"title" validate:"required,min=1,max=255"`
-	Notes            string              `gorm:"type:text" json:"notes"`
-	OwnerUserID      string              `gorm:"type:varchar(255);not null;index" json:"owner_user_id" validate:"required"`
-	TotalPrintTime   int                 `gorm:"type:integer;default:0" json:"total_print_time"` // em segundos
-	TotalFilamentG   float64             `gorm:"type:decimal(10,2);default:0" json:"total_filament_g"`
-	TotalCost        float64             `gorm:"type:decimal(10,2);default:0" json:"total_cost"`
+	ID             uint    `gorm:"primary_key;auto_increment" json:"id"`
+	Title          string  `gorm:"type:varchar(255);not null" json:"title" validate:"required,min=1,max=255"`
+	Notes          string  `gorm:"type:text" json:"notes"`
+	OwnerUserID    string  `gorm:"type:varchar(255);not null;index" json:"owner_user_id" validate:"required"`
+	TotalPrintTime int     `gorm:"type:integer;default:0" json:"total_print_time"` // em segundos
+	TotalFilamentG float64 `gorm:"type:decimal(10,2);default:0" json:"total_filament_g"`
+	TotalCost      float64 `gorm:"type:decimal(10,2);default:0" json:"total_cost"`
 
 	// Calculation result fields - saved when quote is calculated
-	CalculationMaterialCost     *float64   `gorm:"type:decimal(10,2)" json:"calculation_material_cost,omitempty"`
-	CalculationEnergyCost       *float64   `gorm:"type:decimal(10,2)" json:"calculation_energy_cost,omitempty"`
-	CalculationWearCost         *float64   `gorm:"type:decimal(10,2)" json:"calculation_wear_cost,omitempty"`
-	CalculationLaborCost        *float64   `gorm:"type:decimal(10,2)" json:"calculation_labor_cost,omitempty"`
-	CalculationDirectCost       *float64   `gorm:"type:decimal(10,2)" json:"calculation_direct_cost,omitempty"`
-	CalculationFinalPrice       *float64   `gorm:"type:decimal(10,2)" json:"calculation_final_price,omitempty"`
-	CalculationPrintTimeHours   *float64   `gorm:"type:decimal(8,2)" json:"calculation_print_time_hours,omitempty"`
-	CalculationOperatorMinutes  *float64   `gorm:"type:decimal(8,2)" json:"calculation_operator_minutes,omitempty"`
-	CalculationModelerMinutes   *float64   `gorm:"type:decimal(8,2)" json:"calculation_modeler_minutes,omitempty"`
-	CalculationServiceType      *string    `gorm:"type:varchar(50)" json:"calculation_service_type,omitempty"`
-	CalculationAppliedMargin    *float64   `gorm:"type:decimal(5,2)" json:"calculation_applied_margin,omitempty"`
-	CalculationCalculatedAt     *time.Time `gorm:"type:timestamp" json:"calculation_calculated_at,omitempty"`
-	MachineProfileID *uint               `gorm:"index" json:"machine_profile_id,omitempty"`
-	EnergyProfileID  *uint               `gorm:"index" json:"energy_profile_id,omitempty"`
-	CostProfileID    *uint               `gorm:"index" json:"cost_profile_id,omitempty"`
-	MarginProfileID  *uint               `gorm:"index" json:"margin_profile_id,omitempty"`
-	FilamentLines    []QuoteFilamentLine `gorm:"foreignkey:QuoteID" json:"filament_lines"`
-	MachineProfile   *MachineProfile     `gorm:"foreignkey:MachineProfileID" json:"machine_profile,omitempty"`
-	EnergyProfile    *EnergyProfile      `gorm:"foreignkey:EnergyProfileID" json:"energy_profile,omitempty"`
-	CostProfile      *CostProfile        `gorm:"foreignkey:CostProfileID" json:"cost_profile,omitempty"`
-	MarginProfile    *MarginProfile      `gorm:"foreignkey:MarginProfileID" json:"margin_profile,omitempty"`
-	CreatedAt        time.Time           `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt        time.Time           `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
-	DeletedAt        *time.Time          `gorm:"index" json:"deleted_at,omitempty"`
+	CalculationMaterialCost    *float64            `gorm:"type:decimal(10,2)" json:"calculation_material_cost,omitempty"`
+	CalculationEnergyCost      *float64            `gorm:"type:decimal(10,2)" json:"calculation_energy_cost,omitempty"`
+	CalculationWearCost        *float64            `gorm:"type:decimal(10,2)" json:"calculation_wear_cost,omitempty"`
+	CalculationLaborCost       *float64            `gorm:"type:decimal(10,2)" json:"calculation_labor_cost,omitempty"`
+	CalculationDirectCost      *float64            `gorm:"type:decimal(10,2)" json:"calculation_direct_cost,omitempty"`
+	CalculationFinalPrice      *float64            `gorm:"type:decimal(10,2)" json:"calculation_final_price,omitempty"`
+	CalculationPrintTimeHours  *float64            `gorm:"type:decimal(8,2)" json:"calculation_print_time_hours,omitempty"`
+	CalculationOperatorMinutes *float64            `gorm:"type:decimal(8,2)" json:"calculation_operator_minutes,omitempty"`
+	CalculationModelerMinutes  *float64            `gorm:"type:decimal(8,2)" json:"calculation_modeler_minutes,omitempty"`
+	CalculationServiceType     *string             `gorm:"type:varchar(50)" json:"calculation_service_type,omitempty"`
+	CalculationAppliedMargin   *float64            `gorm:"type:decimal(5,2)" json:"calculation_applied_margin,omitempty"`
+	CalculationCalculatedAt    *time.Time          `gorm:"type:timestamp" json:"calculation_calculated_at,omitempty"`
+	MachineProfileID           *uint               `gorm:"index" json:"machine_profile_id,omitempty"`
+	EnergyProfileID            *uint               `gorm:"index" json:"energy_profile_id,omitempty"`
+	CostProfileID              *uint               `gorm:"index" json:"cost_profile_id,omitempty"`
+	MarginProfileID            *uint               `gorm:"index" json:"margin_profile_id,omitempty"`
+	FilamentLines              []QuoteFilamentLine `gorm:"foreignkey:QuoteID" json:"filament_lines"`
+	MachineProfile             *MachineProfile     `gorm:"foreignkey:MachineProfileID" json:"machine_profile,omitempty"`
+	EnergyProfile              *EnergyProfile      `gorm:"foreignkey:EnergyProfileID" json:"energy_profile,omitempty"`
+	CostProfile                *CostProfile        `gorm:"foreignkey:CostProfileID" json:"cost_profile,omitempty"`
+	MarginProfile              *MarginProfile      `gorm:"foreignkey:MarginProfileID" json:"margin_profile,omitempty"`
+	CreatedAt                  time.Time           `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt                  time.Time           `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
+	DeletedAt                  *time.Time          `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // TableName especifica o nome da tabela para o GORM

@@ -172,34 +172,34 @@ type CalculateQuoteRequest struct {
 
 // QuoteResponse representa a resposta de um orçamento
 type QuoteResponse struct {
-	ID             uint                    `json:"id"`
-	Title          string                  `json:"title"`
-	Notes          string                  `json:"notes,omitempty"`
-	OwnerUserID    string                  `json:"owner_user_id"`
-	CreatedAt      string                  `json:"created_at"`
-	UpdatedAt      string                  `json:"updated_at"`
-	Filaments      []QuoteFilamentResponse `json:"filaments,omitempty"`
-	MachineProfile *MachineProfileResponse `json:"machine_profile,omitempty"`
-	EnergyProfile  *EnergyProfileResponse  `json:"energy_profile,omitempty"`
-	CostProfile    *CostProfileResponse    `json:"cost_profile,omitempty"`
-	MarginProfile  *MarginProfileResponse  `json:"margin_profile,omitempty"`
+	ID             uint                      `json:"id"`
+	Title          string                    `json:"title"`
+	Notes          string                    `json:"notes,omitempty"`
+	OwnerUserID    string                    `json:"owner_user_id"`
+	CreatedAt      string                    `json:"created_at"`
+	UpdatedAt      string                    `json:"updated_at"`
+	Filaments      []QuoteFilamentResponse   `json:"filaments,omitempty"`
+	MachineProfile *MachineProfileResponse   `json:"machine_profile,omitempty"`
+	EnergyProfile  *EnergyProfileResponse    `json:"energy_profile,omitempty"`
+	CostProfile    *CostProfileResponse      `json:"cost_profile,omitempty"`
+	MarginProfile  *MarginProfileResponse    `json:"margin_profile,omitempty"`
 	Calculation    *QuoteCalculationResponse `json:"calculation,omitempty"`
 }
 
 // QuoteCalculationResponse representa os resultados do cálculo de um orçamento
 type QuoteCalculationResponse struct {
-	MaterialCost     float64 `json:"material_cost"`
-	EnergyCost       float64 `json:"energy_cost"`
-	WearCost         float64 `json:"wear_cost"`
-	LaborCost        float64 `json:"labor_cost"`
-	DirectCost       float64 `json:"direct_cost"`
-	FinalPrice       float64 `json:"final_price"`
-	PrintTimeHours   float64 `json:"print_time_hours"`
-	OperatorMinutes  float64 `json:"operator_minutes"`
-	ModelerMinutes   float64 `json:"modeler_minutes"`
-	ServiceType      string  `json:"service_type"`
-	AppliedMargin    float64 `json:"applied_margin"`
-	CalculatedAt     string  `json:"calculated_at"`
+	MaterialCost    float64 `json:"material_cost"`
+	EnergyCost      float64 `json:"energy_cost"`
+	WearCost        float64 `json:"wear_cost"`
+	LaborCost       float64 `json:"labor_cost"`
+	DirectCost      float64 `json:"direct_cost"`
+	FinalPrice      float64 `json:"final_price"`
+	PrintTimeHours  float64 `json:"print_time_hours"`
+	OperatorMinutes float64 `json:"operator_minutes"`
+	ModelerMinutes  float64 `json:"modeler_minutes"`
+	ServiceType     string  `json:"service_type"`
+	AppliedMargin   float64 `json:"applied_margin"`
+	CalculatedAt    string  `json:"calculated_at"`
 }
 
 // QuoteFilamentResponse representa um filamento usado em um orçamento com dados completos + usage
@@ -440,18 +440,18 @@ func ToQuoteResponse(quote *entities.Quote) *QuoteResponse {
 	// Convert calculation results if available
 	if quote.CalculationCalculatedAt != nil {
 		response.Calculation = &QuoteCalculationResponse{
-			MaterialCost:     *quote.CalculationMaterialCost,
-			EnergyCost:       *quote.CalculationEnergyCost,
-			WearCost:         *quote.CalculationWearCost,
-			LaborCost:        *quote.CalculationLaborCost,
-			DirectCost:       *quote.CalculationDirectCost,
-			FinalPrice:       *quote.CalculationFinalPrice,
-			PrintTimeHours:   *quote.CalculationPrintTimeHours,
-			OperatorMinutes:  *quote.CalculationOperatorMinutes,
-			ModelerMinutes:   *quote.CalculationModelerMinutes,
-			ServiceType:      *quote.CalculationServiceType,
-			AppliedMargin:    *quote.CalculationAppliedMargin,
-			CalculatedAt:     quote.CalculationCalculatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			MaterialCost:    *quote.CalculationMaterialCost,
+			EnergyCost:      *quote.CalculationEnergyCost,
+			WearCost:        *quote.CalculationWearCost,
+			LaborCost:       *quote.CalculationLaborCost,
+			DirectCost:      *quote.CalculationDirectCost,
+			FinalPrice:      *quote.CalculationFinalPrice,
+			PrintTimeHours:  *quote.CalculationPrintTimeHours,
+			OperatorMinutes: *quote.CalculationOperatorMinutes,
+			ModelerMinutes:  *quote.CalculationModelerMinutes,
+			ServiceType:     *quote.CalculationServiceType,
+			AppliedMargin:   *quote.CalculationAppliedMargin,
+			CalculatedAt:    quote.CalculationCalculatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 

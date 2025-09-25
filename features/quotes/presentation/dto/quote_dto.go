@@ -178,11 +178,47 @@ type QuoteResponse struct {
 	OwnerUserID    string                  `json:"owner_user_id"`
 	CreatedAt      string                  `json:"created_at"`
 	UpdatedAt      string                  `json:"updated_at"`
-	FilamentLines  []FilamentLineResponse  `json:"filament_lines,omitempty"`
+	Filaments      []QuoteFilamentResponse `json:"filaments,omitempty"`
 	MachineProfile *MachineProfileResponse `json:"machine_profile,omitempty"`
 	EnergyProfile  *EnergyProfileResponse  `json:"energy_profile,omitempty"`
 	CostProfile    *CostProfileResponse    `json:"cost_profile,omitempty"`
 	MarginProfile  *MarginProfileResponse  `json:"margin_profile,omitempty"`
+}
+
+// QuoteFilamentResponse representa um filamento usado em um orçamento com dados completos + usage
+type QuoteFilamentResponse struct {
+	// Dados completos do filamento
+	ID       uint   `json:"id"`
+	Name     string `json:"name"`
+	Brand    string `json:"brand"`
+	Material string `json:"material"`
+
+	// Legacy color fields
+	Color    string `json:"color"`
+	ColorHex string `json:"color_hex,omitempty"`
+
+	// Advanced color system
+	ColorType    string `json:"color_type,omitempty"`
+	ColorData    string `json:"color_data,omitempty"`
+	ColorPreview string `json:"color_preview,omitempty"`
+
+	Diameter      float64  `json:"diameter"`
+	Weight        *float64 `json:"weight,omitempty"`
+	PricePerKg    float64  `json:"price_per_kg"`
+	PricePerMeter *float64 `json:"price_per_meter,omitempty"`
+	URL           string   `json:"url,omitempty"`
+	OwnerUserID   *string  `json:"owner_user_id,omitempty"`
+	CreatedAt     string   `json:"created_at"`
+	UpdatedAt     string   `json:"updated_at"`
+
+	// Usage data from quote filament line
+	Usage QuoteFilamentUsage `json:"usage"`
+}
+
+// QuoteFilamentUsage representa o uso de um filamento em um orçamento específico
+type QuoteFilamentUsage struct {
+	WeightGrams  float64  `json:"weight_grams"`
+	LengthMeters *float64 `json:"length_meters,omitempty"`
 }
 
 // FilamentLineResponse representa a resposta de uma linha de filamento
@@ -283,26 +319,45 @@ func ToQuoteResponse(quote *entities.Quote) *QuoteResponse {
 		UpdatedAt:   quote.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
-	// Convert filament lines
+	// Convert filaments with usage data
 	if len(quote.FilamentLines) > 0 {
-		response.FilamentLines = make([]FilamentLineResponse, 0, len(quote.FilamentLines))
+		response.Filaments = make([]QuoteFilamentResponse, 0, len(quote.FilamentLines))
 		for _, line := range quote.FilamentLines {
-			response.FilamentLines = append(response.FilamentLines, FilamentLineResponse{
-				ID:                            line.ID,
-				QuoteID:                       line.QuoteID,
-				FilamentSnapshotName:          line.FilamentSnapshotName,
-				FilamentSnapshotBrand:         line.FilamentSnapshotBrand,
-				FilamentSnapshotMaterial:      line.FilamentSnapshotMaterial,
-				FilamentSnapshotColor:         line.FilamentSnapshotColor,
-				FilamentSnapshotColorHex:      line.FilamentSnapshotColorHex,
-				FilamentSnapshotPricePerKg:    line.FilamentSnapshotPricePerKg,
-				FilamentSnapshotPricePerMeter: line.FilamentSnapshotPricePerMeter,
-				FilamentSnapshotURL:           line.FilamentSnapshotURL,
-				WeightGrams:                   line.WeightGrams,
-				LengthMeters:                  line.LengthMeters,
-				CreatedAt:                     line.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-				UpdatedAt:                     line.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			})
+			if line.Filament != nil {
+				filamentResponse := QuoteFilamentResponse{
+					// Complete filament data
+					ID:       line.Filament.ID,
+					Name:     line.Filament.Name,
+					Brand:    line.Filament.Brand.Name,
+					Material: line.Filament.Material.Name,
+					Color:    line.Filament.Color,
+					ColorHex: line.Filament.ColorHex,
+
+					Diameter:      line.Filament.Diameter,
+					Weight:        line.Filament.Weight,
+					PricePerKg:    line.Filament.PricePerKg,
+					PricePerMeter: line.Filament.PricePerMeter,
+					URL:           line.Filament.URL,
+					OwnerUserID:   line.Filament.OwnerUserID,
+					CreatedAt:     line.Filament.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+					UpdatedAt:     line.Filament.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+
+					// Usage data from quote filament line
+					Usage: QuoteFilamentUsage{
+						WeightGrams:  line.WeightGrams,
+						LengthMeters: line.LengthMeters,
+					},
+				}
+
+				// Include advanced color data if available
+				if line.Filament.ColorType != "" {
+					filamentResponse.ColorType = string(line.Filament.ColorType)
+					filamentResponse.ColorData = line.Filament.ColorData
+					filamentResponse.ColorPreview = line.Filament.ColorPreview
+				}
+
+				response.Filaments = append(response.Filaments, filamentResponse)
+			}
 		}
 	}
 

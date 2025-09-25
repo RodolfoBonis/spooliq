@@ -3534,53 +3534,6 @@
                 }
             }
         },
-        "dto.FilamentLineResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "filament_snapshot_brand": {
-                    "type": "string"
-                },
-                "filament_snapshot_color": {
-                    "type": "string"
-                },
-                "filament_snapshot_color_hex": {
-                    "type": "string"
-                },
-                "filament_snapshot_material": {
-                    "type": "string"
-                },
-                "filament_snapshot_name": {
-                    "type": "string"
-                },
-                "filament_snapshot_price_per_kg": {
-                    "type": "number"
-                },
-                "filament_snapshot_price_per_meter": {
-                    "type": "number"
-                },
-                "filament_snapshot_url": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "length_meters": {
-                    "type": "number"
-                },
-                "quote_id": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "weight_grams": {
-                    "type": "number"
-                }
-            }
-        },
         "dto.MachinePresetResponse": {
             "type": "object",
             "properties": {
@@ -3761,6 +3714,84 @@
                 }
             }
         },
+        "dto.QuoteFilamentResponse": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "color": {
+                    "description": "Legacy color fields",
+                    "type": "string"
+                },
+                "color_data": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "color_preview": {
+                    "type": "string"
+                },
+                "color_type": {
+                    "description": "Advanced color system",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "diameter": {
+                    "type": "number"
+                },
+                "id": {
+                    "description": "Dados completos do filamento",
+                    "type": "integer"
+                },
+                "material": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_user_id": {
+                    "type": "string"
+                },
+                "price_per_kg": {
+                    "type": "number"
+                },
+                "price_per_meter": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "usage": {
+                    "description": "Usage data from quote filament line",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.QuoteFilamentUsage"
+                        }
+                    ]
+                },
+                "weight": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.QuoteFilamentUsage": {
+            "type": "object",
+            "properties": {
+                "length_meters": {
+                    "type": "number"
+                },
+                "weight_grams": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.QuoteResponse": {
             "type": "object",
             "properties": {
@@ -3773,10 +3804,10 @@
                 "energy_profile": {
                     "$ref": "#/definitions/dto.EnergyProfileResponse"
                 },
-                "filament_lines": {
+                "filaments": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.FilamentLineResponse"
+                        "$ref": "#/definitions/dto.QuoteFilamentResponse"
                     }
                 },
                 "id": {

@@ -3,20 +3,22 @@ package entities
 import (
 	"time"
 
+	filament_entities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 	"github.com/jinzhu/gorm"
 )
 
 // QuoteFilamentLine representa uma linha de filamento em um orçamento
 // @Description Linha de filamento em um orçamento de impressão 3D
 type QuoteFilamentLine struct {
-	ID               uint     `gorm:"primary_key;auto_increment" json:"id"`
-	QuoteID          uint     `gorm:"not null;index" json:"quote_id" validate:"required"`
-	FilamentID       uint     `gorm:"not null;index" json:"filament_id" validate:"required"`
-	WeightGrams      float64  `gorm:"type:decimal(10,2);not null" json:"weight_grams" validate:"required,min=0"` // em gramas
-	LengthMeters     *float64 `gorm:"type:decimal(10,2)" json:"length_meters,omitempty"`                         // comprimento estimado em metros
-	PrintTimeSeconds int      `gorm:"type:integer;default:0" json:"print_time_seconds"`                          // tempo de impressão em segundos
-	Cost             float64  `gorm:"type:decimal(10,2);default:0" json:"cost"`                                  // custo calculado
-	Notes            string   `gorm:"type:text" json:"notes"`
+	ID               uint                        `gorm:"primary_key;auto_increment" json:"id"`
+	QuoteID          uint                        `gorm:"not null;index" json:"quote_id" validate:"required"`
+	FilamentID       uint                        `gorm:"not null;index" json:"filament_id" validate:"required"`
+	Filament         *filament_entities.Filament `gorm:"foreignkey:FilamentID" json:"filament,omitempty"`
+	WeightGrams      float64                     `gorm:"type:decimal(10,2);not null" json:"weight_grams" validate:"required,min=0"` // em gramas
+	LengthMeters     *float64                    `gorm:"type:decimal(10,2)" json:"length_meters,omitempty"`                         // comprimento estimado em metros
+	PrintTimeSeconds int                         `gorm:"type:integer;default:0" json:"print_time_seconds"`                          // tempo de impressão em segundos
+	Cost             float64                     `gorm:"type:decimal(10,2);default:0" json:"cost"`                                  // custo calculado
+	Notes            string                      `gorm:"type:text" json:"notes"`
 	// Snapshot dos dados do filamento (para preservar histórico)
 	FilamentSnapshotName          string    `gorm:"type:varchar(255)" json:"filament_snapshot_name"`
 	FilamentSnapshotBrand         string    `gorm:"type:varchar(255)" json:"filament_snapshot_brand"`

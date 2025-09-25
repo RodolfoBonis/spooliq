@@ -72,6 +72,9 @@ func (r *quoteRepositoryImpl) GetByID(ctx context.Context, id uint, userID strin
 	var model models.QuoteModel
 
 	err := r.db.Preload("FilamentLines").
+		Preload("FilamentLines.Filament").
+		Preload("FilamentLines.Filament.Brand").
+		Preload("FilamentLines.Filament.Material").
 		Preload("MachineProfile").
 		Preload("EnergyProfile").
 		Preload("CostProfile").
@@ -91,6 +94,9 @@ func (r *quoteRepositoryImpl) GetByUser(ctx context.Context, userID string) ([]*
 	var models []*models.QuoteModel
 
 	err := r.db.Preload("FilamentLines").
+		Preload("FilamentLines.Filament").
+		Preload("FilamentLines.Filament.Brand").
+		Preload("FilamentLines.Filament.Material").
 		Preload("MachineProfile").
 		Preload("EnergyProfile").
 		Preload("CostProfile").

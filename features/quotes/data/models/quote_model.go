@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	filament_entities "github.com/RodolfoBonis/spooliq/features/filaments/domain/entities"
 	"github.com/jinzhu/gorm"
 )
 
@@ -44,9 +45,10 @@ func (q *QuoteModel) BeforeUpdate(scope *gorm.Scope) error {
 
 // QuoteFilamentLineModel representa uma linha de filamento no banco de dados
 type QuoteFilamentLineModel struct {
-	ID         uint `gorm:"primary_key;auto_increment"`
-	QuoteID    uint `gorm:"not null;index"`
-	FilamentID uint `gorm:"not null;index"`
+	ID         uint                        `gorm:"primary_key;auto_increment"`
+	QuoteID    uint                        `gorm:"not null;index"`
+	FilamentID uint                        `gorm:"not null;index"`
+	Filament   *filament_entities.Filament `gorm:"foreignkey:FilamentID"`
 
 	// Snapshot dos dados do filamento (para preservar histórico)
 	FilamentSnapshotName          string     `gorm:"type:varchar(255);not null"`

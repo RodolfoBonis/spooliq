@@ -8,6 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Create handles creating a new brand.
+// @Summary Create Brand
+// @Schemes
+// @Description Create a new filament brand
+// @Tags Filament Metadata
+// @Accept json
+// @Produce json
+// @Param request body entities.CreateBrandRequestEntity true "Brand data"
+// @Success 201 {object} entities.BrandEntity "Successfully created brand"
+// @Failure 400 {object} errors.HTTPError
+// @Failure 401 {object} errors.HTTPError
+// @Failure 409 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /brands [post]
+// @Security Bearer
 func (uc *BrandUseCase) Create(c *gin.Context) {
 	var request entities.CreateBrandRequestEntity
 

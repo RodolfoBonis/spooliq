@@ -15,7 +15,9 @@
       "Bash(make:*)",
       "Bash(goimports:*)",
       "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(go get:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,6 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
 	"github.com/jinzhu/gorm"
 	// Drivers de banco de dados
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -150,6 +151,8 @@ func RetryHandler(n int, f func() (bool, error)) error {
 }
 
 // RunMigrations runs the database migrations using the new SQL migration system.
-func RunMigrations(logger logger.Logger) error {
-	return nil
+func RunMigrations() {
+	Connector.AutoMigrate(
+		&brands.BrandModel{},
+	)
 }

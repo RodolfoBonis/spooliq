@@ -7,7 +7,10 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/services"
-	"github.com/RodolfoBonis/spooliq/features/auth/di"
+	authDi "github.com/RodolfoBonis/spooliq/features/auth/di"
+	brandDi "github.com/RodolfoBonis/spooliq/features/brand/di"
+	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
+
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/routes"
 	"github.com/gin-gonic/gin"
@@ -21,12 +24,13 @@ func NewFxApp() *fx.App {
 		config.Module,
 		services.Module,
 		middlewares.Module,
-		di.AuthModule,
+		authDi.AuthModule,
+		brandDi.Module,
 		fx.Provide(
 			gin.New,
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -34,7 +38,7 @@ func NewFxApp() *fx.App {
 					})
 				}
 
-				routes.InitializeRoutes(router, authUc, protectFactory, logger)
+				routes.InitializeRoutes(router, authUc, brandUc, protectFactory, logger)
 				RegisterHooks(lc, router, logger, monitoring)
 			},
 		),

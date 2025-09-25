@@ -4,7 +4,10 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/auth"
-	auth_uc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
+	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
+	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
+
+	"github.com/RodolfoBonis/spooliq/features/brand"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
@@ -14,7 +17,8 @@ import (
 // InitializeRoutes sets up all application routes.
 func InitializeRoutes(
 	router *gin.Engine,
-	authUc auth_uc.AuthUseCase,
+	authUc authuc.AuthUseCase,
+	brandUc branduc.IBrandUseCase,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	logger logger.Logger,
 ) {
@@ -26,4 +30,5 @@ func InitializeRoutes(
 
 	health.Routes(root, logger)
 	auth.Routes(root, authUc, protectFactory)
+	brand.Routes(root, brandUc, protectFactory)
 }

@@ -31,7 +31,13 @@ func InitAndRun() fx.Option {
 				}
 				log.Info(ctx, "📊 Database connection verified")
 
-				// setup the swagger info
+				log.Info(ctx, "Running migrations...")
+
+				services.RunMigrations()
+
+				log.Info(ctx, "Migrations done")
+
+				// Setup the swagger info
 				if cfg.Environment == entities.Environment.Development {
 					docs.SwaggerInfo.Host = "localhost:" + cfg.Port
 					docs.SwaggerInfo.Schemes = []string{"http", "https"}

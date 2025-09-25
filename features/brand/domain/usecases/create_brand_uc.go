@@ -12,7 +12,7 @@ import (
 // @Summary Create Brand
 // @Schemes
 // @Description Create a new filament brand
-// @Tags Filament Metadata
+// @Tags Brands
 // @Accept json
 // @Produce json
 // @Param request body entities.CreateBrandRequestEntity true "Brand data"

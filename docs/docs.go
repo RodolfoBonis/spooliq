@@ -280,7 +280,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Filament Metadata"
+                    "Brands"
                 ],
                 "summary": "Create Brand",
                 "parameters": [

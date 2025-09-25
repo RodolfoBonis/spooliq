@@ -25,14 +25,20 @@ import (
 // @Security Bearer
 func (uc *BrandUseCase) Create(c *gin.Context) {
 	var request entities.CreateBrandRequestEntity
-
+	ctx := c.Request.Context()
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, errors.InvalidRequestResponse(err.Error()))
+		appError := errors.UsecaseError(err.Error())
+		httpError := appError.ToHTTPError()
+		uc.logger.LogError(ctx, httpError.Message, err)
+		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 
 	if err := uc.validator.Struct(request); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ValidationErrorResponse(err.Error()))
+		appError := errors.UsecaseError(err.Error())
+		httpError := appError.ToHTTPError()
+		uc.logger.LogError(ctx, httpError.Message, err)
+		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 
@@ -43,12 +49,16 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 			"name":  request.Name,
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, errors.ErrorResponse(errors.ErrorMessages.FailedToCreateBrand))
+		appError := errors.UsecaseError(err.Error())
+		httpError := appError.ToHTTPError()
+		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 
 	if exists {
-		c.JSON(http.StatusConflict, errors.ErrorResponse("Brand with this name already exists"))
+		httpError := errors.NewHTTPError(http.StatusConflict, "Brand with this name already exists")
+		uc.logger.LogError(ctx, httpError.Message, err)
+		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 
@@ -63,7 +73,9 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 			"error": err.Error(),
 		})
 
-		c.JSON(http.StatusInternalServerError, errors.ErrorResponse(errors.ErrorMessages.FailedToCreateBrand))
+		httpError := errors.NewHTTPError(http.StatusInternalServerError, "Failed to create brand")
+		uc.logger.LogError(ctx, httpError.Message, err)
+		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 

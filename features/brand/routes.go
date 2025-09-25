@@ -6,9 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Routes configures all brand-related HTTP routes with authentication middleware.
 func Routes(route *gin.RouterGroup, useCase usecases.IBrandUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
 	brands := route.Group("/brands")
 	{
 		brands.POST("/", protectFactory(useCase.Create, roles.AdminRole))
+		brands.PUT("/:id", protectFactory(useCase.Update, roles.AdminRole))
 	}
 }

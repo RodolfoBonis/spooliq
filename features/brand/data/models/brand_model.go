@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// BrandModel represents the database model for brand entities.
 type BrandModel struct {
 	ID          uuid.UUID  `gorm:"<-:create;type:uuid;PRIMARY_KEY;" json:"id"`
 	Name        string     `gorm:"type:varchar(255);not null" json:"name"`
@@ -16,13 +17,16 @@ type BrandModel struct {
 	DeletedAt   *time.Time `sql:"index" json:"deleted_at,omitempty"`
 }
 
+// BeforeCreate is a GORM hook that sets the UUID before creating a brand record.
 func (b *BrandModel) BeforeCreate() (err error) {
 	b.ID = uuid.New()
 	return
 }
 
+// TableName returns the table name for the brand model.
 func (b *BrandModel) TableName() string { return "brands" }
 
+// FromEntity populates the BrandModel from a BrandEntity.
 func (b *BrandModel) FromEntity(entity *entities.BrandEntity) {
 	b.ID = entity.ID
 	b.Name = entity.Name
@@ -30,9 +34,9 @@ func (b *BrandModel) FromEntity(entity *entities.BrandEntity) {
 	b.CreatedAt = entity.CreatedAt
 	b.UpdatedAt = entity.UpdatedAt
 	b.DeletedAt = entity.DeletedAt
-	return
 }
 
+// ToEntity converts the BrandModel to a BrandEntity.
 func (b *BrandModel) ToEntity() entities.BrandEntity {
 	return entities.BrandEntity{
 		ID:          b.ID,

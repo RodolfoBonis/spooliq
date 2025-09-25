@@ -9,6 +9,7 @@ import (
 	"go.uber.org/fx"
 )
 
+// Module provides all brand-related dependencies for FX dependency injection.
 var Module = fx.Module("brand", fx.Provide(
 	fx.Annotate(func(db *gorm.DB) domainRepositories.BrandRepository { return repositories.NewBrandRepository(db) }),
 	fx.Annotate(func(repository domainRepositories.BrandRepository, logger logger.Logger) usecases.IBrandUseCase {

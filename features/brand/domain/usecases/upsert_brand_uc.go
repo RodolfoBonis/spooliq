@@ -15,7 +15,7 @@ import (
 // @Tags Brands
 // @Accept json
 // @Produce json
-// @Param request body entities.CreateBrandRequestEntity true "Brand data"
+// @Param request body entities.UpsertBrandRequestEntity true "Brand data"
 // @Success 201 {object} entities.BrandEntity "Successfully created brand"
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
@@ -24,7 +24,7 @@ import (
 // @Router /brands [post]
 // @Security Bearer
 func (uc *BrandUseCase) Create(c *gin.Context) {
-	var request entities.CreateBrandRequestEntity
+	var request entities.UpsertBrandRequestEntity
 	ctx := c.Request.Context()
 	if err := c.ShouldBindJSON(&request); err != nil {
 		appError := errors.UsecaseError(err.Error())

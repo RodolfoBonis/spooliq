@@ -14,6 +14,7 @@ type brandRepository struct {
 	db *gorm.DB
 }
 
+// NewBrandRepository creates a new instance of the brand repository.
 func NewBrandRepository(db *gorm.DB) repositories.BrandRepository {
 	return &brandRepository{
 		db: db,
@@ -21,12 +22,15 @@ func NewBrandRepository(db *gorm.DB) repositories.BrandRepository {
 }
 
 func (b *brandRepository) FindByID(id uuid.UUID) (*entities.BrandEntity, error) {
-	var brand entities.BrandEntity
-	err := b.db.Where("id = ?", id).First(&brand).Error
+	var brand models.BrandModel
+	err := b.db.Model(models.BrandModel{}).Where("id = ?", id).First(&brand).Error
 	if err != nil {
 		return nil, err
 	}
-	return &brand, nil
+
+	entity := brand.ToEntity()
+
+	return &entity, nil
 }
 
 func (b *brandRepository) FindAll() ([]entities.BrandEntity, error) {
@@ -75,7 +79,7 @@ func (b *brandRepository) Exists(name string) (bool, error) {
 	var count int
 	err := b.db.Model(models.BrandModel{}).Where("name = ?", name).Count(&count).Error
 	if err != nil {
-		if errors.Is(gorm.ErrRecordNotFound, err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
 		}
 		return false, err

@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// BrandRepository defines the contract for brand data access operations.
 type BrandRepository interface {
 	Create(brand *entities.BrandEntity) error
 	Update(brand *entities.BrandEntity) error

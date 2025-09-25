@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// BrandEntity represents a filament brand in the domain layer.
 type BrandEntity struct {
 	ID          uuid.UUID  `json:"id"`
 	Name        string     `json:"name"`

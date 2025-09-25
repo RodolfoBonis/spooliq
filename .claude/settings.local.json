@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "Bash(npm start)",
+      "Bash(npm start:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run clear:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(make lint:*)",
+      "Bash(make test:*)",
+      "Bash(make:*)",
+      "Bash(goimports:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

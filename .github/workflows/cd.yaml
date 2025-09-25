@@ -93,8 +93,21 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          install: true
 
       - name: Setup ArgoCD CLI
         uses: imajeetyadav/argocd-cli@v1
@@ -114,17 +127,6 @@ jobs:
           add: "version.txt"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Preset Image Name
         run: echo "IMAGE_URL=$(echo ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY_OWNER }}/${{ env.PACKAGE_NAME }}:${{ env.VERSION }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV

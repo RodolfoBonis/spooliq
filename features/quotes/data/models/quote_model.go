@@ -115,6 +115,7 @@ func (EnergyProfileModel) TableName() string {
 type CostProfileModel struct {
 	ID             uint       `gorm:"primary_key;auto_increment"`
 	QuoteID        uint       `gorm:"not null;index"`
+	Name           string     `gorm:"type:varchar(255);not null"`
 	WearPercentage float64    `gorm:"type:decimal(5,2);not null;default:0"`
 	OverheadAmount float64    `gorm:"type:decimal(10,2);not null;default:0"`
 	Description    string     `gorm:"type:text"`
@@ -132,6 +133,7 @@ func (CostProfileModel) TableName() string {
 type MarginProfileModel struct {
 	ID                  uint       `gorm:"primary_key;auto_increment"`
 	QuoteID             uint       `gorm:"not null;index"`
+	Name                string     `gorm:"type:varchar(255);not null"`
 	PrintingOnlyMargin  float64    `gorm:"type:decimal(8,2);not null;default:0"`
 	PrintingPlusMargin  float64    `gorm:"type:decimal(8,2);not null;default:0"`
 	FullServiceMargin   float64    `gorm:"type:decimal(8,2);not null;default:0"`

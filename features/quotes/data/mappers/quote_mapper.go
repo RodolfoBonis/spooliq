@@ -82,6 +82,7 @@ func ModelToEntity(model *models.QuoteModel) *entities.Quote {
 		entity.CostProfile = &entities.CostProfile{
 			ID:             model.CostProfile.ID,
 			QuoteID:        model.CostProfile.QuoteID,
+			Name:           model.CostProfile.Name,
 			WearPercentage: model.CostProfile.WearPercentage,
 			OverheadAmount: model.CostProfile.OverheadAmount,
 			Description:    model.CostProfile.Description,
@@ -94,6 +95,7 @@ func ModelToEntity(model *models.QuoteModel) *entities.Quote {
 		entity.MarginProfile = &entities.MarginProfile{
 			ID:                  model.MarginProfile.ID,
 			QuoteID:             model.MarginProfile.QuoteID,
+			Name:                model.MarginProfile.Name,
 			PrintingOnlyMargin:  model.MarginProfile.PrintingOnlyMargin,
 			PrintingPlusMargin:  model.MarginProfile.PrintingPlusMargin,
 			FullServiceMargin:   model.MarginProfile.FullServiceMargin,
@@ -184,6 +186,7 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 		model.CostProfile = &models.CostProfileModel{
 			ID:             entity.CostProfile.ID,
 			QuoteID:        entity.CostProfile.QuoteID,
+			Name:           entity.CostProfile.Name,
 			WearPercentage: entity.CostProfile.WearPercentage,
 			OverheadAmount: entity.CostProfile.OverheadAmount,
 			Description:    entity.CostProfile.Description,
@@ -196,6 +199,7 @@ func EntityToModel(entity *entities.Quote) *models.QuoteModel {
 		model.MarginProfile = &models.MarginProfileModel{
 			ID:                  entity.MarginProfile.ID,
 			QuoteID:             entity.MarginProfile.QuoteID,
+			Name:                entity.MarginProfile.Name,
 			PrintingOnlyMargin:  entity.MarginProfile.PrintingOnlyMargin,
 			PrintingPlusMargin:  entity.MarginProfile.PrintingPlusMargin,
 			FullServiceMargin:   entity.MarginProfile.FullServiceMargin,

@@ -65,9 +65,6 @@ LABEL maintainer="RodolfoBonis"
 # Copy only the compressed binary
 COPY --from=builder /app/spooliq /spooliq
 
-# Copy migrations directory for SQL migration system
-COPY --from=builder /app/migrations /migrations
-
 # Expose port
 EXPOSE 8000
 

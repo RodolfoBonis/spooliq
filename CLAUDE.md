@@ -24,12 +24,13 @@ make app/run               # Start full application with Docker Compose
 make app/down              # Stop full application
 ```
 
-### Database Operations
+### Database Schema Management
+SpoolIQ uses GORM's AutoMigration feature - database tables are automatically created and updated when the application starts. No manual migration commands are needed.
+
 ```bash
-make db/migrate            # Run pending migrations
-make db/rollback           # Rollback last migration
-make db/create NAME="name" # Create new migration
-make db/status             # Check migration status
+# Database schema is managed automatically via GORM AutoMigration
+# Schema updates happen automatically when starting the application
+make run                   # Triggers AutoMigration on startup
 ```
 
 ### Cache Management
@@ -58,8 +59,7 @@ bash scripts/generate-swagger.sh  # Generate Swagger docs
 - **core/** - Central components: config, logger, middlewares, services, errors
   - **config/** - App configuration and environment management
   - **middlewares/** - Auth, CORS, cache, monitoring middlewares
-  - **services/** - Database, Redis, AMQP, Auth services
-  - **migrations/** - SQL migration system
+  - **services/** - Database, Redis, AMQP, Auth services with GORM AutoMigration
 - **features/** - Business domain modules (currently auth module)
 - **routes/** - API route definitions and router setup
 - **docs/** - Swagger/OpenAPI documentation

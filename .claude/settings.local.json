@@ -13,7 +13,9 @@
       "Bash(make lint:*)",
       "Bash(make test:*)",
       "Bash(make:*)",
-      "Bash(goimports:*)"
+      "Bash(goimports:*)",
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

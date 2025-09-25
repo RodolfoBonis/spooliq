@@ -5,10 +5,12 @@ import (
 	"strings"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
+	"go.opentelemetry.io/otel"
 )
 
 // Update handles updating an existing brand.
@@ -29,15 +31,25 @@ import (
 // @Router /brands/{id} [put]
 // @Security Bearer
 func (uc *BrandUseCase) Update(c *gin.Context) {
+	// Create custom span for brand update
+	tracer := otel.Tracer("brand-service")
+	ctx, span := logger.StartSpanWithLogger(c.Request.Context(), tracer, "brand.update", uc.logger)
+	var spanErr error
+	defer func() {
+		logger.EndSpanWithLogger(span, uc.logger, spanErr)
+	}()
+
 	idParam := c.Param("id")
-	ctx := c.Request.Context()
 	id, err := uuid.Parse(idParam)
 
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid brand ID", map[string]interface{}{
-			"id":    id,
-			"error": err.Error(),
-		})
+		spanErr = err
+
+		// Add trace context to log
+		fields := logger.AddTraceToContext(ctx)
+		fields["brand_id"] = idParam
+		fields["error"] = err.Error()
+		uc.logger.Error(ctx, "Invalid brand ID", fields)
 
 		appError := coreErrors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
@@ -123,10 +135,11 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 		return
 	}
 
-	uc.logger.Info(ctx, "Brand updated successfully", map[string]interface{}{
-		"brand_id": brand.ID,
-		"name":     brand.Name,
-	})
+	// Log successful update with trace context
+	fields := logger.AddTraceToContext(ctx)
+	fields["brand_id"] = brand.ID
+	fields["brand_name"] = brand.Name
+	uc.logger.Info(ctx, "Brand updated successfully", fields)
 
 	c.JSON(200, brand)
 }

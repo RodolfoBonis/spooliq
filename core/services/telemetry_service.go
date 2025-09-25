@@ -38,7 +38,7 @@ type TelemetryConfig struct {
 // NewTelemetryService creates a new telemetry service
 func NewTelemetryService(lc fx.Lifecycle, logger logger.Logger) (*TelemetryService, error) {
 	cfg := loadTelemetryConfig()
-	
+
 	service := &TelemetryService{
 		logger:  logger,
 		enabled: cfg.Enabled,
@@ -52,7 +52,7 @@ func NewTelemetryService(lc fx.Lifecycle, logger logger.Logger) (*TelemetryServi
 	// Initialize OpenTelemetry
 	tp, err := initTracerProvider(cfg)
 	if err != nil {
-		logger.Error(context.Background(), "Failed to initialize tracer provider", logger.Fields{
+		logger.Error(context.Background(), "Failed to initialize tracer provider", map[string]interface{}{
 			"error": err.Error(),
 		})
 		return nil, fmt.Errorf("failed to initialize tracer provider: %w", err)
@@ -63,7 +63,7 @@ func NewTelemetryService(lc fx.Lifecycle, logger logger.Logger) (*TelemetryServi
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info(ctx, "Telemetry service started", logger.Fields{
+			logger.Info(ctx, "Telemetry service started", map[string]interface{}{
 				"endpoint":     cfg.Endpoint,
 				"service_name": cfg.ServiceName,
 				"environment":  cfg.Environment,
@@ -80,9 +80,9 @@ func NewTelemetryService(lc fx.Lifecycle, logger logger.Logger) (*TelemetryServi
 
 // loadTelemetryConfig loads telemetry configuration from environment
 func loadTelemetryConfig() TelemetryConfig {
-	enabled := os.Getenv("SIGNOZ_ENABLED") == "true" || 
+	enabled := os.Getenv("SIGNOZ_ENABLED") == "true" ||
 		os.Getenv("OTEL_TRACES_ENABLED") == "true"
-	
+
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
 		endpoint = "http://localhost:4318"
@@ -208,17 +208,17 @@ func (t *TelemetryService) Shutdown(ctx context.Context) error {
 	}
 
 	t.logger.Info(ctx, "Shutting down telemetry service...")
-	
+
 	// Force flush any remaining spans
 	if err := t.tracerProvider.ForceFlush(ctx); err != nil {
-		t.logger.Error(ctx, "Error flushing tracer provider", logger.Fields{
+		t.logger.Error(ctx, "Error flushing tracer provider", map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
 
 	// Shutdown the tracer provider
 	if err := t.tracerProvider.Shutdown(ctx); err != nil {
-		t.logger.Error(ctx, "Error shutting down tracer provider", logger.Fields{
+		t.logger.Error(ctx, "Error shutting down tracer provider", map[string]interface{}{
 			"error": err.Error(),
 		})
 		return err

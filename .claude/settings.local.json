@@ -17,7 +17,11 @@
       "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
       "Bash(grep:*)",
       "Bash(go get:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(go mod:*)",
+      "Bash(gofmt:*)",
+      "Bash(go build:*)",
+      "Bash(go doc:*)"
     ],
     "deny": [],
     "ask": []

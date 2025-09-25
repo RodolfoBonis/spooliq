@@ -129,7 +129,12 @@ func (cl *CustomLogger) fieldsToZap(fields Fields) []zap.Field {
 }
 
 // Module provides the fx module for CustomLogger.
-var Module = fx.Module("logger", fx.Provide(NewLogger))
+var Module = fx.Module("logger",
+	fx.Provide(
+		NewLogger,
+		NewTraceLogger,
+	),
+)
 
 // LogError logs any error in a structured way, extracting stacktrace/context if available.
 func (cl *CustomLogger) LogError(ctx context.Context, message string, err error) {

@@ -1,9 +1,12 @@
 package middlewares
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -80,7 +83,7 @@ func (t *TracingMiddleware) CustomTracing() gin.HandlerFunc {
 			// Set trace and span IDs in context for logger correlation
 			traceID := span.SpanContext().TraceID().String()
 			spanID := span.SpanContext().SpanID().String()
-			
+
 			c.Set("trace_id", traceID)
 			c.Set("span_id", spanID)
 
@@ -108,21 +111,21 @@ func (t *TracingMiddleware) CustomTracing() gin.HandlerFunc {
 }
 
 // spanNameFormatter formats the span name
-func (t *TracingMiddleware) spanNameFormatter(operation string, r *gin.Request) string {
+func (t *TracingMiddleware) spanNameFormatter(c *gin.Context) string {
 	// Create more descriptive span names
-	method := r.Method
-	path := r.URL.Path
-	
-	// Use route pattern if available (e.g., /users/:id instead of /users/123)
-	if r.Route != "" {
-		path = r.Route
+	method := c.Request.Method
+	path := c.Request.URL.Path
+
+	// Use route pattern if available from gin context
+	if route := c.FullPath(); route != "" {
+		path = route
 	}
-	
+
 	return fmt.Sprintf("%s %s", method, path)
 }
 
 // filterEndpoint determines which endpoints should be traced
-func (t *TracingMiddleware) filterEndpoint(r *gin.Request) bool {
+func (t *TracingMiddleware) filterEndpoint(r *http.Request) bool {
 	// Don't trace health check and metrics endpoints
 	excludedPaths := []string{
 		"/health_check",
@@ -149,7 +152,7 @@ func (t *TracingMiddleware) StartSpan(c *gin.Context, spanName string, opts ...t
 
 	tracer := otel.Tracer(t.serviceName)
 	ctx, span := tracer.Start(c.Request.Context(), spanName, opts...)
-	
+
 	// Add common attributes
 	span.SetAttributes(
 		attribute.String("service.name", t.serviceName),
@@ -177,4 +180,9 @@ func (t *TracingMiddleware) ExtractTraceContext(c *gin.Context) context.Context 
 
 	propagator := otel.GetTextMapPropagator()
 	return propagator.Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
+}
+
+// NewTracingMiddlewareProvider creates a TracingMiddleware with FX dependencies
+func NewTracingMiddlewareProvider(logger logger.Logger, telemetryService *services.TelemetryService) *TracingMiddleware {
+	return NewTracingMiddleware(logger, "spooliq-api", telemetryService.IsEnabled())
 }

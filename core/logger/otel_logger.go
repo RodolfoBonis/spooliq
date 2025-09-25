@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 
+	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -19,7 +20,7 @@ type TraceLogger interface {
 func withTraceContext(ctx context.Context, fields ...Fields) Fields {
 	// Get span from context
 	span := trace.SpanFromContext(ctx)
-	
+
 	// Create base fields map
 	var baseFields Fields
 	if len(fields) > 0 {
@@ -27,19 +28,19 @@ func withTraceContext(ctx context.Context, fields ...Fields) Fields {
 	} else {
 		baseFields = Fields{}
 	}
-	
+
 	// Add trace context if span is valid
 	if span.SpanContext().IsValid() {
 		baseFields["trace_id"] = span.SpanContext().TraceID().String()
 		baseFields["span_id"] = span.SpanContext().SpanID().String()
 		baseFields["trace_flags"] = span.SpanContext().TraceFlags().String()
-		
+
 		// Add trace state if present
 		if span.SpanContext().TraceState().String() != "" {
 			baseFields["trace_state"] = span.SpanContext().TraceState().String()
 		}
 	}
-	
+
 	return baseFields
 }
 
@@ -72,10 +73,10 @@ func (cl *CustomLogger) LogErrorWithTrace(ctx context.Context, message string, e
 	if err == nil {
 		return
 	}
-	
+
 	// Get trace context
 	span := trace.SpanFromContext(ctx)
-	
+
 	// Create fields from error
 	var fields map[string]interface{}
 	if appErr, ok := err.(interface{ ToLogFields() map[string]interface{} }); ok {
@@ -85,16 +86,16 @@ func (cl *CustomLogger) LogErrorWithTrace(ctx context.Context, message string, e
 			"error": err.Error(),
 		}
 	}
-	
+
 	// Add trace context if available
 	if span.SpanContext().IsValid() {
 		fields["trace_id"] = span.SpanContext().TraceID().String()
 		fields["span_id"] = span.SpanContext().SpanID().String()
-		
+
 		// Record error in span
 		span.RecordError(err)
 	}
-	
+
 	// Log with enriched fields
 	cl.Error(ctx, message, fields)
 }
@@ -107,7 +108,7 @@ func NewTraceLogger() TraceLogger {
 // AddTraceToContext adds trace information to the context fields
 func AddTraceToContext(ctx context.Context) Fields {
 	fields := Fields{}
-	
+
 	// Check if we have trace context from Gin context
 	if ginCtx, ok := ctx.Value("gin_context").(*gin.Context); ok {
 		if traceID, exists := ginCtx.Get("trace_id"); exists {
@@ -118,21 +119,21 @@ func AddTraceToContext(ctx context.Context) Fields {
 		}
 		return fields
 	}
-	
+
 	// Otherwise, get from OpenTelemetry span
 	span := trace.SpanFromContext(ctx)
 	if span.SpanContext().IsValid() {
 		fields["trace_id"] = span.SpanContext().TraceID().String()
 		fields["span_id"] = span.SpanContext().SpanID().String()
 	}
-	
+
 	return fields
 }
 
 // StartSpanWithLogger starts a new span and logs it
 func StartSpanWithLogger(ctx context.Context, tracer trace.Tracer, spanName string, logger Logger) (context.Context, trace.Span) {
 	ctx, span := tracer.Start(ctx, spanName)
-	
+
 	if span.SpanContext().IsValid() {
 		logger.Debug(ctx, "Span started", Fields{
 			"span_name": spanName,
@@ -140,7 +141,7 @@ func StartSpanWithLogger(ctx context.Context, tracer trace.Tracer, spanName stri
 			"span_id":   span.SpanContext().SpanID().String(),
 		})
 	}
-	
+
 	return ctx, span
 }
 

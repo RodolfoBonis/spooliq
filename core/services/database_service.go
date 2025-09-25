@@ -11,6 +11,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
 	"github.com/jinzhu/gorm"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	// Drivers de banco de dados
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -99,6 +101,10 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 	db.LogMode(!isProduction)
 	db.DB().SetConnMaxLifetime(10 * time.Second)
 	db.DB().SetMaxIdleConns(30)
+
+	// Add OpenTelemetry tracing callbacks
+	addOtelCallbacks(db)
+
 	Connector = db
 
 	go func(dbConfig string) {
@@ -156,4 +162,91 @@ func RunMigrations() {
 	Connector.AutoMigrate(
 		&brands.BrandModel{},
 	)
+}
+
+// addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM
+func addOtelCallbacks(db *gorm.DB) {
+	tracer := otel.Tracer("database")
+
+	// Before callback - start span
+	db.Callback().Create().Before("gorm:create").Register("otel:before_create", func(scope *gorm.Scope) {
+		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
+			if ctxVal, ok := ctx.(context.Context); ok {
+				ctx, span := tracer.Start(ctxVal, "db.create")
+				span.SetAttributes(
+					attribute.String("db.table", scope.TableName()),
+					attribute.String("db.operation", "create"),
+				)
+				scope.Set("otel:span", span)
+				scope.Set("otel:ctx", ctx)
+			}
+		}
+	})
+
+	db.Callback().Update().Before("gorm:update").Register("otel:before_update", func(scope *gorm.Scope) {
+		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
+			if ctxVal, ok := ctx.(context.Context); ok {
+				ctx, span := tracer.Start(ctxVal, "db.update")
+				span.SetAttributes(
+					attribute.String("db.table", scope.TableName()),
+					attribute.String("db.operation", "update"),
+				)
+				scope.Set("otel:span", span)
+				scope.Set("otel:ctx", ctx)
+			}
+		}
+	})
+
+	db.Callback().Query().Before("gorm:query").Register("otel:before_query", func(scope *gorm.Scope) {
+		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
+			if ctxVal, ok := ctx.(context.Context); ok {
+				ctx, span := tracer.Start(ctxVal, "db.query")
+				span.SetAttributes(
+					attribute.String("db.table", scope.TableName()),
+					attribute.String("db.operation", "query"),
+				)
+				scope.Set("otel:span", span)
+				scope.Set("otel:ctx", ctx)
+			}
+		}
+	})
+
+	db.Callback().Delete().Before("gorm:delete").Register("otel:before_delete", func(scope *gorm.Scope) {
+		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
+			if ctxVal, ok := ctx.(context.Context); ok {
+				ctx, span := tracer.Start(ctxVal, "db.delete")
+				span.SetAttributes(
+					attribute.String("db.table", scope.TableName()),
+					attribute.String("db.operation", "delete"),
+				)
+				scope.Set("otel:span", span)
+				scope.Set("otel:ctx", ctx)
+			}
+		}
+	})
+
+	// After callbacks - end span
+	afterCallback := func(scope *gorm.Scope) {
+		if spanVal, exists := scope.Get("otel:span"); exists && spanVal != nil {
+			if span, ok := spanVal.(interface{ End() }); ok {
+				if scope.HasError() {
+					// Add error attributes
+					if span, ok := spanVal.(interface {
+						End()
+						SetAttributes(...attribute.KeyValue)
+						RecordError(error)
+					}); ok {
+						span.SetAttributes(attribute.Bool("error", true))
+						span.RecordError(scope.DB().Error)
+					}
+				}
+				span.End()
+			}
+		}
+	}
+
+	db.Callback().Create().After("gorm:create").Register("otel:after_create", afterCallback)
+	db.Callback().Update().After("gorm:update").Register("otel:after_update", afterCallback)
+	db.Callback().Query().After("gorm:query").Register("otel:after_query", afterCallback)
+	db.Callback().Delete().After("gorm:delete").Register("otel:after_delete", afterCallback)
 }

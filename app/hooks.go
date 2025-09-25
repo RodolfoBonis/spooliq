@@ -12,7 +12,7 @@ import (
 )
 
 // RegisterHooks registers application lifecycle hooks.
-func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware) {
+func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, tracing *middlewares.TracingMiddleware) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
@@ -23,6 +23,11 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Log
 					panic(err)
 				}
 				config.SentryConfig()
+
+				// Add tracing middleware first for OpenTelemetry
+				router.Use(tracing.Middleware())
+				router.Use(tracing.CustomTracing())
+
 				router.Use(monitoring.SentryMiddleware())
 				router.Use(monitoring.LogMiddleware)
 				router.Use(gin.Logger())

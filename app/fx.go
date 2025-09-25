@@ -30,7 +30,7 @@ func NewFxApp() *fx.App {
 			gin.New,
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, tracingMiddleware *middlewares.TracingMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -39,7 +39,7 @@ func NewFxApp() *fx.App {
 				}
 
 				routes.InitializeRoutes(router, authUc, brandUc, protectFactory, logger)
-				RegisterHooks(lc, router, logger, monitoring)
+				RegisterHooks(lc, router, logger, monitoring, tracingMiddleware)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

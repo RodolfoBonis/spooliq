@@ -8,6 +8,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
 )
 
 // ValidateLogin realiza a validação do login do usuário.
@@ -29,18 +30,32 @@ import (
 // @Example request {"email": "user@example.com", "password": "string"}
 // @Example response {"accessToken": "jwt-token", "refreshToken": "refresh-token", "expiresIn": 3600}
 func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
-	ctx := c.Request.Context()
+	// Create custom span for user login
+	tracer := otel.Tracer("auth-service")
+	ctx, span := logger.StartSpanWithLogger(c.Request.Context(), tracer, "auth.login", uc.Logger)
+	var spanErr error
+	defer func() {
+		logger.EndSpanWithLogger(span, uc.Logger, spanErr)
+	}()
+
 	loginData := new(entities.RequestLoginEntity)
-	uc.Logger.Info(ctx, "Login attempt", logger.Fields{
-		"email":      loginData.Email,
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
-	})
+	// Log login attempt with trace context
+	fields := logger.AddTraceToContext(ctx)
+	fields["ip"] = c.ClientIP()
+	fields["user_agent"] = c.Request.UserAgent()
+	uc.Logger.Info(ctx, "Login attempt started", fields)
+
 	err := c.BindJSON(&loginData)
 	if err != nil {
+		spanErr = err
 		internalError := errors.NewAppError(coreEntities.ErrUsecase, err.Error(), nil, err)
 		httpError := internalError.ToHTTPError()
-		uc.Logger.LogError(ctx, "Invalid login payload", internalError)
+
+		// Add trace context to error log
+		errorFields := logger.AddTraceToContext(ctx)
+		errorFields["error"] = err.Error()
+		uc.Logger.Error(ctx, "Invalid login payload", errorFields)
+
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -53,17 +68,27 @@ func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 		loginData.Password,
 	)
 	if err != nil {
+		spanErr = err
 		internalError := errors.NewAppError(coreEntities.ErrInvalidCredentials, "Invalid credentials", nil, err)
 		httpError := internalError.ToHTTPError()
-		uc.Logger.LogError(ctx, "Login failed: invalid credentials", internalError)
+
+		// Add trace context to failed login log
+		failFields := logger.AddTraceToContext(ctx)
+		failFields["email"] = loginData.Email
+		failFields["ip"] = c.ClientIP()
+		failFields["error"] = err.Error()
+		uc.Logger.Warning(ctx, "Login failed: invalid credentials", failFields)
+
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
-	uc.Logger.Info(ctx, "Login successful", logger.Fields{
-		"email":      loginData.Email,
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
-	})
+
+	// Log successful login with trace context
+	successFields := logger.AddTraceToContext(ctx)
+	successFields["email"] = loginData.Email
+	successFields["ip"] = c.ClientIP()
+	successFields["user_agent"] = c.Request.UserAgent()
+	uc.Logger.Info(ctx, "Login successful", successFields)
 	c.JSON(http.StatusOK, entities.LoginResponseEntity{
 		AccessToken:  jwt.AccessToken,
 		RefreshToken: jwt.RefreshToken,

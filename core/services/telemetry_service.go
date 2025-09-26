@@ -10,9 +10,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -130,20 +129,12 @@ func loadTelemetryConfig() TelemetryConfig {
 func initTracerProvider(cfg TelemetryConfig) (*trace.TracerProvider, error) {
 	ctx := context.Background()
 
-	// Create OTLP exporter
-	client := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(cfg.Endpoint),
-		otlptracehttp.WithInsecure(), // Use WithInsecure for non-TLS endpoints
-		otlptracehttp.WithTimeout(10*time.Second),
-		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
-			Enabled:         true,
-			InitialInterval: 1 * time.Second,
-			MaxInterval:     10 * time.Second,
-			MaxElapsedTime:  30 * time.Second,
-		}),
+	// Create OTLP exporter using gRPC
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint(cfg.Endpoint),
+		otlptracegrpc.WithInsecure(), // Use WithInsecure for non-TLS endpoints
+		otlptracegrpc.WithTimeout(10*time.Second),
 	)
-
-	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
 	}
@@ -209,11 +200,11 @@ func initTracerProvider(cfg TelemetryConfig) (*trace.TracerProvider, error) {
 func initMeterProvider(cfg TelemetryConfig) (*sdkmetric.MeterProvider, error) {
 	ctx := context.Background()
 
-	// Create OTLP metrics exporter
-	exporter, err := otlpmetrichttp.New(ctx,
-		otlpmetrichttp.WithEndpoint(cfg.Endpoint),
-		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithTimeout(10*time.Second),
+	// Create OTLP metrics exporter using gRPC
+	exporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithEndpoint(cfg.Endpoint),
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithTimeout(10*time.Second),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OTLP metrics exporter: %w", err)

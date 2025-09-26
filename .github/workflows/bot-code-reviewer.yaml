@@ -5,7 +5,7 @@ on: [pull_request]
 
 jobs:
   code-review:
-    runs-on: [self-hosted, macOS, X64]
+    runs-on: [self-hosted, gh-actions, k3s]
     permissions:
       contents: read
       pull-requests: write

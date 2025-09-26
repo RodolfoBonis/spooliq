@@ -114,7 +114,7 @@ jobs:
           VERSION: ${{ steps.version-strategy.outputs.version }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
-          cd k3s-apps
+          cd k3s-manifest
           
           # Update deployment (converter para minúscula)
           IMAGE="${ECR_REGISTRY}/${{ github.repository_owner }}/spooliq:${VERSION}"
@@ -176,6 +176,8 @@ jobs:
       - name: Notify n8n Success
         if: success()
         run: |
+          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ github.repository_owner }}/spooliq:${{ steps.version-strategy.outputs.version }}"
+          DOCKER_IMAGE=$(echo "$DOCKER_IMAGE" | tr '[:upper:]' '[:lower:]')
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -189,7 +191,7 @@ jobs:
               "actor": "${{ github.actor }}",
               "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
               "details": {
-                "docker_image": "${{ steps.ecr.outputs.registry }}/${{ github.repository_owner }}/spooliq:${{ steps.version-strategy.outputs.version }}",
+                "docker_image": "'$DOCKER_IMAGE'",
                 "argocd_sync": "success",
                 "build_time": "${{ steps.build-duration.outputs.duration }}",
                 "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}"

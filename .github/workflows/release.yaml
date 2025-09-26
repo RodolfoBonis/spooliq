@@ -15,14 +15,13 @@ env:
 
 jobs:
   release:
-    runs-on: [self-hosted, gh-actions]
+    runs-on: [self-hosted, macOS, X64]
     if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
 
       - name: Setup Go
         uses: actions/setup-go@v5

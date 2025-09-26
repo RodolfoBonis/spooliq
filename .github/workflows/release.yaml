@@ -67,13 +67,12 @@ jobs:
 
       - name: Add, commit and push version increment
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
-          git add version.txt
-          git commit -m "Increment version"
-          git push origin main
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "GitHub Actions"
+          author_email: "actions@github.com"
+          message: "Increment version"
+          add: "version.txt"
 
       - name: Create Tag (if auto-increment)
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'

@@ -133,7 +133,6 @@ func initTracerProvider(cfg TelemetryConfig) (*trace.TracerProvider, error) {
 	// Create OTLP exporter
 	client := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(cfg.Endpoint),
-		otlptracehttp.WithURLPath("/v1/traces"),
 		otlptracehttp.WithInsecure(), // Use WithInsecure for non-TLS endpoints
 		otlptracehttp.WithTimeout(10*time.Second),
 		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
@@ -213,7 +212,6 @@ func initMeterProvider(cfg TelemetryConfig) (*sdkmetric.MeterProvider, error) {
 	// Create OTLP metrics exporter
 	exporter, err := otlpmetrichttp.New(ctx,
 		otlpmetrichttp.WithEndpoint(cfg.Endpoint),
-		otlpmetrichttp.WithURLPath("/v1/metrics"),
 		otlpmetrichttp.WithInsecure(),
 		otlpmetrichttp.WithTimeout(10*time.Second),
 	)

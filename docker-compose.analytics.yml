@@ -1,0 +1,95 @@
+# Docker Compose para Analytics Database
+# Banco de dados separado para histórico de deployments via n8n
+
+version: '3.8'
+
+services:
+  # Analytics Database - PostgreSQL separado para deployment history
+  analytics_db:
+    image: postgres:15-alpine
+    container_name: spooliq_analytics_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spooliq_analytics
+      POSTGRES_USER: analytics_user
+      POSTGRES_PASSWORD: analytics_pass_2024
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    ports:
+      - "5433:5432"  # Porta diferente da API principal (5432)
+    volumes:
+      - analytics_db_data:/var/lib/postgresql/data
+      - ./sql/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - analytics_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics_user -d spooliq_analytics"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # pgAdmin para gerenciar o banco de analytics (opcional)
+  analytics_pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: spooliq_analytics_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@spooliq.com
+      PGADMIN_DEFAULT_PASSWORD: analytics_admin_2024
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - analytics_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - analytics_network
+    depends_on:
+      analytics_db:
+        condition: service_healthy
+    profiles:
+      - tools  # Usar 'docker-compose --profile tools up' para incluir
+
+  # Grafana para dashboards de deployment analytics (opcional)
+  analytics_grafana:
+    image: grafana/grafana:10.2.0
+    container_name: spooliq_analytics_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: grafana_admin_2024
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    ports:
+      - "3001:3000"
+    volumes:
+      - analytics_grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    networks:
+      - analytics_network
+    depends_on:
+      analytics_db:
+        condition: service_healthy
+    profiles:
+      - tools  # Usar 'docker-compose --profile tools up' para incluir
+
+volumes:
+  analytics_db_data:
+    driver: local
+    name: spooliq_analytics_db_data
+  analytics_pgadmin_data:
+    driver: local
+    name: spooliq_analytics_pgadmin_data
+  analytics_grafana_data:
+    driver: local
+    name: spooliq_analytics_grafana_data
+
+networks:
+  analytics_network:
+    driver: bridge
+    name: spooliq_analytics_network

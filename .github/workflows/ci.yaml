@@ -31,7 +31,7 @@ env:
 jobs:
   lint_go:
     name: Lint Go Code
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gh-actions]
     outputs:
       status: ${{ steps.lint.outputs.status }}
     steps:
@@ -117,7 +117,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, gh-actions]
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -170,7 +170,7 @@ jobs:
 
   check_vulnerabilities:
     name: Security Vulnerability Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gh-actions]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -254,37 +254,41 @@ jobs:
 
   notify_success:
     name: Notify Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gh-actions]
     needs: [lint_go, test, check_vulnerabilities]
     if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' }}
     steps:
-      - name: Generate success message
-        id: generate_success_message
+      - name: Calculate Build Duration
+        id: build-duration
         run: |
-          echo '✅ **CI Pipeline Successful!**' > telegram_message_success.txt
-          echo '' >> telegram_message_success.txt
-          echo '📋 **Build Details:**' >> telegram_message_success.txt
-          echo '- Repository: ${{ github.repository }}' >> telegram_message_success.txt
-          echo '- Triggered by: ${{ github.actor }}' >> telegram_message_success.txt
-          echo '- Commit: ${{ github.sha }}' >> telegram_message_success.txt
-          echo '- Branch: ${{ github.event_name == 'pull_request' && github.head_ref && github.base_ref && format('{0} -> {1}', github.head_ref, github.base_ref) || github.ref_name }}' >> telegram_message_success.txt
-          echo '- PR URL: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || env.PR_URL }}' >> telegram_message_success.txt
-          echo '' >> telegram_message_success.txt
-          echo '✨ All tests passed, code linted successfully, and no vulnerabilities found!' >> telegram_message_success.txt
-          
-          MESSAGE=$(cat telegram_message_success.txt)
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          START_TIME=${{ github.event.head_commit.timestamp }}
+          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "duration=Calculated during workflow" >> $GITHUB_OUTPUT
 
-      - name: Send Telegram notification on success
-        if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' }}
-        uses: an3park/telegram-action@v1
-        with:
-          chat_id: ${{ secrets.BOTTOKEN }}
-          bot_token: ${{ secrets.CHAT_ID }}
-          message_thread_id: ${{ secrets.THREAD_ID }}
-          message: ${{ steps.generate_success_message.outputs.message }}
+      - name: Notify n8n Success
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "ci_success",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "tag": null,
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "build_time": "${{ steps.build-duration.outputs.duration }}",
+                "test_results": "all passed",
+                "coverage": "available in artifacts",
+                "pr_number": "${{ github.event_name == 'pull_request' && github.event.pull_request.number || null }}",
+                "pr_url": "${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || null }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'
 
   notify_failure:
     name: Notify Failure
@@ -292,33 +296,44 @@ jobs:
     needs: [lint_go, test, check_vulnerabilities]
     if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' }}
     steps:
-      - name: Generate failure message
-        id: generate_error_message
+      - name: Determine failure type
+        id: failure-analysis
         run: |
-          echo '❌ **CI Pipeline Failed!**' > telegram_message_error.txt
-          echo '' >> telegram_message_error.txt
-          echo '📋 **Build Details:**' >> telegram_message_error.txt
-          echo '- Repository: ${{ github.repository }}' >> telegram_message_error.txt
-          echo '- Triggered by: ${{ github.actor }}' >> telegram_message_error.txt
-          echo '- Commit: ${{ github.sha }}' >> telegram_message_error.txt
-          echo '- Branch: ${{ github.event_name == 'pull_request' && github.head_ref && github.base_ref && format('{0} -> {1}', github.head_ref, github.base_ref) || github.ref_name }}' >> telegram_message_error.txt
-          echo '- PR URL: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || env.PR_URL }}' >> telegram_message_error.txt
-          echo '' >> telegram_message_error.txt
-          echo '- Commit URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}' >> telegram_message_error.txt
-          echo '⚠️ [Check GitHub Actions Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})' >> telegram_message_error.txt
-          echo '' >> telegram_message_error.txt
-          echo '🔍 **Failure Summary:**' >> telegram_message_error.txt
-          
-          MESSAGE=$(cat telegram_message_error.txt)
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          if [[ "${{ needs.lint_go.result }}" != "success" ]]; then
+            echo "error_type=Lint errors found" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "error_type=Tests failed" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.check_vulnerabilities.result }}" != "success" ]]; then
+            echo "error_type=Security vulnerabilities found" >> $GITHUB_OUTPUT
+          else
+            echo "error_type=Unknown CI failure" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Send Telegram notification on failure
-        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' }}
-        uses: an3park/telegram-action@v1
-        with:
-          chat_id: ${{ secrets.BOTTOKEN }}
-          bot_token: ${{ secrets.CHAT_ID }}
-          message_thread_id: ${{ secrets.THREAD_ID }}
-          message: ${{ steps.generate_error_message.outputs.message }}
+      - name: Notify n8n Failure
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "ci_failure",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "tag": null,
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "error_message": "${{ steps.failure-analysis.outputs.error_type }}",
+                "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "failed_jobs": {
+                  "lint": "${{ needs.lint_go.result }}",
+                  "test": "${{ needs.test.result }}",
+                  "security": "${{ needs.check_vulnerabilities.result }}"
+                },
+                "pr_number": "${{ github.event_name == 'pull_request' && github.event.pull_request.number || null }}",
+                "pr_url": "${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || null }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'

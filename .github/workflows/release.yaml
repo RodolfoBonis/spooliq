@@ -1,0 +1,173 @@
+name: Release with GoReleaser
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+    paths-ignore:
+      - version.txt
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  release:
+    runs-on: [self-hosted, gh-actions]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine Version Strategy
+        id: version-strategy
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "strategy=tag" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "strategy=auto" >> $GITHUB_OUTPUT
+            chmod +x ./.config/scripts/increment_version.sh
+            ./.config/scripts/increment_version.sh
+            VERSION=$(cat version.txt)
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit Version (if auto-increment)
+        if: steps.version-strategy.outputs.strategy == 'auto'
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "GoReleaser Bot"
+          author_email: "bot@github.com"
+          message: "chore: increment version to v${{ steps.version-strategy.outputs.version }}"
+          add: "version.txt"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Create Tag (if auto-increment)
+        if: steps.version-strategy.outputs.strategy == 'auto'
+        run: |
+          git tag ${{ steps.version-strategy.outputs.tag }}
+          git push origin ${{ steps.version-strategy.outputs.tag }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+      - name: Update K3s Manifests
+        env:
+          VERSION: ${{ steps.version-strategy.outputs.version }}
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          # Clone k3s-apps
+          git clone https://${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/k3s-apps.git
+          cd k3s-apps
+          
+          # Update deployment (converter para minúscula)
+          IMAGE="${ECR_REGISTRY}/${{ github.repository_owner }}/spooliq:${VERSION}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          yq e -i ".spec.template.spec.containers[0].image = \"${IMAGE}\"" \
+            ./applications/spooliq/service/spooliq-deployment.yaml
+          
+          # Commit
+          git config user.name "GoReleaser Bot"
+          git config user.email "bot@github.com"
+          git add -A
+          git commit -m "feat: update spooliq to v${VERSION}"
+          git push
+
+      - name: Setup ArgoCD CLI
+        uses: imajeetyadav/argocd-cli@v1
+
+      - name: Sync ArgoCD
+        run: |
+          argocd app sync spooliq \
+            --grpc-web \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }}
+
+      - name: Calculate Build Duration
+        id: build-duration
+        run: |
+          START_TIME=${{ github.event.head_commit.timestamp }}
+          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "duration=Calculated during workflow" >> $GITHUB_OUTPUT
+
+      - name: Notify n8n Success
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "deploy_success",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "tag": "${{ steps.version-strategy.outputs.tag }}",
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "docker_image": "${{ steps.ecr.outputs.registry }}/${{ github.repository_owner }}/spooliq:${{ steps.version-strategy.outputs.version }}",
+                "argocd_sync": "success",
+                "build_time": "${{ steps.build-duration.outputs.duration }}",
+                "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'
+
+      - name: Notify n8n Failure  
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "deploy_failure",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "tag": "${{ steps.version-strategy.outputs.tag }}",
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "error_message": "GoReleaser deployment failed - check GitHub Actions logs",
+                "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "job_status": "${{ job.status }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'

@@ -21,7 +21,9 @@
       "Bash(go mod:*)",
       "Bash(gofmt:*)",
       "Bash(go build:*)",
-      "Bash(go doc:*)"
+      "Bash(go doc:*)",
+      "WebSearch",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

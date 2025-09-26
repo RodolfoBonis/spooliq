@@ -1,0 +1,115 @@
+version: 2
+
+project_name: spooliq
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+# Build otimizado para Linux/Docker
+builds:
+  - id: spooliq
+    main: ./main.go
+    binary: spooliq
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+      - -a
+    ldflags:
+      - -s -w
+      - -extldflags "-static"
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+# Compressão UPX
+upx:
+  - enabled: true
+    compress: best
+    lzma: true
+    goos: [linux]
+
+# Docker Images
+dockers:
+  - image_templates:
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/RodolfoBonis/spooliq"
+      - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
+      - "--build-arg=VERSION={{.Version}}"
+    dockerfile: dockerfile.with-ca
+
+# Archives
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - spooliq
+
+# Changelog
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "Increment version"
+      - "Merge pull request"
+  groups:
+    - title: '🚀 Features'
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 100
+    - title: '🐛 Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 200
+    - title: '♻️ Refactoring'
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 300
+
+# GitHub Release
+release:
+  github:
+    owner: RodolfoBonis
+    name: spooliq
+  prerelease: auto
+  name_template: "v{{.Version}}"
+  header: |
+    ## SpoolIQ v{{.Version}}
+    
+    **Released:** {{ .Date }}
+    
+  footer: |
+    ---
+    ### 🐳 Docker Image
+    ```bash
+    docker pull {{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}
+    ```
+    
+    ### 📊 Deployment
+    - **K3s Cluster:** Automatically deployed via ArgoCD
+    - **Monitoring:** Available in SigNoz
+    
+    **Full Changelog:** [{{ .PreviousTag }}...{{ .Tag }}](https://github.com/RodolfoBonis/spooliq/compare/{{ .PreviousTag }}...{{ .Tag }})
+
+# Snapshot para desenvolvimento
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev"
+
+# Checksum
+checksum:
+  name_template: 'checksums.txt'

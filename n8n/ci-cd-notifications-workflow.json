@@ -1,0 +1,466 @@
+{
+  "name": "SpoolIQ CI/CD Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/webhook/spooliq-ci-cd",
+        "options": {
+          "responseMode": "onReceived"
+        },
+        "responseData": "{\n  \"status\": \"received\",\n  \"timestamp\": \"{{$now.toISO()}}\"\n}"
+      },
+      "id": "webhook-trigger",
+      "name": "CI/CD Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "spooliq-ci-cd-webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.={{$json.event_type}}}}",
+                    "rightValue": "ci_success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ci_success"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.event_type}}",
+                    "rightValue": "ci_failure",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ci_failure"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.event_type}}",
+                    "rightValue": "deploy_success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "deploy_success"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.event_type}}",
+                    "rightValue": "deploy_failure",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "deploy_failure"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "event-router",
+      "name": "Route by Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success message for CI\nconst data = $input.first();\n\nconst message = `🚀 **${data.json.repository.split('/')[1]} Build Success!**\n\n✅ Workflow: ${data.json.workflow}\n📝 Commit: ${data.json.commit_sha.substring(0, 8)}\n👤 By: ${data.json.actor}\n⏱️ Build Time: ${data.json.details?.build_time || 'N/A'}\n\n📊 [View Logs](https://github.com/${data.json.repository}/actions)`;\n\nreturn {\n  json: {\n    ...data.json,\n    formatted_message: message,\n    emoji: '✅',\n    priority: 'normal'\n  }\n};"
+      },
+      "id": "format-ci-success",
+      "name": "Format CI Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format failure message for CI\nconst data = $input.first();\n\nconst message = `❌ **${data.json.repository.split('/')[1]} Build Failed!**\n\n🚨 Workflow: ${data.json.workflow}\n📝 Commit: ${data.json.commit_sha.substring(0, 8)}\n👤 By: ${data.json.actor}\n❗ Error: ${data.json.details?.error_message || 'Check logs for details'}\n\n🔍 [View Logs](${data.json.details?.logs_url || `https://github.com/${data.json.repository}/actions`})`;\n\nreturn {\n  json: {\n    ...data.json,\n    formatted_message: message,\n    emoji: '❌',\n    priority: 'high'\n  }\n};"
+      },
+      "id": "format-ci-failure",
+      "name": "Format CI Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success message for Deploy\nconst data = $input.first();\n\nconst message = `🚀 **${data.json.repository.split('/')[1]} Deployed Successfully!**\n\n🏷️ Version: ${data.json.tag}\n🐳 Docker: ${data.json.details?.docker_image || 'N/A'}\n⚡ ArgoCD: ${data.json.details?.argocd_sync || 'N/A'}\n👤 By: ${data.json.actor}\n⏱️ Deploy Time: ${data.json.details?.build_time || 'N/A'}\n\n📊 [SigNoz Dashboard](https://signoz.yourdomain.com)\n📋 [Release Notes](https://github.com/${data.json.repository}/releases/tag/${data.json.tag})`;\n\nreturn {\n  json: {\n    ...data.json,\n    formatted_message: message,\n    emoji: '🚀',\n    priority: 'normal'\n  }\n};"
+      },
+      "id": "format-deploy-success",
+      "name": "Format Deploy Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format failure message for Deploy\nconst data = $input.first();\n\nconst message = `🔥 **${data.json.repository.split('/')[1]} Deploy FAILED!**\n\n❌ Critical deployment failure detected\n🏷️ Version: ${data.json.tag || 'unknown'}\n👤 By: ${data.json.actor}\n🚨 Error: ${data.json.details?.error_message || 'Unknown error'}\n\n🔍 [Debug Logs](${data.json.details?.logs_url || `https://github.com/${data.json.repository}/actions`})\n📞 **Escalating to on-call team**`;\n\nreturn {\n  json: {\n    ...data.json,\n    formatted_message: message,\n    emoji: '🔥',\n    priority: 'critical'\n  }\n};"
+      },
+      "id": "format-deploy-failure",
+      "name": "Format Deploy Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 540]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.telegram_chat_id || '-123456789'}}",
+        "text": "={{$json.formatted_message}}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "message_thread_id": "={{$json.telegram_thread_id}}"
+        }
+      },
+      "id": "send-telegram",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "SpoolIQ Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "deployment_history",
+        "columns": [
+          "repository",
+          "event_type", 
+          "workflow",
+          "commit_sha",
+          "tag",
+          "branch",
+          "actor",
+          "timestamp",
+          "status",
+          "build_time",
+          "docker_image",
+          "error_message",
+          "logs_url",
+          "metadata"
+        ],
+        "values": {
+          "repository": "={{$json.repository}}",
+          "event_type": "={{$json.event_type}}",
+          "workflow": "={{$json.workflow}}",
+          "commit_sha": "={{$json.commit_sha}}",
+          "tag": "={{$json.tag}}",
+          "branch": "={{$json.branch}}",
+          "actor": "={{$json.actor}}",
+          "timestamp": "={{$json.timestamp}}",
+          "status": "={{$json.event_type.includes('success') ? 'success' : 'failure'}}",
+          "build_time": "={{$json.details?.build_time}}",
+          "docker_image": "={{$json.details?.docker_image}}",
+          "error_message": "={{$json.details?.error_message}}",
+          "logs_url": "={{$json.details?.logs_url}}",
+          "metadata": "={{JSON.stringify($json.details || {})}}"
+        }
+      },
+      "id": "save-to-analytics-db",
+      "name": "Save to Analytics DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "analytics-db-credentials",
+          "name": "SpoolIQ Analytics Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.priority}}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-critical",
+      "name": "Is Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 540]
+    },
+    {
+      "parameters": {
+        "channel": "#alerts",
+        "text": "={{$json.formatted_message}}",
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "id": "send-slack-alert",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1120, 540],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "SpoolIQ Slack"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.signoz.io/api/v1/annotations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"text\": $json.repository.split('/')[1] + \" \" + ($json.event_type.includes('success') ? \"deployed\" : \"failed\"),\n  \"tags\": [\n    \"repository:\" + $json.repository,\n    \"event:\" + $json.event_type,\n    \"version:\" + ($json.tag || \"unknown\")\n  ],\n  \"timestamp\": $json.timestamp\n}",
+        "options": {}
+      },
+      "id": "signoz-annotation",
+      "name": "Add SigNoz Annotation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "signoz-api-credentials",
+          "name": "SigNoz API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "CI/CD Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route by Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Event Type": {
+      "main": [
+        [
+          {
+            "node": "Format CI Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format CI Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Deploy Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Deploy Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format CI Success": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format CI Failure": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Deploy Success": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Deploy Failure": {
+      "main": [
+        [
+          {
+            "node": "Is Critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Notification": {
+      "main": [
+        [
+          {
+            "node": "Save to Analytics DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Analytics DB": {
+      "main": [
+        [
+          {
+            "node": "Add SigNoz Annotation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Critical?": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Save to Analytics DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "ci-cd",
+      "name": "CI/CD"
+    },
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "spooliq",
+      "name": "SpoolIQ"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+}

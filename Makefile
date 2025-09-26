@@ -15,7 +15,7 @@ DOCKER_COMPOSE=docker-compose
 BINARY_NAME=$(shell basename $(CURDIR))
 PROJECT_NAME=$(shell basename $(CURDIR))
 
-.PHONY: all build run test clean lint help infrastructure/raise infrastructure/down infrastructure/logs infrastructure/restart app/run app/down app/logs cache/test cache/status cache/clear db/migrate db/rollback db/status db/dry-run db/seed db/reset
+.PHONY: all build run test clean lint help infrastructure/raise infrastructure/down infrastructure/logs infrastructure/restart app/run app/down app/logs cache/test cache/status cache/clear analytics/start analytics/stop analytics/logs analytics/migrate analytics/query analytics/status analytics/tools analytics/clean release-check release-snapshot release-local release-tag release-push docker/build docker/build-ca docker/size docker/analyze docker/clean
 
 all: help
 
@@ -175,6 +175,83 @@ docker/clean:
 	@docker builder prune -f
 	@echo "✅ Docker cleanup complete!"
 
+# Analytics Database commands
+analytics/start:
+	@echo "🗄️ Starting Analytics Database..."
+	@docker-compose -f docker-compose.analytics.yml up -d analytics_db
+	@echo "✅ Analytics database started on port 5433!"
+	@echo "📊 Database: spooliq_analytics"
+	@echo "👤 User: analytics_user"
+	@echo "🔐 Pass: analytics_pass_2024"
+
+analytics/stop:
+	@echo "🛑 Stopping Analytics Database..."
+	@docker-compose -f docker-compose.analytics.yml down
+	@echo "✅ Analytics database stopped!"
+
+analytics/logs:
+	@echo "📋 Analytics Database logs..."
+	@docker-compose -f docker-compose.analytics.yml logs -f analytics_db
+
+analytics/migrate:
+	@echo "📊 Running Analytics Database migrations..."
+	@docker exec spooliq_analytics_db psql -U analytics_user -d spooliq_analytics -f /docker-entrypoint-initdb.d/create_deployment_history.sql
+	@echo "✅ Migrations completed!"
+
+analytics/query:
+	@echo "🔍 Connecting to Analytics Database..."
+	@docker exec -it spooliq_analytics_db psql -U analytics_user -d spooliq_analytics
+
+analytics/status:
+	@echo "📊 Analytics Database Status:"
+	@docker exec spooliq_analytics_db psql -U analytics_user -d spooliq_analytics -c "SELECT COUNT(*) as total_deployments, COUNT(CASE WHEN status = 'success' THEN 1 END) as successful FROM deployment_history;" || echo "❌ Database not running or table not created"
+
+analytics/tools:
+	@echo "🛠️ Starting Analytics Tools (pgAdmin + Grafana)..."
+	@docker-compose -f docker-compose.analytics.yml --profile tools up -d
+	@echo "✅ Analytics tools started!"
+	@echo "🗄️ pgAdmin: http://localhost:5050 (admin@spooliq.com / analytics_admin_2024)"
+	@echo "📊 Grafana: http://localhost:3001 (admin / grafana_admin_2024)"
+
+analytics/clean:
+	@echo "🧹 Cleaning Analytics data..."
+	@docker-compose -f docker-compose.analytics.yml down -v
+	@echo "⚠️ All analytics data has been removed!"
+
+# GoReleaser commands
+release-check:
+	@echo "🔍 Checking GoReleaser configuration..."
+	@goreleaser check
+
+release-snapshot:
+	@echo "🐳 Building Docker snapshot with GoReleaser..."
+	@goreleaser release --snapshot --clean --skip=publish
+
+release-local:
+	@echo "🏗️ Building local binary with GoReleaser..."
+	@goreleaser build --single-target --clean
+
+release-tag:
+	@echo "🏷️ Creating release tag..."
+	@chmod +x ./.config/scripts/increment_version.sh
+	@./.config/scripts/increment_version.sh
+	@VERSION=$$(cat version.txt) && \
+	git add version.txt && \
+	git commit -m "chore: bump version to v$$VERSION" && \
+	git tag -a "v$$VERSION" -m "Release v$$VERSION" && \
+	echo "✅ Created tag v$$VERSION" && \
+	echo "🚀 Push with: git push origin main v$$VERSION"
+
+release-push:
+	@echo "🚀 Pushing release tag to trigger GoReleaser..."
+	@VERSION=$$(cat version.txt) && \
+	git push origin main "v$$VERSION"
+
+release-auto:
+	@echo "🚀 Triggering auto-release via push to main..."
+	@echo "📝 This will trigger GoReleaser with auto-version increment"
+	@git push origin main
+
 # Display help
 help:
 	@echo "Available commands:"
@@ -185,6 +262,14 @@ help:
 	@echo "  make test                 - Run the tests"
 	@echo "  make clean                - Clean the binary"
 	@echo "  make lint                 - Run the linter"
+	@echo ""
+	@echo "🚀 GoReleaser & Release:"
+	@echo "  make release-check        - Check GoReleaser configuration"
+	@echo "  make release-snapshot     - Build Docker snapshot locally"
+	@echo "  make release-local        - Build local binary with GoReleaser"
+	@echo "  make release-auto         - Trigger auto-release (push to main)"
+	@echo "  make release-tag          - Create and tag new version manually"
+	@echo "  make release-push         - Push release tag to trigger deployment"
 	@echo ""
 	@echo "🏗️  Infrastructure:"
 	@echo "  make infrastructure/raise - Start PostgreSQL + RabbitMQ + Keycloak + Redis"
@@ -219,6 +304,16 @@ help:
 	@echo "  make docker/size          - Show Docker image size analysis"
 	@echo "  make docker/analyze       - Detailed Docker image analysis"
 	@echo "  make docker/clean         - Clean Docker build cache and unused resources"
+	@echo ""
+	@echo "📊 Analytics Database (n8n CI/CD History):"
+	@echo "  make analytics/start      - Start analytics database (port 5433)"
+	@echo "  make analytics/stop       - Stop analytics database"
+	@echo "  make analytics/logs       - Show analytics database logs"
+	@echo "  make analytics/migrate    - Run database migrations"
+	@echo "  make analytics/query      - Connect to analytics database (psql)"
+	@echo "  make analytics/status     - Show deployment statistics"
+	@echo "  make analytics/tools      - Start pgAdmin + Grafana tools"
+	@echo "  make analytics/clean      - Clean all analytics data (DESTRUCTIVE)"
 	@echo ""
 	@echo "  make help                 - Display this help message"
 

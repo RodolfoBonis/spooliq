@@ -27,3 +27,5 @@ spooliq.exe
 spooliq
 
 spooliq_docs
+# Added by goreleaser init:
+dist/

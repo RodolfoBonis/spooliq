@@ -97,8 +97,10 @@ func loadTelemetryConfig() TelemetryConfig {
 		os.Getenv("OTEL_TRACES_ENABLED") == "true"
 
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	fmt.Printf("DEBUG: OTEL_EXPORTER_OTLP_ENDPOINT env var = '%s'\n", endpoint)
 	if endpoint == "" {
 		endpoint = "http://localhost:4318"
+		fmt.Printf("DEBUG: Using fallback endpoint = '%s'\n", endpoint)
 	}
 
 	serviceName := os.Getenv("OTEL_SERVICE_NAME")

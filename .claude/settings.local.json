@@ -69,7 +69,9 @@
       "Bash(cd:*)",
       "Bash(gh run list:*)",
       "Bash(gh workflow run:*)",
-      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/auth/service/**)"
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/auth/service/**)",
+      "Bash(git tag:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

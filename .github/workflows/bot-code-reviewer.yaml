@@ -5,7 +5,7 @@ on: [pull_request]
 
 jobs:
   code-review:
-    runs-on: [self-hosted, gh-actions, k3s]
+    runs-on: [ubuntu-latest]
     permissions:
       contents: read
       pull-requests: write

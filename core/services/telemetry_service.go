@@ -10,9 +10,11 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -23,6 +25,7 @@ import (
 type TelemetryService struct {
 	logger         logger.Logger
 	tracerProvider *trace.TracerProvider
+	meterProvider  *sdkmetric.MeterProvider
 	enabled        bool
 }
 
@@ -59,6 +62,17 @@ func NewTelemetryService(lc fx.Lifecycle, logger logger.Logger) (*TelemetryServi
 	}
 
 	service.tracerProvider = tp
+
+	// Initialize meter provider
+	mp, err := initMeterProvider(cfg)
+	if err != nil {
+		logger.Error(context.Background(), "Failed to initialize meter provider", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, fmt.Errorf("failed to initialize meter provider: %w", err)
+	}
+
+	service.meterProvider = mp
 
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
@@ -191,27 +205,87 @@ func initTracerProvider(cfg TelemetryConfig) (*trace.TracerProvider, error) {
 	return tp, nil
 }
 
+// initMeterProvider initializes the OpenTelemetry meter provider
+func initMeterProvider(cfg TelemetryConfig) (*sdkmetric.MeterProvider, error) {
+	ctx := context.Background()
+
+	// Create OTLP metrics exporter
+	exporter, err := otlpmetrichttp.New(ctx,
+		otlpmetrichttp.WithEndpoint(cfg.Endpoint),
+		otlpmetrichttp.WithInsecure(),
+		otlpmetrichttp.WithTimeout(10*time.Second),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTLP metrics exporter: %w", err)
+	}
+
+	// Create resource with service information
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceName(cfg.ServiceName),
+			semconv.ServiceVersion(cfg.Version),
+			attribute.String("environment", cfg.Environment),
+		),
+		resource.WithTelemetrySDK(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
+	// Create meter provider
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter,
+			sdkmetric.WithInterval(30*time.Second),
+		)),
+		sdkmetric.WithResource(res),
+	)
+
+	// Set global meter provider
+	otel.SetMeterProvider(mp)
+
+	return mp, nil
+}
+
 // Shutdown gracefully shuts down the telemetry service
 func (t *TelemetryService) Shutdown(ctx context.Context) error {
-	if !t.enabled || t.tracerProvider == nil {
+	if !t.enabled {
 		return nil
 	}
 
 	t.logger.Info(ctx, "Shutting down telemetry service...")
 
 	// Force flush any remaining spans
-	if err := t.tracerProvider.ForceFlush(ctx); err != nil {
-		t.logger.Error(ctx, "Error flushing tracer provider", map[string]interface{}{
-			"error": err.Error(),
-		})
+	if t.tracerProvider != nil {
+		if err := t.tracerProvider.ForceFlush(ctx); err != nil {
+			t.logger.Error(ctx, "Error flushing tracer provider", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+
+		// Shutdown the tracer provider
+		if err := t.tracerProvider.Shutdown(ctx); err != nil {
+			t.logger.Error(ctx, "Error shutting down tracer provider", map[string]interface{}{
+				"error": err.Error(),
+			})
+			return err
+		}
 	}
 
-	// Shutdown the tracer provider
-	if err := t.tracerProvider.Shutdown(ctx); err != nil {
-		t.logger.Error(ctx, "Error shutting down tracer provider", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return err
+	// Force flush any remaining metrics
+	if t.meterProvider != nil {
+		if err := t.meterProvider.ForceFlush(ctx); err != nil {
+			t.logger.Error(ctx, "Error flushing meter provider", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+
+		// Shutdown the meter provider
+		if err := t.meterProvider.Shutdown(ctx); err != nil {
+			t.logger.Error(ctx, "Error shutting down meter provider", map[string]interface{}{
+				"error": err.Error(),
+			})
+			return err
+		}
 	}
 
 	t.logger.Info(ctx, "Telemetry service shutdown complete")
@@ -226,4 +300,9 @@ func (t *TelemetryService) IsEnabled() bool {
 // GetTracerProvider returns the tracer provider
 func (t *TelemetryService) GetTracerProvider() *trace.TracerProvider {
 	return t.tracerProvider
+}
+
+// GetMeterProvider returns the meter provider
+func (t *TelemetryService) GetMeterProvider() *sdkmetric.MeterProvider {
+	return t.meterProvider
 }

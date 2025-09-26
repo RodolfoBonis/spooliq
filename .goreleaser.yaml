@@ -38,20 +38,23 @@ upx:
     goos: [linux]
 
 # Docker Images
-dockers:
-  - image_templates:
-      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
-      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+dockers_v2:
+  - images:
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source=https://github.com/RodolfoBonis/spooliq"
       - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
       - "--build-arg=VERSION={{.Version}}"
+    labels:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.title": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "https://github.com/RodolfoBonis/spooliq"
     dockerfile: dockerfile.with-ca
     use: buildx
     extra_files:
@@ -67,7 +70,7 @@ dockers:
 # Archives
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    builds:
+    ids:
       - spooliq
 
 # Changelog

@@ -175,49 +175,6 @@ docker/clean:
 	@docker builder prune -f
 	@echo "✅ Docker cleanup complete!"
 
-# Analytics Database commands
-analytics/start:
-	@echo "🗄️ Starting Analytics Database..."
-	@docker-compose -f docker-compose.analytics.yml up -d analytics_db
-	@echo "✅ Analytics database started on port 5433!"
-	@echo "📊 Database: spooliq_analytics"
-	@echo "👤 User: analytics_user"
-	@echo "🔐 Pass: analytics_pass_2024"
-
-analytics/stop:
-	@echo "🛑 Stopping Analytics Database..."
-	@docker-compose -f docker-compose.analytics.yml down
-	@echo "✅ Analytics database stopped!"
-
-analytics/logs:
-	@echo "📋 Analytics Database logs..."
-	@docker-compose -f docker-compose.analytics.yml logs -f analytics_db
-
-analytics/migrate:
-	@echo "📊 Running Analytics Database migrations..."
-	@docker exec spooliq_analytics_db psql -U analytics_user -d spooliq_analytics -f /docker-entrypoint-initdb.d/create_deployment_history.sql
-	@echo "✅ Migrations completed!"
-
-analytics/query:
-	@echo "🔍 Connecting to Analytics Database..."
-	@docker exec -it spooliq_analytics_db psql -U analytics_user -d spooliq_analytics
-
-analytics/status:
-	@echo "📊 Analytics Database Status:"
-	@docker exec spooliq_analytics_db psql -U analytics_user -d spooliq_analytics -c "SELECT COUNT(*) as total_deployments, COUNT(CASE WHEN status = 'success' THEN 1 END) as successful FROM deployment_history;" || echo "❌ Database not running or table not created"
-
-analytics/tools:
-	@echo "🛠️ Starting Analytics Tools (pgAdmin + Grafana)..."
-	@docker-compose -f docker-compose.analytics.yml --profile tools up -d
-	@echo "✅ Analytics tools started!"
-	@echo "🗄️ pgAdmin: http://localhost:5050 (admin@spooliq.com / analytics_admin_2024)"
-	@echo "📊 Grafana: http://localhost:3001 (admin / grafana_admin_2024)"
-
-analytics/clean:
-	@echo "🧹 Cleaning Analytics data..."
-	@docker-compose -f docker-compose.analytics.yml down -v
-	@echo "⚠️ All analytics data has been removed!"
-
 # GoReleaser commands
 release-check:
 	@echo "🔍 Checking GoReleaser configuration..."
@@ -287,33 +244,12 @@ help:
 	@echo "  make cache/status         - Show Redis status and cache keys"
 	@echo "  make cache/clear          - Clear all cache"
 	@echo ""
-	@echo "🗄️  Database Commands (New SQL Migration System):"
-	@echo "  make db/migrate           - Run all pending migrations"
-	@echo "  make db/rollback          - Rollback last migration (use COUNT=n for multiple)"
-	@echo "  make db/status            - Show migration status"
-	@echo "  make db/create NAME=\"name\" - Create new migration with given name"
-	@echo "  make db/list              - List all available migrations"
-	@echo "  make db/fresh-confirm     - Drop all tables and rerun migrations (DESTRUCTIVE)"
-	@echo "  make db/reset-migrations  - Rollback all migrations and rerun them"
-	@echo "  make db/seed              - Seed database with initial data"
-	@echo "  make db/reset             - Reset database (SQLite only)"
-	@echo ""
 	@echo "🐳 Docker Commands:"
 	@echo "  make docker/build         - Build ultra-optimized image (scratch + UPX)"
 	@echo "  make docker/build-ca      - Build optimized image with CA certificates"
 	@echo "  make docker/size          - Show Docker image size analysis"
 	@echo "  make docker/analyze       - Detailed Docker image analysis"
 	@echo "  make docker/clean         - Clean Docker build cache and unused resources"
-	@echo ""
-	@echo "📊 Analytics Database (n8n CI/CD History):"
-	@echo "  make analytics/start      - Start analytics database (port 5433)"
-	@echo "  make analytics/stop       - Stop analytics database"
-	@echo "  make analytics/logs       - Show analytics database logs"
-	@echo "  make analytics/migrate    - Run database migrations"
-	@echo "  make analytics/query      - Connect to analytics database (psql)"
-	@echo "  make analytics/status     - Show deployment statistics"
-	@echo "  make analytics/tools      - Start pgAdmin + Grafana tools"
-	@echo "  make analytics/clean      - Clean all analytics data (DESTRUCTIVE)"
 	@echo ""
 	@echo "  make help                 - Display this help message"
 

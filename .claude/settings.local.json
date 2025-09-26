@@ -72,7 +72,14 @@
       "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/auth/service/**)",
       "Bash(git tag:*)",
       "Bash(git fetch:*)",
-      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/**)"
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/**)",
+      "WebFetch(domain:signoz.io)",
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/config/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/ingress/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/ingress/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/application/**)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,7 +5,7 @@ permissions:
 
 on:
   workflow_run:
-    workflows: ["CI/CD Pipeline - spooliq"]
+    workflows: ["CI - spooliq"]
     types:
       - completed
     branches: [main]

@@ -20,7 +20,7 @@ Enviado quando o build/teste passa com sucesso.
 {
   "event_type": "ci_success",
   "repository": "RodolfoBonis/spooliq",
-  "workflow": "CI/CD Pipeline - spooliq",
+  "workflow": "CI - spooliq",
   "commit_sha": "a1b2c3d4e5f6",
   "tag": null,
   "branch": "refs/heads/main",
@@ -44,7 +44,7 @@ Enviado quando o build/teste falha.
 {
   "event_type": "ci_failure",
   "repository": "RodolfoBonis/spooliq",
-  "workflow": "CI/CD Pipeline - spooliq",
+  "workflow": "CI - spooliq",
   "commit_sha": "a1b2c3d4e5f6",
   "tag": null,
   "branch": "refs/heads/main", 

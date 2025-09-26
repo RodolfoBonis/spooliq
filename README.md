@@ -2,7 +2,8 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.20%2B-blue)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/RodolfoBonis/spooliq/ci.yml?branch=main)](https://github.com/RodolfoBonis/spooliq/actions)
+[![CI - spooliq](https://github.com/RodolfoBonis/spooliq/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/RodolfoBonis/spooliq/actions/workflows/ci.yaml)
+[![Deploy](https://github.com/RodolfoBonis/spooliq/actions/workflows/release.yaml/badge.svg)](https://github.com/RodolfoBonis/spooliq/actions/workflows/release.yaml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://hub.docker.com/)
 [![Swagger Docs](https://img.shields.io/badge/docs-Swagger-brightgreen)](http://localhost:8000/docs/index.html)
 

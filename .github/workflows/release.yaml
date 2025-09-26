@@ -86,6 +86,11 @@ jobs:
           git tag ${{ steps.version-strategy.outputs.tag }}
           git push origin ${{ steps.version-strategy.outputs.tag }}
 
+      - name: Reset git state before GoReleaser
+        run: |
+          git reset --hard HEAD
+          git clean -fd
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:

@@ -134,7 +134,7 @@ func initTracerProvider(cfg TelemetryConfig) (*trace.TracerProvider, error) {
 		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
 	}
 
-	// Create resource with service information
+	// Create resource with service information (defensive approach)
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceName(cfg.ServiceName),
@@ -147,18 +147,8 @@ func initTracerProvider(cfg TelemetryConfig) (*trace.TracerProvider, error) {
 			attribute.String("k8s.namespace.name", os.Getenv("POD_NAMESPACE")),
 			attribute.String("k8s.node.name", os.Getenv("NODE_IP")),
 		),
-		resource.WithProcessPID(),
-		resource.WithProcessExecutableName(),
-		resource.WithProcessExecutablePath(),
-		resource.WithProcessOwner(),
-		resource.WithProcessRuntimeName(),
-		resource.WithProcessRuntimeVersion(),
-		resource.WithProcessRuntimeDescription(),
-		resource.WithHost(),
+		// Use only basic detectors to avoid schema conflicts
 		resource.WithTelemetrySDK(),
-		resource.WithOS(),
-		resource.WithContainer(),
-		resource.WithSchemaURL(semconv.SchemaURL),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create resource: %w", err)

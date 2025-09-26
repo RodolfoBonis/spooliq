@@ -14,7 +14,8 @@ ENV CGO_ENABLED=0 \
     GOARCH=amd64 \
     GO111MODULE=on \
     TOKEN=$GITHUB_TOKEN \
-    VERSION=${VERSION}
+    VERSION=${VERSION} \
+    USER=spooliq
 
 # Install minimal dependencies including UPX
 RUN apk add --no-cache git ca-certificates upx
@@ -55,6 +56,9 @@ FROM gcr.io/distroless/static-debian12:nonroot AS production
 ARG VERSION=unknown
 LABEL version=${VERSION}
 LABEL maintainer="RodolfoBonis"
+
+# Set environment variables for OpenTelemetry
+ENV USER=nonroot
 
 # Copy CA certificates and compressed binary
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

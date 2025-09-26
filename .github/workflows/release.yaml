@@ -1,5 +1,8 @@
 name: Release with GoReleaser
 
+permissions:
+  contents: write
+
 on:
   workflow_run:
     workflows: ["CI/CD Pipeline - spooliq"]

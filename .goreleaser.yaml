@@ -38,34 +38,30 @@ upx:
     goos: [linux]
 
 # Docker Images
-dockers_v2:
-  - images:
-      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}"
-    tags:
-      - "{{ .Version }}"
-      - "latest"
-    build:
-      dockerfile: dockerfile.with-ca
-      platform: "linux/amd64"
-      pull: true
-      build_args:
-        GITHUB_TOKEN: "{{ .Env.GITHUB_TOKEN }}"
-        VERSION: "{{.Version}}"
-      extra_files:
-        - go.mod
-        - go.sum
-        - main.go
-        - app/
-        - core/
-        - features/
-        - routes/
-        - docs/
-    labels:
-      "org.opencontainers.image.created": "{{.Date}}"
-      "org.opencontainers.image.title": "{{.ProjectName}}"
-      "org.opencontainers.image.revision": "{{.FullCommit}}"
-      "org.opencontainers.image.version": "{{.Version}}"
-      "org.opencontainers.image.source": "https://github.com/RodolfoBonis/spooliq"
+dockers:
+  - image_templates:
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+    dockerfile: dockerfile.with-ca
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/RodolfoBonis/spooliq"
+      - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
+      - "--build-arg=VERSION={{.Version}}"
+      - "--platform=linux/amd64"
+    extra_files:
+      - go.mod
+      - go.sum
+      - main.go
+      - app/
+      - core/
+      - features/
+      - routes/
+      - docs/
 
 # Archives
 archives:

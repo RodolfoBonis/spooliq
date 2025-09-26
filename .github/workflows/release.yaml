@@ -73,6 +73,8 @@ jobs:
           author_email: "actions@github.com"
           message: "Increment version"
           add: "version.txt"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Create Tag (if auto-increment)
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
@@ -91,13 +93,19 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
 
+      - name: Checkout k3s manifest repository
+        uses: actions/checkout@master
+        with:
+          repository: RodolfoBonis/k3s-apps
+          ref: main
+          path: k3s-manifest
+          token: ${{ secrets.GH_TOKEN }}
+
       - name: Update K3s Manifests
         env:
           VERSION: ${{ steps.version-strategy.outputs.version }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
-          # Clone k3s-apps
-          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/k3s-apps.git
           cd k3s-apps
           
           # Update deployment (converter para minúscula)
@@ -106,11 +114,9 @@ jobs:
           yq e -i ".spec.template.spec.containers[0].image = \"${IMAGE}\"" \
             ./applications/spooliq/service/spooliq-deployment.yaml
           
-          # Commit
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
-          git add -A
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add ./applications/spooliq/service/spooliq-deployment.yaml
           git commit -m "feat: update spooliq to v${VERSION}"
           git push
 

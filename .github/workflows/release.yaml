@@ -127,9 +127,37 @@ jobs:
       - name: Calculate Build Duration
         id: build-duration
         run: |
-          START_TIME=${{ github.event.head_commit.timestamp }}
+          START_TIME="${{ github.event.head_commit.timestamp }}"
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            START_TIME="${{ github.event.repository.pushed_at }}"
+          fi
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            # Fallback: use workflow start time (approximate)
+            START_TIME=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+          fi
+          
           END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "duration=Calculated during workflow" >> $GITHUB_OUTPUT
+          
+          # Calculate duration in seconds using date command
+          START_EPOCH=$(date -d "$START_TIME" +%s)
+          END_EPOCH=$(date -d "$END_TIME" +%s)
+          DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
+          
+          # Convert to human readable format
+          if [ $DURATION_SECONDS -lt 60 ]; then
+            DURATION="${DURATION_SECONDS}s"
+          elif [ $DURATION_SECONDS -lt 3600 ]; then
+            MINUTES=$((DURATION_SECONDS / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${MINUTES}m ${SECONDS}s"
+          else
+            HOURS=$((DURATION_SECONDS / 3600))
+            MINUTES=$(((DURATION_SECONDS % 3600) / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
+          fi
+          
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
 
       - name: Notify n8n Success
         if: success()

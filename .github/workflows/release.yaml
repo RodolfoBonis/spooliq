@@ -91,6 +91,12 @@ jobs:
           git reset --hard HEAD
           git clean -fd
 
+      - name: Set lowercase repository owner
+        id: repo-owner
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -99,7 +105,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
 
       - name: Checkout k3s manifest repository
         uses: actions/checkout@master
@@ -113,12 +119,12 @@ jobs:
         env:
           VERSION: ${{ steps.version-strategy.outputs.version }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
         run: |
           cd k3s-manifest
           
-          # Update deployment (converter para minúscula)
-          IMAGE="${ECR_REGISTRY}/${{ github.repository_owner }}/spooliq:${VERSION}"
-          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          # Update deployment (já em minúscula)
+          IMAGE="${ECR_REGISTRY}/${REPOSITORY_OWNER}/spooliq:${VERSION}"
           yq e -i ".spec.template.spec.containers[0].image = \"${IMAGE}\"" \
             ./applications/spooliq/service/spooliq-deployment.yaml
           
@@ -176,8 +182,7 @@ jobs:
       - name: Notify n8n Success
         if: success()
         run: |
-          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ github.repository_owner }}/spooliq:${{ steps.version-strategy.outputs.version }}"
-          DOCKER_IMAGE=$(echo "$DOCKER_IMAGE" | tr '[:upper:]' '[:lower:]')
+          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version-strategy.outputs.version }}"
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \

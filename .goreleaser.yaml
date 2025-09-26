@@ -40,8 +40,8 @@ upx:
 # Docker Images
 dockers:
   - image_templates:
-      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER | lower }}/{{ .ProjectName }}:{{ .Version }}"
-      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER | lower }}/{{ .ProjectName }}:latest"
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+      - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
     build_flag_templates:
       - "--pull"
       - "--label=org.opencontainers.image.created={{.Date}}"
@@ -97,7 +97,7 @@ release:
     ---
     ### 🐳 Docker Image
     ```bash
-    docker pull {{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER | lower }}/{{ .ProjectName }}:{{ .Version }}
+    docker pull {{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}
     ```
     
     ### 📊 Deployment

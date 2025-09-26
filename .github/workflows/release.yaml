@@ -79,6 +79,7 @@ jobs:
       - name: Create Tag (if auto-increment)
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
         run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
           git tag ${{ steps.version-strategy.outputs.tag }}
           git push origin ${{ steps.version-strategy.outputs.tag }}
 
@@ -98,7 +99,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
           # Clone k3s-apps
-          git clone https://${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/k3s-apps.git
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/k3s-apps.git
           cd k3s-apps
           
           # Update deployment (converter para minúscula)
@@ -110,6 +111,7 @@ jobs:
           # Commit
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
           git add -A
           git commit -m "feat: update spooliq to v${VERSION}"
           git push

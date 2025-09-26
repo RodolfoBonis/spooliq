@@ -330,3 +330,4 @@ See the [LICENSE](LICENSE) file for more details.
 
 - **Author:** RodolfoBonis
 - **Repository:** https://github.com/RodolfoBonis/spooliq
+# Testing CI trigger

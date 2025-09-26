@@ -43,6 +43,7 @@ dockers:
       - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
       - "{{ .Env.ECR_REGISTRY }}/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
     build_flag_templates:
+      - "--platform=linux/amd64"
       - "--pull"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
@@ -52,9 +53,16 @@ dockers:
       - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
       - "--build-arg=VERSION={{.Version}}"
     dockerfile: dockerfile.with-ca
+    use: buildx
     extra_files:
       - go.mod
       - go.sum
+      - main.go
+      - app/
+      - core/
+      - features/
+      - routes/
+      - docs/
 
 # Archives
 archives:

@@ -13,8 +13,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/docs"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 // InitAndRun initializes and runs the application using Fx lifecycle

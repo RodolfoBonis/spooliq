@@ -5,8 +5,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/brand/data/repositories"
 	domainRepositories "github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
-	"gorm.io/gorm"
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 // Module provides all brand-related dependencies for FX dependency injection.

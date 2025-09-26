@@ -65,10 +65,10 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 		Logger: gormlogger.New(
 			nil, // Use default logger writer
 			gormlogger.Config{
-				SlowThreshold:             time.Second,   // Log slow queries
+				SlowThreshold:             time.Second,       // Log slow queries
 				LogLevel:                  gormlogger.Silent, // Use Silent to avoid duplicate logs
-				IgnoreRecordNotFoundError: true,         // Don't log RecordNotFound errors
-				Colorful:                  false,        // Disable color for structured logging
+				IgnoreRecordNotFoundError: true,              // Don't log RecordNotFound errors
+				Colorful:                  false,             // Disable color for structured logging
 			},
 		),
 	}
@@ -155,10 +155,10 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 							logger.LogError(context.Background(), "Database retry failed", appErr)
 							return false, e
 						}
-						
+
 						// Re-add OpenTelemetry tracing after reconnection
 						addOtelCallbacks(Connector)
-						
+
 						logger.Info(context.Background(), "Database reconnected successfully")
 						return true, nil
 					})

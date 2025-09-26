@@ -9,8 +9,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"go.opentelemetry.io/otel"
+	"gorm.io/gorm"
 )
 
 // Update handles updating an existing brand.

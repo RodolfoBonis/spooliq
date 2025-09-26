@@ -2,8 +2,8 @@ package services
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	"gorm.io/gorm"
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 // Module provides the fx module for services.

@@ -16,6 +16,11 @@ type AuthService struct {
 // NewAuthService creates a new AuthService instance.
 func NewAuthService(logger logger.Logger, cfg *config.AppConfig) *AuthService {
 	client := gocloak.NewClient(cfg.Keycloak.Host)
+	
+	// Get the internal Resty client and configure it with instrumented HTTP transport
+	restyClient := client.RestyClient()
+	instrumentedHTTPClient := NewInstrumentedHTTPClient()
+	restyClient.SetTransport(instrumentedHTTPClient.Transport)
 
 	return &AuthService{
 		client: client,

@@ -1,0 +1,535 @@
+{
+  "version": 1,
+  "title": "SpoolIQ Database Analytics",
+  "description": "Comprehensive database monitoring for SpoolIQ application including top queries, slow queries, and database performance metrics",
+  "tags": ["database", "spooliq", "performance"],
+  "variables": [
+    {
+      "type": "query",
+      "name": "service_name",
+      "description": "Service Name",
+      "query": "spooliq-api",
+      "defaultValue": "spooliq-api"
+    }
+  ],
+  "layout": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 12,
+      "h": 3,
+      "i": "0"
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "w": 12,
+      "h": 3,
+      "i": "1"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "w": 24,
+      "h": 8,
+      "i": "2"
+    },
+    {
+      "x": 0,
+      "y": 11,
+      "w": 24,
+      "h": 8,
+      "i": "3"
+    },
+    {
+      "x": 0,
+      "y": 19,
+      "w": 12,
+      "h": 6,
+      "i": "4"
+    },
+    {
+      "x": 12,
+      "y": 19,
+      "w": 12,
+      "h": 6,
+      "i": "5"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "0",
+      "title": "Database Queries Rate",
+      "description": "Number of database queries per second",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "value",
+      "query": {
+        "queryType": "builder",
+        "promQL": "",
+        "builder": {
+          "queryName": "A",
+          "stepInterval": 60,
+          "queryFormulas": [],
+          "filters": {
+            "items": [
+              {
+                "key": {
+                  "key": "service.name",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "{{.service_name}}"
+              },
+              {
+                "key": {
+                  "key": "db.system",
+                  "dataType": "string", 
+                  "type": "tag"
+                },
+                "op": "exists",
+                "value": ""
+              }
+            ],
+            "op": "AND"
+          },
+          "queryFormulas": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "legend": "Queries/sec"
+            }
+          ],
+          "groupBy": [],
+          "aggregateOperator": "rate",
+          "aggregateAttribute": {
+            "key": "",
+            "dataType": "",
+            "type": ""
+          },
+          "timeAggregation": "rate",
+          "spaceAggregation": "sum",
+          "functions": []
+        }
+      },
+      "timePreferance": {
+        "start": "now-1h",
+        "end": "now"
+      },
+      "thresholds": [],
+      "yAxisUnit": "reqps"
+    },
+    {
+      "id": "1", 
+      "title": "Database Query Duration (Avg)",
+      "description": "Average duration of database queries",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "value",
+      "query": {
+        "queryType": "builder",
+        "promQL": "",
+        "builder": {
+          "queryName": "A",
+          "stepInterval": 60,
+          "filters": {
+            "items": [
+              {
+                "key": {
+                  "key": "service.name",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "{{.service_name}}"
+              },
+              {
+                "key": {
+                  "key": "db.system",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "exists",
+                "value": ""
+              }
+            ],
+            "op": "AND"
+          },
+          "queryFormulas": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "legend": "Avg Duration"
+            }
+          ],
+          "groupBy": [],
+          "aggregateOperator": "avg",
+          "aggregateAttribute": {
+            "key": "durationNano",
+            "dataType": "float64",
+            "type": "tag"
+          },
+          "timeAggregation": "avg",
+          "spaceAggregation": "avg",
+          "functions": []
+        }
+      },
+      "timePreferance": {
+        "start": "now-1h", 
+        "end": "now"
+      },
+      "thresholds": [],
+      "yAxisUnit": "ns"
+    },
+    {
+      "id": "2",
+      "title": "Top Database Queries",
+      "description": "Most frequently executed database queries",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "table",
+      "query": {
+        "queryType": "builder",
+        "promQL": "",
+        "builder": {
+          "queryName": "A",
+          "stepInterval": 60,
+          "filters": {
+            "items": [
+              {
+                "key": {
+                  "key": "service.name",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "{{.service_name}}"
+              },
+              {
+                "key": {
+                  "key": "db.statement",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "exists",
+                "value": ""
+              }
+            ],
+            "op": "AND"
+          },
+          "queryFormulas": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "legend": ""
+            }
+          ],
+          "groupBy": [
+            {
+              "key": "db.statement",
+              "dataType": "string",
+              "type": "tag"
+            },
+            {
+              "key": "db.operation",
+              "dataType": "string", 
+              "type": "tag"
+            }
+          ],
+          "aggregateOperator": "count",
+          "aggregateAttribute": {
+            "key": "",
+            "dataType": "",
+            "type": ""
+          },
+          "timeAggregation": "rate",
+          "spaceAggregation": "sum",
+          "functions": [],
+          "orderBy": [
+            {
+              "columnName": "value",
+              "order": "desc"
+            }
+          ],
+          "limit": 20
+        }
+      },
+      "timePreferance": {
+        "start": "now-1h",
+        "end": "now"
+      },
+      "thresholds": [],
+      "yAxisUnit": "short"
+    },
+    {
+      "id": "3",
+      "title": "Slowest Database Queries", 
+      "description": "Database queries with highest execution time",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "table",
+      "query": {
+        "queryType": "builder",
+        "promQL": "",
+        "builder": {
+          "queryName": "A",
+          "stepInterval": 60,
+          "filters": {
+            "items": [
+              {
+                "key": {
+                  "key": "service.name",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "{{.service_name}}"
+              },
+              {
+                "key": {
+                  "key": "db.statement",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "exists",
+                "value": ""
+              }
+            ],
+            "op": "AND"
+          },
+          "queryFormulas": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "legend": ""
+            }
+          ],
+          "groupBy": [
+            {
+              "key": "db.statement",
+              "dataType": "string",
+              "type": "tag"
+            },
+            {
+              "key": "db.operation",
+              "dataType": "string",
+              "type": "tag"
+            },
+            {
+              "key": "timestamp",
+              "dataType": "string",
+              "type": "tag"
+            }
+          ],
+          "aggregateOperator": "max",
+          "aggregateAttribute": {
+            "key": "durationNano",
+            "dataType": "float64",
+            "type": "tag"
+          },
+          "timeAggregation": "max",
+          "spaceAggregation": "max",
+          "functions": [],
+          "orderBy": [
+            {
+              "columnName": "value",
+              "order": "desc"
+            }
+          ],
+          "limit": 20
+        }
+      },
+      "timePreferance": {
+        "start": "now-1h",
+        "end": "now"
+      },
+      "thresholds": [],
+      "yAxisUnit": "ns"
+    },
+    {
+      "id": "4",
+      "title": "Database Errors",
+      "description": "Database query error rate",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1", 
+      "panelTypes": "graph",
+      "query": {
+        "queryType": "builder",
+        "promQL": "",
+        "builder": {
+          "queryName": "A",
+          "stepInterval": 60,
+          "filters": {
+            "items": [
+              {
+                "key": {
+                  "key": "service.name",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "{{.service_name}}"
+              },
+              {
+                "key": {
+                  "key": "db.system",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "exists",
+                "value": ""
+              },
+              {
+                "key": {
+                  "key": "status_code",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "ERROR"
+              }
+            ],
+            "op": "AND"
+          },
+          "queryFormulas": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "legend": "Error Rate"
+            }
+          ],
+          "groupBy": [],
+          "aggregateOperator": "rate",
+          "aggregateAttribute": {
+            "key": "",
+            "dataType": "",
+            "type": ""
+          },
+          "timeAggregation": "rate",
+          "spaceAggregation": "sum",
+          "functions": []
+        }
+      },
+      "timePreferance": {
+        "start": "now-1h",
+        "end": "now"
+      },
+      "thresholds": [
+        {
+          "thresholdValue": 0.1,
+          "thresholdFormat": "text",
+          "thresholdOperator": ">",
+          "thresholdColor": "#ff6b6b"
+        }
+      ],
+      "yAxisUnit": "percent"
+    },
+    {
+      "id": "5",
+      "title": "External HTTP Calls",
+      "description": "External service calls and their performance",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "table",
+      "query": {
+        "queryType": "builder",
+        "promQL": "",
+        "builder": {
+          "queryName": "A",
+          "stepInterval": 60,
+          "filters": {
+            "items": [
+              {
+                "key": {
+                  "key": "service.name",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "{{.service_name}}"
+              },
+              {
+                "key": {
+                  "key": "http.url",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "exists",
+                "value": ""
+              },
+              {
+                "key": {
+                  "key": "span.kind",
+                  "dataType": "string",
+                  "type": "tag"
+                },
+                "op": "=",
+                "value": "client"
+              }
+            ],
+            "op": "AND"
+          },
+          "queryFormulas": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "legend": ""
+            }
+          ],
+          "groupBy": [
+            {
+              "key": "http.url",
+              "dataType": "string",
+              "type": "tag"
+            },
+            {
+              "key": "http.method",
+              "dataType": "string",
+              "type": "tag"
+            },
+            {
+              "key": "http.status_code",
+              "dataType": "string",
+              "type": "tag"
+            }
+          ],
+          "aggregateOperator": "count",
+          "aggregateAttribute": {
+            "key": "",
+            "dataType": "",
+            "type": ""
+          },
+          "timeAggregation": "rate",
+          "spaceAggregation": "sum",
+          "functions": [],
+          "orderBy": [
+            {
+              "columnName": "value",
+              "order": "desc"
+            }
+          ],
+          "limit": 15
+        }
+      },
+      "timePreferance": {
+        "start": "now-1h",
+        "end": "now"
+      },
+      "thresholds": [],
+      "yAxisUnit": "short"
+    }
+  ]
+}

@@ -65,14 +65,14 @@ jobs:
             fi
           fi
 
-      - name: Commit Version (if auto-increment)
+      - name: Add, commit and push version increment
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
           git add version.txt
-          git commit -m "chore: increment version to v${{ steps.version-strategy.outputs.version }}"
+          git commit -m "Increment version"
           git push origin main
 
       - name: Create Tag (if auto-increment)
@@ -108,8 +108,8 @@ jobs:
             ./applications/spooliq/service/spooliq-deployment.yaml
           
           # Commit
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
           git add -A
           git commit -m "feat: update spooliq to v${VERSION}"

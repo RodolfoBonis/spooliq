@@ -120,27 +120,33 @@ GROUP BY event_type, status;
 
 ### 5. Fluxo Simplificado (Apenas GoReleaser)
 
-**Novo Workflow Unificado:**
-- ✅ Push para `main` → GoReleaser (auto-increment version) → Deploy
-- ✅ Push de tag `v*` → GoReleaser → Deploy
+**Novo Workflow com Dependência de CI:**
+- ✅ Push para `main` → CI → ✅ CI Success → GoReleaser (auto-increment) → Deploy
+- ✅ Push de tag `v*` → GoReleaser → Deploy (direto)
 
 ```mermaid
 graph LR
-    A[Push to main/tag] --> B[GoReleaser Workflow]
-    B --> C[Auto-increment Version]
-    C --> D[Build & Push Docker]
-    D --> E[Update K3s Manifests]
-    E --> F[Sync ArgoCD]
-    F --> G[n8n Webhook]
-    G --> H{Event Type Router}
-    H --> I[Format Message]
-    I --> J[Send Telegram]
-    J --> K[Save to Analytics DB]
-    K --> L[SigNoz Annotation]
+    A[Push to main] --> B[CI Pipeline]
+    B --> C{CI Success?}
+    C -->|✅ Success| D[GoReleaser Workflow]
+    C -->|❌ Failure| E[n8n CI Failure]
     
-    H --> M[Check Critical?]
-    M --> N[Send Slack Alert]
-    N --> K
+    F[Push tag v*] --> D
+    
+    D --> G[Auto-increment Version]
+    G --> H[Build & Push Docker]
+    H --> I[Update K3s Manifests]
+    I --> J[Sync ArgoCD]
+    J --> K[n8n Deploy Webhook]
+    K --> L{Event Type Router}
+    L --> M[Format Message]
+    M --> N[Send Telegram]
+    N --> O[Save to Analytics DB]
+    O --> P[SigNoz Annotation]
+    
+    L --> Q[Check Critical?]
+    Q --> R[Send Slack Alert]
+    R --> O
 ```
 
 **Comandos Úteis:**

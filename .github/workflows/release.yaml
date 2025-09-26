@@ -1,13 +1,14 @@
 name: Release with GoReleaser
 
 on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline - spooliq"]
+    types:
+      - completed
+    branches: [main]
   push:
-    branches:
-      - main
     tags:
       - 'v*'
-    paths-ignore:
-      - version.txt
 
 env:
   GO_VERSION: '1.23'
@@ -15,6 +16,7 @@ env:
 jobs:
   release:
     runs-on: [self-hosted, gh-actions]
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,15 +52,22 @@ jobs:
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
             echo "strategy=auto" >> $GITHUB_OUTPUT
-            chmod +x ./.config/scripts/increment_version.sh
-            ./.config/scripts/increment_version.sh
-            VERSION=$(cat version.txt)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+            # Only auto-increment for workflow_run events (after CI success)
+            if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+              chmod +x ./.config/scripts/increment_version.sh
+              ./.config/scripts/increment_version.sh
+              VERSION=$(cat version.txt)
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+            else
+              # For direct tag pushes, use the tag version
+              echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+              echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Commit Version (if auto-increment)
-        if: steps.version-strategy.outputs.strategy == 'auto'
+        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
         uses: EndBug/add-and-commit@v9
         with:
           author_name: "GoReleaser Bot"
@@ -69,7 +78,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Create Tag (if auto-increment)
-        if: steps.version-strategy.outputs.strategy == 'auto'
+        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
         run: |
           git tag ${{ steps.version-strategy.outputs.tag }}
           git push origin ${{ steps.version-strategy.outputs.tag }}

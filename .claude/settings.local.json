@@ -23,7 +23,8 @@
       "Bash(go build:*)",
       "Bash(go doc:*)",
       "WebSearch",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

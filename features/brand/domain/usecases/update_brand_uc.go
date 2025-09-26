@@ -9,7 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"go.opentelemetry.io/otel"
 )
 

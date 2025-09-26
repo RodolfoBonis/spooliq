@@ -7,7 +7,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
 	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type brandRepository struct {
@@ -76,7 +76,7 @@ func (b *brandRepository) Update(entity *entities.BrandEntity) error {
 }
 
 func (b *brandRepository) Exists(name string) (bool, error) {
-	var count int
+	var count int64
 	err := b.db.Model(models.BrandModel{}).Where("name = ?", name).Count(&count).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

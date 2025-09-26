@@ -13,7 +13,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/docs"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"go.uber.org/fx"
 )
 
@@ -23,7 +23,14 @@ func InitAndRun() fx.Option {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				// Test database connection
-				if err := db.DB().Ping(); err != nil {
+				sqlDB, err := db.DB()
+				if err != nil {
+					log.Error(ctx, "📊 Failed to get database instance", map[string]interface{}{
+						"error": err.Error(),
+					})
+					return fmt.Errorf("failed to get database instance: %w", err)
+				}
+				if err := sqlDB.Ping(); err != nil {
 					log.Error(ctx, "📊 Database ping failed", map[string]interface{}{
 						"error": err.Error(),
 					})

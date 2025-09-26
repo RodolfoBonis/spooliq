@@ -2,7 +2,7 @@ package services
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"go.uber.org/fx"
 )
 

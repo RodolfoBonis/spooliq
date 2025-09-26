@@ -5,7 +5,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/brand/data/repositories"
 	domainRepositories "github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"go.uber.org/fx"
 )
 

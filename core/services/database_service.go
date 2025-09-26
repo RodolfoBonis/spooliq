@@ -10,13 +10,10 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
-	"github.com/jinzhu/gorm"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-
-	// Drivers de banco de dados
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 // Connector is the global database connector instance.
@@ -63,9 +60,21 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 	connConfig := buildConnectorConfig()
 	dbConfig := connectorURL(connConfig)
 
-	db, err := gorm.Open(connConfig.Driver,
-		dbConfig,
-	)
+	// Configure GORM with custom logger for better integration
+	gormConfig := &gorm.Config{
+		Logger: gormlogger.New(
+			nil, // Use default logger writer
+			gormlogger.Config{
+				SlowThreshold:             time.Second,   // Log slow queries
+				LogLevel:                  gormlogger.Silent, // Use Silent to avoid duplicate logs
+				IgnoreRecordNotFoundError: true,         // Don't log RecordNotFound errors
+				Colorful:                  false,        // Disable color for structured logging
+			},
+		),
+	}
+
+	// Use the official postgres driver for GORM v2
+	db, err := gorm.Open(postgres.Open(dbConfig), gormConfig)
 
 	if err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, err.Error(), map[string]interface{}{"db_config": dbConfig}, err)
@@ -74,7 +83,14 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 	}
 
 	// Test the connection immediately
-	if err := db.DB().Ping(); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
+		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to get SQL DB instance", map[string]interface{}{"error": err.Error()}, err)
+		logger.LogError(context.Background(), "Database SQL instance failed", appErr)
+		return appErr
+	}
+
+	if err := sqlDB.Ping(); err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to ping database after connection", map[string]interface{}{"error": err.Error()}, err)
 		logger.LogError(context.Background(), "Database ping failed", appErr)
 		return appErr
@@ -96,11 +112,13 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 		})
 	}
 
-	isProduction := environment == entities.Environment.Production
-	db.SingularTable(true)
-	db.LogMode(!isProduction)
-	db.DB().SetConnMaxLifetime(10 * time.Second)
-	db.DB().SetMaxIdleConns(30)
+	// Configure connection pool settings
+	sqlDB, err = db.DB()
+	if err == nil {
+		sqlDB.SetConnMaxLifetime(10 * time.Second)
+		sqlDB.SetMaxIdleConns(30)
+		sqlDB.SetMaxOpenConns(100)
+	}
 
 	// Add OpenTelemetry tracing callbacks
 	addOtelCallbacks(db)
@@ -111,19 +129,36 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 		var intervals = []time.Duration{3 * time.Second, 3 * time.Second, 15 * time.Second, 30 * time.Second, 60 * time.Second}
 		for {
 			time.Sleep(60 * time.Second)
-			if e := Connector.DB().Ping(); e != nil {
+			sqlDB, _ := Connector.DB()
+			if e := sqlDB.Ping(); e != nil {
 				appErr := errors.NewAppError(entities.ErrDatabase, e.Error(), nil, e)
 				logger.LogError(context.Background(), "Database ping failed", appErr)
 			L:
 				for i := 0; i < len(intervals); i++ {
 					e2 := RetryHandler(3, func() (bool, error) {
 						var e error
-						Connector, e = gorm.Open("postgres", dbConfig)
+						// Create gorm config for retry connections
+						retryGormConfig := &gorm.Config{
+							Logger: gormlogger.New(
+								nil,
+								gormlogger.Config{
+									SlowThreshold:             time.Second,
+									LogLevel:                  gormlogger.Silent,
+									IgnoreRecordNotFoundError: true,
+									Colorful:                  false,
+								},
+							),
+						}
+						Connector, e = gorm.Open(postgres.Open(dbConfig), retryGormConfig)
 						if e != nil {
 							appErr := errors.NewAppError(entities.ErrDatabase, e.Error(), nil, e)
 							logger.LogError(context.Background(), "Database retry failed", appErr)
 							return false, e
 						}
+						
+						// Re-add OpenTelemetry tracing after reconnection
+						addOtelCallbacks(Connector)
+						
 						logger.Info(context.Background(), "Database reconnected successfully")
 						return true, nil
 					})
@@ -164,89 +199,11 @@ func RunMigrations() {
 	)
 }
 
-// addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM
+// addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM using the official plugin
 func addOtelCallbacks(db *gorm.DB) {
-	tracer := otel.Tracer("database")
-
-	// Before callback - start span
-	db.Callback().Create().Before("gorm:create").Register("otel:before_create", func(scope *gorm.Scope) {
-		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
-			if ctxVal, ok := ctx.(context.Context); ok {
-				ctx, span := tracer.Start(ctxVal, "db.create")
-				span.SetAttributes(
-					attribute.String("db.table", scope.TableName()),
-					attribute.String("db.operation", "create"),
-				)
-				scope.Set("otel:span", span)
-				scope.Set("otel:ctx", ctx)
-			}
-		}
-	})
-
-	db.Callback().Update().Before("gorm:update").Register("otel:before_update", func(scope *gorm.Scope) {
-		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
-			if ctxVal, ok := ctx.(context.Context); ok {
-				ctx, span := tracer.Start(ctxVal, "db.update")
-				span.SetAttributes(
-					attribute.String("db.table", scope.TableName()),
-					attribute.String("db.operation", "update"),
-				)
-				scope.Set("otel:span", span)
-				scope.Set("otel:ctx", ctx)
-			}
-		}
-	})
-
-	db.Callback().Query().Before("gorm:query").Register("otel:before_query", func(scope *gorm.Scope) {
-		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
-			if ctxVal, ok := ctx.(context.Context); ok {
-				ctx, span := tracer.Start(ctxVal, "db.query")
-				span.SetAttributes(
-					attribute.String("db.table", scope.TableName()),
-					attribute.String("db.operation", "query"),
-				)
-				scope.Set("otel:span", span)
-				scope.Set("otel:ctx", ctx)
-			}
-		}
-	})
-
-	db.Callback().Delete().Before("gorm:delete").Register("otel:before_delete", func(scope *gorm.Scope) {
-		if ctx, exists := scope.Get("otel:ctx"); exists && ctx != nil {
-			if ctxVal, ok := ctx.(context.Context); ok {
-				ctx, span := tracer.Start(ctxVal, "db.delete")
-				span.SetAttributes(
-					attribute.String("db.table", scope.TableName()),
-					attribute.String("db.operation", "delete"),
-				)
-				scope.Set("otel:span", span)
-				scope.Set("otel:ctx", ctx)
-			}
-		}
-	})
-
-	// After callbacks - end span
-	afterCallback := func(scope *gorm.Scope) {
-		if spanVal, exists := scope.Get("otel:span"); exists && spanVal != nil {
-			if span, ok := spanVal.(interface{ End() }); ok {
-				if scope.HasError() {
-					// Add error attributes
-					if span, ok := spanVal.(interface {
-						End()
-						SetAttributes(...attribute.KeyValue)
-						RecordError(error)
-					}); ok {
-						span.SetAttributes(attribute.Bool("error", true))
-						span.RecordError(scope.DB().Error)
-					}
-				}
-				span.End()
-			}
-		}
+	// Use the official GORM OpenTelemetry plugin which provides better instrumentation
+	if err := db.Use(tracing.NewPlugin()); err != nil {
+		// Log error but don't fail the application if tracing setup fails
+		fmt.Printf("Failed to register GORM OpenTelemetry plugin: %v\n", err)
 	}
-
-	db.Callback().Create().After("gorm:create").Register("otel:after_create", afterCallback)
-	db.Callback().Update().After("gorm:update").Register("otel:after_update", afterCallback)
-	db.Callback().Query().After("gorm:query").Register("otel:after_query", afterCallback)
-	db.Callback().Delete().After("gorm:delete").Register("otel:after_delete", afterCallback)
 }

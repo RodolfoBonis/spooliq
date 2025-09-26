@@ -10,9 +10,11 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -25,6 +27,7 @@ type TelemetryService struct {
 	logger         logger.Logger
 	tracerProvider *trace.TracerProvider
 	meterProvider  *sdkmetric.MeterProvider
+	loggerProvider *sdklog.LoggerProvider
 	enabled        bool
 }
 
@@ -72,6 +75,17 @@ func NewTelemetryService(lc fx.Lifecycle, logger logger.Logger) (*TelemetryServi
 	}
 
 	service.meterProvider = mp
+
+	// Initialize logger provider
+	lp, err := initLoggerProvider(cfg)
+	if err != nil {
+		logger.Error(context.Background(), "Failed to initialize logger provider", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, fmt.Errorf("failed to initialize logger provider: %w", err)
+	}
+
+	service.loggerProvider = lp
 
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
@@ -237,6 +251,48 @@ func initMeterProvider(cfg TelemetryConfig) (*sdkmetric.MeterProvider, error) {
 	return mp, nil
 }
 
+// initLoggerProvider initializes the OpenTelemetry logger provider
+func initLoggerProvider(cfg TelemetryConfig) (*sdklog.LoggerProvider, error) {
+	ctx := context.Background()
+
+	// Create OTLP logs exporter using gRPC
+	exporter, err := otlploggrpc.New(ctx,
+		otlploggrpc.WithEndpoint(cfg.Endpoint),
+		otlploggrpc.WithInsecure(),
+		otlploggrpc.WithTimeout(10*time.Second),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTLP logs exporter: %w", err)
+	}
+
+	// Create resource with service information
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceName(cfg.ServiceName),
+			semconv.ServiceVersion(cfg.Version),
+			attribute.String("environment", cfg.Environment),
+		),
+		resource.WithTelemetrySDK(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
+	// Create logger provider
+	lp := sdklog.NewLoggerProvider(
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter,
+			sdklog.WithExportTimeout(10*time.Second),
+		)),
+		sdklog.WithResource(res),
+	)
+
+	// Set global logger provider
+	// Note: otel.SetLoggerProvider doesn't exist yet in current version
+	// We'll need to handle this manually in the logger implementation
+
+	return lp, nil
+}
+
 // Shutdown gracefully shuts down the telemetry service
 func (t *TelemetryService) Shutdown(ctx context.Context) error {
 	if !t.enabled {
@@ -279,6 +335,23 @@ func (t *TelemetryService) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	// Force flush any remaining logs
+	if t.loggerProvider != nil {
+		if err := t.loggerProvider.ForceFlush(ctx); err != nil {
+			t.logger.Error(ctx, "Error flushing logger provider", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+
+		// Shutdown the logger provider
+		if err := t.loggerProvider.Shutdown(ctx); err != nil {
+			t.logger.Error(ctx, "Error shutting down logger provider", map[string]interface{}{
+				"error": err.Error(),
+			})
+			return err
+		}
+	}
+
 	t.logger.Info(ctx, "Telemetry service shutdown complete")
 	return nil
 }
@@ -296,4 +369,9 @@ func (t *TelemetryService) GetTracerProvider() *trace.TracerProvider {
 // GetMeterProvider returns the meter provider
 func (t *TelemetryService) GetMeterProvider() *sdkmetric.MeterProvider {
 	return t.meterProvider
+}
+
+// GetLoggerProvider returns the logger provider
+func (t *TelemetryService) GetLoggerProvider() *sdklog.LoggerProvider {
+	return t.loggerProvider
 }

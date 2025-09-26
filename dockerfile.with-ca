@@ -26,7 +26,7 @@ RUN git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".instead
 WORKDIR /app
 
 # Copy dependency files first (better layer caching)
-COPY go.mod go.sum ./
+COPY go.mod go.sum* ./
 
 # Download dependencies
 RUN go mod download

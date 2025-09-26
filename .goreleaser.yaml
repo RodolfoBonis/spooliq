@@ -52,6 +52,9 @@ dockers:
       - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
       - "--build-arg=VERSION={{.Version}}"
     dockerfile: dockerfile.with-ca
+    extra_files:
+      - go.mod
+      - go.sum
 
 # Archives
 archives:

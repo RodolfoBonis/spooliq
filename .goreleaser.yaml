@@ -44,28 +44,28 @@ dockers_v2:
     tags:
       - "{{ .Version }}"
       - "latest"
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--pull"
-      - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
-      - "--build-arg=VERSION={{.Version}}"
+    build:
+      dockerfile: dockerfile.with-ca
+      platform: "linux/amd64"
+      pull: true
+      build_args:
+        GITHUB_TOKEN: "{{ .Env.GITHUB_TOKEN }}"
+        VERSION: "{{.Version}}"
+      extra_files:
+        - go.mod
+        - go.sum
+        - main.go
+        - app/
+        - core/
+        - features/
+        - routes/
+        - docs/
     labels:
       "org.opencontainers.image.created": "{{.Date}}"
       "org.opencontainers.image.title": "{{.ProjectName}}"
       "org.opencontainers.image.revision": "{{.FullCommit}}"
       "org.opencontainers.image.version": "{{.Version}}"
       "org.opencontainers.image.source": "https://github.com/RodolfoBonis/spooliq"
-    dockerfile: dockerfile.with-ca
-    use: buildx
-    extra_files:
-      - go.mod
-      - go.sum
-      - main.go
-      - app/
-      - core/
-      - features/
-      - routes/
-      - docs/
 
 # Archives
 archives:

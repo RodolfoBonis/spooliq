@@ -10,6 +10,6 @@ var Module = fx.Module("middlewares",
 		NewMonitoringMiddleware,
 		NewProtectMiddleware,
 		NewCacheMiddleware,
-		NewTracingMiddlewareProvider,
+		// NewTracingMiddlewareProvider removed - now using observability.Instrumentor
 	),
 )

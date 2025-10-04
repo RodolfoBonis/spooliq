@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -183,6 +182,5 @@ func (t *TracingMiddleware) ExtractTraceContext(c *gin.Context) context.Context 
 }
 
 // NewTracingMiddlewareProvider creates a TracingMiddleware with FX dependencies
-func NewTracingMiddlewareProvider(logger logger.Logger, telemetryService *services.TelemetryService) *TracingMiddleware {
-	return NewTracingMiddleware(logger, "spooliq-api", telemetryService.IsEnabled())
-}
+// DEPRECATED: Use observability.Instrumentor.InstrumentHTTPServer instead
+// This function has been removed as TelemetryService has been replaced by ObservabilityManager

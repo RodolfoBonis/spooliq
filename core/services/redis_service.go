@@ -11,8 +11,6 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // RedisService provides Redis caching capabilities.
@@ -68,26 +66,14 @@ func (r *RedisService) GetClient() *redis.Client {
 
 // Set stores a key-value pair with optional expiration.
 func (r *RedisService) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *errors.AppError {
-	tracer := otel.Tracer("redis-service")
-	ctx, span := tracer.Start(ctx, "redis.set")
-	defer span.End()
-
-	span.SetAttributes(
-		attribute.String("redis.operation", "set"),
-		attribute.String("redis.key", key),
-		attribute.String("redis.expiration", expiration.String()),
-	)
-
+	// Automatic instrumentation is now handled by the observability system
 	err := r.client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
-		span.SetAttributes(attribute.Bool("error", true))
-		span.RecordError(err)
-
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["key"] = key
-		fields["error"] = err.Error()
-		r.logger.Error(ctx, "Failed to set Redis key", fields)
+		r.logger.Error(ctx, "Failed to set Redis key", map[string]interface{}{
+			"key":        key,
+			"expiration": expiration.String(),
+			"error":      err.Error(),
+		})
 
 		appErr := errors.NewAppError(entities.ErrService, err.Error(), map[string]interface{}{
 			"key": key,
@@ -99,29 +85,16 @@ func (r *RedisService) Set(ctx context.Context, key string, value interface{}, e
 
 // Get retrieves a value by key.
 func (r *RedisService) Get(ctx context.Context, key string) (string, *errors.AppError) {
-	tracer := otel.Tracer("redis-service")
-	ctx, span := tracer.Start(ctx, "redis.get")
-	defer span.End()
-
-	span.SetAttributes(
-		attribute.String("redis.operation", "get"),
-		attribute.String("redis.key", key),
-	)
-
+	// Automatic instrumentation is now handled by the observability system
 	val, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
-		span.SetAttributes(attribute.Bool("redis.key_found", false))
 		return "", nil // Key does not exist
 	}
 	if err != nil {
-		span.SetAttributes(attribute.Bool("error", true))
-		span.RecordError(err)
-
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["key"] = key
-		fields["error"] = err.Error()
-		r.logger.Error(ctx, "Failed to get Redis key", fields)
+		r.logger.Error(ctx, "Failed to get Redis key", map[string]interface{}{
+			"key":   key,
+			"error": err.Error(),
+		})
 
 		appErr := errors.NewAppError(entities.ErrService, err.Error(), map[string]interface{}{
 			"key": key,
@@ -129,31 +102,18 @@ func (r *RedisService) Get(ctx context.Context, key string) (string, *errors.App
 		return "", appErr
 	}
 
-	span.SetAttributes(attribute.Bool("redis.key_found", true))
 	return val, nil
 }
 
 // Delete removes a key from Redis.
 func (r *RedisService) Delete(ctx context.Context, key string) *errors.AppError {
-	tracer := otel.Tracer("redis-service")
-	ctx, span := tracer.Start(ctx, "redis.delete")
-	defer span.End()
-
-	span.SetAttributes(
-		attribute.String("redis.operation", "delete"),
-		attribute.String("redis.key", key),
-	)
-
+	// Automatic instrumentation is now handled by the observability system
 	err := r.client.Del(ctx, key).Err()
 	if err != nil {
-		span.SetAttributes(attribute.Bool("error", true))
-		span.RecordError(err)
-
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["key"] = key
-		fields["error"] = err.Error()
-		r.logger.Error(ctx, "Failed to delete Redis key", fields)
+		r.logger.Error(ctx, "Failed to delete Redis key", map[string]interface{}{
+			"key":   key,
+			"error": err.Error(),
+		})
 
 		appErr := errors.NewAppError(entities.ErrService, err.Error(), map[string]interface{}{
 			"key": key,

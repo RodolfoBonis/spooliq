@@ -11,7 +11,8 @@ import (
 	"go.uber.org/fx"
 )
 
-// RegisterHooks registers application lifecycle hooks.
+// RegisterHooks registers application lifecycle hooks with legacy tracing.
+// DEPRECATED: Use RegisterHooksWithObservability instead
 func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, tracing *middlewares.TracingMiddleware) {
 	lifecycle.Append(
 		fx.Hook{
@@ -42,3 +43,6 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Log
 		},
 	)
 }
+
+// RegisterHooksWithObservability has been temporarily removed while we fix observability implementation
+// Use RegisterHooks instead for now

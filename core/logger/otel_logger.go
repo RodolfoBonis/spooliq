@@ -106,6 +106,8 @@ func NewTraceLogger() TraceLogger {
 }
 
 // AddTraceToContext adds trace information to the context fields
+// DEPRECATED: The new observability system provides automatic trace correlation.
+// Use standard logging methods instead - trace context is automatically added.
 func AddTraceToContext(ctx context.Context) Fields {
 	fields := Fields{}
 
@@ -131,6 +133,7 @@ func AddTraceToContext(ctx context.Context) Fields {
 }
 
 // StartSpanWithLogger starts a new span and logs it
+// DEPRECATED: Use observability.Helper functions or automatic instrumentation instead
 func StartSpanWithLogger(ctx context.Context, tracer trace.Tracer, spanName string, logger Logger) (context.Context, trace.Span) {
 	ctx, span := tracer.Start(ctx, spanName)
 
@@ -146,6 +149,7 @@ func StartSpanWithLogger(ctx context.Context, tracer trace.Tracer, spanName stri
 }
 
 // EndSpanWithLogger ends a span and logs it
+// DEPRECATED: Use observability.Helper functions or automatic instrumentation instead
 func EndSpanWithLogger(span trace.Span, logger Logger, err error) {
 	if err != nil {
 		span.RecordError(err)

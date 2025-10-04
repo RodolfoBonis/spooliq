@@ -4,10 +4,8 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
-	"go.opentelemetry.io/otel"
 )
 
 // Create handles creating a new brand.
@@ -26,39 +24,37 @@ import (
 // @Router /brands [post]
 // @Security Bearer
 func (uc *BrandUseCase) Create(c *gin.Context) {
-	// Create custom span for brand creation
-	tracer := otel.Tracer("brand-service")
-	ctx, span := logger.StartSpanWithLogger(c.Request.Context(), tracer, "brand.create", uc.logger)
-	var spanErr error
-	defer func() {
-		logger.EndSpanWithLogger(span, uc.logger, spanErr)
-	}()
+	ctx := c.Request.Context()
+
+	// Log brand creation attempt (automatic trace correlation via enhanced observability)
+	uc.logger.Info(ctx, "Brand creation attempt started", map[string]interface{}{
+		"ip":         c.ClientIP(),
+		"user_agent": c.Request.UserAgent(),
+	})
 
 	var request entities.UpsertBrandRequestEntity
 	if err := c.ShouldBindJSON(&request); err != nil {
-		spanErr = err
 		appError := errors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
 
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["error"] = err.Error()
-		uc.logger.Error(ctx, httpError.Message, fields)
+		// Enhanced logging with automatic trace correlation
+		uc.logger.Error(ctx, "Invalid brand creation payload", map[string]interface{}{
+			"error": err.Error(),
+		})
 
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 
 	if err := uc.validator.Struct(request); err != nil {
-		spanErr = err
 		appError := errors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
 
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["error"] = err.Error()
-		fields["validation_failed"] = true
-		uc.logger.Error(ctx, httpError.Message, fields)
+		// Enhanced logging with automatic trace correlation
+		uc.logger.Error(ctx, "Brand validation failed", map[string]interface{}{
+			"error":             err.Error(),
+			"validation_failed": true,
+		})
 
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
@@ -66,14 +62,12 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 
 	exists, err := uc.repository.Exists(request.Name)
 	if err != nil {
-		spanErr = err
-
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["name"] = request.Name
-		fields["error"] = err.Error()
-		fields["operation"] = "check_brand_existence"
-		uc.logger.Error(ctx, "Failed to check brand existence", fields)
+		// Enhanced logging with automatic trace correlation
+		uc.logger.Error(ctx, "Failed to check brand existence", map[string]interface{}{
+			"name":      request.Name,
+			"error":     err.Error(),
+			"operation": "check_brand_existence",
+		})
 
 		appError := errors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
@@ -84,11 +78,11 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 	if exists {
 		httpError := errors.NewHTTPError(http.StatusConflict, "Brand with this name already exists")
 
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["name"] = request.Name
-		fields["conflict"] = true
-		uc.logger.Warning(ctx, httpError.Message, fields)
+		// Enhanced logging with automatic trace correlation
+		uc.logger.Warning(ctx, "Brand creation failed: name already exists", map[string]interface{}{
+			"name":     request.Name,
+			"conflict": true,
+		})
 
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
@@ -100,25 +94,23 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 	}
 
 	if err := uc.repository.Create(brand); err != nil {
-		spanErr = err
-
-		// Add trace context to log
-		fields := logger.AddTraceToContext(ctx)
-		fields["name"] = request.Name
-		fields["error"] = err.Error()
-		fields["operation"] = "create_brand"
-		uc.logger.Error(ctx, "Failed to create brand", fields)
+		// Enhanced logging with automatic trace correlation
+		uc.logger.Error(ctx, "Failed to create brand", map[string]interface{}{
+			"name":      request.Name,
+			"error":     err.Error(),
+			"operation": "create_brand",
+		})
 
 		httpError := errors.NewHTTPError(http.StatusInternalServerError, "Failed to create brand")
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
 
-	// Log successful creation with trace context
-	fields := logger.AddTraceToContext(ctx)
-	fields["brand_id"] = brand.ID
-	fields["brand_name"] = brand.Name
-	uc.logger.Info(ctx, "Brand created successfully", fields)
+	// Log successful creation with automatic trace correlation
+	uc.logger.Info(ctx, "Brand created successfully", map[string]interface{}{
+		"brand_id":   brand.ID,
+		"brand_name": brand.Name,
+	})
 
 	c.JSON(http.StatusCreated, brand)
 }

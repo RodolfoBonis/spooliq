@@ -22,6 +22,9 @@ func NewFxApp() *fx.App {
 	return fx.New(
 		logger.Module,
 		config.Module,
+		// Novo sistema de observabilidade (substitui o TelemetryService antigo)
+		// Temporariamente desabilitado enquanto ajustamos implementação
+		// observability.Module,
 		services.Module,
 		middlewares.Module,
 		authDi.AuthModule,
@@ -30,7 +33,7 @@ func NewFxApp() *fx.App {
 			gin.New,
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, tracingMiddleware *middlewares.TracingMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -39,6 +42,8 @@ func NewFxApp() *fx.App {
 				}
 
 				routes.InitializeRoutes(router, authUc, brandUc, protectFactory, logger)
+				// Usando middleware básico temporariamente enquanto ajustamos observabilidade
+				tracingMiddleware := middlewares.NewTracingMiddleware(logger, "spooliq-api", false)
 				RegisterHooks(lc, router, logger, monitoring, tracingMiddleware)
 			},
 		),

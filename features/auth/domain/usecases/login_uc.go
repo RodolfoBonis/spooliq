@@ -30,7 +30,7 @@ import (
 func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 	ctx := c.Request.Context()
 	loginData := new(entities.RequestLoginEntity)
-	
+
 	// Log login attempt (automatic trace correlation via enhanced observability)
 	uc.Logger.Info(ctx, "Login attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),

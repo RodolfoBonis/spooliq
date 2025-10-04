@@ -58,12 +58,12 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 	if err := c.BindJSON(&request); err != nil {
 		appError := coreErrors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
-		
+
 		// Enhanced logging with automatic trace correlation
 		uc.logger.Error(ctx, "Invalid brand update payload", map[string]interface{}{
 			"error": err.Error(),
 		})
-		
+
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -71,13 +71,13 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 	if err := uc.validator.Struct(request); err != nil {
 		appError := coreErrors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
-		
+
 		// Enhanced logging with automatic trace correlation
 		uc.logger.Error(ctx, "Brand update validation failed", map[string]interface{}{
 			"error":             err.Error(),
 			"validation_failed": true,
 		})
-		
+
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 		return
 	}
@@ -87,23 +87,23 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Brand not found")
 			httpError := appError.ToHTTPError()
-			
+
 			// Enhanced logging with automatic trace correlation
 			uc.logger.Error(ctx, "Brand not found for update", map[string]interface{}{
 				"brand_id": id,
 				"error":    err.Error(),
 			})
-			
+
 			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 			return
 		}
-		
+
 		// Enhanced logging with automatic trace correlation
 		uc.logger.Error(ctx, "Failed to get brand for update", map[string]interface{}{
 			"brand_id": id,
 			"error":    err.Error(),
 		})
-		
+
 		appError := coreErrors.UsecaseError(err.Error())
 		httpError := appError.ToHTTPError()
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
@@ -119,7 +119,7 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 				"name":  request.Name,
 				"error": err.Error(),
 			})
-			
+
 			appError := coreErrors.UsecaseError(err.Error())
 			httpError := appError.ToHTTPError()
 			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
@@ -129,13 +129,13 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 		if exists {
 			appError := coreErrors.UsecaseError("Brand with this name already exists")
 			httpError := appError.ToHTTPError()
-			
+
 			// Enhanced logging with automatic trace correlation
 			uc.logger.Error(ctx, "Brand update failed: name already exists", map[string]interface{}{
 				"name":     request.Name,
 				"conflict": true,
 			})
-			
+
 			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
 			return
 		}
@@ -152,7 +152,7 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 			"brand_id": id,
 			"error":    err.Error(),
 		})
-		
+
 		appError := coreErrors.UsecaseError("Failed to update brand")
 		httpError := appError.ToHTTPError()
 		c.AbortWithStatusJSON(httpError.StatusCode, httpError)

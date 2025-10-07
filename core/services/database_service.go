@@ -10,6 +10,9 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
+	"github.com/uptrace/opentelemetry-go-extra/otelsql"
+	"go.opentelemetry.io/otel"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -60,6 +63,25 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 	connConfig := buildConnectorConfig()
 	dbConfig := connectorURL(connConfig)
 
+	// Register and open instrumented SQL driver
+	sqlDB, err := otelsql.Open("postgres", dbConfig,
+		otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
+		otelsql.WithDBName(connConfig.DBName),
+		otelsql.WithTracerProvider(otel.GetTracerProvider()),
+		otelsql.WithMeterProvider(otel.GetMeterProvider()),
+	)
+	if err != nil {
+		appErr := errors.NewAppError(entities.ErrDatabase, err.Error(), map[string]interface{}{"db_config": dbConfig}, err)
+		logger.LogError(context.Background(), "Failed to open instrumented database connection", appErr)
+		return appErr
+	}
+
+	// Report DB stats to OpenTelemetry
+	otelsql.ReportDBStatsMetrics(sqlDB, otelsql.WithAttributes(
+		semconv.DBSystemPostgreSQL,
+		semconv.DBName(connConfig.DBName),
+	))
+
 	// Configure GORM with custom logger for better integration
 	gormConfig := &gorm.Config{
 		Logger: gormlogger.New(
@@ -73,8 +95,10 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 		),
 	}
 
-	// Use the official postgres driver for GORM v2
-	db, err := gorm.Open(postgres.Open(dbConfig), gormConfig)
+	// Use the instrumented sql.DB with GORM
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: sqlDB,
+	}), gormConfig)
 
 	if err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, err.Error(), map[string]interface{}{"db_config": dbConfig}, err)
@@ -83,14 +107,14 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 	}
 
 	// Test the connection immediately
-	sqlDB, err := db.DB()
+	testSqlDB, err := db.DB()
 	if err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to get SQL DB instance", map[string]interface{}{"error": err.Error()}, err)
 		logger.LogError(context.Background(), "Database SQL instance failed", appErr)
 		return appErr
 	}
 
-	if err := sqlDB.Ping(); err != nil {
+	if err = testSqlDB.Ping(); err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to ping database after connection", map[string]interface{}{"error": err.Error()}, err)
 		logger.LogError(context.Background(), "Database ping failed", appErr)
 		return appErr
@@ -137,6 +161,26 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 				for i := 0; i < len(intervals); i++ {
 					e2 := RetryHandler(3, func() (bool, error) {
 						var e error
+
+						// Reopen instrumented SQL connection
+						retrySqlDB, e := otelsql.Open("postgres", dbConfig,
+							otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
+							otelsql.WithDBName(connConfig.DBName),
+							otelsql.WithTracerProvider(otel.GetTracerProvider()),
+							otelsql.WithMeterProvider(otel.GetMeterProvider()),
+						)
+						if e != nil {
+							appErr := errors.NewAppError(entities.ErrDatabase, e.Error(), nil, e)
+							logger.LogError(context.Background(), "Database retry failed", appErr)
+							return false, e
+						}
+
+						// Register DB stats metrics
+						otelsql.ReportDBStatsMetrics(retrySqlDB, otelsql.WithAttributes(
+							semconv.DBSystemPostgreSQL,
+							semconv.DBName(connConfig.DBName),
+						))
+
 						// Create gorm config for retry connections
 						retryGormConfig := &gorm.Config{
 							Logger: gormlogger.New(
@@ -149,7 +193,9 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 								},
 							),
 						}
-						Connector, e = gorm.Open(postgres.Open(dbConfig), retryGormConfig)
+						Connector, e = gorm.Open(postgres.New(postgres.Config{
+							Conn: retrySqlDB,
+						}), retryGormConfig)
 						if e != nil {
 							appErr := errors.NewAppError(entities.ErrDatabase, e.Error(), nil, e)
 							logger.LogError(context.Background(), "Database retry failed", appErr)

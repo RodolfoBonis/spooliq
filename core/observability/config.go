@@ -19,10 +19,11 @@ type Config struct {
 	Environment string `json:"environment"`
 
 	// Export settings
-	Endpoint    string        `json:"endpoint"`
-	Insecure    bool          `json:"insecure"`
-	Timeout     time.Duration `json:"timeout"`
-	Compression string        `json:"compression"` // gzip, none
+	Endpoint         string        `json:"endpoint"`
+	ExporterProtocol string        `json:"exporter_protocol"` // grpc, http
+	Insecure         bool          `json:"insecure"`
+	Timeout          time.Duration `json:"timeout"`
+	Compression      string        `json:"compression"` // gzip, none
 
 	// Resource attributes
 	Resource ResourceConfig `json:"resource"`
@@ -195,11 +196,12 @@ func LoadObservabilityConfig() *Config {
 		Version:     getStringEnv("VERSION", "OTEL_SERVICE_VERSION", "1.0.0"),
 		Environment: getStringEnv("ENV", "DEPLOYMENT_ENVIRONMENT", config.EnvironmentConfig()),
 
-		// Export settings (HTTP exporters expect host:port format without scheme)
-		Endpoint:    stripURLScheme(getStringEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")),
-		Insecure:    getBoolEnv("OTEL_EXPORTER_OTLP_INSECURE", true),
-		Timeout:     getDurationEnv("OTEL_EXPORTER_OTLP_TIMEOUT", 10*time.Second),
-		Compression: getStringEnv("OTEL_EXPORTER_OTLP_COMPRESSION", "gzip"),
+		// Export settings
+		Endpoint:         stripURLScheme(getStringEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")),
+		ExporterProtocol: getStringEnv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc"), // Default to gRPC
+		Insecure:         getBoolEnv("OTEL_EXPORTER_OTLP_INSECURE", true),
+		Timeout:          getDurationEnv("OTEL_EXPORTER_OTLP_TIMEOUT", 10*time.Second),
+		Compression:      getStringEnv("OTEL_EXPORTER_OTLP_COMPRESSION", "gzip"),
 
 		// Resource configuration
 		Resource: loadResourceConfig(),

@@ -79,7 +79,9 @@
       "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/ingress/**)",
       "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/ingress/**)",
       "Read(/Users/rodolfodebonis/Documents/projects/k3s-apps/applications/signoz/application/**)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(go run:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

@@ -10,6 +10,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -36,6 +37,19 @@ func (r *RedisService) Init() *errors.AppError {
 		DB:       r.cfg.RedisDB,
 	})
 
+	// Add OpenTelemetry instrumentation for Redis
+	if err := redisotel.InstrumentTracing(rdb); err != nil {
+		r.logger.Warning(context.Background(), "Failed to instrument Redis tracing", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	if err := redisotel.InstrumentMetrics(rdb); err != nil {
+		r.logger.Warning(context.Background(), "Failed to instrument Redis metrics", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -51,7 +65,7 @@ func (r *RedisService) Init() *errors.AppError {
 	}
 
 	r.client = rdb
-	r.logger.Info(context.Background(), "Redis connected successfully", map[string]interface{}{
+	r.logger.Info(context.Background(), "Redis connected successfully with OpenTelemetry instrumentation", map[string]interface{}{
 		"redis_host": config.EnvRedisHost(),
 		"redis_port": config.EnvRedisPort(),
 	})

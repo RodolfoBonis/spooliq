@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	otlpmetric "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	otlptrace "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	otlploggrpc "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	otlploghttp "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	otlpmetricgrpc "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	otlpmetrichttp "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	otlptracegrpc "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	otlptracehttp "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -59,7 +65,7 @@ type MetricProvider struct {
 
 // LogProvider handles structured logging with OpenTelemetry integration
 type LogProvider struct {
-	provider interface{} // Will be *sdklog.LoggerProvider when available
+	provider *sdklog.LoggerProvider
 	logger   logger.Logger
 }
 
@@ -338,17 +344,62 @@ func (om *Manager) GetMeter(name string) metric.Meter {
 func NewTraceProvider(config *Config, res *resource.Resource, logger logger.Logger) (*TraceProvider, error) {
 	ctx := context.Background()
 
-	// Create OTLP trace exporter (HTTP)
-	opts := []otlptrace.Option{
-		otlptrace.WithEndpoint(config.Endpoint), // Use endpoint as-is (already includes scheme)
-		otlptrace.WithTimeout(config.Timeout),
+	var exporter sdktrace.SpanExporter
+	var err error
+
+	// Create OTLP trace exporter based on protocol
+	protocol := config.ExporterProtocol
+	if protocol == "" {
+		protocol = "grpc" // Default to gRPC
 	}
-	if config.Insecure {
-		opts = append(opts, otlptrace.WithInsecure())
-	}
-	exporter, err := otlptrace.New(ctx, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTLP trace exporter: %w", err)
+
+	switch protocol {
+	case "grpc":
+		// Create gRPC trace exporter
+		grpcOpts := []otlptracegrpc.Option{
+			otlptracegrpc.WithEndpoint(config.Endpoint),
+			otlptracegrpc.WithTimeout(config.Timeout),
+		}
+		if config.Insecure {
+			grpcOpts = append(grpcOpts, otlptracegrpc.WithInsecure())
+		}
+		if config.Compression != "" && config.Compression != "none" {
+			grpcOpts = append(grpcOpts, otlptracegrpc.WithCompressor(config.Compression))
+		}
+		exporter, err = otlptracegrpc.New(ctx, grpcOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP gRPC trace exporter: %w", err)
+		}
+		logger.Info(ctx, "OTLP trace exporter initialized", map[string]interface{}{
+			"protocol":    "grpc",
+			"endpoint":    config.Endpoint,
+			"compression": config.Compression,
+		})
+
+	case "http", "http/protobuf":
+		// Create HTTP trace exporter
+		httpOpts := []otlptracehttp.Option{
+			otlptracehttp.WithEndpoint(config.Endpoint),
+			otlptracehttp.WithTimeout(config.Timeout),
+		}
+		if config.Insecure {
+			httpOpts = append(httpOpts, otlptracehttp.WithInsecure())
+		}
+		if config.Compression != "" && config.Compression != "none" {
+			httpOpts = append(httpOpts, otlptracehttp.WithCompression(otlptracehttp.GzipCompression))
+		}
+		exporter, err = otlptracehttp.New(ctx, httpOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP HTTP trace exporter: %w", err)
+		}
+		logger.Info(ctx, "OTLP trace exporter initialized", map[string]interface{}{
+			"protocol":    "http",
+			"endpoint":    config.Endpoint,
+			"compression": config.Compression,
+		})
+
+	default:
+		return nil, fmt.Errorf("unsupported OTLP protocol: %s (use 'grpc' or 'http')", protocol)
 	}
 
 	// Create trace provider
@@ -372,17 +423,62 @@ func NewTraceProvider(config *Config, res *resource.Resource, logger logger.Logg
 func NewMetricProvider(config *Config, res *resource.Resource, logger logger.Logger) (*MetricProvider, error) {
 	ctx := context.Background()
 
-	// Create OTLP metric exporter (HTTP)
-	opts := []otlpmetric.Option{
-		otlpmetric.WithEndpoint(config.Endpoint), // Use endpoint as-is (already includes scheme)
-		otlpmetric.WithTimeout(config.Timeout),
+	var exporter sdkmetric.Exporter
+	var err error
+
+	// Create OTLP metric exporter based on protocol
+	protocol := config.ExporterProtocol
+	if protocol == "" {
+		protocol = "grpc" // Default to gRPC
 	}
-	if config.Insecure {
-		opts = append(opts, otlpmetric.WithInsecure())
-	}
-	exporter, err := otlpmetric.New(ctx, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTLP metric exporter: %w", err)
+
+	switch protocol {
+	case "grpc":
+		// Create gRPC metric exporter
+		grpcOpts := []otlpmetricgrpc.Option{
+			otlpmetricgrpc.WithEndpoint(config.Endpoint),
+			otlpmetricgrpc.WithTimeout(config.Timeout),
+		}
+		if config.Insecure {
+			grpcOpts = append(grpcOpts, otlpmetricgrpc.WithInsecure())
+		}
+		if config.Compression != "" && config.Compression != "none" {
+			grpcOpts = append(grpcOpts, otlpmetricgrpc.WithCompressor(config.Compression))
+		}
+		exporter, err = otlpmetricgrpc.New(ctx, grpcOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP gRPC metric exporter: %w", err)
+		}
+		logger.Info(ctx, "OTLP metric exporter initialized", map[string]interface{}{
+			"protocol":    "grpc",
+			"endpoint":    config.Endpoint,
+			"compression": config.Compression,
+		})
+
+	case "http", "http/protobuf":
+		// Create HTTP metric exporter
+		httpOpts := []otlpmetrichttp.Option{
+			otlpmetrichttp.WithEndpoint(config.Endpoint),
+			otlpmetrichttp.WithTimeout(config.Timeout),
+		}
+		if config.Insecure {
+			httpOpts = append(httpOpts, otlpmetrichttp.WithInsecure())
+		}
+		if config.Compression != "" && config.Compression != "none" {
+			httpOpts = append(httpOpts, otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression))
+		}
+		exporter, err = otlpmetrichttp.New(ctx, httpOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP HTTP metric exporter: %w", err)
+		}
+		logger.Info(ctx, "OTLP metric exporter initialized", map[string]interface{}{
+			"protocol":    "http",
+			"endpoint":    config.Endpoint,
+			"compression": config.Compression,
+		})
+
+	default:
+		return nil, fmt.Errorf("unsupported OTLP protocol: %s (use 'grpc' or 'http')", protocol)
 	}
 
 	// Create metric provider
@@ -399,12 +495,80 @@ func NewMetricProvider(config *Config, res *resource.Resource, logger logger.Log
 	}, nil
 }
 
-// NewLogProvider creates a new log provider (simplified for now)
+// NewLogProvider creates a new log provider with OTLP exporter
 func NewLogProvider(config *Config, res *resource.Resource, logger logger.Logger) (*LogProvider, error) {
-	// For now, just return a basic log provider
-	// OTEL logs are still experimental, so we'll focus on trace correlation
+	ctx := context.Background()
+
+	var exporter sdklog.Exporter
+	var err error
+
+	// Create OTLP log exporter based on protocol
+	protocol := config.ExporterProtocol
+	if protocol == "" {
+		protocol = "grpc" // Default to gRPC
+	}
+
+	switch protocol {
+	case "grpc":
+		// Create gRPC log exporter
+		grpcOpts := []otlploggrpc.Option{
+			otlploggrpc.WithEndpoint(config.Endpoint),
+			otlploggrpc.WithTimeout(config.Timeout),
+		}
+		if config.Insecure {
+			grpcOpts = append(grpcOpts, otlploggrpc.WithInsecure())
+		}
+		if config.Compression != "" && config.Compression != "none" {
+			grpcOpts = append(grpcOpts, otlploggrpc.WithCompressor(config.Compression))
+		}
+		exporter, err = otlploggrpc.New(ctx, grpcOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP gRPC log exporter: %w", err)
+		}
+		logger.Info(ctx, "OTLP log exporter initialized", map[string]interface{}{
+			"protocol":    "grpc",
+			"endpoint":    config.Endpoint,
+			"compression": config.Compression,
+		})
+
+	case "http", "http/protobuf":
+		// Create HTTP log exporter
+		httpOpts := []otlploghttp.Option{
+			otlploghttp.WithEndpoint(config.Endpoint),
+			otlploghttp.WithTimeout(config.Timeout),
+		}
+		if config.Insecure {
+			httpOpts = append(httpOpts, otlploghttp.WithInsecure())
+		}
+		if config.Compression != "" && config.Compression != "none" {
+			httpOpts = append(httpOpts, otlploghttp.WithCompression(otlploghttp.GzipCompression))
+		}
+		exporter, err = otlploghttp.New(ctx, httpOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP HTTP log exporter: %w", err)
+		}
+		logger.Info(ctx, "OTLP log exporter initialized", map[string]interface{}{
+			"protocol":    "http",
+			"endpoint":    config.Endpoint,
+			"compression": config.Compression,
+		})
+
+	default:
+		return nil, fmt.Errorf("unsupported OTLP protocol: %s (use 'grpc' or 'http')", protocol)
+	}
+
+	// Create log provider
+	provider := sdklog.NewLoggerProvider(
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter,
+			sdklog.WithExportTimeout(config.Logs.BatchTimeout),
+			sdklog.WithExportMaxBatchSize(config.Logs.BatchSize),
+			sdklog.WithExportInterval(5*time.Second),
+		)),
+		sdklog.WithResource(res),
+	)
+
 	return &LogProvider{
-		provider: nil, // Will be implemented when OTEL logs stabilize
+		provider: provider,
 		logger:   logger,
 	}, nil
 }
@@ -492,8 +656,8 @@ func (mp *MetricProvider) Shutdown(ctx context.Context) error {
 
 // Shutdown gracefully shuts down the log provider
 func (lp *LogProvider) Shutdown(ctx context.Context) error {
-	if shutdownable, ok := lp.provider.(interface{ Shutdown(context.Context) error }); ok {
-		return shutdownable.Shutdown(ctx)
+	if lp.provider != nil {
+		return lp.provider.Shutdown(ctx)
 	}
 	return nil
 }

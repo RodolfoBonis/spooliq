@@ -8,6 +8,10 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // AmqpService provides AMQP messaging capabilities.
@@ -54,9 +58,26 @@ func (s *AmqpService) StartChannelConnection() (*amqp.Channel, error) {
 
 // SendDataToQueue sends data to the AMQP queue.
 func (s *AmqpService) SendDataToQueue(queue string, payload []byte) error {
+	ctx := context.Background()
+	tracer := otel.Tracer("amqp")
+
+	// Start span for AMQP publish operation
+	ctx, span := tracer.Start(ctx, "amqp.publish",
+		trace.WithSpanKind(trace.SpanKindProducer),
+		trace.WithAttributes(
+			attribute.String("messaging.system", "rabbitmq"),
+			attribute.String("messaging.destination", queue),
+			attribute.String("messaging.operation", "publish"),
+			attribute.Int("messaging.message.payload_size_bytes", len(payload)),
+		),
+	)
+	defer span.End()
+
 	channel, err := s.StartChannelConnection()
 	if err != nil {
-		s.logger.Error(context.Background(), "AMQP not available, skipping queue operation", map[string]interface{}{
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to connect to AMQP")
+		s.logger.Error(ctx, "AMQP not available, skipping queue operation", map[string]interface{}{
 			"queue": queue,
 			"error": err.Error(),
 		})
@@ -73,12 +94,14 @@ func (s *AmqpService) SendDataToQueue(queue string, payload []byte) error {
 	)
 
 	if internalError != nil {
+		span.RecordError(internalError)
+		span.SetStatus(codes.Error, "Failed to declare queue")
 		appErr := errors.NewAppError(entities.ErrService, internalError.Error(), map[string]interface{}{"queue": queue}, internalError)
-		s.logger.LogError(context.Background(), "Failed to declare queue", appErr)
+		s.logger.LogError(ctx, "Failed to declare queue", appErr)
 		return internalError
 	}
 
-	internalError = channel.PublishWithContext(context.Background(),
+	internalError = channel.PublishWithContext(ctx,
 		"",     // exchange
 		q.Name, // routing key
 		false,  // mandatory
@@ -89,12 +112,20 @@ func (s *AmqpService) SendDataToQueue(queue string, payload []byte) error {
 		})
 
 	if internalError != nil {
+		span.RecordError(internalError)
+		span.SetStatus(codes.Error, "Failed to publish message")
 		appErr := errors.NewAppError(entities.ErrService, internalError.Error(), map[string]interface{}{"queue": queue}, internalError)
-		s.logger.LogError(context.Background(), "Failed to publish message", appErr)
+		s.logger.LogError(ctx, "Failed to publish message", appErr)
 		return internalError
 	}
 
-	s.logger.Info(context.Background(), "Message published to queue", map[string]interface{}{
+	span.SetStatus(codes.Ok, "Message published successfully")
+	span.SetAttributes(
+		attribute.String("messaging.destination.name", q.Name),
+		attribute.Int("messaging.message.consumer_count", q.Consumers),
+	)
+
+	s.logger.Info(ctx, "Message published to queue", map[string]interface{}{
 		"queue":        queue,
 		"payload_size": len(payload),
 	})
@@ -103,9 +134,25 @@ func (s *AmqpService) SendDataToQueue(queue string, payload []byte) error {
 
 // ConsumeQueue consumes messages from the AMQP queue.
 func (s *AmqpService) ConsumeQueue(queue string) (<-chan amqp.Delivery, error) {
+	ctx := context.Background()
+	tracer := otel.Tracer("amqp")
+
+	// Start span for AMQP consume operation
+	ctx, span := tracer.Start(ctx, "amqp.consume",
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(
+			attribute.String("messaging.system", "rabbitmq"),
+			attribute.String("messaging.destination", queue),
+			attribute.String("messaging.operation", "consume"),
+		),
+	)
+	defer span.End()
+
 	channel, err := s.StartChannelConnection()
 	if err != nil {
-		s.logger.Error(context.Background(), "AMQP not available, cannot consume queue", map[string]interface{}{
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to connect to AMQP")
+		s.logger.Error(ctx, "AMQP not available, cannot consume queue", map[string]interface{}{
 			"queue": queue,
 			"error": err.Error(),
 		})
@@ -122,8 +169,10 @@ func (s *AmqpService) ConsumeQueue(queue string) (<-chan amqp.Delivery, error) {
 	)
 
 	if internalError != nil {
+		span.RecordError(internalError)
+		span.SetStatus(codes.Error, "Failed to declare queue")
 		appErr := errors.NewAppError(entities.ErrService, internalError.Error(), map[string]interface{}{"queue": queue}, internalError)
-		s.logger.LogError(context.Background(), "Failed to declare queue for consume", appErr)
+		s.logger.LogError(ctx, "Failed to declare queue for consume", appErr)
 		return nil, internalError
 	}
 
@@ -138,13 +187,24 @@ func (s *AmqpService) ConsumeQueue(queue string) (<-chan amqp.Delivery, error) {
 	)
 
 	if internalError != nil {
+		span.RecordError(internalError)
+		span.SetStatus(codes.Error, "Failed to start consuming")
 		appErr := errors.NewAppError(entities.ErrService, internalError.Error(), map[string]interface{}{"queue": queue}, internalError)
-		s.logger.LogError(context.Background(), "Failed to start consuming queue", appErr)
+		s.logger.LogError(ctx, "Failed to start consuming queue", appErr)
 		return nil, internalError
 	}
 
-	s.logger.Info(context.Background(), "Consuming queue", map[string]interface{}{
-		"queue": queue,
+	span.SetStatus(codes.Ok, "Started consuming queue")
+	span.SetAttributes(
+		attribute.String("messaging.destination.name", q.Name),
+		attribute.Int("messaging.queue.message_count", q.Messages),
+		attribute.Int("messaging.queue.consumer_count", q.Consumers),
+	)
+
+	s.logger.Info(ctx, "Consuming queue", map[string]interface{}{
+		"queue":         queue,
+		"message_count": q.Messages,
+		"consumers":     q.Consumers,
 	})
 
 	return msgs, nil

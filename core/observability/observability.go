@@ -340,7 +340,7 @@ func NewTraceProvider(config *Config, res *resource.Resource, logger logger.Logg
 
 	// Create OTLP trace exporter (HTTP)
 	opts := []otlptrace.Option{
-		otlptrace.WithEndpoint("http://" + config.Endpoint), // HTTP exporter expects full URL
+		otlptrace.WithEndpoint(config.Endpoint), // Use endpoint as-is (already includes scheme)
 		otlptrace.WithTimeout(config.Timeout),
 	}
 	if config.Insecure {
@@ -374,7 +374,7 @@ func NewMetricProvider(config *Config, res *resource.Resource, logger logger.Log
 
 	// Create OTLP metric exporter (HTTP)
 	opts := []otlpmetric.Option{
-		otlpmetric.WithEndpoint("http://" + config.Endpoint), // HTTP exporter expects full URL
+		otlpmetric.WithEndpoint(config.Endpoint), // Use endpoint as-is (already includes scheme)
 		otlpmetric.WithTimeout(config.Timeout),
 	}
 	if config.Insecure {
@@ -419,9 +419,14 @@ func createSampler(sampling SamplingConfig) sdktrace.Sampler {
 	case "ratio":
 		return sdktrace.TraceIDRatioBased(sampling.Rate)
 	case "parent_based":
+		// Use ParentBased with TraceIDRatioBased as root sampler
 		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampling.Rate))
+	case "":
+		// Default to ratio-based sampling if no type specified
+		return sdktrace.TraceIDRatioBased(sampling.Rate)
 	default:
-		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampling.Rate))
+		// For unknown types, default to ratio-based sampling
+		return sdktrace.TraceIDRatioBased(sampling.Rate)
 	}
 }
 

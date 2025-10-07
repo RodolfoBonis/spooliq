@@ -9,11 +9,9 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/observability"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	authDi "github.com/RodolfoBonis/spooliq/features/auth/di"
+	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	brandDi "github.com/RodolfoBonis/spooliq/features/brand/di"
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
-
-	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
-	"github.com/RodolfoBonis/spooliq/routes"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 )
@@ -41,9 +39,8 @@ func NewFxApp() *fx.App {
 					})
 				}
 
-				routes.InitializeRoutes(router, authUc, brandUc, protectFactory, logger)
-				// Usar sistema completo de observabilidade
-				RegisterHooksWithObservability(lc, router, logger, monitoring, obsManager, helper)
+				// Setup middlewares and lifecycle hooks
+				SetupMiddlewaresAndRoutes(lc, router, authUc, brandUc, protectFactory, logger, monitoring, obsManager, helper)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

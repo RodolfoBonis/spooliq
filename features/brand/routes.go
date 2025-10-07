@@ -15,5 +15,6 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBrandUseCase, protectFacto
 		brands.GET("/:id", cacheMiddleware.Cache1Hour(), protectFactory(useCase.FindByID, roles.AdminRole))
 		brands.POST("/", protectFactory(useCase.Create, roles.AdminRole))
 		brands.PUT("/:id", protectFactory(useCase.Update, roles.AdminRole))
+		brands.DELETE("/:id", protectFactory(useCase.Delete, roles.AdminRole))
 	}
 }

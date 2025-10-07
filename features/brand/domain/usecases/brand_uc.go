@@ -20,7 +20,7 @@ type IBrandUseCase interface {
 	Update(c *gin.Context)
 	FindByID(c *gin.Context)
 	FindAll(c *gin.Context)
-	//Delete(c *gin.Context)
+	Delete(c *gin.Context)
 }
 
 // NewBrandUseCase creates a new instance of the brand use case.

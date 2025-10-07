@@ -9,8 +9,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	otlpmetric "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	otlptrace "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	otlpmetric "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	otlptrace "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -338,9 +338,9 @@ func (om *Manager) GetMeter(name string) metric.Meter {
 func NewTraceProvider(config *Config, res *resource.Resource, logger logger.Logger) (*TraceProvider, error) {
 	ctx := context.Background()
 
-	// Create OTLP trace exporter
+	// Create OTLP trace exporter (HTTP)
 	opts := []otlptrace.Option{
-		otlptrace.WithEndpoint(config.Endpoint),
+		otlptrace.WithEndpoint("http://" + config.Endpoint), // HTTP exporter expects full URL
 		otlptrace.WithTimeout(config.Timeout),
 	}
 	if config.Insecure {
@@ -372,9 +372,9 @@ func NewTraceProvider(config *Config, res *resource.Resource, logger logger.Logg
 func NewMetricProvider(config *Config, res *resource.Resource, logger logger.Logger) (*MetricProvider, error) {
 	ctx := context.Background()
 
-	// Create OTLP metric exporter
+	// Create OTLP metric exporter (HTTP)
 	opts := []otlpmetric.Option{
-		otlpmetric.WithEndpoint(config.Endpoint),
+		otlpmetric.WithEndpoint("http://" + config.Endpoint), // HTTP exporter expects full URL
 		otlpmetric.WithTimeout(config.Timeout),
 	}
 	if config.Insecure {

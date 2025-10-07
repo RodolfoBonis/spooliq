@@ -1,6 +1,7 @@
 package observability
 
 import (
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -195,7 +196,7 @@ func LoadObservabilityConfig() *Config {
 		Environment: getStringEnv("ENV", "DEPLOYMENT_ENVIRONMENT", config.EnvironmentConfig()),
 
 		// Export settings
-		Endpoint:    getStringEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
+		Endpoint:    stripURLScheme(getStringEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")),
 		Insecure:    getBoolEnv("OTEL_EXPORTER_OTLP_INSECURE", true),
 		Timeout:     getDurationEnv("OTEL_EXPORTER_OTLP_TIMEOUT", 10*time.Second),
 		Compression: getStringEnv("OTEL_EXPORTER_OTLP_COMPRESSION", "gzip"),
@@ -499,4 +500,21 @@ func parseCustomFields() map[string]string {
 		}
 	}
 	return fields
+}
+
+// stripURLScheme removes the scheme (http://, https://) from an endpoint URL
+// This is needed because OTLP gRPC exporters expect "host:port" format without scheme
+func stripURLScheme(endpoint string) string {
+	if endpoint == "" {
+		return endpoint
+	}
+
+	// Parse the URL to extract host and port
+	if parsedURL, err := url.Parse(endpoint); err == nil && parsedURL.Host != "" {
+		return parsedURL.Host
+	}
+
+	// If parsing fails or no host found, return original endpoint
+	// This handles cases where endpoint is already in "host:port" format
+	return endpoint
 }

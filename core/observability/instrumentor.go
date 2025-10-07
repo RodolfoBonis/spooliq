@@ -150,9 +150,13 @@ func (i *Instrumentor) InstrumentHTTPServer(serviceName string) gin.HandlerFunc 
 
 		// Create span manually using the global tracer
 		tracer := otel.Tracer(serviceName)
-		ctx, span := tracer.Start(c.Request.Context(),
-			fmt.Sprintf("%s %s", c.Request.Method, c.FullPath()),
-		)
+		
+		// DEBUG: Log span creation
+		spanName := fmt.Sprintf("%s %s", c.Request.Method, c.FullPath())
+		fmt.Printf("[OTEL DEBUG] Creating span: %s (path=%s, fullPath=%s)\n", 
+			spanName, c.Request.URL.Path, c.FullPath())
+		
+		ctx, span := tracer.Start(c.Request.Context(), spanName)
 		defer span.End()
 
 		// Update the request context with the span

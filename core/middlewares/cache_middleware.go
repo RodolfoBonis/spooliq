@@ -91,6 +91,12 @@ func (cm *CacheMiddleware) Cache(config CacheConfig) gin.HandlerFunc {
 
 		c.Next()
 
+		// Don't cache error responses (4xx, 5xx status codes)
+		if writer.statusCode >= 400 {
+			c.Header("X-Cache", "ERROR")
+			return
+		}
+
 		// Cache the response
 		cachedData := CachedResponse{
 			Body:        writer.body,

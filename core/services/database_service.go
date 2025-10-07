@@ -9,6 +9,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
+	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -242,9 +244,20 @@ func RetryHandler(n int, f func() (bool, error)) error {
 
 // RunMigrations runs the database migrations using the new SQL migration system.
 func RunMigrations() {
-	// Migration disabled temporarily - tables already exist
-	// Will need to investigate GORM tag compatibility issue
-	fmt.Println("Migrations skipped - tables already created manually")
+	// Check if tables exist before migrating to avoid conflicts with existing data
+	if !Connector.Migrator().HasTable(&brands.BrandModel{}) {
+		err := Connector.AutoMigrate(&brands.BrandModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
+		}
+	}
+	
+	if !Connector.Migrator().HasTable(&materials.MaterialModel{}) {
+		err := Connector.AutoMigrate(&materials.MaterialModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
+		}
+	}
 }
 
 // addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM using the official plugin

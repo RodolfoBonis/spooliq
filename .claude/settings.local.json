@@ -82,7 +82,8 @@
       "Bash(find:*)",
       "Bash(go run:*)",
       "Bash(git stash:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(timeout 10s make run)"
     ],
     "deny": [],
     "ask": []

@@ -11,13 +11,13 @@ import (
 var Module = fx.Module("observability",
 	// Core providers
 	fx.Provide(
-		NewObservabilityManager,
+		NewManager,
 		NewHelper,
 		// Removed: NewObservabilityLogger, NewDecorator, NewAMQPInstrumentor, NewPerformanceOptimizer
 	),
 
 	// Lifecycle hooks
-	fx.Invoke(func(lc fx.Lifecycle, manager *ObservabilityManager, helper *Helper) {
+	fx.Invoke(func(lc fx.Lifecycle, manager *Manager, helper *Helper) {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				// Set global helper for convenience functions
@@ -30,18 +30,18 @@ var Module = fx.Module("observability",
 	// Export types for other modules
 	fx.Provide(
 		fx.Annotate(
-			func(manager *ObservabilityManager) (*ObservabilityManager, error) {
+			func(manager *Manager) (*Manager, error) {
 				return manager, nil
 			},
-			fx.As(new(ObservabilityManagerInterface)),
+			fx.As(new(ManagerInterface)),
 		),
 	),
 )
 
-// ObservabilityManagerInterface defines the interface for observability manager
-type ObservabilityManagerInterface interface {
+// ManagerInterface defines the interface for observability manager
+type ManagerInterface interface {
 	IsEnabled() bool
-	GetConfig() *ObservabilityConfig
+	GetConfig() *Config
 	GetInstrumentor() *Instrumentor
 }
 
@@ -51,10 +51,10 @@ func ProvideObservabilityComponents() fx.Option {
 		Module,
 		fx.Provide(
 			// Individual component providers
-			func(manager *ObservabilityManager) *Instrumentor {
+			func(manager *Manager) *Instrumentor {
 				return manager.GetInstrumentor()
 			},
-			func(manager *ObservabilityManager, logger logger.Logger) (*MetricCollector, error) {
+			func(manager *Manager, logger logger.Logger) (*MetricCollector, error) {
 				return NewMetricCollector(manager, logger)
 			},
 		),
@@ -62,13 +62,13 @@ func ProvideObservabilityComponents() fx.Option {
 }
 
 // ProvideWithConfiguration provides observability with custom configuration
-func ProvideWithConfiguration(configLoader func() *ObservabilityConfig) fx.Option {
+func ProvideWithConfiguration(configLoader func() *Config) fx.Option {
 	return fx.Options(
 		fx.Provide(configLoader),
 		fx.Provide(
-			func(config *ObservabilityConfig, lc fx.Lifecycle, logger logger.Logger) (*ObservabilityManager, error) {
+			func(config *Config, lc fx.Lifecycle, logger logger.Logger) (*Manager, error) {
 				// Create manager with custom config
-				manager := &ObservabilityManager{
+				manager := &Manager{
 					config: config,
 					logger: logger,
 				}
@@ -104,14 +104,14 @@ func ProvideWithConfiguration(configLoader func() *ObservabilityConfig) fx.Optio
 func ProvideForTesting() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			func() *ObservabilityConfig {
+			func() *Config {
 				config := LoadObservabilityConfig()
 				config.Enabled = false // Disable for testing
 				config.Features.DryRun = true
 				return config
 			},
 		),
-		ProvideWithConfiguration(func() *ObservabilityConfig {
+		ProvideWithConfiguration(func() *Config {
 			config := LoadObservabilityConfig()
 			config.Enabled = false
 			return config
@@ -122,14 +122,14 @@ func ProvideForTesting() fx.Option {
 // TracingOnlyModule provides only tracing components
 var TracingOnlyModule = fx.Module("observability-tracing",
 	fx.Provide(
-		func() *ObservabilityConfig {
+		func() *Config {
 			config := LoadObservabilityConfig()
 			config.Metrics.Enabled = false
 			config.Logs.Enabled = false
 			return config
 		},
 	),
-	ProvideWithConfiguration(func() *ObservabilityConfig {
+	ProvideWithConfiguration(func() *Config {
 		config := LoadObservabilityConfig()
 		config.Metrics.Enabled = false
 		config.Logs.Enabled = false
@@ -140,14 +140,14 @@ var TracingOnlyModule = fx.Module("observability-tracing",
 // MetricsOnlyModule provides only metrics components
 var MetricsOnlyModule = fx.Module("observability-metrics",
 	fx.Provide(
-		func() *ObservabilityConfig {
+		func() *Config {
 			config := LoadObservabilityConfig()
 			config.Traces.Enabled = false
 			config.Logs.Enabled = false
 			return config
 		},
 	),
-	ProvideWithConfiguration(func() *ObservabilityConfig {
+	ProvideWithConfiguration(func() *Config {
 		config := LoadObservabilityConfig()
 		config.Traces.Enabled = false
 		config.Logs.Enabled = false
@@ -158,14 +158,14 @@ var MetricsOnlyModule = fx.Module("observability-metrics",
 // LogsOnlyModule provides only logging components
 var LogsOnlyModule = fx.Module("observability-logs",
 	fx.Provide(
-		func() *ObservabilityConfig {
+		func() *Config {
 			config := LoadObservabilityConfig()
 			config.Traces.Enabled = false
 			config.Metrics.Enabled = false
 			return config
 		},
 	),
-	ProvideWithConfiguration(func() *ObservabilityConfig {
+	ProvideWithConfiguration(func() *Config {
 		config := LoadObservabilityConfig()
 		config.Traces.Enabled = false
 		config.Metrics.Enabled = false

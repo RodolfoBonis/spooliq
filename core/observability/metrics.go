@@ -14,9 +14,9 @@ import (
 
 // MetricCollector collects and manages custom metrics
 type MetricCollector struct {
-	manager *ObservabilityManager
+	manager *Manager
 	logger  logger.Logger
-	config  *ObservabilityConfig
+	config  *Config
 
 	// Runtime metrics
 	runtimeCollector *RuntimeCollector
@@ -121,7 +121,7 @@ type SystemCollector struct {
 }
 
 // NewMetricCollector creates a new metric collector
-func NewMetricCollector(manager *ObservabilityManager, logger logger.Logger) (*MetricCollector, error) {
+func NewMetricCollector(manager *Manager, logger logger.Logger) (*MetricCollector, error) {
 	mc := &MetricCollector{
 		manager:  manager,
 		logger:   logger,
@@ -218,7 +218,7 @@ func (mc *MetricCollector) Stop(ctx context.Context) error {
 }
 
 // NewRuntimeCollector creates a new runtime metrics collector
-func NewRuntimeCollector(manager *ObservabilityManager) (*RuntimeCollector, error) {
+func NewRuntimeCollector(manager *Manager) (*RuntimeCollector, error) {
 	meter := manager.GetMeter("runtime")
 
 	rc := &RuntimeCollector{meter: meter}
@@ -310,7 +310,7 @@ func NewRuntimeCollector(manager *ObservabilityManager) (*RuntimeCollector, erro
 }
 
 // NewBusinessCollector creates a new business metrics collector
-func NewBusinessCollector(manager *ObservabilityManager) (*BusinessCollector, error) {
+func NewBusinessCollector(manager *Manager) (*BusinessCollector, error) {
 	meter := manager.GetMeter("business")
 
 	bc := &BusinessCollector{
@@ -389,7 +389,7 @@ func NewBusinessCollector(manager *ObservabilityManager) (*BusinessCollector, er
 }
 
 // NewPerformanceCollector creates a new performance metrics collector
-func NewPerformanceCollector(manager *ObservabilityManager) (*PerformanceCollector, error) {
+func NewPerformanceCollector(manager *Manager) (*PerformanceCollector, error) {
 	meter := manager.GetMeter("performance")
 
 	pc := &PerformanceCollector{meter: meter}
@@ -503,7 +503,7 @@ func NewPerformanceCollector(manager *ObservabilityManager) (*PerformanceCollect
 }
 
 // NewSystemCollector creates a new system metrics collector
-func NewSystemCollector(manager *ObservabilityManager) (*SystemCollector, error) {
+func NewSystemCollector(manager *Manager) (*SystemCollector, error) {
 	meter := manager.GetMeter("system")
 
 	sc := &SystemCollector{meter: meter}

@@ -9,8 +9,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/config"
 )
 
-// ObservabilityConfig holds comprehensive observability configuration
-type ObservabilityConfig struct {
+// Config holds comprehensive observability configuration
+type Config struct {
 	// General settings
 	Enabled     bool   `json:"enabled"`
 	ServiceName string `json:"service_name"`
@@ -186,8 +186,8 @@ type FeaturesConfig struct {
 }
 
 // LoadObservabilityConfig loads configuration from environment variables
-func LoadObservabilityConfig() *ObservabilityConfig {
-	return &ObservabilityConfig{
+func LoadObservabilityConfig() *Config {
+	return &Config{
 		// General settings
 		Enabled:     getBoolEnv("SIGNOZ_ENABLED", "OTEL_TRACES_ENABLED", false),
 		ServiceName: getStringEnv("OTEL_SERVICE_NAME", "spooliq-api"),

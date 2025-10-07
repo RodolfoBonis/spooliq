@@ -24,9 +24,9 @@ import (
 
 // Instrumentor provides automatic instrumentation capabilities
 type Instrumentor struct {
-	manager *ObservabilityManager
+	manager *Manager
 	logger  logger.Logger
-	config  *ObservabilityConfig
+	config  *Config
 
 	// Metrics
 	httpDuration   metric.Float64Histogram
@@ -47,7 +47,7 @@ type InstrumentationContext struct {
 }
 
 // NewInstrumentor creates a new instrumentor
-func NewInstrumentor(manager *ObservabilityManager, logger logger.Logger) (*Instrumentor, error) {
+func NewInstrumentor(manager *Manager, logger logger.Logger) (*Instrumentor, error) {
 	inst := &Instrumentor{
 		manager: manager,
 		logger:  logger,

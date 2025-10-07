@@ -46,7 +46,7 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Log
 }
 
 // RegisterHooksWithObservability registers application lifecycle hooks with new observability system.
-func RegisterHooksWithObservability(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.ObservabilityManager, helper *observability.Helper) {
+func RegisterHooksWithObservability(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {

@@ -22,9 +22,9 @@ import (
 	"go.uber.org/fx"
 )
 
-// ObservabilityManager manages all observability components
-type ObservabilityManager struct {
-	config   *ObservabilityConfig
+// Manager manages all observability components
+type Manager struct {
+	config   *Config
 	logger   logger.Logger
 	resource *resource.Resource
 
@@ -63,11 +63,11 @@ type LogProvider struct {
 	logger   logger.Logger
 }
 
-// NewObservabilityManager creates a new observability manager
-func NewObservabilityManager(lc fx.Lifecycle, logger logger.Logger) (*ObservabilityManager, error) {
+// NewManager creates a new observability manager
+func NewManager(lc fx.Lifecycle, logger logger.Logger) (*Manager, error) {
 	config := LoadObservabilityConfig()
 
-	om := &ObservabilityManager{
+	om := &Manager{
 		config:   config,
 		logger:   logger,
 		shutdown: make(chan struct{}),
@@ -103,7 +103,7 @@ func NewObservabilityManager(lc fx.Lifecycle, logger logger.Logger) (*Observabil
 }
 
 // initResource initializes the OpenTelemetry resource
-func (om *ObservabilityManager) initResource() error {
+func (om *Manager) initResource() error {
 	attrs := []attribute.KeyValue{
 		semconv.ServiceName(om.config.ServiceName),
 		semconv.ServiceVersion(om.config.Version),
@@ -171,7 +171,7 @@ func (om *ObservabilityManager) initResource() error {
 }
 
 // initProviders initializes all OpenTelemetry providers
-func (om *ObservabilityManager) initProviders() error {
+func (om *Manager) initProviders() error {
 	var err error
 
 	// Initialize trace provider
@@ -214,7 +214,7 @@ func (om *ObservabilityManager) initProviders() error {
 }
 
 // initComponents initializes observability components
-func (om *ObservabilityManager) initComponents() error {
+func (om *Manager) initComponents() error {
 	var err error
 
 	// Initialize instrumentor
@@ -235,7 +235,7 @@ func (om *ObservabilityManager) initComponents() error {
 }
 
 // Start starts the observability manager
-func (om *ObservabilityManager) Start(ctx context.Context) error {
+func (om *Manager) Start(ctx context.Context) error {
 	om.mu.Lock()
 	defer om.mu.Unlock()
 
@@ -266,7 +266,7 @@ func (om *ObservabilityManager) Start(ctx context.Context) error {
 }
 
 // Stop stops the observability manager
-func (om *ObservabilityManager) Stop(ctx context.Context) error {
+func (om *Manager) Stop(ctx context.Context) error {
 	om.mu.Lock()
 	defer om.mu.Unlock()
 
@@ -318,7 +318,7 @@ func (om *ObservabilityManager) Stop(ctx context.Context) error {
 }
 
 // GetTracer returns a tracer for the given name
-func (om *ObservabilityManager) GetTracer(name string) trace.Tracer {
+func (om *Manager) GetTracer(name string) trace.Tracer {
 	if om.tracerProvider == nil {
 		return noop.NewTracerProvider().Tracer(name)
 	}
@@ -326,7 +326,7 @@ func (om *ObservabilityManager) GetTracer(name string) trace.Tracer {
 }
 
 // GetMeter returns a meter for the given name
-func (om *ObservabilityManager) GetMeter(name string) metric.Meter {
+func (om *Manager) GetMeter(name string) metric.Meter {
 	if om.meterProvider == nil {
 		// Return a noop meter for disabled observability
 		return nil
@@ -335,7 +335,7 @@ func (om *ObservabilityManager) GetMeter(name string) metric.Meter {
 }
 
 // NewTraceProvider creates a new trace provider with OTLP exporter
-func NewTraceProvider(config *ObservabilityConfig, res *resource.Resource, logger logger.Logger) (*TraceProvider, error) {
+func NewTraceProvider(config *Config, res *resource.Resource, logger logger.Logger) (*TraceProvider, error) {
 	ctx := context.Background()
 
 	// Create OTLP trace exporter
@@ -369,7 +369,7 @@ func NewTraceProvider(config *ObservabilityConfig, res *resource.Resource, logge
 }
 
 // NewMetricProvider creates a new metric provider with OTLP exporter
-func NewMetricProvider(config *ObservabilityConfig, res *resource.Resource, logger logger.Logger) (*MetricProvider, error) {
+func NewMetricProvider(config *Config, res *resource.Resource, logger logger.Logger) (*MetricProvider, error) {
 	ctx := context.Background()
 
 	// Create OTLP metric exporter
@@ -400,7 +400,7 @@ func NewMetricProvider(config *ObservabilityConfig, res *resource.Resource, logg
 }
 
 // NewLogProvider creates a new log provider (simplified for now)
-func NewLogProvider(config *ObservabilityConfig, res *resource.Resource, logger logger.Logger) (*LogProvider, error) {
+func NewLogProvider(config *Config, res *resource.Resource, logger logger.Logger) (*LogProvider, error) {
 	// For now, just return a basic log provider
 	// OTEL logs are still experimental, so we'll focus on trace correlation
 	return &LogProvider{
@@ -494,22 +494,22 @@ func (lp *LogProvider) Shutdown(ctx context.Context) error {
 }
 
 // GetInstrumentor returns the instrumentor
-func (om *ObservabilityManager) GetInstrumentor() *Instrumentor {
+func (om *Manager) GetInstrumentor() *Instrumentor {
 	return om.instrumentor
 }
 
 // GetConfig returns the observability configuration
-func (om *ObservabilityManager) GetConfig() *ObservabilityConfig {
+func (om *Manager) GetConfig() *Config {
 	return om.config
 }
 
 // IsEnabled returns whether observability is enabled
-func (om *ObservabilityManager) IsEnabled() bool {
+func (om *Manager) IsEnabled() bool {
 	return om.config.Enabled
 }
 
 // IsRunning returns whether the manager is running
-func (om *ObservabilityManager) IsRunning() bool {
+func (om *Manager) IsRunning() bool {
 	om.mu.RLock()
 	defer om.mu.RUnlock()
 	return om.isRunning

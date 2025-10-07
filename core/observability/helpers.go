@@ -14,7 +14,7 @@ import (
 
 // Helper provides simplified observability helpers
 type Helper struct {
-	manager *ObservabilityManager
+	manager *Manager
 	logger  logger.Logger
 }
 
@@ -33,7 +33,7 @@ type MetricOptions struct {
 }
 
 // NewHelper creates a new observability helper
-func NewHelper(manager *ObservabilityManager, logger logger.Logger) *Helper {
+func NewHelper(manager *Manager, logger logger.Logger) *Helper {
 	return &Helper{
 		manager: manager,
 		logger:  logger,
@@ -117,7 +117,7 @@ func (h *Helper) TraceFunction(ctx context.Context, name string, fn func(context
 }
 
 // TraceFunctionWithResult traces a function with return value
-func TraceFunctionWithResult[T any](h *Helper, ctx context.Context, name string, fn func(context.Context) (T, error), opts *SpanOptions) (T, error) {
+func TraceFunctionWithResult[T any](ctx context.Context, h *Helper, name string, fn func(context.Context) (T, error), opts *SpanOptions) (T, error) {
 	ctx, span := h.StartSpan(ctx, name, opts)
 	defer span.End()
 
@@ -454,10 +454,10 @@ func (h *Helper) TraceAndMeasure(ctx context.Context, name string, fn func(conte
 }
 
 // TraceAndMeasureWithResult combines tracing and metrics for a function with result
-func TraceAndMeasureWithResult[T any](h *Helper, ctx context.Context, name string, fn func(context.Context) (T, error), opts *SpanOptions) (T, error) {
+func TraceAndMeasureWithResult[T any](ctx context.Context, h *Helper, name string, fn func(context.Context) (T, error), opts *SpanOptions) (T, error) {
 	start := time.Now()
 
-	result, err := TraceFunctionWithResult(h, ctx, name, fn, opts)
+	result, err := TraceFunctionWithResult(ctx, h, name, fn, opts)
 	duration := time.Since(start)
 
 	// Record latency metric
@@ -570,7 +570,7 @@ func (h *Helper) CreateCommonAttributes(userID, requestID string) []attribute.Ke
 	return attrs
 }
 
-// Global helper instance (will be set by the observability manager)
+// GlobalHelper is the global helper instance (will be set by the observability manager)
 var GlobalHelper *Helper
 
 // SetGlobalHelper sets the global helper instance

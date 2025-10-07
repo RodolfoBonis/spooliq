@@ -22,6 +22,12 @@ func InitAndRun() fx.Option {
 	return fx.Invoke(func(lc fx.Lifecycle, cfg *config.AppConfig, amqpService *services.AmqpService, app *gin.Engine, log logger.Logger, db *gorm.DB) {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
+				// Validate database connection
+				if db == nil {
+					log.Error(ctx, "📊 Database instance is nil", map[string]interface{}{})
+					return fmt.Errorf("database instance is nil - check database initialization logs")
+				}
+
 				// Test database connection
 				sqlDB, err := db.DB()
 				if err != nil {

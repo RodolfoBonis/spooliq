@@ -576,21 +576,21 @@ func NewLogProvider(config *Config, res *resource.Resource, logger logger.Logger
 // createSampler creates a sampler based on configuration
 func createSampler(sampling SamplingConfig) sdktrace.Sampler {
 	switch sampling.Type {
-	case "always":
+	case "always", "always_on":
 		return sdktrace.AlwaysSample()
-	case "never":
+	case "never", "always_off":
 		return sdktrace.NeverSample()
-	case "ratio":
+	case "ratio", "traceidratio":
 		return sdktrace.TraceIDRatioBased(sampling.Rate)
-	case "parent_based":
+	case "parent_based", "parentbased", "parentbased_always_on":
 		// Use ParentBased with TraceIDRatioBased as root sampler
 		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampling.Rate))
 	case "":
-		// Default to ratio-based sampling if no type specified
-		return sdktrace.TraceIDRatioBased(sampling.Rate)
+		// Default to parent-based sampling if no type specified
+		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampling.Rate))
 	default:
-		// For unknown types, default to ratio-based sampling
-		return sdktrace.TraceIDRatioBased(sampling.Rate)
+		// For unknown types, default to parent-based sampling with ratio
+		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampling.Rate))
 	}
 }
 

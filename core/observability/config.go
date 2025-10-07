@@ -423,11 +423,12 @@ func getFloat64Env(key string, defaultValue float64) float64 {
 
 func getDurationEnv(key string, defaultValue time.Duration) time.Duration {
 	if value := os.Getenv(key); value != "" {
+		// Try parsing as duration first (e.g., "30s", "5m", "1h")
 		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
 		}
-		// Try parsing as milliseconds
-		if ms, err := strconv.Atoi(value); err == nil {
+		// Try parsing as milliseconds (for backward compatibility)
+		if ms, err := strconv.ParseInt(value, 10, 64); err == nil {
 			return time.Duration(ms) * time.Millisecond
 		}
 	}

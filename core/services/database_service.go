@@ -17,6 +17,9 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/plugin/opentelemetry/tracing"
+
+	// Register postgres driver for otelsql
+	_ "github.com/lib/pq"
 )
 
 // Connector is the global database connector instance.

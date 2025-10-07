@@ -10,7 +10,6 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/gin-gonic/gin"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -138,7 +137,6 @@ func (i *Instrumentor) InstrumentHTTPServer(serviceName string) gin.HandlerFunc 
 		return func(c *gin.Context) { c.Next() }
 	}
 
-	// Use otelgin with custom configuration
 	return gin.HandlerFunc(func(c *gin.Context) {
 		// Skip instrumentation for excluded paths
 		for _, path := range i.config.Traces.ExcludedPaths {
@@ -150,8 +148,47 @@ func (i *Instrumentor) InstrumentHTTPServer(serviceName string) gin.HandlerFunc 
 
 		start := time.Now()
 
-		// Use otelgin middleware
-		otelgin.Middleware(serviceName)(c)
+		// Create span manually using the global tracer
+		tracer := otel.Tracer(serviceName)
+		ctx, span := tracer.Start(c.Request.Context(),
+			fmt.Sprintf("%s %s", c.Request.Method, c.FullPath()),
+		)
+		defer span.End()
+
+		// Update the request context with the span
+		c.Request = c.Request.WithContext(ctx)
+
+		// Add HTTP attributes to span
+		span.SetAttributes(
+			attribute.String("http.method", c.Request.Method),
+			attribute.String("http.url", c.Request.URL.String()),
+			attribute.String("http.scheme", c.Request.URL.Scheme),
+			attribute.String("http.host", c.Request.Host),
+			attribute.String("http.target", c.Request.URL.Path),
+			attribute.String("http.route", c.FullPath()),
+			attribute.String("http.user_agent", c.Request.UserAgent()),
+		)
+
+		// Continue with the request
+		c.Next()
+
+		// Add response attributes
+		span.SetAttributes(
+			attribute.Int("http.status_code", c.Writer.Status()),
+			attribute.Int("http.response_size", c.Writer.Size()),
+		)
+
+		// Set span status based on HTTP status
+		if c.Writer.Status() >= 400 {
+			span.SetAttributes(attribute.Bool("error", true))
+			if c.Writer.Status() >= 500 {
+				span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", c.Writer.Status()))
+			} else {
+				span.SetStatus(codes.Ok, "")
+			}
+		} else {
+			span.SetStatus(codes.Ok, "")
+		}
 
 		// Add custom instrumentation
 		i.instrumentHTTPRequest(c, start)

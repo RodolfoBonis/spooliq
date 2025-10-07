@@ -35,7 +35,7 @@ func (uc *authUseCaseImpl) ValidateToken(c *gin.Context) {
 	})
 	token := strings.Split(authorization, " ")[1]
 	rptResult, err := uc.KeycloakClient.RetrospectToken(
-		c,
+		ctx,
 		token,
 		uc.KeycloakAccessData.ClientID,
 		uc.KeycloakAccessData.ClientSecret,

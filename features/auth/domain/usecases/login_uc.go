@@ -51,7 +51,7 @@ func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 		return
 	}
 	jwt, err := uc.KeycloakClient.Login(
-		c,
+		ctx,
 		uc.KeycloakAccessData.ClientID,
 		uc.KeycloakAccessData.ClientSecret,
 		uc.KeycloakAccessData.Realm,

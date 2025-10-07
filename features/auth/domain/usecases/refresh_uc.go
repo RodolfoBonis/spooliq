@@ -41,7 +41,7 @@ func (uc *authUseCaseImpl) RefreshAuthToken(c *gin.Context) {
 	}
 	refreshToken := strings.Split(authHeader, " ")[1]
 	token, err := uc.KeycloakClient.RefreshToken(
-		c,
+		ctx,
 		refreshToken,
 		uc.KeycloakAccessData.ClientID,
 		uc.KeycloakAccessData.ClientSecret,

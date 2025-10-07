@@ -40,7 +40,7 @@ func (uc *authUseCaseImpl) Logout(c *gin.Context) {
 	}
 	refreshToken := strings.Split(authHeader, " ")[1]
 	err := uc.KeycloakClient.Logout(
-		c,
+		ctx,
 		uc.KeycloakAccessData.ClientID,
 		uc.KeycloakAccessData.ClientSecret,
 		uc.KeycloakAccessData.Realm,

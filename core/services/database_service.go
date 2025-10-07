@@ -107,14 +107,14 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 	}
 
 	// Test the connection immediately
-	testSqlDB, err := db.DB()
+	testSQLDB, err := db.DB()
 	if err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to get SQL DB instance", map[string]interface{}{"error": err.Error()}, err)
 		logger.LogError(context.Background(), "Database SQL instance failed", appErr)
 		return appErr
 	}
 
-	if err = testSqlDB.Ping(); err != nil {
+	if err = testSQLDB.Ping(); err != nil {
 		appErr := errors.NewAppError(entities.ErrDatabase, "Failed to ping database after connection", map[string]interface{}{"error": err.Error()}, err)
 		logger.LogError(context.Background(), "Database ping failed", appErr)
 		return appErr
@@ -163,7 +163,7 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 						var e error
 
 						// Reopen instrumented SQL connection
-						retrySqlDB, e := otelsql.Open("postgres", dbConfig,
+						retrySQLDB, e := otelsql.Open("postgres", dbConfig,
 							otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
 							otelsql.WithDBName(connConfig.DBName),
 							otelsql.WithTracerProvider(otel.GetTracerProvider()),
@@ -176,7 +176,7 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 						}
 
 						// Register DB stats metrics
-						otelsql.ReportDBStatsMetrics(retrySqlDB, otelsql.WithAttributes(
+						otelsql.ReportDBStatsMetrics(retrySQLDB, otelsql.WithAttributes(
 							semconv.DBSystemPostgreSQL,
 							semconv.DBName(connConfig.DBName),
 						))
@@ -194,7 +194,7 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 							),
 						}
 						Connector, e = gorm.Open(postgres.New(postgres.Config{
-							Conn: retrySqlDB,
+							Conn: retrySQLDB,
 						}), retryGormConfig)
 						if e != nil {
 							appErr := errors.NewAppError(entities.ErrDatabase, e.Error(), nil, e)

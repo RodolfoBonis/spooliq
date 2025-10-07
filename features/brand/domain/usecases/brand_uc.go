@@ -18,8 +18,8 @@ type BrandUseCase struct {
 type IBrandUseCase interface {
 	Create(c *gin.Context)
 	Update(c *gin.Context)
-	//GetByID(c *gin.Context)
-	//GetAll(c *gin.Context)
+	FindByID(c *gin.Context)
+	FindAll(c *gin.Context)
 	//Delete(c *gin.Context)
 }
 

@@ -89,7 +89,7 @@ func RegisterHooksWithObservability(lifecycle fx.Lifecycle, router *gin.Engine, 
 }
 
 // SetupMiddlewaresAndRoutes configures middlewares BEFORE routes (critical for Gin)
-func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
+func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
 	// Configure trusted proxies
 	err := router.SetTrustedProxies([]string{})
 	if err != nil {
@@ -118,7 +118,7 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authU
 	router.Use(gin.ErrorLogger())
 
 	// Now register routes (AFTER all middlewares are set up)
-	routes.InitializeRoutes(router, authUc, brandUc, protectFactory, logger)
+	routes.InitializeRoutes(router, authUc, brandUc, protectFactory, cacheMiddleware, logger)
 	logger.Info(context.Background(), "Routes initialized after middleware setup")
 
 	// Register lifecycle hooks for cleanup

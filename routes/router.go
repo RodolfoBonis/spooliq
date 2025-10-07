@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/features/auth"
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
@@ -20,6 +21,7 @@ func InitializeRoutes(
 	authUc authuc.AuthUseCase,
 	brandUc branduc.IBrandUseCase,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
+	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
 ) {
 
@@ -30,5 +32,5 @@ func InitializeRoutes(
 
 	health.Routes(root, logger)
 	auth.Routes(root, authUc, protectFactory)
-	brand.Routes(root, brandUc, protectFactory)
+	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 }

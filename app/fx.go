@@ -40,7 +40,7 @@ func NewFxApp() *fx.App {
 				}
 
 				// Setup middlewares and lifecycle hooks
-				SetupMiddlewaresAndRoutes(lc, router, authUc, brandUc, protectFactory, logger, monitoring, obsManager, helper)
+				SetupMiddlewaresAndRoutes(lc, router, authUc, brandUc, protectFactory, cacheMiddleware, logger, monitoring, obsManager, helper)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

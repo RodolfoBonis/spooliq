@@ -10,6 +10,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
+	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -245,6 +246,7 @@ func RetryHandler(n int, f func() (bool, error)) error {
 func RunMigrations() {
 	Connector.AutoMigrate(
 		&brands.BrandModel{},
+		&materials.MaterialModel{},
 	)
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
+	"github.com/RodolfoBonis/spooliq/core/observability"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 )
@@ -44,5 +45,42 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Log
 	)
 }
 
-// RegisterHooksWithObservability has been temporarily removed while we fix observability implementation
-// Use RegisterHooks instead for now
+// RegisterHooksWithObservability registers application lifecycle hooks with new observability system.
+func RegisterHooksWithObservability(lifecycle fx.Lifecycle, router *gin.Engine, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.ObservabilityManager, helper *observability.Helper) {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				err := router.SetTrustedProxies([]string{})
+				if err != nil {
+					appError := errors.RootError(err.Error(), nil)
+					logger.LogError(ctx, "Erro ao configurar trusted proxies", appError)
+					panic(err)
+				}
+				config.SentryConfig()
+
+				// Add new observability middleware (automatic instrumentation)
+				if obsManager.IsEnabled() {
+					instrumentor := obsManager.GetInstrumentor()
+					router.Use(instrumentor.InstrumentHTTPServer("spooliq-api"))
+				}
+
+				router.Use(monitoring.SentryMiddleware())
+				router.Use(monitoring.LogMiddleware)
+				router.Use(gin.Logger())
+				router.Use(gin.Recovery())
+				router.Use(gin.ErrorLogger())
+
+				logger.Info(ctx, "Application started with enhanced observability", map[string]interface{}{
+					"observability_enabled": obsManager.IsEnabled(),
+					"auto_instrumentation":  obsManager.GetConfig().Features.AutoHTTP,
+				})
+
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				logger.Info(ctx, "Stopping server.")
+				return nil
+			},
+		},
+	)
+}

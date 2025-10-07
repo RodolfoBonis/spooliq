@@ -10,14 +10,14 @@ import (
 
 // MaterialModel represents a 3D printing material in the database
 type MaterialModel struct {
-	ID           uuid.UUID  `gorm:"<-:create;type:uuid;PRIMARY_KEY;" json:"id"`
+	ID           uuid.UUID  `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
 	Name         string     `gorm:"type:varchar(255);not null" json:"name"`
 	Description  string     `gorm:"type:text" json:"description,omitempty"`
 	TempTable    float32    `gorm:"type:float" json:"tempTable,omitempty"`
 	TempExtruder float32    `gorm:"type:float" json:"tempExtruder,omitempty"`
 	CreatedAt    time.Time  `gorm:"<-:create;type:timestamp;" json:"created_at,omitempty"`
 	UpdatedAt    time.Time  `gorm:"<-:update;type:timestamp;" json:"updated_at,omitempty"`
-	DeletedAt    *time.Time `sql:"index" json:"deleted_at,omitempty"`
+	DeletedAt    *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // TableName returns the database table name for MaterialModel

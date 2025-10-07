@@ -7,8 +7,10 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/auth"
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
+	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 
 	"github.com/RodolfoBonis/spooliq/features/brand"
+	"github.com/RodolfoBonis/spooliq/features/material"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
@@ -20,6 +22,7 @@ func InitializeRoutes(
 	router *gin.Engine,
 	authUc authuc.AuthUseCase,
 	brandUc branduc.IBrandUseCase,
+	materialUc materialuc.IMaterialUseCase,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
@@ -33,4 +36,5 @@ func InitializeRoutes(
 	health.Routes(root, logger)
 	auth.Routes(root, authUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
+	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 }

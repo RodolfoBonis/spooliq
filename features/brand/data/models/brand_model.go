@@ -5,7 +5,6 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // BrandModel represents the database model for brand entities.
@@ -16,12 +15,6 @@ type BrandModel struct {
 	CreatedAt   time.Time  `gorm:"<-:create;type:timestamp;" json:"created_at,omitempty"`
 	UpdatedAt   time.Time  `gorm:"<-:update;type:timestamp;" json:"updated_at,omitempty"`
 	DeletedAt   *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-// BeforeCreate is a GORM hook that sets the UUID before creating a brand record.
-func (b *BrandModel) BeforeCreate(tx *gorm.DB) (err error) {
-	b.ID = uuid.New()
-	return
 }
 
 // TableName returns the table name for the brand model.

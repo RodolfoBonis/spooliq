@@ -14,6 +14,7 @@ import (
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
 	materialDi "github.com/RodolfoBonis/spooliq/features/material/di"
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 )
@@ -30,11 +31,12 @@ func NewFxApp() *fx.App {
 		authDi.AuthModule,
 		brandDi.Module,
 		materialDi.Module,
+		preset.Module,
 		fx.Provide(
 			gin.New,
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, materialUc materialuc.IMaterialUseCase, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, materialUc materialuc.IMaterialUseCase, presetHandler *preset.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -43,7 +45,7 @@ func NewFxApp() *fx.App {
 				}
 
 				// Setup middlewares and lifecycle hooks
-				SetupMiddlewaresAndRoutes(lc, router, authUc, brandUc, materialUc, protectFactory, cacheMiddleware, logger, monitoring, obsManager, helper)
+				SetupMiddlewaresAndRoutes(lc, router, authUc, brandUc, materialUc, presetHandler, protectFactory, cacheMiddleware, logger, monitoring, obsManager, helper)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

@@ -5,7 +5,6 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // MaterialModel represents a 3D printing material in the database
@@ -22,12 +21,6 @@ type MaterialModel struct {
 
 // TableName returns the database table name for MaterialModel
 func (m *MaterialModel) TableName() string { return "materials" }
-
-// BeforeCreate é um hook do GORM executado antes de criar um material
-func (m *MaterialModel) BeforeCreate(tx *gorm.DB) (err error) {
-	m.ID = uuid.New()
-	return
-}
 
 // FromEntity populates the MaterialModel from a MaterialEntity.
 func (m *MaterialModel) FromEntity(entity *entities.MaterialEntity) {

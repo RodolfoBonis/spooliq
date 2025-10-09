@@ -11,6 +11,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
+	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -251,11 +252,40 @@ func RunMigrations() {
 			panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
 		}
 	}
-	
+
 	if !Connector.Migrator().HasTable(&materials.MaterialModel{}) {
 		err := Connector.AutoMigrate(&materials.MaterialModel{})
 		if err != nil {
 			panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
+		}
+	}
+
+	// Preset migrations
+	if !Connector.Migrator().HasTable(&presets.PresetModel{}) {
+		err := Connector.AutoMigrate(&presets.PresetModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING PRESET MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&presets.MachinePresetModel{}) {
+		err := Connector.AutoMigrate(&presets.MachinePresetModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING MACHINE_PRESET MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&presets.EnergyPresetModel{}) {
+		err := Connector.AutoMigrate(&presets.EnergyPresetModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING ENERGY_PRESET MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&presets.CostPresetModel{}) {
+		err := Connector.AutoMigrate(&presets.CostPresetModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
 		}
 	}
 }

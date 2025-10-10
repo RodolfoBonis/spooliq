@@ -4,8 +4,10 @@ import "github.com/RodolfoBonis/spooliq/core/entities"
 
 // System role constants
 const (
-	UserRole          = "User"
-	OrgAdmin          = "OrgAdmin"
+	UserRole          = "user"
+	AdminRole         = "adm"
+	OrgAdminRole      = "OrgAdmin"
+	OwnerRole         = "Owner"
 	PlatformAdminRole = "PlatformAdmin"
 )
 

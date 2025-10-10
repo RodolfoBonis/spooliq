@@ -13,6 +13,6 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, protectFac
 		// All company routes require UserRole
 		companyRoutes.POST("/", protectFactory(useCase.Create, roles.PlatformAdminRole))
 		companyRoutes.GET("/", protectFactory(useCase.Get, roles.UserRole))
-		companyRoutes.PUT("/", protectFactory(useCase.Update, roles.OrgAdmin))
+		companyRoutes.PUT("/", protectFactory(useCase.Update, roles.OrgAdminRole))
 	}
 }

@@ -16,6 +16,8 @@ import (
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
+	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
+	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -333,6 +335,30 @@ func RunMigrations() {
 		err := Connector.AutoMigrate(&presets.CostPresetModel{})
 		if err != nil {
 			panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
+		}
+	}
+
+	// User management migrations
+	if !Connector.Migrator().HasTable(&users.UserModel{}) {
+		err := Connector.AutoMigrate(&users.UserModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING USER MIGRATION: %s", err.Error()))
+		}
+	}
+
+	// Subscription payment history migrations
+	if !Connector.Migrator().HasTable(&subscriptions.SubscriptionModel{}) {
+		err := Connector.AutoMigrate(&subscriptions.SubscriptionModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION MIGRATION: %s", err.Error()))
+		}
+	}
+
+	// Update existing companies table to add subscription fields (migration)
+	if Connector.Migrator().HasTable(&companies.CompanyModel{}) {
+		err := Connector.AutoMigrate(&companies.CompanyModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR UPDATING COMPANY TABLE WITH SUBSCRIPTION FIELDS: %s", err.Error()))
 		}
 	}
 }

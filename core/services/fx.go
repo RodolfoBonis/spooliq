@@ -12,6 +12,7 @@ var Module = fx.Module("services",
 		NewAmqpService,
 		NewRedisService,
 		NewAuthService,
+		NewAsaasService,
 		func(logger logger.Logger) *gorm.DB {
 			if Connector == nil {
 				_ = OpenConnection(logger)

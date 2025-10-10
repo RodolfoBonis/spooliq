@@ -15,7 +15,7 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		budgetRoutes.GET("/", protectFactory(useCase.FindAll, roles.UserRole))
 		budgetRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.UserRole))
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.UserRole))
-		budgetRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdmin))
+		budgetRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdminRole))
 		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.UserRole))
 		budgetRoutes.POST("/:id/duplicate", protectFactory(useCase.Duplicate, roles.UserRole))
 		budgetRoutes.GET("/:id/calculate", protectFactory(useCase.Recalculate, roles.UserRole))

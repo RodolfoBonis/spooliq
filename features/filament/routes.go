@@ -16,6 +16,6 @@ func Routes(route *gin.RouterGroup, useCase usecases.IFilamentUseCase, protectFa
 		filaments.GET("/:id", protectFactory(useCase.FindByID, roles.UserRole), cacheMiddleware.Cache15Min())
 		filaments.POST("/", protectFactory(useCase.Create, roles.UserRole))
 		filaments.PUT("/:id", protectFactory(useCase.Update, roles.UserRole))
-		filaments.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdmin))
+		filaments.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdminRole))
 	}
 }

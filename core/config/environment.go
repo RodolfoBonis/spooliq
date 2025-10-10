@@ -148,6 +148,16 @@ func EnvCDNBucket() string {
 	return GetEnv("CDN_BUCKET", "spooliq")
 }
 
+// EnvAsaasAPIKey returns the Asaas API key from environment variables.
+func EnvAsaasAPIKey() string {
+	return GetEnv("ASAAS_API_KEY", "")
+}
+
+// EnvAsaasBaseURL returns the Asaas base URL from environment variables.
+func EnvAsaasBaseURL() string {
+	return GetEnv("ASAAS_BASE_URL", "https://sandbox.asaas.com/api/v3")
+}
+
 // LoadEnvVars loads all environment variables required by the application.
 func LoadEnvVars() {
 	env := EnvironmentConfig()

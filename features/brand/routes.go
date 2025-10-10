@@ -13,8 +13,8 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBrandUseCase, protectFacto
 	{
 		brands.GET("/", protectFactory(useCase.FindAll, roles.UserRole), cacheMiddleware.Cache15Min())
 		brands.GET("/:id", protectFactory(useCase.FindByID, roles.UserRole), cacheMiddleware.Cache1Hour())
-		brands.POST("/", protectFactory(useCase.Create, roles.OrgAdmin))
-		brands.PUT("/:id", protectFactory(useCase.Update, roles.OrgAdmin))
-		brands.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdmin))
+		brands.POST("/", protectFactory(useCase.Create, roles.OrgAdminRole))
+		brands.PUT("/:id", protectFactory(useCase.Update, roles.OrgAdminRole))
+		brands.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdminRole))
 	}
 }

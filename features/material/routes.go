@@ -11,10 +11,10 @@ import (
 func Routes(route *gin.RouterGroup, useCase usecases.IMaterialUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware) {
 	materials := route.Group("/materials")
 	{
-		materials.GET("/", protectFactory(useCase.FindAll, roles.OrgAdmin), cacheMiddleware.Cache15Min())
-		materials.GET("/:id", protectFactory(useCase.FindByID, roles.OrgAdmin), cacheMiddleware.Cache1Hour())
-		materials.POST("/", protectFactory(useCase.Create, roles.OrgAdmin))
-		materials.PUT("/:id", protectFactory(useCase.Update, roles.OrgAdmin))
-		materials.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdmin))
+		materials.GET("/", protectFactory(useCase.FindAll, roles.OrgAdminRole), cacheMiddleware.Cache15Min())
+		materials.GET("/:id", protectFactory(useCase.FindByID, roles.OrgAdminRole), cacheMiddleware.Cache1Hour())
+		materials.POST("/", protectFactory(useCase.Create, roles.OrgAdminRole))
+		materials.PUT("/:id", protectFactory(useCase.Update, roles.OrgAdminRole))
+		materials.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdminRole))
 	}
 }

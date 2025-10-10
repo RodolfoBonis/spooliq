@@ -65,7 +65,7 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 	// Check if user is admin
 	userRole, _ := c.Get("user_role")
 	userRoleStr, _ := userRole.(string)
-	isAdmin := userRoleStr == roles.OrgAdmin
+	isAdmin := userRoleStr == roles.OrgAdminRole
 
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)

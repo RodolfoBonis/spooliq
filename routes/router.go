@@ -31,6 +31,7 @@ import (
 func InitializeRoutes(
 	router *gin.Engine,
 	authUc authuc.AuthUseCase,
+	registerUc *authuc.RegisterUseCase,
 	brandUc branduc.IBrandUseCase,
 	budgetUc budgetuc.IBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
@@ -50,7 +51,7 @@ func InitializeRoutes(
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	health.Routes(root, logger)
-	auth.Routes(root, authUc, protectFactory)
+	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
 	company.Routes(root, companyUc, protectFactory)

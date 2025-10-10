@@ -23,6 +23,11 @@ type AppConfig struct {
 	RedisPort      string
 	RedisPassword  string
 	RedisDB        int
+	CDNBaseURL     string
+	CDNAPIKey      string
+	CDNBucket      string
+	AsaasAPIKey    string
+	AsaasBaseURL   string
 }
 
 // NewAppConfig creates and returns a new AppConfig instance.
@@ -47,6 +52,11 @@ func NewAppConfig() *AppConfig {
 		RedisPort:      EnvRedisPort(),
 		RedisPassword:  EnvRedisPassword(),
 		RedisDB:        EnvRedisDB(),
+		CDNBaseURL:     EnvCDNBaseURL(),
+		CDNAPIKey:      EnvCDNAPIKey(),
+		CDNBucket:      EnvCDNBucket(),
+		AsaasAPIKey:    EnvAsaasAPIKey(),
+		AsaasBaseURL:   EnvAsaasBaseURL(),
 	}
 }
 

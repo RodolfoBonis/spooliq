@@ -52,15 +52,15 @@ type KeycloakUserRequest struct {
 
 // KeycloakUserResponse represents a user response from Keycloak
 type KeycloakUserResponse struct {
-	ID            string              `json:"id"`
-	Username      string              `json:"username"`
-	Email         string              `json:"email"`
-	EmailVerified bool                `json:"emailVerified"`
-	Enabled       bool                `json:"enabled"`
-	FirstName     string              `json:"firstName"`
-	LastName      string              `json:"lastName"`
-	Attributes    map[string][]string `json:"attributes,omitempty"`
-	CreatedTimestamp int64            `json:"createdTimestamp"`
+	ID               string              `json:"id"`
+	Username         string              `json:"username"`
+	Email            string              `json:"email"`
+	EmailVerified    bool                `json:"emailVerified"`
+	Enabled          bool                `json:"enabled"`
+	FirstName        string              `json:"firstName"`
+	LastName         string              `json:"lastName"`
+	Attributes       map[string][]string `json:"attributes,omitempty"`
+	CreatedTimestamp int64               `json:"createdTimestamp"`
 }
 
 // KeycloakPasswordRequest represents a request to set a user password
@@ -231,7 +231,7 @@ func (s *KeycloakAdminService) doRequest(ctx context.Context, method, path strin
 // CreateUser creates a new user in Keycloak
 func (s *KeycloakAdminService) CreateUser(ctx context.Context, req KeycloakUserRequest) (string, *errors.AppError) {
 	var userID string
-	
+
 	// First, check if user already exists
 	existingUser, err := s.GetUserByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
@@ -278,7 +278,7 @@ func (s *KeycloakAdminService) buildCreateUserRequest(ctx context.Context, req K
 	}
 
 	url := fmt.Sprintf("%s/admin/realms/%s/users", s.baseURL, s.realm)
-	
+
 	jsonBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -298,7 +298,7 @@ func (s *KeycloakAdminService) buildCreateUserRequest(ctx context.Context, req K
 // SetUserPassword sets a password for a user
 func (s *KeycloakAdminService) SetUserPassword(ctx context.Context, userID, password string) *errors.AppError {
 	path := fmt.Sprintf("users/%s/reset-password", userID)
-	
+
 	passwordReq := KeycloakPasswordRequest{
 		Type:      "password",
 		Value:     password,
@@ -424,4 +424,3 @@ func (s *KeycloakAdminService) GetUserByEmail(ctx context.Context, email string)
 
 	return &users[0], nil
 }
-

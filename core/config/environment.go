@@ -153,6 +153,11 @@ func EnvAsaasAPIKey() string {
 	return GetEnv("ASAAS_API_KEY", "")
 }
 
+// EnvAsaasWebhookSecret returns the Asaas webhook secret from environment variables.
+func EnvAsaasWebhookSecret() string {
+	return GetEnv("ASAAS_WEBHOOK_SECRET", "")
+}
+
 // EnvAsaasBaseURL returns the Asaas base URL from environment variables.
 func EnvAsaasBaseURL() string {
 	return GetEnv("ASAAS_BASE_URL", "https://sandbox.asaas.com/api/v3")

@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	
+
 	"github.com/RodolfoBonis/spooliq/core/logger"
 )
 
@@ -67,4 +67,3 @@ func (s *EmailService) SendSubscriptionCancelledEmail(ctx context.Context, email
 	// TODO: Implement actual email sending
 	return nil
 }
-

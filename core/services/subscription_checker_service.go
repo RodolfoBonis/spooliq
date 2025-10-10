@@ -30,15 +30,27 @@ func NewSubscriptionCheckerService(
 
 // CheckAllSubscriptions runs the daily subscription check for all companies
 func (s *SubscriptionCheckerService) CheckAllSubscriptions(ctx context.Context) error {
-	s.logger.Info(ctx, "Starting daily subscription check (placeholder)", nil)
+	s.logger.Info(ctx, "Starting daily subscription check", nil)
 	
-	// TODO: Implement full logic to:
-	// 1. Query companies with trial or active status
-	// 2. For trial: check if expired, verify Asaas payment
-	// 3. For active: check Asaas subscription for overdue/cancelled
-	// 4. Update company status and send email notifications
+	// This is a placeholder implementation that logs actions
+	// In production, you would:
+	// 1. Call s.companyRepository to get all companies with status "trial" or "active"
+	// 2. For each company:
+	//    - Skip if IsPlatformCompany = true
+	//    - For trial: check if TrialEndsAt < now
+	//      * If expired, call s.asaasService.GetSubscription(company.AsaasSubscriptionID)
+	//      * Check if first payment was made
+	//      * Update status to "active" if payment confirmed, "suspended" if not
+	//    - For active: call s.asaasService.GetSubscription()
+	//      * Check for overdue or cancelled status
+	//      * Update company status accordingly
+	// 3. Update company in database
+	// 4. Send email notifications via EmailService
 	
-	s.logger.Info(ctx, "Daily subscription check completed (placeholder)", nil)
+	s.logger.Info(ctx, "Daily subscription check completed", map[string]interface{}{
+		"note": "This is a placeholder. Implement full logic before production.",
+	})
+	
 	return nil
 }
 
@@ -46,7 +58,7 @@ func (s *SubscriptionCheckerService) CheckAllSubscriptions(ctx context.Context) 
 func (s *SubscriptionCheckerService) checkCompanySubscription(ctx context.Context, company interface{}) error {
 	// Type assertion to get company entity
 	// This should be implemented based on your company entity structure
-	
+
 	// For trial companies
 	// if company.SubscriptionStatus == "trial" {
 	//     if company.TrialEndsAt != nil && time.Now().After(*company.TrialEndsAt) {
@@ -80,9 +92,9 @@ func (s *SubscriptionCheckerService) StartDailyChecker(ctx context.Context) {
 	if now.After(next3AM) {
 		next3AM = next3AM.Add(24 * time.Hour)
 	}
-	
+
 	duration := time.Until(next3AM)
-	
+
 	s.logger.Info(ctx, "Scheduling daily subscription checker", map[string]interface{}{
 		"next_run": next3AM.Format("2006-01-02 15:04:05"),
 		"duration": duration.String(),
@@ -90,7 +102,7 @@ func (s *SubscriptionCheckerService) StartDailyChecker(ctx context.Context) {
 
 	// Initial timer until 3 AM
 	timer := time.NewTimer(duration)
-	
+
 	go func() {
 		for {
 			select {
@@ -101,10 +113,10 @@ func (s *SubscriptionCheckerService) StartDailyChecker(ctx context.Context) {
 						"error": err.Error(),
 					})
 				}
-				
+
 				// Reset timer for next day (24 hours)
 				timer.Reset(24 * time.Hour)
-				
+
 			case <-ctx.Done():
 				s.logger.Info(ctx, "Stopping daily subscription checker", nil)
 				timer.Stop()
@@ -113,4 +125,3 @@ func (s *SubscriptionCheckerService) StartDailyChecker(ctx context.Context) {
 		}
 	}()
 }
-

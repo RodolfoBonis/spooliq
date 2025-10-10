@@ -94,10 +94,10 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 					"trial_ends_at":   company.TrialEndsAt,
 				})
 				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error":            "Trial period has expired",
+					"error":               "Trial period has expired",
 					"subscription_status": "trial_expired",
-					"trial_ended_at":   company.TrialEndsAt.Format("2006-01-02T15:04:05Z07:00"),
-					"message":          "Please subscribe to continue using the service",
+					"trial_ended_at":      company.TrialEndsAt.Format("2006-01-02T15:04:05Z07:00"),
+					"message":             "Please subscribe to continue using the service",
 				})
 				c.Abort()
 				return
@@ -183,4 +183,3 @@ func formatTimePtr(t *time.Time) string {
 	}
 	return t.Format("2006-01-02T15:04:05Z07:00")
 }
-

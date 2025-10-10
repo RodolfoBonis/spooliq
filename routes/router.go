@@ -8,6 +8,10 @@ import (
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/brand"
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/budget"
+	budgetuc "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/customer"
+	customeruc "github.com/RodolfoBonis/spooliq/features/customer/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/filament"
 	filamentuc "github.com/RodolfoBonis/spooliq/features/filament/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/material"
@@ -24,6 +28,8 @@ func InitializeRoutes(
 	router *gin.Engine,
 	authUc authuc.AuthUseCase,
 	brandUc branduc.IBrandUseCase,
+	budgetUc budgetuc.IBudgetUseCase,
+	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
 	presetHandler *preset.Handler,
@@ -40,6 +46,8 @@ func InitializeRoutes(
 	health.Routes(root, logger)
 	auth.Routes(root, authUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
+	budget.Routes(root, budgetUc, protectFactory)
+	customer.Routes(root, customerUc, protectFactory)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	preset.SetupRoutes(root, presetHandler)

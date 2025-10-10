@@ -1,0 +1,105 @@
+package usecases
+
+import (
+	"net/http"
+
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
+
+// FindByID retrieves a budget by ID
+// @Summary Get budget by ID
+// @Description Get a specific budget by ID with all details
+// @Tags budgets
+// @Accept json
+// @Produce json
+// @Param id path string true "Budget ID"
+// @Success 200 {object} entities.BudgetResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/budgets/{id} [get]
+// @Security BearerAuth
+func (uc *BudgetUseCase) FindByID(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	uc.logger.Info(ctx, "Budget retrieval by ID attempt started", map[string]interface{}{
+		"user_agent": c.Request.UserAgent(),
+		"ip":         c.ClientIP(),
+	})
+
+	userID := getUserID(c)
+	if userID == "" {
+		uc.logger.Error(ctx, "User ID not found in context", nil)
+		appError := coreErrors.UsecaseError("User ID not found in context")
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	admin := isAdmin(c)
+
+	// Parse budget ID
+	budgetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{
+			"error": err.Error(),
+		})
+		appError := coreErrors.UsecaseError("Invalid budget ID")
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	// Get budget from repository
+	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to retrieve budget", map[string]interface{}{
+			"error":     err.Error(),
+			"budget_id": budgetID,
+		})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		return
+	}
+
+	// Get customer info
+	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+
+	// Get items
+	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
+	itemResponses := make([]entities.BudgetItemResponse, len(items))
+	for i, item := range items {
+		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
+		itemResponses[i] = entities.BudgetItemResponse{
+			Item:     item,
+			Filament: filamentInfo,
+		}
+	}
+
+	// Get presets info
+	var machinePreset, energyPreset, costPreset *entities.PresetInfo
+	if budget.MachinePresetID != nil {
+		machinePreset, _ = uc.budgetRepository.GetPresetInfo(ctx, *budget.MachinePresetID, "machine")
+	}
+	if budget.EnergyPresetID != nil {
+		energyPreset, _ = uc.budgetRepository.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy")
+	}
+	if budget.CostPresetID != nil {
+		costPreset, _ = uc.budgetRepository.GetPresetInfo(ctx, *budget.CostPresetID, "cost")
+	}
+
+	response := entities.BudgetResponse{
+		Budget:        budget,
+		Customer:      customerInfo,
+		Items:         itemResponses,
+		MachinePreset: machinePreset,
+		EnergyPreset:  energyPreset,
+		CostPreset:    costPreset,
+	}
+
+	uc.logger.Info(ctx, "Budget retrieved successfully", map[string]interface{}{
+		"budget_id": budget.ID,
+	})
+
+	c.JSON(http.StatusOK, response)
+}

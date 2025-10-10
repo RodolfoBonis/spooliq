@@ -89,7 +89,8 @@
       "Bash(cd:*)",
       "Bash(cd:*)",
       "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
-      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)"
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "WebFetch(domain:api.spooliq.rodolfodebonis.com.br)"
     ],
     "deny": [],
     "ask": []

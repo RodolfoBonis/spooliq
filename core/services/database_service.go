@@ -10,6 +10,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
+	budgets "github.com/RodolfoBonis/spooliq/features/budget/data/models"
+	customers "github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
@@ -261,10 +263,39 @@ func RunMigrations() {
 		}
 	}
 
+	if !Connector.Migrator().HasTable(&customers.CustomerModel{}) {
+		err := Connector.AutoMigrate(&customers.CustomerModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
+		}
+	}
+
 	if !Connector.Migrator().HasTable(&filaments.FilamentModel{}) {
 		err := Connector.AutoMigrate(&filaments.FilamentModel{})
 		if err != nil {
 			panic(fmt.Sprintf("ERROR DURING FILAMENT MIGRATION: %s", err.Error()))
+		}
+	}
+
+	// Budget migrations
+	if !Connector.Migrator().HasTable(&budgets.BudgetModel{}) {
+		err := Connector.AutoMigrate(&budgets.BudgetModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING BUDGET MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&budgets.BudgetItemModel{}) {
+		err := Connector.AutoMigrate(&budgets.BudgetItemModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&budgets.BudgetStatusHistoryModel{}) {
+		err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING BUDGET_STATUS_HISTORY MIGRATION: %s", err.Error()))
 		}
 	}
 

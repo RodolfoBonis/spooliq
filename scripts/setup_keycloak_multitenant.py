@@ -14,13 +14,23 @@ import uuid as uuid_lib
 import requests
 from typing import Dict, Optional
 import json
+import os
 
-# Configuration
-KEYCLOAK_URL = "https://auth.rodolfodebonis.com.br"
-REALM_NAME = "spooliq"
-ADMIN_EMAIL = "dev@rodolfodebonis.com.br"
-ADMIN_PASSWORD = "U{}z3N!B]xubk$ZK*DU/q7H4R8S8CG4%"
+# Configuration - Load from environment variables
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "https://auth.rodolfodebonis.com.br")
+REALM_NAME = os.getenv("KEYCLOAK_REALM", "spooliq")
+ADMIN_EMAIL = os.getenv("KEYCLOAK_ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
 CLIENT_ID = "spooliq"
+
+# Validate required environment variables
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    print("❌ Error: KEYCLOAK_ADMIN_EMAIL and KEYCLOAK_ADMIN_PASSWORD environment variables are required")
+    print("\nUsage:")
+    print("  export KEYCLOAK_ADMIN_EMAIL=your_admin@email.com")
+    print("  export KEYCLOAK_ADMIN_PASSWORD=your_password")
+    print("  python3 scripts/setup_keycloak_multitenant.py")
+    sys.exit(1)
 
 
 class KeycloakSetup:

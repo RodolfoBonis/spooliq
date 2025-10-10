@@ -12,13 +12,28 @@ from uuid import uuid4
 # ============================================================
 # CONFIGURATION
 # ============================================================
-KEYCLOAK_URL = "https://auth.rodolfodebonis.com.br"
-REALM = "spooliq"
-ADMIN_EMAIL = "dev@rodolfodebonis.com.br"
-ADMIN_PASSWORD = "U{}z3N!B]xubk$ZK*DU/q7H4R8S8CG4%"
+import os
 
-# Generate UUID for Spooliq Platform organization
-SPOOLIQ_ORG_UUID = str(uuid4())
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "https://auth.rodolfodebonis.com.br")
+REALM = os.getenv("KEYCLOAK_REALM", "spooliq")
+ADMIN_EMAIL = os.getenv("KEYCLOAK_ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
+SPOOLIQ_ORG_UUID = os.getenv("SPOOLIQ_ORG_UUID")
+
+# Validate required environment variables
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    print("❌ Error: KEYCLOAK_ADMIN_EMAIL and KEYCLOAK_ADMIN_PASSWORD environment variables are required")
+    print("\nUsage:")
+    print("  export KEYCLOAK_ADMIN_EMAIL=your_admin@email.com")
+    print("  export KEYCLOAK_ADMIN_PASSWORD=your_password")
+    print("  export SPOOLIQ_ORG_UUID=your_organization_uuid  # Optional, will generate if not provided")
+    print("  python3 scripts/setup_keycloak_groups.py")
+    sys.exit(1)
+
+# Generate UUID for Spooliq Platform organization if not provided
+if not SPOOLIQ_ORG_UUID:
+    SPOOLIQ_ORG_UUID = str(uuid4())
+    print(f"⚠️  No SPOOLIQ_ORG_UUID provided, generated new UUID: {SPOOLIQ_ORG_UUID}")
 
 print("=" * 60)
 print("🏢 Keycloak Multi-tenant Setup using Groups")

@@ -23,6 +23,8 @@ go.work
 
 .env
 .env.development
+.env.local
+scripts/.env.local
 spooliq.exe
 spooliq
 

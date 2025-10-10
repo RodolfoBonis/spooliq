@@ -10,10 +10,21 @@ import sys
 # ============================================================
 # CONFIGURATION
 # ============================================================
-KEYCLOAK_URL = "https://auth.rodolfodebonis.com.br"
-REALM = "spooliq"
-ADMIN_EMAIL = "dev@rodolfodebonis.com.br"
-ADMIN_PASSWORD = "U{}z3N!B]xubk$ZK*DU/q7H4R8S8CG4%"
+import os
+
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "https://auth.rodolfodebonis.com.br")
+REALM = os.getenv("KEYCLOAK_REALM", "spooliq")
+ADMIN_EMAIL = os.getenv("KEYCLOAK_ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
+
+# Validate required environment variables
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    print("❌ Error: KEYCLOAK_ADMIN_EMAIL and KEYCLOAK_ADMIN_PASSWORD environment variables are required")
+    print("\nUsage:")
+    print("  export KEYCLOAK_ADMIN_EMAIL=your_admin@email.com")
+    print("  export KEYCLOAK_ADMIN_PASSWORD=your_password")
+    print("  python3 scripts/fix_keycloak_roles.py")
+    sys.exit(1)
 
 print("=" * 60)
 print("🔧 Fixing Keycloak Roles")

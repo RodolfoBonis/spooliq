@@ -5,10 +5,20 @@ Check which realm the user exists in and provide guidance.
 
 import requests
 import sys
+import os
 
-KEYCLOAK_URL = "https://auth.rodolfodebonis.com.br"
-ADMIN_EMAIL = "dev@rodolfodebonis.com.br"
-ADMIN_PASSWORD = "U{}z3N!B]xubk$ZK*DU/q7H4R8S8CG4%"
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "https://auth.rodolfodebonis.com.br")
+ADMIN_EMAIL = os.getenv("KEYCLOAK_ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
+
+# Validate required environment variables
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    print("❌ Error: KEYCLOAK_ADMIN_EMAIL and KEYCLOAK_ADMIN_PASSWORD environment variables are required")
+    print("\nUsage:")
+    print("  export KEYCLOAK_ADMIN_EMAIL=your_admin@email.com")
+    print("  export KEYCLOAK_ADMIN_PASSWORD=your_password")
+    print("  python3 scripts/check_user_realm.py")
+    sys.exit(1)
 
 def get_admin_token():
     """Get admin token from master realm."""

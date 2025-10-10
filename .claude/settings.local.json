@@ -83,7 +83,13 @@
       "Bash(go run:*)",
       "Bash(git stash:*)",
       "Bash(docker exec:*)",
-      "Bash(timeout 10s make run)"
+      "Bash(timeout 10s make run)",
+      "Bash(bash:*)",
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "Bash(cd:*)",
+      "Bash(cd:*)",
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)",
+      "Read(/Users/rodolfodebonis/Documents/projects/spooliq/**)"
     ],
     "deny": [],
     "ask": []

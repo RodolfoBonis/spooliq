@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"errors"
 	"net/http"
 	"strings"
@@ -30,6 +31,14 @@ import (
 func (uc *BrandUseCase) FindByID(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+
 	// Log brand retrieval attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brand retrieval attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),
@@ -52,7 +61,7 @@ func (uc *BrandUseCase) FindByID(c *gin.Context) {
 		return
 	}
 
-	brand, err := uc.repository.FindByID(id)
+	brand, err := uc.repository.FindByID(id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Brand not found")

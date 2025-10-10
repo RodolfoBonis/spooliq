@@ -2,9 +2,11 @@ package usecases
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,6 +32,13 @@ import (
 // @Security Bearer
 func (uc *BrandUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
 
 	// Log brand update attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brand update attempt started", map[string]interface{}{
@@ -82,7 +91,7 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 		return
 	}
 
-	brand, err := uc.repository.FindByID(id)
+	brand, err := uc.repository.FindByID(id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Brand not found")
@@ -112,7 +121,7 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 
 	// Check if another brand with the same name exists (excluding current brand)
 	if request.Name != brand.Name {
-		exists, err := uc.repository.Exists(request.Name)
+		exists, err := uc.repository.Exists(request.Name, organizationID)
 		if err != nil {
 			// Enhanced logging with automatic trace correlation
 			uc.logger.Error(ctx, "Failed to check brand name existence", map[string]interface{}{

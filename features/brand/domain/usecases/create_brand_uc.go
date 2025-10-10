@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
@@ -25,6 +26,14 @@ import (
 // @Security Bearer
 func (uc *BrandUseCase) Create(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
 
 	// Log brand creation attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brand creation attempt started", map[string]interface{}{
@@ -60,7 +69,7 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	exists, err := uc.repository.Exists(request.Name)
+	exists, err := uc.repository.Exists(request.Name, organizationID)
 	if err != nil {
 		// Enhanced logging with automatic trace correlation
 		uc.logger.Error(ctx, "Failed to check brand existence", map[string]interface{}{

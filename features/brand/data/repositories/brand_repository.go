@@ -21,9 +21,11 @@ func NewBrandRepository(db *gorm.DB) repositories.BrandRepository {
 	}
 }
 
-func (b *brandRepository) FindByID(id uuid.UUID) (*entities.BrandEntity, error) {
+func (b *brandRepository) FindByID(id uuid.UUID, organizationID string) (*entities.BrandEntity, error) {
 	var brand models.BrandModel
-	err := b.db.Model(models.BrandModel{}).Where("id = ?", id).First(&brand).Error
+	err := b.db.Model(models.BrandModel{}).
+		Where("id = ? AND organization_id = ?", id, organizationID).
+		First(&brand).Error
 	if err != nil {
 		return nil, err
 	}
@@ -33,9 +35,12 @@ func (b *brandRepository) FindByID(id uuid.UUID) (*entities.BrandEntity, error) 
 	return &entity, nil
 }
 
-func (b *brandRepository) FindAll() ([]entities.BrandEntity, error) {
+func (b *brandRepository) FindAll(organizationID string) ([]entities.BrandEntity, error) {
 	var brandsData []models.BrandModel
-	err := b.db.Order("name ASC").Find(&brandsData).Error
+	err := b.db.
+		Where("organization_id = ?", organizationID).
+		Order("name ASC").
+		Find(&brandsData).Error
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +80,11 @@ func (b *brandRepository) Update(entity *entities.BrandEntity) error {
 	return b.db.Model(brand).Where("id = ?", brand.ID).Updates(brand).Error
 }
 
-func (b *brandRepository) Exists(name string) (bool, error) {
+func (b *brandRepository) Exists(name string, organizationID string) (bool, error) {
 	var count int64
-	err := b.db.Model(models.BrandModel{}).Where("name = ?", name).Count(&count).Error
+	err := b.db.Model(models.BrandModel{}).
+		Where("name = ? AND organization_id = ?", name, organizationID).
+		Count(&count).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil

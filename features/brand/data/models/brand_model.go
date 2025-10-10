@@ -9,12 +9,13 @@ import (
 
 // BrandModel represents the database model for brand entities.
 type BrandModel struct {
-	ID          uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name        string     `gorm:"type:varchar(255);not null" json:"name"`
-	Description string     `gorm:"type:text" json:"description,omitempty"`
-	CreatedAt   time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt   time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt   *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_brand_org" json:"organization_id"`
+	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
+	Description    string     `gorm:"type:text" json:"description,omitempty"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // TableName returns the table name for the brand model.
@@ -26,6 +27,7 @@ func (b *BrandModel) FromEntity(entity *entities.BrandEntity) {
 	if entity.ID != uuid.Nil {
 		b.ID = entity.ID
 	}
+	b.OrganizationID = entity.OrganizationID
 	b.Name = entity.Name
 	b.Description = entity.Description
 	// Let GORM handle timestamps
@@ -41,11 +43,12 @@ func (b *BrandModel) FromEntity(entity *entities.BrandEntity) {
 // ToEntity converts the BrandModel to a BrandEntity.
 func (b *BrandModel) ToEntity() entities.BrandEntity {
 	return entities.BrandEntity{
-		ID:          b.ID,
-		Name:        b.Name,
-		Description: b.Description,
-		CreatedAt:   b.CreatedAt,
-		UpdatedAt:   b.UpdatedAt,
-		DeletedAt:   b.DeletedAt,
+		ID:             b.ID,
+		OrganizationID: b.OrganizationID,
+		Name:           b.Name,
+		Description:    b.Description,
+		CreatedAt:      b.CreatedAt,
+		UpdatedAt:      b.UpdatedAt,
+		DeletedAt:      b.DeletedAt,
 	}
 }

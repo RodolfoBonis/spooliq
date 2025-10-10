@@ -10,7 +10,7 @@ type BrandRepository interface {
 	Create(brand *entities.BrandEntity) error
 	Update(brand *entities.BrandEntity) error
 	Delete(id uuid.UUID) error
-	FindByID(id uuid.UUID) (*entities.BrandEntity, error)
-	FindAll() ([]entities.BrandEntity, error)
-	Exists(name string) (bool, error)
+	FindByID(id uuid.UUID, organizationID string) (*entities.BrandEntity, error)
+	FindAll(organizationID string) ([]entities.BrandEntity, error)
+	Exists(name string, organizationID string) (bool, error)
 }

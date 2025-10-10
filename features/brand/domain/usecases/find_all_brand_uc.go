@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"net/http"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -26,13 +27,21 @@ import (
 func (uc *BrandUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+
 	// Log brands retrieval attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brands retrieval attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),
 		"user_agent": c.Request.UserAgent(),
 	})
 
-	brands, err := uc.repository.FindAll()
+	brands, err := uc.repository.FindAll(organizationID)
 
 	if err != nil {
 		// Enhanced logging with automatic trace correlation

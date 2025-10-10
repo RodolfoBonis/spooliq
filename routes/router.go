@@ -21,6 +21,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
 	uploadsuc "github.com/RodolfoBonis/spooliq/features/uploads/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/users"
 	"github.com/RodolfoBonis/spooliq/features/webhooks"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,6 +43,7 @@ func InitializeRoutes(
 	uploadsUc uploadsuc.IUploadUseCase,
 	presetHandler *preset.Handler,
 	webhookHandler *webhooks.Handler,
+	userHandler *users.Handler,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
@@ -62,5 +64,6 @@ func InitializeRoutes(
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	preset.SetupRoutes(root, presetHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
+	users.SetupRoutes(root, userHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
 }

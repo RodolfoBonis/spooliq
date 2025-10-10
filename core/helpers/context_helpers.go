@@ -61,3 +61,14 @@ func IsPlatformAdmin(c *gin.Context) bool {
 func GetOrganizationIDString(c *gin.Context) string {
 	return GetOrganizationID(c)
 }
+
+// GetUserRoles extracts user roles from Gin context
+// Returns empty slice if not found
+func GetUserRoles(c *gin.Context) []string {
+	if roles, exists := c.Get("user_roles"); exists {
+		if rolesSlice, ok := roles.([]string); ok {
+			return rolesSlice
+		}
+	}
+	return []string{}
+}

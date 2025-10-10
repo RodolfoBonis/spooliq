@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	sysRoles "github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -32,40 +31,4 @@ func NewCustomerUseCase(repository repositories.CustomerRepository, logger logge
 		validator:  validator.New(),
 		logger:     logger,
 	}
-}
-
-// isAdmin checks if the user has admin role
-func isAdmin(c *gin.Context) bool {
-	rolesInterface, exists := c.Get("user_roles")
-	if !exists {
-		return false
-	}
-
-	roles, ok := rolesInterface.([]string)
-	if !ok {
-		return false
-	}
-
-	for _, role := range roles {
-		if role == string(sysRoles.AdminRole) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// getUserID retrieves the user ID from context
-func getUserID(c *gin.Context) string {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		return ""
-	}
-
-	userIDStr, ok := userID.(string)
-	if !ok {
-		return ""
-	}
-
-	return userIDStr
 }

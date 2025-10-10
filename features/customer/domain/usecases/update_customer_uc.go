@@ -5,6 +5,7 @@ import (
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -33,15 +34,13 @@ func (uc *CustomerUseCase) Update(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		appError := coreErrors.UsecaseError("Organization ID not found in context")
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
-
-	admin := isAdmin(c)
 
 	// Parse customer ID
 	customerID, err := uuid.Parse(c.Param("id"))
@@ -75,7 +74,7 @@ func (uc *CustomerUseCase) Update(c *gin.Context) {
 	}
 
 	// Get existing customer
-	customer, err := uc.repository.FindByID(ctx, customerID, userID, admin)
+	customer, err := uc.repository.FindByID(ctx, customerID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve customer", map[string]interface{}{
 			"error":       err.Error(),
@@ -88,7 +87,7 @@ func (uc *CustomerUseCase) Update(c *gin.Context) {
 	// Check if email is being changed and if it already exists
 	if request.Email != nil && *request.Email != "" {
 		if customer.Email == nil || *customer.Email != *request.Email {
-			exists, err := uc.repository.ExistsByEmail(ctx, *request.Email, userID, &customerID)
+			exists, err := uc.repository.ExistsByEmail(ctx, *request.Email, organizationID, &customerID)
 			if err != nil {
 				uc.logger.Error(ctx, "Failed to check email existence", map[string]interface{}{
 					"error": err.Error(),

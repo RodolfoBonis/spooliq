@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -30,15 +31,13 @@ func (uc *CustomerUseCase) Delete(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		appError := coreErrors.UsecaseError("Organization ID not found in context")
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
-
-	admin := isAdmin(c)
 
 	// Parse customer ID
 	customerID, err := uuid.Parse(c.Param("id"))
@@ -52,7 +51,7 @@ func (uc *CustomerUseCase) Delete(c *gin.Context) {
 	}
 
 	// Check if customer exists and user has permission
-	customer, err := uc.repository.FindByID(ctx, customerID, userID, admin)
+	customer, err := uc.repository.FindByID(ctx, customerID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve customer", map[string]interface{}{
 			"error":       err.Error(),

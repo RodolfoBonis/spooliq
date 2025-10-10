@@ -30,17 +30,12 @@ func (r *customerRepositoryImpl) Create(ctx context.Context, customer *entities.
 	return nil
 }
 
-func (r *customerRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, userID string, isAdmin bool) (*entities.CustomerEntity, error) {
+func (r *customerRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.CustomerEntity, error) {
 	model := &models.CustomerModel{}
 
-	query := r.db.WithContext(ctx)
-
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
-
-	if err := query.First(model, "id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Where("id = ? AND organization_id = ?", id, organizationID).
+		First(model).Error; err != nil {
 		return nil, fmt.Errorf("customer not found: %w", err)
 	}
 
@@ -69,16 +64,13 @@ func (r *customerRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-func (r *customerRepositoryImpl) FindAll(ctx context.Context, userID string, isAdmin bool, limit, offset int) ([]*entities.CustomerEntity, int, error) {
+func (r *customerRepositoryImpl) FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.CustomerEntity, int, error) {
 	var customers []*models.CustomerModel
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&models.CustomerModel{})
-
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
+	query := r.db.WithContext(ctx).
+		Model(&models.CustomerModel{}).
+		Where("organization_id = ?", organizationID)
 
 	// Get total count
 	if err := query.Count(&total).Error; err != nil {
@@ -103,45 +95,13 @@ func (r *customerRepositoryImpl) FindAll(ctx context.Context, userID string, isA
 	return entities, int(total), nil
 }
 
-func (r *customerRepositoryImpl) FindByOwner(ctx context.Context, userID string, limit, offset int) ([]*entities.CustomerEntity, int, error) {
+func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.CustomerEntity, int, error) {
 	var customers []*models.CustomerModel
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&models.CustomerModel{}).Where("owner_user_id = ?", userID)
-
-	// Get total count
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to count customers: %w", err)
-	}
-
-	// Get paginated results
-	if err := query.
-		Limit(limit).
-		Offset(offset).
-		Order("created_at DESC").
-		Find(&customers).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to find customers: %w", err)
-	}
-
-	// Convert to entities
-	entities := make([]*entities.CustomerEntity, len(customers))
-	for i, model := range customers {
-		entities[i] = model.ToEntity()
-	}
-
-	return entities, int(total), nil
-}
-
-func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, userID string, isAdmin bool, filters map[string]interface{}, limit, offset int) ([]*entities.CustomerEntity, int, error) {
-	var customers []*models.CustomerModel
-	var total int64
-
-	query := r.db.WithContext(ctx).Model(&models.CustomerModel{})
-
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
+	query := r.db.WithContext(ctx).
+		Model(&models.CustomerModel{}).
+		Where("organization_id = ?", organizationID)
 
 	// Apply filters
 	if name, ok := filters["name"].(string); ok && name != "" {
@@ -202,11 +162,12 @@ func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, userID str
 	return entities, int(total), nil
 }
 
-func (r *customerRepositoryImpl) ExistsByEmail(ctx context.Context, email string, ownerUserID string, excludeID *uuid.UUID) (bool, error) {
+func (r *customerRepositoryImpl) ExistsByEmail(ctx context.Context, email string, organizationID string, excludeID *uuid.UUID) (bool, error) {
 	var count int64
 
-	query := r.db.WithContext(ctx).Model(&models.CustomerModel{}).
-		Where("email = ? AND owner_user_id = ?", email, ownerUserID)
+	query := r.db.WithContext(ctx).
+		Model(&models.CustomerModel{}).
+		Where("email = ? AND organization_id = ?", email, organizationID)
 
 	if excludeID != nil {
 		query = query.Where("id != ?", *excludeID)

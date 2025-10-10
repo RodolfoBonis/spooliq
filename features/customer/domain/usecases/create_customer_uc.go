@@ -5,6 +5,7 @@ import (
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,7 +32,15 @@ func (uc *CustomerUseCase) Create(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
-	userID := getUserID(c)
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		appError := coreErrors.UsecaseError("Organization ID not found in context")
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	userID := helpers.GetUserID(c)
 	if userID == "" {
 		uc.logger.Error(ctx, "User ID not found in context", nil)
 		appError := coreErrors.UsecaseError("User ID not found in context")
@@ -59,9 +68,9 @@ func (uc *CustomerUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Check if email already exists for this owner
+	// Check if email already exists for this organization
 	if request.Email != nil && *request.Email != "" {
-		exists, err := uc.repository.ExistsByEmail(ctx, *request.Email, userID, nil)
+		exists, err := uc.repository.ExistsByEmail(ctx, *request.Email, organizationID, nil)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to check email existence", map[string]interface{}{
 				"error": err.Error(),
@@ -83,20 +92,21 @@ func (uc *CustomerUseCase) Create(c *gin.Context) {
 
 	// Create customer entity
 	customer := &entities.CustomerEntity{
-		ID:          uuid.New(),
-		Name:        request.Name,
-		Email:       request.Email,
-		Phone:       request.Phone,
-		Document:    request.Document,
-		Address:     request.Address,
-		City:        request.City,
-		State:       request.State,
-		ZipCode:     request.ZipCode,
-		Notes:       request.Notes,
-		OwnerUserID: userID,
-		IsActive:    true,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Name:           request.Name,
+		Email:          request.Email,
+		Phone:          request.Phone,
+		Document:       request.Document,
+		Address:        request.Address,
+		City:           request.City,
+		State:          request.State,
+		ZipCode:        request.ZipCode,
+		Notes:          request.Notes,
+		OwnerUserID:    userID,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// Save to repository

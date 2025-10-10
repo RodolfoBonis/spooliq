@@ -5,6 +5,7 @@ import (
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -105,7 +106,8 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 	if request.CustomerID != nil {
 		// Verify customer exists and user has permission
-		customer, err := uc.customerRepository.FindByID(ctx, *request.CustomerID, userID, admin)
+		organizationID := helpers.GetOrganizationID(c)
+		customer, err := uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID)
 		if err != nil {
 			uc.logger.Error(ctx, "Customer not found", map[string]interface{}{
 				"error":       err.Error(),

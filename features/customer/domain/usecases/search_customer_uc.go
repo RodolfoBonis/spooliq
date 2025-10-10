@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -38,15 +39,13 @@ func (uc *CustomerUseCase) Search(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		appError := coreErrors.UsecaseError("Organization ID not found in context")
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
-
-	admin := isAdmin(c)
 
 	var request entities.SearchCustomerRequest
 	if err := c.ShouldBindQuery(&request); err != nil {
@@ -104,7 +103,7 @@ func (uc *CustomerUseCase) Search(c *gin.Context) {
 	filters["sort_dir"] = request.SortDir
 
 	// Search customers
-	customers, total, err := uc.repository.SearchCustomers(ctx, userID, admin, filters, request.PageSize, offset)
+	customers, total, err := uc.repository.SearchCustomers(ctx, organizationID, filters, request.PageSize, offset)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to search customers", map[string]interface{}{
 			"error": err.Error(),

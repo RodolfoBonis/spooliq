@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -30,15 +31,13 @@ func (uc *CustomerUseCase) FindAll(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		appError := coreErrors.UsecaseError("Organization ID not found in context")
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
-
-	admin := isAdmin(c)
 
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -54,7 +53,7 @@ func (uc *CustomerUseCase) FindAll(c *gin.Context) {
 	offset := (page - 1) * pageSize
 
 	// Get customers from repository
-	customers, total, err := uc.repository.FindAll(ctx, userID, admin, pageSize, offset)
+	customers, total, err := uc.repository.FindAll(ctx, organizationID, pageSize, offset)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve customers", map[string]interface{}{
 			"error": err.Error(),

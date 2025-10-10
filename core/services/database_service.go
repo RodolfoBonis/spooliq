@@ -10,6 +10,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
+	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
@@ -257,6 +258,13 @@ func RunMigrations() {
 		err := Connector.AutoMigrate(&materials.MaterialModel{})
 		if err != nil {
 			panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&filaments.FilamentModel{}) {
+		err := Connector.AutoMigrate(&filaments.FilamentModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING FILAMENT MIGRATION: %s", err.Error()))
 		}
 	}
 

@@ -561,6 +561,442 @@
                 }
             }
         },
+        "/filaments": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Find all 3D printing filaments (user's own + global catalog)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Find All Filaments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved filaments",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllFilamentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new 3D printing filament",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Create Filament",
+                "parameters": [
+                    {
+                        "description": "Filament data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateFilamentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created filament",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FilamentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/search": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Search 3D printing filaments with various filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Search Filaments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by name (partial match)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by brand ID (UUID)",
+                        "name": "brand_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by material ID (UUID)",
+                        "name": "material_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by color type (solid, gradient, duo, rainbow)",
+                        "name": "color_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filter by diameter (exact match)",
+                        "name": "diameter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum price per kg",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum price per kg",
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved filaments",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllFilamentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieve a single filament by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Find Filament By ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved filament",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FilamentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing 3D printing filament",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Update Filament",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Filament update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateFilamentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated filament",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FilamentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete a 3D printing filament (soft delete)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Delete Filament",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted filament"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/materials": {
             "get": {
                 "security": [
@@ -1718,6 +2154,43 @@
                 }
             }
         },
+        "entities.BrandInfo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ColorType": {
+            "type": "string",
+            "enum": [
+                "solid",
+                "gradient",
+                "duo",
+                "rainbow",
+                "metallic",
+                "transparent",
+                "wood-fill",
+                "carbon-fiber"
+            ],
+            "x-enum-varnames": [
+                "ColorTypeSolid",
+                "ColorTypeGradient",
+                "ColorTypeDuo",
+                "ColorTypeRainbow",
+                "ColorTypeMetallic",
+                "ColorTypeTransparent",
+                "ColorTypeWoodFill",
+                "ColorTypeCarbonFiber"
+            ]
+        },
         "entities.CostPresetEntity": {
             "type": "object",
             "properties": {
@@ -1749,6 +2222,93 @@
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.CreateFilamentRequest": {
+            "type": "object",
+            "required": [
+                "brand_id",
+                "color",
+                "diameter",
+                "material_id",
+                "name",
+                "price_per_kg"
+            ],
+            "properties": {
+                "bed_temperature": {
+                    "type": "integer",
+                    "maximum": 300,
+                    "minimum": 0
+                },
+                "brand_id": {
+                    "type": "string"
+                },
+                "color": {
+                    "description": "Color configuration",
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "color_data": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "color_type": {
+                    "$ref": "#/definitions/entities.ColorType"
+                },
+                "density": {
+                    "description": "Technical specifications",
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "diameter": {
+                    "description": "Physical properties",
+                    "type": "number",
+                    "maximum": 10
+                },
+                "hardness": {
+                    "type": "string"
+                },
+                "material_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "owner_user_id": {
+                    "description": "Ownership",
+                    "type": "string"
+                },
+                "price_per_kg": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "price_per_meter": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "print_temperature": {
+                    "type": "integer",
+                    "maximum": 500,
+                    "minimum": 0
+                },
+                "url": {
+                    "description": "Additional properties",
+                    "type": "string"
+                },
+                "uv_resistance": {
+                    "type": "boolean"
+                },
+                "weight": {
                     "type": "number"
                 }
             }
@@ -1788,6 +2348,202 @@
                 }
             }
         },
+        "entities.FilamentEntity": {
+            "type": "object",
+            "properties": {
+                "bed_temperature": {
+                    "description": "°C",
+                    "type": "integer"
+                },
+                "brand_id": {
+                    "description": "Foreign keys for metadata",
+                    "type": "string"
+                },
+                "color": {
+                    "description": "Legacy color fields (maintained for backward compatibility)",
+                    "type": "string"
+                },
+                "color_data": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "color_preview": {
+                    "type": "string"
+                },
+                "color_type": {
+                    "description": "Advanced color system",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ColorType"
+                        }
+                    ]
+                },
+                "created_at": {
+                    "description": "Timestamps",
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "density": {
+                    "description": "Technical specifications",
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diameter": {
+                    "description": "Physical properties",
+                    "type": "number"
+                },
+                "hardness": {
+                    "description": "Shore hardness",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "material_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_user_id": {
+                    "description": "Ownership and access control",
+                    "type": "string"
+                },
+                "price_per_kg": {
+                    "type": "number"
+                },
+                "price_per_meter": {
+                    "type": "number"
+                },
+                "print_temperature": {
+                    "description": "°C",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "description": "Additional properties",
+                    "type": "string"
+                },
+                "uv_resistance": {
+                    "type": "boolean"
+                },
+                "weight": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.FilamentResponse": {
+            "type": "object",
+            "properties": {
+                "bed_temperature": {
+                    "description": "°C",
+                    "type": "integer"
+                },
+                "brand": {
+                    "$ref": "#/definitions/entities.BrandInfo"
+                },
+                "brand_id": {
+                    "description": "Foreign keys for metadata",
+                    "type": "string"
+                },
+                "color": {
+                    "description": "Legacy color fields (maintained for backward compatibility)",
+                    "type": "string"
+                },
+                "color_data": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "color_preview": {
+                    "type": "string"
+                },
+                "color_type": {
+                    "description": "Advanced color system",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ColorType"
+                        }
+                    ]
+                },
+                "created_at": {
+                    "description": "Timestamps",
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "density": {
+                    "description": "Technical specifications",
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diameter": {
+                    "description": "Physical properties",
+                    "type": "number"
+                },
+                "hardness": {
+                    "description": "Shore hardness",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "material": {
+                    "$ref": "#/definitions/entities.MaterialInfo"
+                },
+                "material_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_user_id": {
+                    "description": "Ownership and access control",
+                    "type": "string"
+                },
+                "price_per_kg": {
+                    "type": "number"
+                },
+                "price_per_meter": {
+                    "type": "number"
+                },
+                "print_temperature": {
+                    "description": "°C",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "description": "Additional properties",
+                    "type": "string"
+                },
+                "uv_resistance": {
+                    "type": "boolean"
+                },
+                "weight": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.FindAllBrandsResponse": {
             "type": "object",
             "properties": {
@@ -1796,6 +2552,29 @@
                     "items": {
                         "$ref": "#/definitions/entities.BrandEntity"
                     }
+                }
+            }
+        },
+        "entities.FindAllFilamentsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.FilamentEntity"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -1923,6 +2702,26 @@
                 }
             }
         },
+        "entities.MaterialInfo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "temp_extruder": {
+                    "type": "number"
+                },
+                "temp_table": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.PresetEntity": {
             "type": "object",
             "properties": {
@@ -1982,6 +2781,91 @@
                 "password": {
                     "description": "User password",
                     "type": "string"
+                }
+            }
+        },
+        "entities.UpdateFilamentRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "bed_temperature": {
+                    "type": "integer",
+                    "maximum": 300,
+                    "minimum": 0
+                },
+                "brand_id": {
+                    "type": "string"
+                },
+                "color": {
+                    "description": "Color configuration",
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "color_data": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "color_type": {
+                    "$ref": "#/definitions/entities.ColorType"
+                },
+                "density": {
+                    "description": "Technical specifications",
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "diameter": {
+                    "description": "Physical properties",
+                    "type": "number",
+                    "maximum": 10
+                },
+                "hardness": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "description": "Status",
+                    "type": "boolean"
+                },
+                "material_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "price_per_kg": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "price_per_meter": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "print_temperature": {
+                    "type": "integer",
+                    "maximum": 500,
+                    "minimum": 0
+                },
+                "url": {
+                    "description": "Additional properties",
+                    "type": "string"
+                },
+                "uv_resistance": {
+                    "type": "boolean"
+                },
+                "weight": {
+                    "type": "number"
                 }
             }
         },

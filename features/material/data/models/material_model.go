@@ -9,13 +9,13 @@ import (
 
 // MaterialModel represents a 3D printing material in the database
 type MaterialModel struct {
-	ID           uuid.UUID  `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
+	ID           uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	Name         string     `gorm:"type:varchar(255);not null" json:"name"`
 	Description  string     `gorm:"type:text" json:"description,omitempty"`
 	TempTable    float32    `gorm:"type:float" json:"tempTable,omitempty"`
 	TempExtruder float32    `gorm:"type:float" json:"tempExtruder,omitempty"`
-	CreatedAt    time.Time  `gorm:"<-:create;type:timestamp;" json:"created_at,omitempty"`
-	UpdatedAt    time.Time  `gorm:"<-:update;type:timestamp;" json:"updated_at,omitempty"`
+	CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt    time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
 	DeletedAt    *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
@@ -24,13 +24,21 @@ func (m *MaterialModel) TableName() string { return "materials" }
 
 // FromEntity populates the MaterialModel from a MaterialEntity.
 func (m *MaterialModel) FromEntity(entity *entities.MaterialEntity) {
-	m.ID = entity.ID
+	// Only set ID if it's not zero (for updates)
+	if entity.ID != uuid.Nil {
+		m.ID = entity.ID
+	}
 	m.Name = entity.Name
 	m.Description = entity.Description
 	m.TempTable = entity.TempTable
 	m.TempExtruder = entity.TempExtruder
-	m.CreatedAt = entity.CreatedAt
-	m.UpdatedAt = entity.UpdatedAt
+	// Let GORM handle timestamps
+	if !entity.CreatedAt.IsZero() {
+		m.CreatedAt = entity.CreatedAt
+	}
+	if !entity.UpdatedAt.IsZero() {
+		m.UpdatedAt = entity.UpdatedAt
+	}
 	m.DeletedAt = entity.DeletedAt
 }
 

@@ -73,40 +73,72 @@ func (e *AppError) ToHTTPError() *HTTPError {
 
 // EntityError creates a new entity error.
 func EntityError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrEntity, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrEntity, message, context, nil)
 }
 
 // EnvironmentError creates a new environment error.
 func EnvironmentError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrEnvironment, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrEnvironment, message, context, nil)
 }
 
 // MiddlewareError creates a new middleware error.
 func MiddlewareError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrMiddleware, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrMiddleware, message, context, nil)
 }
 
 // ModelError creates a new model error.
 func ModelError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrModel, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrModel, message, context, nil)
 }
 
 // RepositoryError creates a new repository error.
 func RepositoryError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrRepository, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrRepository, message, context, nil)
 }
 
 // RootError creates a new root error.
 func RootError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrRoot, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrRoot, message, context, nil)
 }
 
 // ServiceError creates a new service error.
 func ServiceError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrService, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrService, message, context, nil)
 }
 
 // UsecaseError creates a new use case error.
 func UsecaseError(message string, ctx ...map[string]interface{}) *AppError {
-	return NewAppError(entities.ErrUsecase, message, ctx[0], nil)
+	var context map[string]interface{}
+	if len(ctx) > 0 {
+		context = ctx[0]
+	}
+	return NewAppError(entities.ErrUsecase, message, context, nil)
 }

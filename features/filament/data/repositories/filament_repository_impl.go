@@ -1,0 +1,245 @@
+package repositories
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/RodolfoBonis/spooliq/features/filament/data/models"
+	"github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
+	"github.com/RodolfoBonis/spooliq/features/filament/domain/repositories"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+type filamentRepositoryImpl struct {
+	db *gorm.DB
+}
+
+// NewFilamentRepository creates a new instance of FilamentRepository
+func NewFilamentRepository(db *gorm.DB) repositories.FilamentRepository {
+	return &filamentRepositoryImpl{db: db}
+}
+
+// Create creates a new filament in the database
+func (r *filamentRepositoryImpl) Create(ctx context.Context, filament *entities.FilamentEntity) error {
+	model := &models.FilamentModel{}
+	model.FromEntity(filament)
+
+	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
+		return fmt.Errorf("failed to create filament: %w", err)
+	}
+
+	// Update entity with generated values
+	*filament = *model.ToEntity()
+	return nil
+}
+
+// FindByID finds a filament by ID with access control
+func (r *filamentRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, userID string, isAdmin bool) (*entities.FilamentEntity, error) {
+	model := &models.FilamentModel{}
+
+	query := r.db.WithContext(ctx)
+
+	// Apply access control
+	if !isAdmin {
+		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", userID)
+	}
+
+	if err := query.First(model, "id = ?", id).Error; err != nil {
+		return nil, fmt.Errorf("filament not found: %w", err)
+	}
+
+	return model.ToEntity(), nil
+}
+
+// Update updates an existing filament
+func (r *filamentRepositoryImpl) Update(ctx context.Context, filament *entities.FilamentEntity) error {
+	model := &models.FilamentModel{}
+	model.FromEntity(filament)
+
+	// Use Updates instead of Save to avoid issues with zero values
+	if err := r.db.WithContext(ctx).
+		Model(&models.FilamentModel{}).
+		Where("id = ?", filament.ID).
+		Updates(model).Error; err != nil {
+		return fmt.Errorf("failed to update filament: %w", err)
+	}
+
+	return nil
+}
+
+// Delete soft deletes a filament
+func (r *filamentRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Delete(&models.FilamentModel{}, "id = ?", id).Error; err != nil {
+		return fmt.Errorf("failed to delete filament: %w", err)
+	}
+
+	return nil
+}
+
+// FindAll retrieves all filaments accessible by the user with pagination
+func (r *filamentRepositoryImpl) FindAll(ctx context.Context, userID string, isAdmin bool, limit, offset int) ([]*entities.FilamentEntity, int, error) {
+	var filaments []models.FilamentModel
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&models.FilamentModel{})
+
+	// Apply access control
+	if !isAdmin {
+		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", userID)
+	}
+
+	// Get total count
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count filaments: %w", err)
+	}
+
+	// Get paginated results
+	if err := query.
+		Limit(limit).
+		Offset(offset).
+		Order("created_at DESC").
+		Find(&filaments).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to find filaments: %w", err)
+	}
+
+	// Convert to entities
+	entities := make([]*entities.FilamentEntity, len(filaments))
+	for i, model := range filaments {
+		entities[i] = model.ToEntity()
+	}
+
+	return entities, int(total), nil
+}
+
+// SearchFilaments searches filaments with filters
+func (r *filamentRepositoryImpl) SearchFilaments(ctx context.Context, userID string, isAdmin bool, filters map[string]interface{}, limit, offset int) ([]*entities.FilamentEntity, int, error) {
+	var filaments []models.FilamentModel
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&models.FilamentModel{})
+
+	// Apply access control
+	if !isAdmin {
+		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", userID)
+	}
+
+	// Apply filters
+	if name, ok := filters["name"]; ok {
+		query = query.Where("name ILIKE ?", fmt.Sprintf("%%%s%%", name))
+	}
+
+	if brandID, ok := filters["brand_id"]; ok {
+		query = query.Where("brand_id = ?", brandID)
+	}
+
+	if materialID, ok := filters["material_id"]; ok {
+		query = query.Where("material_id = ?", materialID)
+	}
+
+	if colorType, ok := filters["color_type"]; ok {
+		query = query.Where("color_type = ?", colorType)
+	}
+
+	if diameter, ok := filters["diameter"]; ok {
+		query = query.Where("diameter = ?", diameter)
+	}
+
+	if minPrice, ok := filters["min_price"]; ok {
+		query = query.Where("price_per_kg >= ?", minPrice)
+	}
+
+	if maxPrice, ok := filters["max_price"]; ok {
+		query = query.Where("price_per_kg <= ?", maxPrice)
+	}
+
+	// Get total count
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count filaments: %w", err)
+	}
+
+	// Get paginated results
+	if err := query.
+		Limit(limit).
+		Offset(offset).
+		Order("created_at DESC").
+		Find(&filaments).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to search filaments: %w", err)
+	}
+
+	// Convert to entities
+	entities := make([]*entities.FilamentEntity, len(filaments))
+	for i, model := range filaments {
+		entities[i] = model.ToEntity()
+	}
+
+	return entities, int(total), nil
+}
+
+// ExistsByNameAndBrand checks if a filament with the given name and brand already exists
+func (r *filamentRepositoryImpl) ExistsByNameAndBrand(ctx context.Context, name string, brandID uuid.UUID, excludeID *uuid.UUID) (bool, error) {
+	var count int64
+
+	query := r.db.WithContext(ctx).Model(&models.FilamentModel{}).
+		Where("name = ? AND brand_id = ?", name, brandID)
+
+	if excludeID != nil {
+		query = query.Where("id != ?", *excludeID)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return false, fmt.Errorf("failed to check filament existence: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+// GetBrandInfo fetches brand information by ID
+func (r *filamentRepositoryImpl) GetBrandInfo(ctx context.Context, brandID uuid.UUID) (*entities.BrandInfo, error) {
+	var brand struct {
+		ID          uuid.UUID `gorm:"column:id"`
+		Name        string    `gorm:"column:name"`
+		Description string    `gorm:"column:description"`
+	}
+
+	if err := r.db.WithContext(ctx).
+		Table("brands").
+		Select("id, name, description").
+		Where("id = ?", brandID).
+		First(&brand).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch brand: %w", err)
+	}
+
+	return &entities.BrandInfo{
+		ID:          brand.ID.String(),
+		Name:        brand.Name,
+		Description: brand.Description,
+	}, nil
+}
+
+// GetMaterialInfo fetches material information by ID
+func (r *filamentRepositoryImpl) GetMaterialInfo(ctx context.Context, materialID uuid.UUID) (*entities.MaterialInfo, error) {
+	var material struct {
+		ID           uuid.UUID `gorm:"column:id"`
+		Name         string    `gorm:"column:name"`
+		Description  string    `gorm:"column:description"`
+		TempTable    float32   `gorm:"column:temp_table"`
+		TempExtruder float32   `gorm:"column:temp_extruder"`
+	}
+
+	if err := r.db.WithContext(ctx).
+		Table("materials").
+		Select("id, name, description, temp_table, temp_extruder").
+		Where("id = ?", materialID).
+		First(&material).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch material: %w", err)
+	}
+
+	return &entities.MaterialInfo{
+		ID:           material.ID.String(),
+		Name:         material.Name,
+		Description:  material.Description,
+		TempTable:    material.TempTable,
+		TempExtruder: material.TempExtruder,
+	}, nil
+}

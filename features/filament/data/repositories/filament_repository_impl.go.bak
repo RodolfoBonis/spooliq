@@ -34,13 +34,20 @@ func (r *filamentRepositoryImpl) Create(ctx context.Context, filament *entities.
 	return nil
 }
 
-// FindByID finds a filament by ID with organization filtering
+// FindByID finds a filament by ID with access control
 func (r *filamentRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.FilamentEntity, error) {
 	model := &models.FilamentModel{}
 
-	if err := r.db.WithContext(ctx).
-		Where("id = ? AND organization_id = ?", id, organizationID).
-		First(model).Error; err != nil {
+	query := r.db.WithContext(ctx)
+
+	query = query.Where("organization_id = ?", organizationID)
+
+	// Apply access control
+	if !isAdmin {
+		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", userID)
+	}
+
+	if err := query.First(model, "id = ?", id).Error; err != nil {
 		return nil, fmt.Errorf("filament not found: %w", err)
 	}
 
@@ -73,14 +80,16 @@ func (r *filamentRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // FindAll retrieves all filaments accessible by the user with pagination
-func (r *filamentRepositoryImpl) FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.FilamentEntity, int, error) {
+func (r *filamentRepositoryImpl) FindAll(ctx context.Context, userID string, isAdmin bool, limit, offset int) ([]*entities.FilamentEntity, int, error) {
 	var filaments []models.FilamentModel
 	var total int64
 
 	query := r.db.WithContext(ctx).Model(&models.FilamentModel{})
 
-	// Filter by organization
-	query = query.Where("organization_id = ?", organizationID)
+	// Apply access control
+	if !isAdmin {
+		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", userID)
+	}
 
 	// Get total count
 	if err := query.Count(&total).Error; err != nil {
@@ -106,14 +115,16 @@ func (r *filamentRepositoryImpl) FindAll(ctx context.Context, organizationID str
 }
 
 // SearchFilaments searches filaments with filters
-func (r *filamentRepositoryImpl) SearchFilaments(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.FilamentEntity, int, error) {
+func (r *filamentRepositoryImpl) SearchFilaments(ctx context.Context, userID string, isAdmin bool, filters map[string]interface{}, limit, offset int) ([]*entities.FilamentEntity, int, error) {
 	var filaments []models.FilamentModel
 	var total int64
 
 	query := r.db.WithContext(ctx).Model(&models.FilamentModel{})
 
-	// Filter by organization
-	query = query.Where("organization_id = ?", organizationID)
+	// Apply access control
+	if !isAdmin {
+		query = query.Where("(owner_user_id IS NULL OR owner_user_id = ?)", userID)
+	}
 
 	// Apply filters
 	if name, ok := filters["name"]; ok {

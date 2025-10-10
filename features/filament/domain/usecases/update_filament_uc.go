@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -33,6 +35,13 @@ import (
 // @Security Bearer
 func (uc *FilamentUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
 
 	// Log filament update attempt
 	uc.logger.Info(ctx, "Filament update attempt started", map[string]interface{}{
@@ -124,7 +133,7 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 	}
 
 	// Fetch existing filament to check ownership
-	existingFilament, err := uc.repository.FindByID(ctx, id, userIDStr, isAdmin)
+	existingFilament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Filament not found")
@@ -267,7 +276,7 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 	}
 
 	// Fetch updated filament with relationships
-	updatedFilament, err := uc.repository.FindByID(ctx, id, userIDStr, isAdmin)
+	updatedFilament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to fetch updated filament", map[string]interface{}{
 			"filament_id": id,

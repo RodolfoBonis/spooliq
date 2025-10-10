@@ -9,9 +9,10 @@ import (
 
 // FilamentEntity represents a 3D printing filament in the domain layer
 type FilamentEntity struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description,omitempty"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID string    `json:"organization_id"` // Multi-tenancy
+	Name           string    `json:"name"`
+	Description    string    `json:"description,omitempty"`
 
 	// Foreign keys for metadata
 	BrandID    uuid.UUID `json:"brand_id"`

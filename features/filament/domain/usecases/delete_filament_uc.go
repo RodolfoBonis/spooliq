@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -30,6 +32,13 @@ import (
 // @Security Bearer
 func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
 
 	// Log filament deletion attempt
 	uc.logger.Info(ctx, "Filament deletion attempt started", map[string]interface{}{
@@ -71,7 +80,7 @@ func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	}
 
 	// Fetch existing filament to check ownership
-	existingFilament, err := uc.repository.FindByID(ctx, id, userIDStr, isAdmin)
+	existingFilament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Filament not found")

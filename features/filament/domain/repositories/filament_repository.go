@@ -11,15 +11,15 @@ import (
 type FilamentRepository interface {
 	// Basic CRUD operations
 	Create(ctx context.Context, filament *entities.FilamentEntity) error
-	FindByID(ctx context.Context, id uuid.UUID, userID string, isAdmin bool) (*entities.FilamentEntity, error)
+	FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.FilamentEntity, error)
 	Update(ctx context.Context, filament *entities.FilamentEntity) error
 	Delete(ctx context.Context, id uuid.UUID) error
 
 	// List operations
-	FindAll(ctx context.Context, userID string, isAdmin bool, limit, offset int) ([]*entities.FilamentEntity, int, error)
+	FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.FilamentEntity, int, error)
 
 	// Search operations
-	SearchFilaments(ctx context.Context, userID string, isAdmin bool, filters map[string]interface{}, limit, offset int) ([]*entities.FilamentEntity, int, error)
+	SearchFilaments(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.FilamentEntity, int, error)
 
 	// Validation operations
 	ExistsByNameAndBrand(ctx context.Context, name string, brandID uuid.UUID, excludeID *uuid.UUID) (bool, error)

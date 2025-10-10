@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
+
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/roles"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -32,6 +33,13 @@ import (
 func (uc *FilamentUseCase) FindByID(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
 	// Log filament retrieval attempt
 	uc.logger.Info(ctx, "Filament retrieval attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),
@@ -51,10 +59,6 @@ func (uc *FilamentUseCase) FindByID(c *gin.Context) {
 		return
 	}
 
-	// Check if user is admin
-	userRole, _ := c.Get("user_role")
-	userRoleStr, _ := userRole.(string)
-	isAdmin := userRoleStr == roles.AdminRole
 
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
@@ -71,7 +75,7 @@ func (uc *FilamentUseCase) FindByID(c *gin.Context) {
 		return
 	}
 
-	filament, err := uc.repository.FindByID(ctx, id, userIDStr, isAdmin)
+	filament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Filament not found")

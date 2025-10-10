@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
+
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/roles"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -36,6 +37,13 @@ import (
 func (uc *FilamentUseCase) Search(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
 	// Log filament search attempt
 	uc.logger.Info(ctx, "Filament search attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),
@@ -44,7 +52,7 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 
 	// Extract user data from context
 	userID, _ := c.Get("user_id")
-	userIDStr, ok := userID.(string)
+	_, ok := userID.(string)
 	if !ok {
 		appError := coreErrors.UsecaseError("Invalid user ID in context")
 		httpError := appError.ToHTTPError()
@@ -55,10 +63,6 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 		return
 	}
 
-	// Check if user is admin
-	userRole, _ := c.Get("user_role")
-	userRoleStr, _ := userRole.(string)
-	isAdmin := userRoleStr == roles.AdminRole
 
 	// Parse pagination parameters
 	page := 1
@@ -164,7 +168,7 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 	}
 
 	// Search filaments
-	filaments, total, err := uc.repository.SearchFilaments(ctx, userIDStr, isAdmin, filters, limit, offset)
+	filaments, total, err := uc.repository.SearchFilaments(ctx, organizationID, filters, limit, offset)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to search filaments", map[string]interface{}{
 			"error":   err.Error(),

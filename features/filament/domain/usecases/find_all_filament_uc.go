@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +30,13 @@ import (
 func (uc *FilamentUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
 	// Log filaments retrieval attempt
 	uc.logger.Info(ctx, "Filaments retrieval attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),
@@ -36,7 +45,7 @@ func (uc *FilamentUseCase) FindAll(c *gin.Context) {
 
 	// Extract user data from context
 	userID, _ := c.Get("user_id")
-	userIDStr, ok := userID.(string)
+	_, ok := userID.(string)
 	if !ok {
 		appError := coreErrors.UsecaseError("Invalid user ID in context")
 		httpError := appError.ToHTTPError()
@@ -71,7 +80,7 @@ func (uc *FilamentUseCase) FindAll(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	// Fetch filaments
-	filaments, total, err := uc.repository.FindAll(ctx, userIDStr, isAdmin, limit, offset)
+	filaments, total, err := uc.repository.FindAll(ctx, organizationID, limit, offset)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve filaments", map[string]interface{}{
 			"error": err.Error(),

@@ -11,9 +11,10 @@ import (
 
 // FilamentModel represents the filament data model for GORM
 type FilamentModel struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name        string    `gorm:"type:varchar(255);not null" json:"name"`
-	Description string    `gorm:"type:text" json:"description"`
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_filament_org" json:"organization_id"`
+	Name           string    `gorm:"type:varchar(255);not null" json:"name"`
+	Description    string    `gorm:"type:text" json:"description"`
 
 	// Foreign keys - relationships ignored by GORM during migration
 	BrandID    uuid.UUID `gorm:"type:uuid;not null" json:"brand_id"`
@@ -67,6 +68,7 @@ func (f *FilamentModel) BeforeCreate(tx *gorm.DB) error {
 func (f *FilamentModel) ToEntity() *entities.FilamentEntity {
 	return &entities.FilamentEntity{
 		ID:               f.ID,
+		OrganizationID:   f.OrganizationID,
 		Name:             f.Name,
 		Description:      f.Description,
 		BrandID:          f.BrandID,
@@ -101,6 +103,7 @@ func getDeletedAt(deletedAt gorm.DeletedAt) *time.Time {
 // FromEntity converts domain entity to GORM model
 func (f *FilamentModel) FromEntity(entity *entities.FilamentEntity) {
 	f.ID = entity.ID
+	f.OrganizationID = entity.OrganizationID
 	f.Name = entity.Name
 	f.Description = entity.Description
 	f.BrandID = entity.BrandID

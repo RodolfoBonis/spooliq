@@ -50,7 +50,7 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 	// Check if user is admin
 	userRole, _ := c.Get("user_role")
 	userRoleStr, _ := userRole.(string)
-	isAdmin := userRoleStr == roles.AdminRole
+	isAdmin := userRoleStr == roles.OrgAdmin
 
 	var request filamentEntities.CreateFilamentRequest
 	if err := c.ShouldBindJSON(&request); err != nil {

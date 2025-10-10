@@ -57,6 +57,6 @@ func InitializeRoutes(
 	customer.Routes(root, customerUc, protectFactory)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
-	preset.SetupRoutes(root, presetHandler)
+	preset.SetupRoutes(root, presetHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
 }

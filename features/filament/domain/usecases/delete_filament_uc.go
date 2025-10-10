@@ -62,7 +62,7 @@ func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	// Check if user is admin
 	userRole, _ := c.Get("user_role")
 	userRoleStr, _ := userRole.(string)
-	isAdmin := userRoleStr == roles.AdminRole
+	isAdmin := userRoleStr == roles.OrgAdmin
 
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)

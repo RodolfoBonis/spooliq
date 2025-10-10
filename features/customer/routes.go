@@ -16,6 +16,6 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICustomerUseCase, protectFa
 		customerRoutes.GET("/search", protectFactory(useCase.Search, roles.UserRole))
 		customerRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.UserRole))
 		customerRoutes.PUT("/:id", protectFactory(useCase.Update, roles.UserRole))
-		customerRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.UserRole))
+		customerRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdmin))
 	}
 }

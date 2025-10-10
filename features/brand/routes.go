@@ -11,10 +11,10 @@ import (
 func Routes(route *gin.RouterGroup, useCase usecases.IBrandUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware) {
 	brands := route.Group("/brands")
 	{
-		brands.GET("/", protectFactory(useCase.FindAll, roles.AdminRole), cacheMiddleware.Cache15Min())
-		brands.GET("/:id", protectFactory(useCase.FindByID, roles.AdminRole), cacheMiddleware.Cache1Hour())
-		brands.POST("/", protectFactory(useCase.Create, roles.AdminRole))
-		brands.PUT("/:id", protectFactory(useCase.Update, roles.AdminRole))
-		brands.DELETE("/:id", protectFactory(useCase.Delete, roles.AdminRole))
+		brands.GET("/", protectFactory(useCase.FindAll, roles.UserRole), cacheMiddleware.Cache15Min())
+		brands.GET("/:id", protectFactory(useCase.FindByID, roles.UserRole), cacheMiddleware.Cache1Hour())
+		brands.POST("/", protectFactory(useCase.Create, roles.OrgAdmin))
+		brands.PUT("/:id", protectFactory(useCase.Update, roles.OrgAdmin))
+		brands.DELETE("/:id", protectFactory(useCase.Delete, roles.OrgAdmin))
 	}
 }

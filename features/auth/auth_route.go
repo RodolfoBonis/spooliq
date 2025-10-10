@@ -11,7 +11,7 @@ func Routes(route *gin.RouterGroup, authUC usecases.AuthUseCase, registerUC *use
 	// Public routes
 	route.POST("/register", registerUC.Register)
 	route.POST("/login", authUC.ValidateLogin)
-	
+
 	// Protected routes
 	route.POST("/logout", protectFactory(authUC.Logout, roles.UserRole))
 	route.POST("/refresh", protectFactory(authUC.RefreshAuthToken, roles.UserRole))

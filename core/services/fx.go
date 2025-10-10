@@ -13,6 +13,7 @@ var Module = fx.Module("services",
 		NewRedisService,
 		NewAuthService,
 		NewAsaasService,
+		NewKeycloakAdminService,
 		func(logger logger.Logger) *gorm.DB {
 			if Connector == nil {
 				_ = OpenConnection(logger)

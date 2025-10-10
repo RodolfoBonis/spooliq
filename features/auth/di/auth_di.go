@@ -17,13 +17,13 @@ var AuthModule = fx.Module("auth",
 			return usecases.NewAuthUseCase(authService.GetClient(), config.EnvKeyCloak(), logger)
 		},
 		func(
-			authService *services.AuthService,
-			asaasService *services.AsaasService,
+			keycloakService services.IKeycloakAdminService,
+			asaasService services.IAsaasService,
 			companyRepository companyRepositories.CompanyRepository,
 			userRepository userRepositories.UserRepository,
 			logger logger.Logger,
 		) *usecases.RegisterUseCase {
-			return usecases.NewRegisterUseCase(authService, asaasService, companyRepository, userRepository, logger)
+			return usecases.NewRegisterUseCase(keycloakService, asaasService, companyRepository, userRepository, logger)
 		},
 	),
 )

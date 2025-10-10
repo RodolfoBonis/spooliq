@@ -15,4 +15,3 @@ var UsersModule = fx.Module("users",
 		},
 	),
 )
-

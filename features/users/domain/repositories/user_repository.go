@@ -18,4 +18,3 @@ type UserRepository interface {
 	Update(ctx context.Context, id uuid.UUID, organizationID string, user *entities.UserEntity) error
 	Delete(ctx context.Context, id uuid.UUID, organizationID string) error
 }
-

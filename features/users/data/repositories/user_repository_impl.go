@@ -130,4 +130,3 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organizat
 		Where("id = ? AND organization_id = ?", id, organizationID).
 		Delete(&models.UserModel{}).Error
 }
-

@@ -12,6 +12,16 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 )
 
+// IAsaasService defines the interface for Asaas API interactions.
+type IAsaasService interface {
+	CreateCustomer(ctx context.Context, req AsaasCustomerRequest) (*AsaasCustomerResponse, error)
+	CreateSubscription(ctx context.Context, req AsaasSubscriptionRequest) (*AsaasSubscriptionResponse, error)
+	GetSubscription(ctx context.Context, subscriptionID string) (*AsaasSubscriptionResponse, error)
+	CancelSubscription(ctx context.Context, subscriptionID string) error
+	GetPayment(ctx context.Context, paymentID string) (*AsaasPaymentResponse, error)
+	ListPayments(ctx context.Context, customerID string, offset, limit int) (*AsaasPaymentListResponse, error)
+}
+
 // AsaasService handles integration with Asaas payment gateway
 type AsaasService struct {
 	apiKey  string
@@ -21,7 +31,7 @@ type AsaasService struct {
 }
 
 // NewAsaasService creates a new instance of AsaasService
-func NewAsaasService(cfg *config.AppConfig, logger logger.Logger) *AsaasService {
+func NewAsaasService(cfg *config.AppConfig, logger logger.Logger) IAsaasService {
 	return &AsaasService{
 		apiKey:  cfg.AsaasAPIKey,
 		baseURL: cfg.AsaasBaseURL,

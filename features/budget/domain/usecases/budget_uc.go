@@ -3,6 +3,7 @@ package usecases
 import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	sysRoles "github.com/RodolfoBonis/spooliq/core/roles"
+	"github.com/RodolfoBonis/spooliq/core/services"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -21,12 +22,14 @@ type IBudgetUseCase interface {
 	Recalculate(c *gin.Context)
 	FindByCustomer(c *gin.Context)
 	GetHistory(c *gin.Context)
+	GeneratePDF(c *gin.Context)
 }
 
 // BudgetUseCase implements the budget use cases
 type BudgetUseCase struct {
 	budgetRepository   budgetRepo.BudgetRepository
 	customerRepository customerRepo.CustomerRepository
+	pdfService         *services.PDFService
 	validator          *validator.Validate
 	logger             logger.Logger
 }
@@ -35,11 +38,13 @@ type BudgetUseCase struct {
 func NewBudgetUseCase(
 	budgetRepository budgetRepo.BudgetRepository,
 	customerRepository customerRepo.CustomerRepository,
+	pdfService *services.PDFService,
 	logger logger.Logger,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
 		customerRepository: customerRepository,
+		pdfService:         pdfService,
 		validator:          validator.New(),
 		logger:             logger,
 	}

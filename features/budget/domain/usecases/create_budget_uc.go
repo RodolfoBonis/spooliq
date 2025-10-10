@@ -107,6 +107,9 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		IncludeLaborCost:  request.IncludeLaborCost,
 		IncludeWasteCost:  request.IncludeWasteCost,
 		LaborCostPerHour:  request.LaborCostPerHour,
+		DeliveryDays:      request.DeliveryDays,
+		PaymentTerms:      request.PaymentTerms,
+		Notes:             request.Notes,
 		OwnerUserID:       userID,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
@@ -169,8 +172,16 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	for i, item := range items {
 		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 		itemResponses[i] = entities.BudgetItemResponse{
-			Item:     item,
-			Filament: filamentInfo,
+			ID:          item.ID.String(),
+			BudgetID:    item.BudgetID.String(),
+			FilamentID:  item.FilamentID.String(),
+			Filament:    filamentInfo,
+			Quantity:    item.Quantity,
+			Order:       item.Order,
+			WasteAmount: item.WasteAmount,
+			ItemCost:    item.ItemCost,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
 		}
 	}
 

@@ -152,6 +152,15 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.LaborCostPerHour != nil {
 		budget.LaborCostPerHour = request.LaborCostPerHour
 	}
+	if request.DeliveryDays != nil {
+		budget.DeliveryDays = request.DeliveryDays
+	}
+	if request.PaymentTerms != nil {
+		budget.PaymentTerms = request.PaymentTerms
+	}
+	if request.Notes != nil {
+		budget.Notes = request.Notes
+	}
 
 	budget.UpdatedAt = time.Now()
 
@@ -212,8 +221,16 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	for i, item := range items {
 		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 		itemResponses[i] = entities.BudgetItemResponse{
-			Item:     item,
-			Filament: filamentInfo,
+			ID:          item.ID.String(),
+			BudgetID:    item.BudgetID.String(),
+			FilamentID:  item.FilamentID.String(),
+			Filament:    filamentInfo,
+			Quantity:    item.Quantity,
+			Order:       item.Order,
+			WasteAmount: item.WasteAmount,
+			ItemCost:    item.ItemCost,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
 		}
 	}
 
@@ -229,3 +246,4 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+

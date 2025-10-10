@@ -14,6 +14,7 @@ type JWTClaim struct {
 	FirstName      string                 `json:"given_name"`
 	FamilyName     string                 `json:"family_name"`
 	Email          string                 `json:"email"`
+	OrganizationID *string                `json:"organization_id,omitempty"`
 	ResourceAccess map[string]interface{} `json:"resource_access,omitempty"`
 	Roles          types.Array            `json:"roles,omitempty"`
 }

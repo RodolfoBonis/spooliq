@@ -10,21 +10,22 @@ import (
 
 // CustomerModel represents the customer data model for GORM
 type CustomerModel struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name        string         `gorm:"type:varchar(255);not null" json:"name"`
-	Email       *string        `gorm:"type:varchar(255)" json:"email"`
-	Phone       *string        `gorm:"type:varchar(50)" json:"phone"`
-	Document    *string        `gorm:"type:varchar(50)" json:"document"`
-	Address     *string        `gorm:"type:varchar(500)" json:"address"`
-	City        *string        `gorm:"type:varchar(255)" json:"city"`
-	State       *string        `gorm:"type:varchar(100)" json:"state"`
-	ZipCode     *string        `gorm:"type:varchar(20)" json:"zip_code"`
-	Notes       *string        `gorm:"type:text" json:"notes"`
-	OwnerUserID string         `gorm:"type:varchar(255);not null;index" json:"owner_user_id"`
-	IsActive    bool           `gorm:"default:true" json:"is_active"`
-	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_customer_org" json:"organization_id"`
+	Name           string         `gorm:"type:varchar(255);not null" json:"name"`
+	Email          *string        `gorm:"type:varchar(255);uniqueIndex:idx_customer_org_email" json:"email"`
+	Phone          *string        `gorm:"type:varchar(50)" json:"phone"`
+	Document       *string        `gorm:"type:varchar(50)" json:"document"`
+	Address        *string        `gorm:"type:varchar(500)" json:"address"`
+	City           *string        `gorm:"type:varchar(255)" json:"city"`
+	State          *string        `gorm:"type:varchar(100)" json:"state"`
+	ZipCode        *string        `gorm:"type:varchar(20)" json:"zip_code"`
+	Notes          *string        `gorm:"type:text" json:"notes"`
+	OwnerUserID    string         `gorm:"type:varchar(255);not null;index" json:"owner_user_id"`
+	IsActive       bool           `gorm:"default:true" json:"is_active"`
+	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 // TableName specifies the table name for GORM
@@ -43,21 +44,22 @@ func (c *CustomerModel) BeforeCreate(tx *gorm.DB) error {
 // ToEntity converts the GORM model to domain entity
 func (c *CustomerModel) ToEntity() *entities.CustomerEntity {
 	return &entities.CustomerEntity{
-		ID:          c.ID,
-		Name:        c.Name,
-		Email:       c.Email,
-		Phone:       c.Phone,
-		Document:    c.Document,
-		Address:     c.Address,
-		City:        c.City,
-		State:       c.State,
-		ZipCode:     c.ZipCode,
-		Notes:       c.Notes,
-		OwnerUserID: c.OwnerUserID,
-		IsActive:    c.IsActive,
-		CreatedAt:   c.CreatedAt,
-		UpdatedAt:   c.UpdatedAt,
-		DeletedAt:   getDeletedAt(c.DeletedAt),
+		ID:             c.ID,
+		OrganizationID: c.OrganizationID,
+		Name:           c.Name,
+		Email:          c.Email,
+		Phone:          c.Phone,
+		Document:       c.Document,
+		Address:        c.Address,
+		City:           c.City,
+		State:          c.State,
+		ZipCode:        c.ZipCode,
+		Notes:          c.Notes,
+		OwnerUserID:    c.OwnerUserID,
+		IsActive:       c.IsActive,
+		CreatedAt:      c.CreatedAt,
+		UpdatedAt:      c.UpdatedAt,
+		DeletedAt:      getDeletedAt(c.DeletedAt),
 	}
 }
 
@@ -72,6 +74,7 @@ func getDeletedAt(deletedAt gorm.DeletedAt) *time.Time {
 // FromEntity converts domain entity to GORM model
 func (c *CustomerModel) FromEntity(entity *entities.CustomerEntity) {
 	c.ID = entity.ID
+	c.OrganizationID = entity.OrganizationID
 	c.Name = entity.Name
 	c.Email = entity.Email
 	c.Phone = entity.Phone

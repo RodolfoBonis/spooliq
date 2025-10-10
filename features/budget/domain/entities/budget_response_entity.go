@@ -1,5 +1,7 @@
 package entities
 
+import "time"
+
 // CustomerInfo represents simplified customer information for budget responses
 type CustomerInfo struct {
 	ID       string  `json:"id"`
@@ -28,8 +30,16 @@ type PresetInfo struct {
 
 // BudgetItemResponse represents a budget item with filament details
 type BudgetItemResponse struct {
-	Item     *BudgetItemEntity `json:"item"`
-	Filament *FilamentInfo     `json:"filament"`
+	ID          string        `json:"id"`
+	BudgetID    string        `json:"budget_id"`
+	FilamentID  string        `json:"filament_id"`
+	Filament    *FilamentInfo `json:"filament"`
+	Quantity    float64       `json:"quantity"`
+	Order       int           `json:"order"`
+	WasteAmount float64       `json:"waste_amount"`
+	ItemCost    int64         `json:"item_cost"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
 }
 
 // BudgetResponse represents the response for a single budget
@@ -67,4 +77,16 @@ type BudgetCalculationResponse struct {
 		WasteAmount  float64 `json:"waste_amount"` // grams
 		ItemCost     float64 `json:"item_cost"`
 	} `json:"items_breakdown"`
+}
+
+// CompanyInfo represents simplified company information for PDF generation
+type CompanyInfo struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Email     *string `json:"email,omitempty"`
+	Phone     *string `json:"phone,omitempty"`
+	WhatsApp  *string `json:"whatsapp,omitempty"`
+	Instagram *string `json:"instagram,omitempty"`
+	Website   *string `json:"website,omitempty"`
+	LogoURL   *string `json:"logo_url,omitempty"`
 }

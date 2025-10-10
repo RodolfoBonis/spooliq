@@ -71,8 +71,16 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 	for i, item := range items {
 		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 		itemResponses[i] = entities.BudgetItemResponse{
-			Item:     item,
-			Filament: filamentInfo,
+			ID:          item.ID.String(),
+			BudgetID:    item.BudgetID.String(),
+			FilamentID:  item.FilamentID.String(),
+			Filament:    filamentInfo,
+			Quantity:    item.Quantity,
+			Order:       item.Order,
+			WasteAmount: item.WasteAmount,
+			ItemCost:    item.ItemCost,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
 		}
 	}
 
@@ -103,3 +111,4 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+

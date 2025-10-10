@@ -11,6 +11,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
 	budgets "github.com/RodolfoBonis/spooliq/features/budget/data/models"
+	companies "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	customers "github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
@@ -267,6 +268,13 @@ func RunMigrations() {
 		err := Connector.AutoMigrate(&customers.CustomerModel{})
 		if err != nil {
 			panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
+		}
+	}
+
+	if !Connector.Migrator().HasTable(&companies.CompanyModel{}) {
+		err := Connector.AutoMigrate(&companies.CompanyModel{})
+		if err != nil {
+			panic(fmt.Sprintf("ERROR DURING COMPANY MIGRATION: %s", err.Error()))
 		}
 	}
 

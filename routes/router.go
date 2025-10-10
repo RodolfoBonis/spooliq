@@ -10,6 +10,8 @@ import (
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/budget"
 	budgetuc "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/company"
+	companyuc "github.com/RodolfoBonis/spooliq/features/company/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/customer"
 	customeruc "github.com/RodolfoBonis/spooliq/features/customer/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/filament"
@@ -17,6 +19,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/material"
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
+	"github.com/RodolfoBonis/spooliq/features/uploads"
+	uploadsuc "github.com/RodolfoBonis/spooliq/features/uploads/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
@@ -29,9 +33,11 @@ func InitializeRoutes(
 	authUc authuc.AuthUseCase,
 	brandUc branduc.IBrandUseCase,
 	budgetUc budgetuc.IBudgetUseCase,
+	companyUc companyuc.ICompanyUseCase,
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
+	uploadsUc uploadsuc.IUploadUseCase,
 	presetHandler *preset.Handler,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
@@ -47,8 +53,10 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
+	company.Routes(root, companyUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	preset.SetupRoutes(root, presetHandler)
+	uploads.Routes(root, uploadsUc, protectFactory)
 }

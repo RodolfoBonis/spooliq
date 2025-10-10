@@ -21,5 +21,6 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		budgetRoutes.GET("/:id/calculate", protectFactory(useCase.Recalculate, roles.UserRole))
 		budgetRoutes.GET("/:id/history", protectFactory(useCase.GetHistory, roles.UserRole))
 		budgetRoutes.GET("/by-customer/:customer_id", protectFactory(useCase.FindByCustomer, roles.UserRole))
+		budgetRoutes.GET("/:id/pdf", protectFactory(useCase.GeneratePDF, roles.UserRole))
 	}
 }

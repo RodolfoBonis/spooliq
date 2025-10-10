@@ -513,3 +513,59 @@ func (r *budgetRepositoryImpl) GetPresetInfo(ctx context.Context, presetID uuid.
 		Type: presetType,
 	}, nil
 }
+
+// GetCompanyByOrganizationID retrieves company information by organization ID
+func (r *budgetRepositoryImpl) GetCompanyByOrganizationID(ctx context.Context, organizationID string) (*entities.CompanyInfo, error) {
+	var company struct {
+		ID        uuid.UUID `gorm:"column:id"`
+		Name      string    `gorm:"column:name"`
+		Email     *string   `gorm:"column:email"`
+		Phone     *string   `gorm:"column:phone"`
+		WhatsApp  *string   `gorm:"column:whatsapp"`
+		Instagram *string   `gorm:"column:instagram"`
+		Website   *string   `gorm:"column:website"`
+		LogoURL   *string   `gorm:"column:logo_url"`
+	}
+
+	if err := r.db.WithContext(ctx).
+		Table("companies").
+		Select("id, name, email, phone, whatsapp, instagram, website, logo_url").
+		Where("organization_id = ?", organizationID).
+		Where("deleted_at IS NULL").
+		First(&company).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("company not found for organization")
+		}
+		return nil, fmt.Errorf("failed to fetch company: %w", err)
+	}
+
+	return &entities.CompanyInfo{
+		ID:        company.ID.String(),
+		Name:      company.Name,
+		Email:     company.Email,
+		Phone:     company.Phone,
+		WhatsApp:  company.WhatsApp,
+		Instagram: company.Instagram,
+		Website:   company.Website,
+		LogoURL:   company.LogoURL,
+	}, nil
+}
+
+// FindItemsByBudgetID retrieves all items for a budget
+func (r *budgetRepositoryImpl) FindItemsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]*entities.BudgetItemEntity, error) {
+	var items []*models.BudgetItemModel
+
+	if err := r.db.WithContext(ctx).
+		Where("budget_id = ?", budgetID).
+		Order("\"order\" ASC").
+		Find(&items).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch budget items: %w", err)
+	}
+
+	entities := make([]*entities.BudgetItemEntity, 0, len(items))
+	for _, item := range items {
+		entities = append(entities, item.ToEntity())
+	}
+
+	return entities, nil
+}

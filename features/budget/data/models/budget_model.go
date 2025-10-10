@@ -42,6 +42,12 @@ type BudgetModel struct {
 	LaborCost    int64 `gorm:"type:bigint;default:0" json:"labor_cost"`
 	TotalCost    int64 `gorm:"type:bigint;default:0" json:"total_cost"`
 
+	// Additional fields for PDF generation
+	DeliveryDays *int    `gorm:"type:integer" json:"delivery_days"`
+	PaymentTerms *string `gorm:"type:text" json:"payment_terms"`
+	Notes        *string `gorm:"type:text" json:"notes"`
+	PDFUrl       *string `gorm:"type:varchar(500)" json:"pdf_url"`
+
 	// Ownership
 	OwnerUserID string `gorm:"type:varchar(255);not null;index" json:"owner_user_id"`
 
@@ -89,6 +95,10 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		EnergyCost:        b.EnergyCost,
 		LaborCost:         b.LaborCost,
 		TotalCost:         b.TotalCost,
+		DeliveryDays:      b.DeliveryDays,
+		PaymentTerms:      b.PaymentTerms,
+		Notes:             b.Notes,
+		PDFUrl:            b.PDFUrl,
 		OwnerUserID:       b.OwnerUserID,
 		CreatedAt:         b.CreatedAt,
 		UpdatedAt:         b.UpdatedAt,
@@ -125,6 +135,10 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.EnergyCost = entity.EnergyCost
 	b.LaborCost = entity.LaborCost
 	b.TotalCost = entity.TotalCost
+	b.DeliveryDays = entity.DeliveryDays
+	b.PaymentTerms = entity.PaymentTerms
+	b.Notes = entity.Notes
+	b.PDFUrl = entity.PDFUrl
 	b.OwnerUserID = entity.OwnerUserID
 	b.CreatedAt = entity.CreatedAt
 	b.UpdatedAt = entity.UpdatedAt

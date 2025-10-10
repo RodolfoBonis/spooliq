@@ -40,4 +40,6 @@ type BudgetRepository interface {
 	GetCustomerInfo(ctx context.Context, customerID uuid.UUID) (*entities.CustomerInfo, error)
 	GetFilamentInfo(ctx context.Context, filamentID uuid.UUID) (*entities.FilamentInfo, error)
 	GetPresetInfo(ctx context.Context, presetID uuid.UUID, presetType string) (*entities.PresetInfo, error)
+	GetCompanyByOrganizationID(ctx context.Context, organizationID string) (*entities.CompanyInfo, error)
+	FindItemsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]*entities.BudgetItemEntity, error)
 }

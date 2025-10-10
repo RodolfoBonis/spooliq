@@ -133,6 +133,21 @@ func EnvAmqpConnection() string {
 	return fmt.Sprintf("amqp://%s:%s@%s/", user, password, host)
 }
 
+// EnvCDNBaseURL returns the CDN base URL from environment variables.
+func EnvCDNBaseURL() string {
+	return GetEnv("CDN_BASE_URL", "https://rb-cdn.rodolfodebonis.com.br")
+}
+
+// EnvCDNAPIKey returns the CDN API key from environment variables.
+func EnvCDNAPIKey() string {
+	return GetEnv("CDN_API_KEY", "")
+}
+
+// EnvCDNBucket returns the CDN bucket name from environment variables.
+func EnvCDNBucket() string {
+	return GetEnv("CDN_BUCKET", "spooliq")
+}
+
 // LoadEnvVars loads all environment variables required by the application.
 func LoadEnvVars() {
 	env := EnvironmentConfig()

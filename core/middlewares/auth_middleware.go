@@ -133,6 +133,9 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			c.Set("user_email", userClaim.Email)
 			c.Set("user_role", role)
 			c.Set("user_roles", userClaim.Roles)
+			if userClaim.OrganizationID != nil {
+				c.Set("organization_id", *userClaim.OrganizationID)
+			}
 
 			handler(c)
 		}

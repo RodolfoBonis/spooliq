@@ -103,8 +103,16 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	for i, item := range items {
 		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 		itemResponses[i] = entities.BudgetItemResponse{
-			Item:     item,
-			Filament: filamentInfo,
+			ID:          item.ID.String(),
+			BudgetID:    item.BudgetID.String(),
+			FilamentID:  item.FilamentID.String(),
+			Filament:    filamentInfo,
+			Quantity:    item.Quantity,
+			Order:       item.Order,
+			WasteAmount: item.WasteAmount,
+			ItemCost:    item.ItemCost,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
 		}
 	}
 
@@ -171,8 +179,16 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	for i, item := range items {
 		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 		itemResponses[i] = entities.BudgetItemResponse{
-			Item:     item,
-			Filament: filamentInfo,
+			ID:          item.ID.String(),
+			BudgetID:    item.BudgetID.String(),
+			FilamentID:  item.FilamentID.String(),
+			Filament:    filamentInfo,
+			Quantity:    item.Quantity,
+			Order:       item.Order,
+			WasteAmount: item.WasteAmount,
+			ItemCost:    item.ItemCost,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
 		}
 	}
 
@@ -246,9 +262,17 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 		for j, item := range items {
 			filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 			itemResponses[j] = entities.BudgetItemResponse{
-				Item:     item,
-				Filament: filamentInfo,
-			}
+			ID:          item.ID.String(),
+			BudgetID:    item.BudgetID.String(),
+			FilamentID:  item.FilamentID.String(),
+			Filament:    filamentInfo,
+			Quantity:    item.Quantity,
+			Order:       item.Order,
+			WasteAmount: item.WasteAmount,
+			ItemCost:    item.ItemCost,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
+		}
 		}
 		budgetResponses[i] = entities.BudgetResponse{
 			Budget:   budget,
@@ -317,3 +341,4 @@ func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, history)
 }
+

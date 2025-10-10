@@ -49,6 +49,12 @@ type BudgetEntity struct {
 	LaborCost    int64 `json:"labor_cost"`    // cents
 	TotalCost    int64 `json:"total_cost"`    // cents
 
+	// Additional fields for PDF generation
+	DeliveryDays *int    `json:"delivery_days,omitempty"` // prazo de entrega em dias
+	PaymentTerms *string `json:"payment_terms,omitempty"` // condições de pagamento
+	Notes        *string `json:"notes,omitempty"`         // observações adicionais
+	PDFUrl       *string `json:"pdf_url,omitempty"`       // URL do PDF gerado
+
 	// Ownership
 	OwnerUserID string `json:"owner_user_id"`
 

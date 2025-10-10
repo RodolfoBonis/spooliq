@@ -30,6 +30,11 @@ type CreateBudgetRequest struct {
 	IncludeWasteCost  bool     `json:"include_waste_cost"`
 	LaborCostPerHour  *float64 `json:"labor_cost_per_hour,omitempty" validate:"omitempty,gte=0"`
 
+	// Additional fields for PDF
+	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`
+	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
+	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
+
 	// Items
 	Items []BudgetItemRequest `json:"items" validate:"required,min=1,dive"`
 }
@@ -54,6 +59,11 @@ type UpdateBudgetRequest struct {
 	IncludeLaborCost  *bool    `json:"include_labor_cost,omitempty"`
 	IncludeWasteCost  *bool    `json:"include_waste_cost,omitempty"`
 	LaborCostPerHour  *float64 `json:"labor_cost_per_hour,omitempty" validate:"omitempty,gte=0"`
+
+	// Additional fields for PDF
+	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`
+	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
+	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
 
 	// Items (optional - if provided, replaces all items)
 	Items *[]BudgetItemRequest `json:"items,omitempty" validate:"omitempty,min=1,dive"`

@@ -11,10 +11,12 @@ import (
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	branduc "github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
 	budgetuc "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
+	companyuc "github.com/RodolfoBonis/spooliq/features/company/domain/usecases"
 	customeruc "github.com/RodolfoBonis/spooliq/features/customer/domain/usecases"
 	filamentuc "github.com/RodolfoBonis/spooliq/features/filament/domain/usecases"
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
+	uploadsuc "github.com/RodolfoBonis/spooliq/features/uploads/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/routes"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
@@ -94,7 +96,7 @@ func RegisterHooksWithObservability(lifecycle fx.Lifecycle, router *gin.Engine, 
 }
 
 // SetupMiddlewaresAndRoutes configures middlewares BEFORE routes (critical for Gin)
-func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, presetHandler *preset.Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
+func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, presetHandler *preset.Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
 	// Configure trusted proxies
 	err := router.SetTrustedProxies([]string{})
 	if err != nil {
@@ -123,7 +125,7 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authU
 	router.Use(gin.ErrorLogger())
 
 	// Now register routes (AFTER all middlewares are set up)
-	routes.InitializeRoutes(router, authUc, brandUc, budgetUc, customerUc, filamentUc, materialUc, presetHandler, protectFactory, cacheMiddleware, logger)
+	routes.InitializeRoutes(router, authUc, brandUc, budgetUc, companyUc, customerUc, filamentUc, materialUc, uploadsUc, presetHandler, protectFactory, cacheMiddleware, logger)
 	logger.Info(context.Background(), "Routes initialized after middleware setup")
 
 	// Register lifecycle hooks for cleanup

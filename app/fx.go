@@ -64,7 +64,7 @@ func NewFxApp() *fx.App {
 			},
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, presetHandler *preset.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, presetHandler *preset.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -73,7 +73,7 @@ func NewFxApp() *fx.App {
 				}
 
 				// Setup middlewares and lifecycle hooks
-				SetupMiddlewaresAndRoutes(lc, router, authUc, registerUc, brandUc, budgetUc, companyUc, customerUc, filamentUc, materialUc, uploadsUc, presetHandler, protectFactory, cacheMiddleware, logger, monitoring, obsManager, helper)
+				SetupMiddlewaresAndRoutes(lc, router, authUc, registerUc, brandUc, budgetUc, companyUc, customerUc, filamentUc, materialUc, uploadsUc, presetHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, obsManager, helper)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

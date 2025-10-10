@@ -96,7 +96,7 @@ func RegisterHooksWithObservability(lifecycle fx.Lifecycle, router *gin.Engine, 
 }
 
 // SetupMiddlewaresAndRoutes configures middlewares BEFORE routes (critical for Gin)
-func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, presetHandler *preset.Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
+func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, presetHandler *preset.Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, obsManager *observability.Manager, helper *observability.Helper) {
 	// Configure trusted proxies
 	err := router.SetTrustedProxies([]string{})
 	if err != nil {
@@ -123,6 +123,10 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authU
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	router.Use(gin.ErrorLogger())
+
+	// Register subscription middleware (checks subscription status)
+	// This runs AFTER auth middleware (applied per-route) but BEFORE route handlers
+	router.Use(subscriptionMiddleware.CheckSubscription())
 
 	// Now register routes (AFTER all middlewares are set up)
 	routes.InitializeRoutes(router, authUc, registerUc, brandUc, budgetUc, companyUc, customerUc, filamentUc, materialUc, uploadsUc, presetHandler, protectFactory, cacheMiddleware, logger)

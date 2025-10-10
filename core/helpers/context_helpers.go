@@ -36,3 +36,28 @@ func IsAdmin(c *gin.Context) bool {
 	return false
 }
 
+// IsPlatformAdmin checks if user has PlatformAdmin role
+func IsPlatformAdmin(c *gin.Context) bool {
+	roles, exists := c.Get("user_roles")
+	if !exists {
+		return false
+	}
+
+	rolesSlice, ok := roles.([]string)
+	if !ok {
+		return false
+	}
+
+	for _, role := range rolesSlice {
+		if role == "PlatformAdmin" {
+			return true
+		}
+	}
+	return false
+}
+
+// GetOrganizationIDString returns organization_id as string (alias for GetOrganizationID)
+// Provided for backward compatibility and explicit naming
+func GetOrganizationIDString(c *gin.Context) string {
+	return GetOrganizationID(c)
+}

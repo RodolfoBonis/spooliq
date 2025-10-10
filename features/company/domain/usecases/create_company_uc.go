@@ -5,6 +5,7 @@ import (
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,32 +32,20 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
+	// Check if user is Platform Admin
+	isPlatformAdmin := helpers.IsPlatformAdmin(c)
+
+	// Get organization ID from context
 	organizationID := getOrganizationID(c)
-	if organizationID == "" {
-		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		appError := coreErrors.UsecaseError("Organization ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
 
-	// Check if company already exists for this organization
-	exists, err := uc.repository.ExistsByOrganizationID(ctx, organizationID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to check company existence", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": organizationID,
+	// Platform Admin can create companies without organization_id in context
+	// Regular users MUST have organization_id from JWT
+	if organizationID == "" && !isPlatformAdmin {
+		uc.logger.Error(ctx, "Organization ID not found in context", map[string]interface{}{
+			"is_platform_admin": isPlatformAdmin,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	if exists {
-		uc.logger.Error(ctx, "Company already exists for this organization", map[string]interface{}{
-			"organization_id": organizationID,
-		})
-		appError := coreErrors.UsecaseError(entities.ErrCompanyAlreadyExists.Error())
-		c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+		appError := coreErrors.UsecaseError("Organization ID required")
+		c.JSON(http.StatusForbidden, gin.H{"error": appError.Message})
 		return
 	}
 
@@ -79,9 +68,49 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 		return
 	}
 
+	// Determine target organization ID
+	// Platform Admin: use own org_id OR generate new UUID for client
+	// Regular users: use their own org_id from JWT
+	targetOrgID := organizationID
+	if isPlatformAdmin {
+		// If Platform Admin doesn't have org_id in JWT, generate a new one
+		// This UUID will need to be added to Keycloak for the client user
+		if targetOrgID == "" {
+			targetOrgID = uuid.New().String()
+			uc.logger.Info(ctx, "Platform Admin creating company with new organization_id", map[string]interface{}{
+				"generated_organization_id": targetOrgID,
+			})
+		} else {
+			uc.logger.Info(ctx, "Platform Admin creating company for own organization", map[string]interface{}{
+				"organization_id": targetOrgID,
+			})
+		}
+	}
+
+	// Check if company already exists for this organization
+	exists, err := uc.repository.ExistsByOrganizationID(ctx, targetOrgID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to check company existence", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": targetOrgID,
+		})
+		appError := coreErrors.RepositoryError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	if exists {
+		uc.logger.Error(ctx, "Company already exists for this organization", map[string]interface{}{
+			"organization_id": targetOrgID,
+		})
+		appError := coreErrors.UsecaseError(entities.ErrCompanyAlreadyExists.Error())
+		c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+		return
+	}
+
 	company := &entities.CompanyEntity{
 		ID:             uuid.New(),
-		OrganizationID: organizationID,
+		OrganizationID: targetOrgID,
 		Name:           request.Name,
 		TradeName:      request.TradeName,
 		Document:       request.Document,

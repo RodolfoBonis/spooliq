@@ -867,6 +867,831 @@
                     }
                 }
             }
+        },
+        "/presets": {
+            "get": {
+                "description": "Retrieve presets with optional filters including type, active status, default status, global status, and user ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Get presets with filters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset type filter (machine, energy, cost)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter only active presets",
+                        "name": "active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter only default presets",
+                        "name": "default",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter only global presets",
+                        "name": "global",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter presets by user ID (UUID format)",
+                        "name": "user_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved presets",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid user ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/costs": {
+            "get": {
+                "description": "Retrieve all available cost presets with pricing and margin configurations",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Get all cost presets",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved cost presets",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.PresetEntity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new cost preset with labor costs, packaging, shipping, overhead, and profit margins",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Create cost preset",
+                "parameters": [
+                    {
+                        "description": "Cost preset creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateCostPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Cost preset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/costs/{id}": {
+            "get": {
+                "description": "Retrieve a specific cost preset with complete pricing and margin details by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Get cost preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cost preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved cost preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CostPresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Cost preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing cost preset with new pricing and margin configurations",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Update cost preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cost preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cost preset update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateCostPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cost preset updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy": {
+            "get": {
+                "description": "Retrieve all available energy presets with pricing and location data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get all energy presets",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved energy presets",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.PresetEntity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new energy preset with cost per kWh, currency, and location information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Create energy preset",
+                "parameters": [
+                    {
+                        "description": "Energy preset creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateEnergyPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Energy preset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy/currency/{currency}": {
+            "get": {
+                "description": "Retrieve energy presets that use a specific currency (3-letter currency code)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy presets by currency",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Currency code (3 letters, e.g., USD, EUR, BRL)",
+                        "name": "currency",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved energy presets by currency",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.EnergyPresetEntity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy/location": {
+            "get": {
+                "description": "Retrieve energy presets filtered by country, state, and/or city",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy presets by location",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by country",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by state/province",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by city",
+                        "name": "city",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved energy presets by location",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.EnergyPresetEntity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy/{id}": {
+            "get": {
+                "description": "Retrieve a specific energy preset with complete pricing and location details by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Energy preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved energy preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.EnergyPresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Energy preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing energy preset with new pricing and location information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Update energy preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Energy preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Energy preset update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateEnergyPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Energy preset updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/machines": {
+            "get": {
+                "description": "Retrieve all available machine presets with their specifications",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Get all machine presets",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved machine presets",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.PresetEntity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new machine preset with specifications like build volume, nozzle diameter, and power consumption",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Create machine preset",
+                "parameters": [
+                    {
+                        "description": "Machine preset creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateMachinePresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Machine preset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/machines/brand/{brand}": {
+            "get": {
+                "description": "Retrieve all machine presets from a specific brand",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Get machine presets by brand",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine brand name",
+                        "name": "brand",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved machine presets by brand",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.MachinePresetEntity"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/machines/{id}": {
+            "get": {
+                "description": "Retrieve a specific machine preset with complete specifications by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Get machine preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved machine preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.MachinePresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Machine preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing machine preset with new specifications",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Update machine preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Machine preset update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateMachinePresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Machine preset updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/{id}": {
+            "get": {
+                "description": "Retrieve a specific preset by its unique identifier",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Get preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a preset by its unique identifier",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Delete preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Preset deleted successfully"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -889,6 +1714,76 @@
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CostPresetEntity": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "labor_cost_per_hour": {
+                    "type": "number"
+                },
+                "overhead_percentage": {
+                    "type": "number"
+                },
+                "packaging_cost_per_item": {
+                    "type": "number"
+                },
+                "post_processing_cost_per_hour": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                },
+                "quality_control_cost_per_item": {
+                    "type": "number"
+                },
+                "shipping_cost_base": {
+                    "type": "number"
+                },
+                "shipping_cost_per_gram": {
+                    "type": "number"
+                },
+                "support_removal_cost_per_hour": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.EnergyPresetEntity": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "off_peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "tariff_type": {
                     "type": "string"
                 }
             }
@@ -949,6 +1844,56 @@
                 }
             }
         },
+        "entities.MachinePresetEntity": {
+            "type": "object",
+            "properties": {
+                "bed_temperature_max": {
+                    "type": "number"
+                },
+                "brand": {
+                    "type": "string"
+                },
+                "build_volume_x": {
+                    "type": "number"
+                },
+                "build_volume_y": {
+                    "type": "number"
+                },
+                "build_volume_z": {
+                    "type": "number"
+                },
+                "cost_per_hour": {
+                    "type": "number"
+                },
+                "extruder_temperature_max": {
+                    "type": "number"
+                },
+                "filament_diameter": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "layer_height_max": {
+                    "type": "number"
+                },
+                "layer_height_min": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "power_consumption": {
+                    "type": "number"
+                },
+                "print_speed_max": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.MaterialEntity": {
             "type": "object",
             "properties": {
@@ -977,6 +1922,54 @@
                     "type": "string"
                 }
             }
+        },
+        "entities.PresetEntity": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.PresetType"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PresetType": {
+            "type": "string",
+            "enum": [
+                "machine",
+                "energy",
+                "cost"
+            ],
+            "x-enum-varnames": [
+                "PresetTypeMachine",
+                "PresetTypeEnergy",
+                "PresetTypeCost"
+            ]
         },
         "entities.RequestLoginEntity": {
             "description": "RequestLoginEntity model data",
@@ -1052,6 +2045,351 @@
                 },
                 "stack_trace": {
                     "type": "string"
+                }
+            }
+        },
+        "usecases.CreateCostPresetRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "labor_cost_per_hour": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "name": {
+                    "type": "string"
+                },
+                "overhead_percentage": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "packaging_cost_per_item": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "post_processing_cost_per_hour": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "profit_margin_percentage": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "quality_control_cost_per_item": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "shipping_cost_base": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "shipping_cost_per_gram": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "support_removal_cost_per_hour": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.CreateEnergyPresetRequest": {
+            "type": "object",
+            "required": [
+                "currency",
+                "energy_cost_per_kwh",
+                "name",
+                "off_peak_hour_multiplier",
+                "peak_hour_multiplier"
+            ],
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "off_peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "tariff_type": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.CreateMachinePresetRequest": {
+            "type": "object",
+            "required": [
+                "build_volume_x",
+                "build_volume_y",
+                "build_volume_z",
+                "filament_diameter",
+                "layer_height_max",
+                "layer_height_min",
+                "name",
+                "nozzle_diameter",
+                "power_consumption",
+                "print_speed_max"
+            ],
+            "properties": {
+                "bed_temperature_max": {
+                    "type": "number"
+                },
+                "brand": {
+                    "type": "string"
+                },
+                "build_volume_x": {
+                    "type": "number"
+                },
+                "build_volume_y": {
+                    "type": "number"
+                },
+                "build_volume_z": {
+                    "type": "number"
+                },
+                "cost_per_hour": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "extruder_temperature_max": {
+                    "type": "number"
+                },
+                "filament_diameter": {
+                    "type": "number"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "layer_height_max": {
+                    "type": "number"
+                },
+                "layer_height_min": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "power_consumption": {
+                    "type": "number"
+                },
+                "print_speed_max": {
+                    "type": "number"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.UpdateCostPresetRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "labor_cost_per_hour": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "overhead_percentage": {
+                    "type": "number"
+                },
+                "packaging_cost_per_item": {
+                    "type": "number"
+                },
+                "post_processing_cost_per_hour": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                },
+                "quality_control_cost_per_item": {
+                    "type": "number"
+                },
+                "shipping_cost_base": {
+                    "type": "number"
+                },
+                "shipping_cost_per_gram": {
+                    "type": "number"
+                },
+                "support_removal_cost_per_hour": {
+                    "type": "number"
+                }
+            }
+        },
+        "usecases.UpdateEnergyPresetRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "off_peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "tariff_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.UpdateMachinePresetRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "bed_temperature_max": {
+                    "type": "number"
+                },
+                "brand": {
+                    "type": "string"
+                },
+                "build_volume_x": {
+                    "type": "number"
+                },
+                "build_volume_y": {
+                    "type": "number"
+                },
+                "build_volume_z": {
+                    "type": "number"
+                },
+                "cost_per_hour": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "extruder_temperature_max": {
+                    "type": "number"
+                },
+                "filament_diameter": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "layer_height_max": {
+                    "type": "number"
+                },
+                "layer_height_min": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "power_consumption": {
+                    "type": "number"
+                },
+                "print_speed_max": {
+                    "type": "number"
                 }
             }
         }

@@ -74,6 +74,20 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler) {
 }
 
 // GetPresets retrieves presets with optional filters
+// @Summary Get presets with filters
+// @Description Retrieve presets with optional filters including type, active status, default status, global status, and user ID
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param type query string false "Preset type filter (machine, energy, cost)"
+// @Param active query boolean false "Filter only active presets"
+// @Param default query boolean false "Filter only default presets"
+// @Param global query boolean false "Filter only global presets"
+// @Param user_id query string false "Filter presets by user ID (UUID format)"
+// @Success 200 {object} interface{} "Successfully retrieved presets"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid user ID format"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets [get]
 func (h *Handler) GetPresets(c *gin.Context) {
 	presetType := c.Query("type")
 	activeOnly := c.Query("active") == "true"
@@ -113,6 +127,16 @@ func (h *Handler) GetPresets(c *gin.Context) {
 }
 
 // GetPresetByID retrieves a preset by ID
+// @Summary Get preset by ID
+// @Description Retrieve a specific preset by its unique identifier
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Preset ID (UUID format)"
+// @Success 200 {object} entities.PresetEntity "Successfully retrieved preset"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Preset not found"
+// @Router /presets/{id} [get]
 func (h *Handler) GetPresetByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -131,6 +155,16 @@ func (h *Handler) GetPresetByID(c *gin.Context) {
 }
 
 // DeletePreset deletes a preset by ID
+// @Summary Delete preset
+// @Description Delete a preset by its unique identifier
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Preset ID (UUID format)"
+// @Success 204 "Preset deleted successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/{id} [delete]
 func (h *Handler) DeletePreset(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -148,6 +182,17 @@ func (h *Handler) DeletePreset(c *gin.Context) {
 }
 
 // CreateMachinePreset creates a new machine preset
+// @Summary Create machine preset
+// @Description Create a new machine preset with specifications like build volume, nozzle diameter, and power consumption
+// @Tags Machine Presets
+// @Accept json
+// @Produce json
+// @Param request body usecases.CreateMachinePresetRequest true "Machine preset creation data"
+// @Success 201 {object} entities.PresetEntity "Machine preset created successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid request data"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security Bearer
+// @Router /presets/machines [post]
 func (h *Handler) CreateMachinePreset(c *gin.Context) {
 	var req usecases.CreateMachinePresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -165,6 +210,14 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 }
 
 // GetMachinePresets retrieves all machine presets
+// @Summary Get all machine presets
+// @Description Retrieve all available machine presets with their specifications
+// @Tags Machine Presets
+// @Accept json
+// @Produce json
+// @Success 200 {array} entities.PresetEntity "Successfully retrieved machine presets"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/machines [get]
 func (h *Handler) GetMachinePresets(c *gin.Context) {
 	presets, err := h.findUC.FindByType(entities.PresetTypeMachine)
 	if err != nil {
@@ -176,6 +229,16 @@ func (h *Handler) GetMachinePresets(c *gin.Context) {
 }
 
 // GetMachinePresetByID retrieves a machine preset with full details
+// @Summary Get machine preset by ID
+// @Description Retrieve a specific machine preset with complete specifications by its ID
+// @Tags Machine Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Machine preset ID (UUID format)"
+// @Success 200 {object} entities.MachinePresetEntity "Successfully retrieved machine preset"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Machine preset not found"
+// @Router /presets/machines/{id} [get]
 func (h *Handler) GetMachinePresetByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -194,6 +257,18 @@ func (h *Handler) GetMachinePresetByID(c *gin.Context) {
 }
 
 // UpdateMachinePreset updates a machine preset
+// @Summary Update machine preset
+// @Description Update an existing machine preset with new specifications
+// @Tags Machine Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Machine preset ID (UUID format)"
+// @Param request body usecases.UpdateMachinePresetRequest true "Machine preset update data"
+// @Success 200 {object} entities.PresetEntity "Machine preset updated successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format or request data"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security Bearer
+// @Router /presets/machines/{id} [put]
 func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -219,6 +294,15 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 }
 
 // GetMachinePresetsByBrand retrieves machine presets by brand
+// @Summary Get machine presets by brand
+// @Description Retrieve all machine presets from a specific brand
+// @Tags Machine Presets
+// @Accept json
+// @Produce json
+// @Param brand path string true "Machine brand name"
+// @Success 200 {array} entities.MachinePresetEntity "Successfully retrieved machine presets by brand"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/machines/brand/{brand} [get]
 func (h *Handler) GetMachinePresetsByBrand(c *gin.Context) {
 	brand := c.Param("brand")
 
@@ -232,6 +316,17 @@ func (h *Handler) GetMachinePresetsByBrand(c *gin.Context) {
 }
 
 // CreateEnergyPreset creates a new energy preset
+// @Summary Create energy preset
+// @Description Create a new energy preset with cost per kWh, currency, and location information
+// @Tags Energy Presets
+// @Accept json
+// @Produce json
+// @Param request body usecases.CreateEnergyPresetRequest true "Energy preset creation data"
+// @Success 201 {object} entities.PresetEntity "Energy preset created successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid request data"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security Bearer
+// @Router /presets/energy [post]
 func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 	var req usecases.CreateEnergyPresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -249,6 +344,14 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 }
 
 // GetEnergyPresets retrieves all energy presets
+// @Summary Get all energy presets
+// @Description Retrieve all available energy presets with pricing and location data
+// @Tags Energy Presets
+// @Accept json
+// @Produce json
+// @Success 200 {array} entities.PresetEntity "Successfully retrieved energy presets"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/energy [get]
 func (h *Handler) GetEnergyPresets(c *gin.Context) {
 	presets, err := h.findUC.FindByType(entities.PresetTypeEnergy)
 	if err != nil {
@@ -260,6 +363,16 @@ func (h *Handler) GetEnergyPresets(c *gin.Context) {
 }
 
 // GetEnergyPresetByID retrieves an energy preset with full details
+// @Summary Get energy preset by ID
+// @Description Retrieve a specific energy preset with complete pricing and location details by its ID
+// @Tags Energy Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Energy preset ID (UUID format)"
+// @Success 200 {object} entities.EnergyPresetEntity "Successfully retrieved energy preset"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Energy preset not found"
+// @Router /presets/energy/{id} [get]
 func (h *Handler) GetEnergyPresetByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -278,6 +391,18 @@ func (h *Handler) GetEnergyPresetByID(c *gin.Context) {
 }
 
 // UpdateEnergyPreset updates an energy preset
+// @Summary Update energy preset
+// @Description Update an existing energy preset with new pricing and location information
+// @Tags Energy Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Energy preset ID (UUID format)"
+// @Param request body usecases.UpdateEnergyPresetRequest true "Energy preset update data"
+// @Success 200 {object} entities.PresetEntity "Energy preset updated successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format or request data"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security Bearer
+// @Router /presets/energy/{id} [put]
 func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -303,6 +428,17 @@ func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 }
 
 // GetEnergyPresetsByLocation retrieves energy presets by location
+// @Summary Get energy presets by location
+// @Description Retrieve energy presets filtered by country, state, and/or city
+// @Tags Energy Presets
+// @Accept json
+// @Produce json
+// @Param country query string false "Filter by country"
+// @Param state query string false "Filter by state/province"
+// @Param city query string false "Filter by city"
+// @Success 200 {array} entities.EnergyPresetEntity "Successfully retrieved energy presets by location"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/energy/location [get]
 func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 	country := c.Query("country")
 	state := c.Query("state")
@@ -318,6 +454,15 @@ func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 }
 
 // GetEnergyPresetsByCurrency retrieves energy presets by currency
+// @Summary Get energy presets by currency
+// @Description Retrieve energy presets that use a specific currency (3-letter currency code)
+// @Tags Energy Presets
+// @Accept json
+// @Produce json
+// @Param currency path string true "Currency code (3 letters, e.g., USD, EUR, BRL)"
+// @Success 200 {array} entities.EnergyPresetEntity "Successfully retrieved energy presets by currency"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/energy/currency/{currency} [get]
 func (h *Handler) GetEnergyPresetsByCurrency(c *gin.Context) {
 	currency := c.Param("currency")
 
@@ -331,6 +476,17 @@ func (h *Handler) GetEnergyPresetsByCurrency(c *gin.Context) {
 }
 
 // CreateCostPreset creates a new cost preset
+// @Summary Create cost preset
+// @Description Create a new cost preset with labor costs, packaging, shipping, overhead, and profit margins
+// @Tags Cost Presets
+// @Accept json
+// @Produce json
+// @Param request body usecases.CreateCostPresetRequest true "Cost preset creation data"
+// @Success 201 {object} entities.PresetEntity "Cost preset created successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid request data"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security Bearer
+// @Router /presets/costs [post]
 func (h *Handler) CreateCostPreset(c *gin.Context) {
 	var req usecases.CreateCostPresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -348,6 +504,14 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 }
 
 // GetCostPresets retrieves all cost presets
+// @Summary Get all cost presets
+// @Description Retrieve all available cost presets with pricing and margin configurations
+// @Tags Cost Presets
+// @Accept json
+// @Produce json
+// @Success 200 {array} entities.PresetEntity "Successfully retrieved cost presets"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Router /presets/costs [get]
 func (h *Handler) GetCostPresets(c *gin.Context) {
 	presets, err := h.findUC.FindByType(entities.PresetTypeCost)
 	if err != nil {
@@ -359,6 +523,16 @@ func (h *Handler) GetCostPresets(c *gin.Context) {
 }
 
 // GetCostPresetByID retrieves a cost preset with full details
+// @Summary Get cost preset by ID
+// @Description Retrieve a specific cost preset with complete pricing and margin details by its ID
+// @Tags Cost Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Cost preset ID (UUID format)"
+// @Success 200 {object} entities.CostPresetEntity "Successfully retrieved cost preset"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Cost preset not found"
+// @Router /presets/costs/{id} [get]
 func (h *Handler) GetCostPresetByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -377,6 +551,18 @@ func (h *Handler) GetCostPresetByID(c *gin.Context) {
 }
 
 // UpdateCostPreset updates a cost preset
+// @Summary Update cost preset
+// @Description Update an existing cost preset with new pricing and margin configurations
+// @Tags Cost Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Cost preset ID (UUID format)"
+// @Param request body usecases.UpdateCostPresetRequest true "Cost preset update data"
+// @Success 200 {object} entities.PresetEntity "Cost preset updated successfully"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format or request data"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security Bearer
+// @Router /presets/costs/{id} [put]
 func (h *Handler) UpdateCostPreset(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)

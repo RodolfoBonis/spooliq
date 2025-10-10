@@ -9,6 +9,7 @@ import (
 // CostPresetEntity represents fixed operational costs for 3D printing
 type CostPresetEntity struct {
 	ID                        uuid.UUID `json:"id"`
+	OrganizationID string     `json:"organization_id"` // Multi-tenancy
 	LaborCostPerHour          float32   `json:"labor_cost_per_hour"`
 	PackagingCostPerItem      float32   `json:"packaging_cost_per_item"`
 	ShippingCostBase          float32   `json:"shipping_cost_base"`

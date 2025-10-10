@@ -8,6 +8,7 @@ import (
 // EnergyPresetModel represents an energy cost preset by location in the database
 type EnergyPresetModel struct {
 	ID                    uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
 	Country               string    `gorm:"type:varchar(100)" json:"country,omitempty"`
 	State                 string    `gorm:"type:varchar(100)" json:"state,omitempty"`
 	City                  string    `gorm:"type:varchar(100)" json:"city,omitempty"`
@@ -25,6 +26,7 @@ func (e *EnergyPresetModel) TableName() string { return "energy_presets" }
 // FromEntity populates the EnergyPresetModel from an EnergyPresetEntity
 func (e *EnergyPresetModel) FromEntity(entity *entities.EnergyPresetEntity) {
 	e.ID = entity.ID
+	e.OrganizationID = entity.OrganizationID
 	e.Country = entity.Country
 	e.State = entity.State
 	e.City = entity.City

@@ -8,6 +8,7 @@ import (
 // CostPresetModel represents fixed costs preset in the database
 type CostPresetModel struct {
 	ID                        uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
 	LaborCostPerHour          float32   `gorm:"type:float" json:"labor_cost_per_hour"`
 	PackagingCostPerItem      float32   `gorm:"type:float" json:"packaging_cost_per_item"`
 	ShippingCostBase          float32   `gorm:"type:float" json:"shipping_cost_base"`
@@ -25,6 +26,7 @@ func (c *CostPresetModel) TableName() string { return "cost_presets" }
 // FromEntity populates the CostPresetModel from a CostPresetEntity
 func (c *CostPresetModel) FromEntity(entity *entities.CostPresetEntity) {
 	c.ID = entity.ID
+	c.OrganizationID = entity.OrganizationID
 	c.LaborCostPerHour = entity.LaborCostPerHour
 	c.PackagingCostPerItem = entity.PackagingCostPerItem
 	c.ShippingCostBase = entity.ShippingCostBase

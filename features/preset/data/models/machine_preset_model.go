@@ -8,6 +8,7 @@ import (
 // MachinePresetModel represents a 3D printer machine preset in the database
 type MachinePresetModel struct {
 	ID                     uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
 	Brand                  string    `gorm:"type:varchar(255)" json:"brand,omitempty"`
 	Model                  string    `gorm:"type:varchar(255)" json:"model,omitempty"`
 	BuildVolumeX           float32   `gorm:"type:float" json:"build_volume_x"`
@@ -30,6 +31,7 @@ func (m *MachinePresetModel) TableName() string { return "machine_presets" }
 // FromEntity populates the MachinePresetModel from a MachinePresetEntity
 func (m *MachinePresetModel) FromEntity(entity *entities.MachinePresetEntity) {
 	m.ID = entity.ID
+	m.OrganizationID = entity.OrganizationID
 	m.Brand = entity.Brand
 	m.Model = entity.Model
 	m.BuildVolumeX = entity.BuildVolumeX

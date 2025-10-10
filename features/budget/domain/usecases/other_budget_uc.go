@@ -2,10 +2,10 @@ package usecases
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -27,14 +27,20 @@ import (
 func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	userID := getUserID(c)
-	if userID == "" {
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
 		return
 	}
 
-	admin := isAdmin(c)
+	userID := helpers.GetUserID(c)
+	if userID == "" {
+		uc.logger.Error(ctx, "User ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID required"})
+		return
+	}
+
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		appError := coreErrors.UsecaseError("Invalid budget ID")
@@ -43,7 +49,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	}
 
 	// Get original budget
-	originalBudget, err := uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	originalBudget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
@@ -51,11 +57,12 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 
 	// Create new budget as draft
 	newBudget := &entities.BudgetEntity{
-		ID:                uuid.New(),
-		Name:              originalBudget.Name + " (Copy)",
-		Description:       originalBudget.Description,
-		CustomerID:        originalBudget.CustomerID,
-		Status:            entities.StatusDraft,
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Name:           originalBudget.Name + " (Copy)",
+		Description:    originalBudget.Description,
+		CustomerID:     originalBudget.CustomerID,
+		Status:         entities.StatusDraft,
 		PrintTimeHours:    originalBudget.PrintTimeHours,
 		PrintTimeMinutes:  originalBudget.PrintTimeMinutes,
 		MachinePresetID:   originalBudget.MachinePresetID,
@@ -95,7 +102,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	uc.budgetRepository.CalculateCosts(ctx, newBudget.ID)
 
 	// Return new budget
-	newBudget, _ = uc.budgetRepository.FindByID(ctx, newBudget.ID, userID, admin)
+	newBudget, _ = uc.budgetRepository.FindByID(ctx, newBudget.ID, organizationID)
 	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, newBudget.CustomerID)
 	items, _ := uc.budgetRepository.GetItems(ctx, newBudget.ID)
 
@@ -141,14 +148,13 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	userID := getUserID(c)
-	if userID == "" {
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
 		return
 	}
 
-	admin := isAdmin(c)
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		appError := coreErrors.UsecaseError("Invalid budget ID")
@@ -157,7 +163,7 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	}
 
 	// Verify budget exists and user has permission
-	_, err = uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	_, err = uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
@@ -171,7 +177,7 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	}
 
 	// Return updated budget
-	budget, _ := uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	budget, _ := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
@@ -219,14 +225,13 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	userID := getUserID(c)
-	if userID == "" {
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
 		return
 	}
 
-	admin := isAdmin(c)
 	customerID, err := uuid.Parse(c.Param("customer_id"))
 	if err != nil {
 		appError := coreErrors.UsecaseError("Invalid customer ID")
@@ -234,19 +239,8 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 		return
 	}
 
-	// Parse pagination
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
-	}
-	offset := (page - 1) * pageSize
-
 	// Get budgets
-	budgets, total, err := uc.budgetRepository.FindByCustomer(ctx, customerID, userID, admin, pageSize, offset)
+	budgets, err := uc.budgetRepository.FindByCustomer(ctx, customerID, organizationID)
 	if err != nil {
 		appError := coreErrors.RepositoryError(err.Error())
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
@@ -262,17 +256,17 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 		for j, item := range items {
 			filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 			itemResponses[j] = entities.BudgetItemResponse{
-			ID:          item.ID.String(),
-			BudgetID:    item.BudgetID.String(),
-			FilamentID:  item.FilamentID.String(),
-			Filament:    filamentInfo,
-			Quantity:    item.Quantity,
-			Order:       item.Order,
-			WasteAmount: item.WasteAmount,
-			ItemCost:    item.ItemCost,
-			CreatedAt:   item.CreatedAt,
-			UpdatedAt:   item.UpdatedAt,
-		}
+				ID:          item.ID.String(),
+				BudgetID:    item.BudgetID.String(),
+				FilamentID:  item.FilamentID.String(),
+				Filament:    filamentInfo,
+				Quantity:    item.Quantity,
+				Order:       item.Order,
+				WasteAmount: item.WasteAmount,
+				ItemCost:    item.ItemCost,
+				CreatedAt:   item.CreatedAt,
+				UpdatedAt:   item.UpdatedAt,
+			}
 		}
 		budgetResponses[i] = entities.BudgetResponse{
 			Budget:   budget,
@@ -281,13 +275,13 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 		}
 	}
 
-	totalPages := (total + pageSize - 1) / pageSize
+	total := len(budgets)
 	response := entities.ListBudgetsResponse{
 		Data:       budgetResponses,
 		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: totalPages,
+		Page:       1,
+		PageSize:   total,
+		TotalPages: 1,
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -309,14 +303,13 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	userID := getUserID(c)
-	if userID == "" {
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
 		return
 	}
 
-	admin := isAdmin(c)
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		appError := coreErrors.UsecaseError("Invalid budget ID")
@@ -325,7 +318,7 @@ func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 	}
 
 	// Verify budget exists and user has permission
-	_, err = uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	_, err = uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
@@ -341,4 +334,3 @@ func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, history)
 }
-

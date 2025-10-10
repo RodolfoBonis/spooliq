@@ -3,6 +3,8 @@ package usecases
 import (
 	"net/http"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
+
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
@@ -26,6 +28,13 @@ import (
 func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
 	uc.logger.Info(ctx, "PDF generation attempt started", map[string]interface{}{
 		"user_agent": c.Request.UserAgent(),
 		"ip":         c.ClientIP(),
@@ -43,26 +52,8 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		return
 	}
 
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	organizationID := getOrganizationID(c)
-	if organizationID == "" {
-		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		appError := coreErrors.UsecaseError("Organization ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	admin := isAdmin(c)
-
 	// Get budget
-	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Budget not found", map[string]interface{}{
 			"error":     err.Error(),

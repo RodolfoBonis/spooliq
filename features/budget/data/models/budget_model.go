@@ -10,9 +10,10 @@ import (
 
 // BudgetModel represents the budget data model for GORM
 type BudgetModel struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name        string    `gorm:"type:varchar(255);not null" json:"name"`
-	Description string    `gorm:"type:text" json:"description"`
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_budget_org" json:"organization_id"`
+	Name           string    `gorm:"type:varchar(255);not null" json:"name"`
+	Description    string    `gorm:"type:text" json:"description"`
 
 	// Foreign key to Customer
 	CustomerID uuid.UUID `gorm:"type:uuid;not null;index" json:"customer_id"`
@@ -77,6 +78,7 @@ func (b *BudgetModel) BeforeCreate(tx *gorm.DB) error {
 func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 	return &entities.BudgetEntity{
 		ID:                b.ID,
+		OrganizationID: b.OrganizationID,
 		Name:              b.Name,
 		Description:       b.Description,
 		CustomerID:        b.CustomerID,
@@ -117,6 +119,7 @@ func getDeletedAt(deletedAt gorm.DeletedAt) *time.Time {
 // FromEntity converts domain entity to GORM model
 func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.ID = entity.ID
+	b.OrganizationID = entity.OrganizationID
 	b.Name = entity.Name
 	b.Description = entity.Description
 	b.CustomerID = entity.CustomerID

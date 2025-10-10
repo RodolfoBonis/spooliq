@@ -21,11 +21,12 @@ const (
 
 // BudgetEntity represents a budget/quote in the domain layer
 type BudgetEntity struct {
-	ID          uuid.UUID    `json:"id"`
-	Name        string       `json:"name"`
-	Description string       `json:"description,omitempty"`
-	CustomerID  uuid.UUID    `json:"customer_id"`
-	Status      BudgetStatus `json:"status"`
+	ID             uuid.UUID    `json:"id"`
+	OrganizationID string       `json:"organization_id"` // Multi-tenancy
+	Name           string       `json:"name"`
+	Description    string       `json:"description,omitempty"`
+	CustomerID     uuid.UUID    `json:"customer_id"`
+	Status         BudgetStatus `json:"status"`
 
 	// Print time (manual input for now)
 	PrintTimeHours   int `json:"print_time_hours"`

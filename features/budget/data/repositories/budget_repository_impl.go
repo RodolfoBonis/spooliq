@@ -31,15 +31,11 @@ func (r *budgetRepositoryImpl) Create(ctx context.Context, budget *entities.Budg
 	return nil
 }
 
-func (r *budgetRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, userID string, isAdmin bool) (*entities.BudgetEntity, error) {
+func (r *budgetRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.BudgetEntity, error) {
 	model := &models.BudgetModel{}
 
 	query := r.db.WithContext(ctx)
-
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
+	query = query.Where("organization_id = ?", organizationID)
 
 	if err := query.First(model, "id = ?", id).Error; err != nil {
 		return nil, fmt.Errorf("budget not found: %w", err)
@@ -70,16 +66,14 @@ func (r *budgetRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *budgetRepositoryImpl) FindAll(ctx context.Context, userID string, isAdmin bool, limit, offset int) ([]*entities.BudgetEntity, int, error) {
+func (r *budgetRepositoryImpl) FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.BudgetEntity, int, error) {
 	var budgets []*models.BudgetModel
 	var total int64
 
 	query := r.db.WithContext(ctx).Model(&models.BudgetModel{})
 
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
+	// Filter by organization
+	query = query.Where("organization_id = ?", organizationID)
 
 	// Get total count
 	if err := query.Count(&total).Error; err != nil {
@@ -104,29 +98,16 @@ func (r *budgetRepositoryImpl) FindAll(ctx context.Context, userID string, isAdm
 	return entities, int(total), nil
 }
 
-func (r *budgetRepositoryImpl) FindByCustomer(ctx context.Context, customerID uuid.UUID, userID string, isAdmin bool, limit, offset int) ([]*entities.BudgetEntity, int, error) {
+func (r *budgetRepositoryImpl) FindByCustomer(ctx context.Context, customerID uuid.UUID, organizationID string) ([]*entities.BudgetEntity, error) {
 	var budgets []*models.BudgetModel
-	var total int64
 
-	query := r.db.WithContext(ctx).Model(&models.BudgetModel{}).Where("customer_id = ?", customerID)
+	query := r.db.WithContext(ctx).Model(&models.BudgetModel{}).Where("customer_id = ? AND organization_id = ?", customerID, organizationID)
 
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
-
-	// Get total count
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to count budgets: %w", err)
-	}
-
-	// Get paginated results
+	// Get results
 	if err := query.
-		Limit(limit).
-		Offset(offset).
 		Order("created_at DESC").
 		Find(&budgets).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to find budgets: %w", err)
+		return nil, fmt.Errorf("failed to find budgets: %w", err)
 	}
 
 	// Convert to entities
@@ -135,19 +116,14 @@ func (r *budgetRepositoryImpl) FindByCustomer(ctx context.Context, customerID uu
 		entities[i] = model.ToEntity()
 	}
 
-	return entities, int(total), nil
+	return entities, nil
 }
 
-func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, userID string, isAdmin bool, filters map[string]interface{}, limit, offset int) ([]*entities.BudgetEntity, int, error) {
+func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.BudgetEntity, int, error) {
 	var budgets []*models.BudgetModel
 	var total int64
 
 	query := r.db.WithContext(ctx).Model(&models.BudgetModel{})
-
-	// Apply access control
-	if !isAdmin {
-		query = query.Where("owner_user_id = ?", userID)
-	}
 
 	// Apply filters
 	if name, ok := filters["name"].(string); ok && name != "" {

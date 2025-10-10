@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -25,20 +26,17 @@ import (
 func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
 	uc.logger.Info(ctx, "Budgets retrieval attempt started", map[string]interface{}{
 		"user_agent": c.Request.UserAgent(),
 		"ip":         c.ClientIP(),
 	})
-
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	admin := isAdmin(c)
 
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -54,7 +52,7 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	offset := (page - 1) * pageSize
 
 	// Get budgets from repository
-	budgets, total, err := uc.budgetRepository.FindAll(ctx, userID, admin, pageSize, offset)
+	budgets, total, err := uc.budgetRepository.FindAll(ctx, organizationID, pageSize, offset)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve budgets", map[string]interface{}{
 			"error": err.Error(),
@@ -76,17 +74,17 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 		for j, item := range items {
 			filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 			itemResponses[j] = entities.BudgetItemResponse{
-			ID:          item.ID.String(),
-			BudgetID:    item.BudgetID.String(),
-			FilamentID:  item.FilamentID.String(),
-			Filament:    filamentInfo,
-			Quantity:    item.Quantity,
-			Order:       item.Order,
-			WasteAmount: item.WasteAmount,
-			ItemCost:    item.ItemCost,
-			CreatedAt:   item.CreatedAt,
-			UpdatedAt:   item.UpdatedAt,
-		}
+				ID:          item.ID.String(),
+				BudgetID:    item.BudgetID.String(),
+				FilamentID:  item.FilamentID.String(),
+				Filament:    filamentInfo,
+				Quantity:    item.Quantity,
+				Order:       item.Order,
+				WasteAmount: item.WasteAmount,
+				ItemCost:    item.ItemCost,
+				CreatedAt:   item.CreatedAt,
+				UpdatedAt:   item.UpdatedAt,
+			}
 		}
 
 		budgetResponses[i] = entities.BudgetResponse{
@@ -114,4 +112,3 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-

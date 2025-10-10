@@ -29,20 +29,17 @@ import (
 func (uc *BudgetUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
 	uc.logger.Info(ctx, "Budget update attempt started", map[string]interface{}{
 		"user_agent": c.Request.UserAgent(),
 		"ip":         c.ClientIP(),
 	})
-
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	admin := isAdmin(c)
 
 	// Parse budget ID
 	budgetID, err := uuid.Parse(c.Param("id"))
@@ -76,7 +73,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 
 	// Get existing budget
-	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, userID, admin)
+	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve budget", map[string]interface{}{
 			"error":     err.Error(),
@@ -106,8 +103,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 	if request.CustomerID != nil {
 		// Verify customer exists and user has permission
-		organizationID := helpers.GetOrganizationID(c)
-		customer, err := uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID)
+		_, err = uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID)
 		if err != nil {
 			uc.logger.Error(ctx, "Customer not found", map[string]interface{}{
 				"error":       err.Error(),
@@ -115,14 +111,6 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			})
 			appError := coreErrors.UsecaseError("Customer not found")
 			c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
-			return
-		}
-		if !admin && customer.OwnerUserID != userID {
-			uc.logger.Error(ctx, "Unauthorized access to customer", map[string]interface{}{
-				"customer_id": *request.CustomerID,
-			})
-			appError := coreErrors.UsecaseError("Unauthorized access to customer")
-			c.JSON(http.StatusForbidden, gin.H{"error": appError.Message})
 			return
 		}
 		budget.CustomerID = *request.CustomerID
@@ -213,7 +201,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 
 	// Retrieve the updated budget
-	budget, _ = uc.budgetRepository.FindByID(ctx, budget.ID, userID, admin)
+	budget, _ = uc.budgetRepository.FindByID(ctx, budget.ID, organizationID)
 
 	// Build response
 	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
@@ -248,4 +236,3 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-

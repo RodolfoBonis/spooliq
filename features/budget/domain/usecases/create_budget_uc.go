@@ -32,16 +32,6 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		"ip":         c.ClientIP(),
 	})
 
-	userID := getUserID(c)
-	if userID == "" {
-		uc.logger.Error(ctx, "User ID not found in context", nil)
-		appError := coreErrors.UsecaseError("User ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	admin := isAdmin(c)
-
 	var request entities.CreateBudgetRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{
@@ -70,9 +60,22 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Check if customer exists and user has permission
 	organizationID := helpers.GetOrganizationID(c)
-	customer, err := uc.customerRepository.FindByID(ctx, request.CustomerID, organizationID)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
+	userID := helpers.GetUserID(c)
+	if userID == "" {
+		uc.logger.Error(ctx, "User ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID required"})
+		return
+	}
+
+	// Check if customer exists and user has permission
+	_, err := uc.customerRepository.FindByID(ctx, request.CustomerID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Customer not found", map[string]interface{}{
 			"error":       err.Error(),
@@ -83,23 +86,14 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Verify customer ownership
-	if !admin && customer.OwnerUserID != userID {
-		uc.logger.Error(ctx, "Unauthorized access to customer", map[string]interface{}{
-			"customer_id": request.CustomerID,
-		})
-		appError := coreErrors.UsecaseError("Unauthorized access to customer")
-		c.JSON(http.StatusForbidden, gin.H{"error": appError.Message})
-		return
-	}
-
 	// Create budget entity
 	budget := &entities.BudgetEntity{
-		ID:                uuid.New(),
-		Name:              request.Name,
-		Description:       request.Description,
-		CustomerID:        request.CustomerID,
-		Status:            entities.StatusDraft,
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Name:           request.Name,
+		Description:    request.Description,
+		CustomerID:     request.CustomerID,
+		Status:         entities.StatusDraft,
 		PrintTimeHours:    request.PrintTimeHours,
 		PrintTimeMinutes:  request.PrintTimeMinutes,
 		MachinePresetID:   request.MachinePresetID,
@@ -159,7 +153,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	}
 
 	// Retrieve the updated budget with calculated costs
-	budget, err = uc.budgetRepository.FindByID(ctx, budget.ID, userID, admin)
+	budget, err = uc.budgetRepository.FindByID(ctx, budget.ID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve created budget", map[string]interface{}{
 			"error": err.Error(),

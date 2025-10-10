@@ -11,16 +11,16 @@ import (
 type BudgetRepository interface {
 	// Basic CRUD operations
 	Create(ctx context.Context, budget *entities.BudgetEntity) error
-	FindByID(ctx context.Context, id uuid.UUID, userID string, isAdmin bool) (*entities.BudgetEntity, error)
+	FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.BudgetEntity, error)
 	Update(ctx context.Context, budget *entities.BudgetEntity) error
 	Delete(ctx context.Context, id uuid.UUID) error
 
 	// List operations
-	FindAll(ctx context.Context, userID string, isAdmin bool, limit, offset int) ([]*entities.BudgetEntity, int, error)
-	FindByCustomer(ctx context.Context, customerID uuid.UUID, userID string, isAdmin bool, limit, offset int) ([]*entities.BudgetEntity, int, error)
+	FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.BudgetEntity, int, error)
+	FindByCustomer(ctx context.Context, customerID uuid.UUID, organizationID string) ([]*entities.BudgetEntity, error)
 
 	// Search operations
-	SearchBudgets(ctx context.Context, userID string, isAdmin bool, filters map[string]interface{}, limit, offset int) ([]*entities.BudgetEntity, int, error)
+	SearchBudgets(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.BudgetEntity, int, error)
 
 	// Item operations
 	AddItem(ctx context.Context, item *entities.BudgetItemEntity) error

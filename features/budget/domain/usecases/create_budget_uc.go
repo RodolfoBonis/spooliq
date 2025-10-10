@@ -88,12 +88,12 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 
 	// Create budget entity
 	budget := &entities.BudgetEntity{
-		ID:             uuid.New(),
-		OrganizationID: organizationID,
-		Name:           request.Name,
-		Description:    request.Description,
-		CustomerID:     request.CustomerID,
-		Status:         entities.StatusDraft,
+		ID:                uuid.New(),
+		OrganizationID:    organizationID,
+		Name:              request.Name,
+		Description:       request.Description,
+		CustomerID:        request.CustomerID,
+		Status:            entities.StatusDraft,
 		PrintTimeHours:    request.PrintTimeHours,
 		PrintTimeMinutes:  request.PrintTimeMinutes,
 		MachinePresetID:   request.MachinePresetID,

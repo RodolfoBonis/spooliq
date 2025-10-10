@@ -1,10 +1,11 @@
 package usecases
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,6 @@ func (uc *BrandUseCase) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
-
 
 	// Log brand deletion attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brand deletion attempt started", map[string]interface{}{

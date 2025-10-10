@@ -22,4 +22,3 @@ var Module = fx.Module("webhooks",
 		webhooks.NewWebhookHandler,
 	),
 )
-

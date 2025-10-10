@@ -1,10 +1,11 @@
 package usecases
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
@@ -37,7 +38,6 @@ func (uc *BrandUseCase) FindByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
-
 
 	// Log brand retrieval attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brand retrieval attempt started", map[string]interface{}{

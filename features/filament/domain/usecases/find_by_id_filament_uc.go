@@ -59,7 +59,6 @@ func (uc *FilamentUseCase) FindByID(c *gin.Context) {
 		return
 	}
 
-
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 

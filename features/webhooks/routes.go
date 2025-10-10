@@ -25,4 +25,3 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler) {
 		webhooks.POST("/asaas", handler.asaasWebhookUC.HandleWebhook)
 	}
 }
-

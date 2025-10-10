@@ -129,4 +129,3 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 
 	return targetUser, nil
 }
-

@@ -121,4 +121,3 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 
 	return nil
 }
-

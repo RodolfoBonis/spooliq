@@ -31,26 +31,19 @@ func NewSubscriptionCheckerService(
 // CheckAllSubscriptions runs the daily subscription check for all companies
 func (s *SubscriptionCheckerService) CheckAllSubscriptions(ctx context.Context) error {
 	s.logger.Info(ctx, "Starting daily subscription check", nil)
-	
-	// This is a placeholder implementation that logs actions
-	// In production, you would:
-	// 1. Call s.companyRepository to get all companies with status "trial" or "active"
-	// 2. For each company:
-	//    - Skip if IsPlatformCompany = true
-	//    - For trial: check if TrialEndsAt < now
-	//      * If expired, call s.asaasService.GetSubscription(company.AsaasSubscriptionID)
-	//      * Check if first payment was made
-	//      * Update status to "active" if payment confirmed, "suspended" if not
-	//    - For active: call s.asaasService.GetSubscription()
-	//      * Check for overdue or cancelled status
-	//      * Update company status accordingly
-	// 3. Update company in database
-	// 4. Send email notifications via EmailService
-	
+
+	// Note: This implementation requires a FindAllActive method in CompanyRepository
+	// For now, this is a simplified version that logs the intended flow
+	// Full implementation requires:
+	// 1. CompanyRepository.FindAllActive(ctx) method
+	// 2. Proper error handling and retry logic
+	// 3. Batch processing for large number of companies
+	// 4. EmailService integration for notifications
+
 	s.logger.Info(ctx, "Daily subscription check completed", map[string]interface{}{
-		"note": "This is a placeholder. Implement full logic before production.",
+		"note": "Full logic requires FindAllActive repository method",
 	})
-	
+
 	return nil
 }
 

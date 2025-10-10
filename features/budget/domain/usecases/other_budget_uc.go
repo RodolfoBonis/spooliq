@@ -57,12 +57,12 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 
 	// Create new budget as draft
 	newBudget := &entities.BudgetEntity{
-		ID:             uuid.New(),
-		OrganizationID: organizationID,
-		Name:           originalBudget.Name + " (Copy)",
-		Description:    originalBudget.Description,
-		CustomerID:     originalBudget.CustomerID,
-		Status:         entities.StatusDraft,
+		ID:                uuid.New(),
+		OrganizationID:    organizationID,
+		Name:              originalBudget.Name + " (Copy)",
+		Description:       originalBudget.Description,
+		CustomerID:        originalBudget.CustomerID,
+		Status:            entities.StatusDraft,
 		PrintTimeHours:    originalBudget.PrintTimeHours,
 		PrintTimeMinutes:  originalBudget.PrintTimeMinutes,
 		MachinePresetID:   originalBudget.MachinePresetID,

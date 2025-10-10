@@ -1,8 +1,9 @@
 package usecases
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"net/http"
+
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
@@ -33,7 +34,6 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
-
 
 	// Log brand creation attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Brand creation attempt started", map[string]interface{}{

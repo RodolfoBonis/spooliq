@@ -8,7 +8,7 @@ import (
 // MachinePresetModel represents a 3D printer machine preset in the database
 type MachinePresetModel struct {
 	ID                     uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
+	OrganizationID         string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
 	Brand                  string    `gorm:"type:varchar(255)" json:"brand,omitempty"`
 	Model                  string    `gorm:"type:varchar(255)" json:"model,omitempty"`
 	BuildVolumeX           float32   `gorm:"type:float" json:"build_volume_x"`

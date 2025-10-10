@@ -9,7 +9,7 @@ import (
 // MachinePresetEntity represents a 3D printer machine preset
 type MachinePresetEntity struct {
 	ID                     uuid.UUID `json:"id"`
-	OrganizationID string     `json:"organization_id"` // Multi-tenancy
+	OrganizationID         string    `json:"organization_id"` // Multi-tenancy
 	Brand                  string    `json:"brand,omitempty"`
 	Model                  string    `json:"model,omitempty"`
 	BuildVolumeX           float32   `json:"build_volume_x"`

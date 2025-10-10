@@ -8,7 +8,7 @@ import (
 // CostPresetModel represents fixed costs preset in the database
 type CostPresetModel struct {
 	ID                        uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
+	OrganizationID            string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
 	LaborCostPerHour          float32   `gorm:"type:float" json:"labor_cost_per_hour"`
 	PackagingCostPerItem      float32   `gorm:"type:float" json:"packaging_cost_per_item"`
 	ShippingCostBase          float32   `gorm:"type:float" json:"shipping_cost_base"`

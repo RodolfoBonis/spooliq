@@ -8,7 +8,7 @@ import (
 // EnergyPresetModel represents an energy cost preset by location in the database
 type EnergyPresetModel struct {
 	ID                    uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
+	OrganizationID        string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
 	Country               string    `gorm:"type:varchar(100)" json:"country,omitempty"`
 	State                 string    `gorm:"type:varchar(100)" json:"state,omitempty"`
 	City                  string    `gorm:"type:varchar(100)" json:"city,omitempty"`

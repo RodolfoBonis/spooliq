@@ -78,7 +78,7 @@ func (b *BudgetModel) BeforeCreate(tx *gorm.DB) error {
 func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 	return &entities.BudgetEntity{
 		ID:                b.ID,
-		OrganizationID: b.OrganizationID,
+		OrganizationID:    b.OrganizationID,
 		Name:              b.Name,
 		Description:       b.Description,
 		CustomerID:        b.CustomerID,

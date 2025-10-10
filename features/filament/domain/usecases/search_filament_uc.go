@@ -63,7 +63,6 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 		return
 	}
 
-
 	// Parse pagination parameters
 	page := 1
 	limit := 20

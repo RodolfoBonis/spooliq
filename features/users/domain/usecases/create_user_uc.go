@@ -110,7 +110,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 		FirstName:     req.Name,
 		LastName:      "",
 	}
-	
+
 	keycloakUserID, appErr := uc.keycloakAdmin.CreateUser(ctx, keycloakReq)
 	if appErr != nil {
 		uc.logger.Error(ctx, "Failed to create user in Keycloak", map[string]interface{}{
@@ -198,4 +198,3 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
-

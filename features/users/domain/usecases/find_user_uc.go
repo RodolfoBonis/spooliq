@@ -88,4 +88,3 @@ func (uc *FindUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organi
 
 	return user, nil
 }
-

@@ -70,4 +70,3 @@ func (uc *ListUsersUseCase) Execute(ctx context.Context, organizationID string, 
 
 	return users, nil
 }
-

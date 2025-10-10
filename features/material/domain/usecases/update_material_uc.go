@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -39,7 +39,6 @@ func (uc *MaterialUseCase) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
-
 
 	// Log material update attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Material update attempt started", map[string]interface{}{

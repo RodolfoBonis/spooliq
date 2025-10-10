@@ -322,4 +322,3 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
-

@@ -9,7 +9,7 @@ import (
 // EnergyPresetEntity represents energy cost configuration by location
 type EnergyPresetEntity struct {
 	ID                    uuid.UUID `json:"id"`
-	OrganizationID string     `json:"organization_id"` // Multi-tenancy
+	OrganizationID        string    `json:"organization_id"` // Multi-tenancy
 	Country               string    `json:"country,omitempty"`
 	State                 string    `json:"state,omitempty"`
 	City                  string    `json:"city,omitempty"`

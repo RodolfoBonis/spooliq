@@ -1,10 +1,11 @@
 package usecases
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,6 @@ func (uc *MaterialUseCase) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
-
 
 	// Log material deletion attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Material deletion attempt started", map[string]interface{}{

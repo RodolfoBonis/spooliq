@@ -93,22 +93,22 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 				return
 			}
 
-		// Extract roles from realm_access instead of resource_access
-		// This works for both public and confidential clients
-		if realmAccess, ok := claims["realm_access"].(map[string]interface{}); ok {
-			if roles, ok := realmAccess["roles"].([]interface{}); ok {
-				rolesBytes, _ := json.Marshal(roles)
-				err = json.Unmarshal(rolesBytes, &userClaim.Roles)
-				if err != nil {
-					appError := errors.NewAppError(entities.ErrMiddleware, err.Error(), nil, err)
-					httpError := appError.ToHTTPError()
-					logger.LogError(ctx, "Auth failed: unmarshal roles error", appError)
-					c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-					c.Abort()
-					return
+			// Extract roles from realm_access instead of resource_access
+			// This works for both public and confidential clients
+			if realmAccess, ok := claims["realm_access"].(map[string]interface{}); ok {
+				if roles, ok := realmAccess["roles"].([]interface{}); ok {
+					rolesBytes, _ := json.Marshal(roles)
+					err = json.Unmarshal(rolesBytes, &userClaim.Roles)
+					if err != nil {
+						appError := errors.NewAppError(entities.ErrMiddleware, err.Error(), nil, err)
+						httpError := appError.ToHTTPError()
+						logger.LogError(ctx, "Auth failed: unmarshal roles error", appError)
+						c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+						c.Abort()
+						return
+					}
 				}
 			}
-		}
 
 			containsRole := userClaim.Roles.Contains(role)
 

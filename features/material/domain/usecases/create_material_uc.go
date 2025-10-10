@@ -1,8 +1,9 @@
 package usecases
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"net/http"
+
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
@@ -34,7 +35,6 @@ func (uc *MaterialUseCase) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
-
 
 	// Log material creation attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Material creation attempt started", map[string]interface{}{

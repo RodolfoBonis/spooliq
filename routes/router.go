@@ -4,6 +4,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
+	"github.com/RodolfoBonis/spooliq/features/admin"
 	"github.com/RodolfoBonis/spooliq/features/auth"
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/brand"
@@ -44,6 +45,7 @@ func InitializeRoutes(
 	presetHandler *preset.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
+	adminHandler *admin.Handler,
 	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
@@ -66,4 +68,5 @@ func InitializeRoutes(
 	uploads.Routes(root, uploadsUc, protectFactory)
 	users.SetupRoutes(root, userHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
+	admin.SetupRoutes(root, adminHandler, protectFactory)
 }

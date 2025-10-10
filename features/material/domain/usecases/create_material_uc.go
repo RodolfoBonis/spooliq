@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"net/http"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -26,6 +27,14 @@ import (
 // @Security Bearer
 func (uc *MaterialUseCase) Create(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
 
 	// Log material creation attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Material creation attempt started", map[string]interface{}{
@@ -63,7 +72,7 @@ func (uc *MaterialUseCase) Create(c *gin.Context) {
 	}
 
 	// Check if material with the same name already exists
-	exists, err := uc.repository.Exists(request.Name)
+	exists, err := uc.repository.Exists(request.Name, organizationID)
 	if err != nil {
 		// Enhanced logging with automatic trace correlation
 		uc.logger.Error(ctx, "Failed to check material name existence", map[string]interface{}{

@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"errors"
 	"net/http"
 	"strings"
@@ -27,6 +28,14 @@ import (
 func (uc *MaterialUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+
 	// Log material deletion attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Material deletion attempt started", map[string]interface{}{
 		"ip":         c.ClientIP(),
@@ -50,7 +59,7 @@ func (uc *MaterialUseCase) Delete(c *gin.Context) {
 	}
 
 	// Check if material exists before deletion
-	material, err := uc.repository.FindByID(id)
+	material, err := uc.repository.FindByID(id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Material not found")

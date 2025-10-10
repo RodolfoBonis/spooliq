@@ -10,7 +10,7 @@ type MaterialRepository interface {
 	Create(material *entities.MaterialEntity) error
 	Update(material *entities.MaterialEntity) error
 	Delete(id uuid.UUID) error
-	FindByID(id uuid.UUID) (*entities.MaterialEntity, error)
-	FindAll() ([]entities.MaterialEntity, error)
-	Exists(name string) (bool, error)
+	FindByID(id uuid.UUID, organizationID string) (*entities.MaterialEntity, error)
+	FindAll(organizationID string) ([]entities.MaterialEntity, error)
+	Exists(name string, organizationID string) (bool, error)
 }

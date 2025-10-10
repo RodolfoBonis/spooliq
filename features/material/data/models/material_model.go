@@ -9,14 +9,15 @@ import (
 
 // MaterialModel represents a 3D printing material in the database
 type MaterialModel struct {
-	ID           uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name         string     `gorm:"type:varchar(255);not null" json:"name"`
-	Description  string     `gorm:"type:text" json:"description,omitempty"`
-	TempTable    float32    `gorm:"type:float" json:"tempTable,omitempty"`
-	TempExtruder float32    `gorm:"type:float" json:"tempExtruder,omitempty"`
-	CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt    time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt    *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_material_org" json:"organization_id"`
+	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
+	Description    string     `gorm:"type:text" json:"description,omitempty"`
+	TempTable      float32    `gorm:"type:float" json:"tempTable,omitempty"`
+	TempExtruder   float32    `gorm:"type:float" json:"tempExtruder,omitempty"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 // TableName returns the database table name for MaterialModel
@@ -28,6 +29,7 @@ func (m *MaterialModel) FromEntity(entity *entities.MaterialEntity) {
 	if entity.ID != uuid.Nil {
 		m.ID = entity.ID
 	}
+	m.OrganizationID = entity.OrganizationID
 	m.Name = entity.Name
 	m.Description = entity.Description
 	m.TempTable = entity.TempTable
@@ -45,13 +47,14 @@ func (m *MaterialModel) FromEntity(entity *entities.MaterialEntity) {
 // ToEntity converts the MaterialModel to a MaterialEntity.
 func (m *MaterialModel) ToEntity() entities.MaterialEntity {
 	return entities.MaterialEntity{
-		ID:           m.ID,
-		Name:         m.Name,
-		Description:  m.Description,
-		TempTable:    m.TempTable,
-		TempExtruder: m.TempExtruder,
-		CreatedAt:    m.CreatedAt,
-		UpdatedAt:    m.UpdatedAt,
-		DeletedAt:    m.DeletedAt,
+		ID:             m.ID,
+		OrganizationID: m.OrganizationID,
+		Name:           m.Name,
+		Description:    m.Description,
+		TempTable:      m.TempTable,
+		TempExtruder:   m.TempExtruder,
+		CreatedAt:      m.CreatedAt,
+		UpdatedAt:      m.UpdatedAt,
+		DeletedAt:      m.DeletedAt,
 	}
 }

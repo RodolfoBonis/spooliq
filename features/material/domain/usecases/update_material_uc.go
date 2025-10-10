@@ -2,8 +2,10 @@ package usecases
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -30,6 +32,14 @@ import (
 // @Security Bearer
 func (uc *MaterialUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found in context", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
 
 	// Log material update attempt (automatic trace correlation via enhanced observability)
 	uc.logger.Info(ctx, "Material update attempt started", map[string]interface{}{
@@ -82,7 +92,7 @@ func (uc *MaterialUseCase) Update(c *gin.Context) {
 		return
 	}
 
-	material, err := uc.repository.FindByID(id)
+	material, err := uc.repository.FindByID(id, organizationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
 			appError := coreErrors.UsecaseError("Material not found")
@@ -112,7 +122,7 @@ func (uc *MaterialUseCase) Update(c *gin.Context) {
 
 	// Check if another material with the same name exists (excluding current material)
 	if request.Name != material.Name {
-		exists, err := uc.repository.Exists(request.Name)
+		exists, err := uc.repository.Exists(request.Name, organizationID)
 		if err != nil {
 			// Enhanced logging with automatic trace correlation
 			uc.logger.Error(ctx, "Failed to check material name existence", map[string]interface{}{

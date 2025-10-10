@@ -103,7 +103,7 @@ else:
 print("\n👥 Creating realm roles...")
 roles_url = f"{KEYCLOAK_URL}/admin/realms/{REALM}/roles"
 
-roles = ["PlatformAdmin", "OrgAdmin", "User"]
+roles = ["PlatformAdmin", "OrgAdmin", "Owner", "User"]
 for role in roles:
     # Check if role exists
     response = requests.get(f"{roles_url}/{role}", headers=headers)
@@ -112,7 +112,7 @@ for role in roles:
     else:
         role_data = {
             "name": role,
-            "description": f"{role} role for Spooliq"
+            "description": f"{role} role for Spooliq SaaS platform"
         }
         response = requests.post(roles_url, headers=headers, json=role_data)
         if response.status_code == 201:

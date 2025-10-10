@@ -3,9 +3,9 @@ package roles
 import "github.com/RodolfoBonis/spooliq/core/entities"
 
 // System role constants
+// These MUST match exactly with Keycloak realm roles
 const (
-	UserRole          = "user"
-	AdminRole         = "adm"
+	UserRole          = "User"
 	OrgAdminRole      = "OrgAdmin"
 	OwnerRole         = "Owner"
 	PlatformAdminRole = "PlatformAdmin"

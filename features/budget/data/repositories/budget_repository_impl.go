@@ -357,7 +357,7 @@ func (r *budgetRepositoryImpl) GetStatusHistory(ctx context.Context, budgetID uu
 	return entities, nil
 }
 
-// CalculateCosts calculates all costs for a budget
+// CalculateCosts calculates all costs for a budget (REFACTORED for multi-filament support)
 func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid.UUID) error {
 	// Get budget
 	var budget models.BudgetModel
@@ -371,112 +371,135 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		return err
 	}
 
-	var filamentCost, wasteCost, energyCost, laborCost int64
+	// Get machine and energy presets (global)
+	var machinePreset *entities.PresetInfo
+	var energyPreset *entities.PresetInfo
 
-	// 1. Calculate filament cost
-	for _, item := range items {
-		filament, err := r.GetFilamentInfo(ctx, item.FilamentID)
-		if err != nil {
-			return fmt.Errorf("failed to get filament info: %w", err)
-		}
-
-		// Cost = (quantity in kg) * price_per_kg * 100 (to cents)
-		itemCost := (item.Quantity / 1000.0) * filament.PricePerKg * 100
-		item.ItemCost = int64(itemCost)
-		filamentCost += int64(itemCost)
-
-		// Update item cost in database
-		if err := r.UpdateItem(ctx, item); err != nil {
-			return fmt.Errorf("failed to update item cost: %w", err)
-		}
+	if budget.MachinePresetID != nil {
+		machinePreset, _ = r.GetPresetInfo(ctx, *budget.MachinePresetID, "machine")
+	}
+	if budget.EnergyPresetID != nil {
+		energyPreset, _ = r.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy")
 	}
 
-	// 2. Calculate AMS waste cost (15g per color change)
-	if budget.IncludeWasteCost && len(items) > 1 {
-		wastePerChange := 15.0 // grams per color change
-		numChanges := len(items) - 1
-		totalWaste := wastePerChange * float64(numChanges)
+	var totalFilamentCost, totalWasteCost, totalEnergyCost, totalLaborCost int64
 
-		// Calculate average filament price
+	// Process each item (product)
+	for _, item := range items {
+		var itemFilamentCost, itemWasteCost, itemEnergyCost, itemLaborCost int64
+
+		// 1. Get filaments for this item
+		itemFilaments, err := r.GetItemFilaments(ctx, item.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get item filaments: %w", err)
+		}
+
+		// 2. Calculate filament cost (sum of all filaments in this item)
+		var totalGrams float64
+		var avgPrice float64
 		var totalPrice float64
-		for _, item := range items {
-			filament, _ := r.GetFilamentInfo(ctx, item.FilamentID)
+
+		for _, itemFil := range itemFilaments {
+			filament, err := r.GetFilamentInfo(ctx, itemFil.FilamentID)
+			if err != nil {
+				continue
+			}
+
+			// Quantity já é o total (não precisa multiplicar por ProductQuantity!)
+			gramsTotal := itemFil.Quantity
+			cost := (gramsTotal / 1000.0) * filament.PricePerKg * 100 // to cents
+			itemFilamentCost += int64(cost)
+			totalGrams += gramsTotal
 			totalPrice += filament.PricePerKg
 		}
-		avgPrice := totalPrice / float64(len(items))
 
-		// Calculate waste cost
-		wasteCost = int64((totalWaste / 1000.0) * avgPrice * 100)
-
-		// Update waste amount for each item (except first)
-		for i := 1; i < len(items); i++ {
-			items[i].WasteAmount = wastePerChange
-			if err := r.UpdateItem(ctx, items[i]); err != nil {
-				return fmt.Errorf("failed to update item waste: %w", err)
-			}
+		if len(itemFilaments) > 0 {
+			avgPrice = totalPrice / float64(len(itemFilaments))
 		}
-	}
 
-	// 3. Calculate energy cost
-	if budget.IncludeEnergyCost && budget.EnergyPresetID != nil && budget.MachinePresetID != nil {
-		energyPreset, err := r.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy")
-		if err == nil {
-			machinePreset, err := r.GetPresetInfo(ctx, *budget.MachinePresetID, "machine")
-			if err == nil {
-				// Get power consumption and energy price from presets
-				var powerConsumption, energyPrice float64
-
-				// Query energy preset for price
-				r.db.WithContext(ctx).
-					Table("presets").
-					Select("CAST(value AS FLOAT) as price").
-					Where("id = ? AND key = 'price_per_kwh'", energyPreset.ID).
-					Scan(&energyPrice)
-
-				// Query machine preset for power consumption
-				r.db.WithContext(ctx).
-					Table("presets").
-					Select("CAST(value AS FLOAT) as power").
-					Where("id = ? AND key = 'power_consumption'", machinePreset.ID).
-					Scan(&powerConsumption)
-
-				totalHours := float64(budget.PrintTimeHours) + float64(budget.PrintTimeMinutes)/60.0
-				kwh := powerConsumption * totalHours / 1000.0 // Convert watts to kilowatts
-				energyCost = int64(kwh * energyPrice * 100)
-			}
+		// 3. Calculate waste cost (AMS multi-color)
+		if budget.IncludeWasteCost && len(itemFilaments) > 1 {
+			wastePerChange := 15.0 // grams
+			numChanges := len(itemFilaments) - 1
+			totalWaste := wastePerChange * float64(numChanges)
+			itemWasteCost = int64((totalWaste / 1000.0) * avgPrice * 100)
 		}
-	}
 
-	// 4. Calculate labor cost
-	if budget.IncludeLaborCost {
-		laborRate := budget.LaborCostPerHour
+		// 4. Calculate energy cost (proportional to this item's print time)
+		if budget.IncludeEnergyCost && machinePreset != nil && energyPreset != nil {
+			// Get power consumption and energy price from presets
+			var powerConsumption, energyPrice float64
 
-		// If no override, use preset
-		if laborRate == nil && budget.CostPresetID != nil {
-			costPreset, err := r.GetPresetInfo(ctx, *budget.CostPresetID, "cost")
+			r.db.WithContext(ctx).
+				Table("presets").
+				Select("CAST(value AS FLOAT) as price").
+				Where("id = ? AND key = 'price_per_kwh'", energyPreset.ID).
+				Scan(&energyPrice)
+
+			r.db.WithContext(ctx).
+				Table("presets").
+				Select("CAST(value AS FLOAT) as power").
+				Where("id = ? AND key = 'power_consumption'", machinePreset.ID).
+				Scan(&powerConsumption)
+
+			itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
+			kwh := powerConsumption * itemHours / 1000.0
+			itemEnergyCost = int64(kwh * energyPrice * 100)
+		}
+
+		// 5. Calculate labor cost (base + additional)
+		itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
+
+		// Base labor cost from preset
+		var laborRate float64
+		if item.CostPresetID != nil {
+			costPreset, err := r.GetPresetInfo(ctx, *item.CostPresetID, "cost")
 			if err == nil {
-				var presetRate float64
 				r.db.WithContext(ctx).
 					Table("presets").
 					Select("CAST(value AS FLOAT) as rate").
 					Where("id = ? AND key = 'labor_cost_per_hour'", costPreset.ID).
-					Scan(&presetRate)
-				laborRate = &presetRate
+					Scan(&laborRate)
 			}
 		}
 
-		if laborRate != nil {
-			totalHours := float64(budget.PrintTimeHours) + float64(budget.PrintTimeMinutes)/60.0
-			laborCost = int64(totalHours * (*laborRate) * 100)
+		itemLaborCost = int64(itemHours * laborRate * 100)
+
+		// Add additional labor cost (pintura, acabamento, etc)
+		if item.AdditionalLaborCost != nil {
+			itemLaborCost += *item.AdditionalLaborCost
 		}
+
+		// 6. Calculate item total cost
+		item.FilamentCost = itemFilamentCost
+		item.WasteCost = itemWasteCost
+		item.EnergyCost = itemEnergyCost
+		item.LaborCost = itemLaborCost
+		item.ItemTotalCost = itemFilamentCost + itemWasteCost + itemEnergyCost + itemLaborCost
+
+		// 7. Calculate unit price
+		if item.ProductQuantity > 0 {
+			item.UnitPrice = item.ItemTotalCost / int64(item.ProductQuantity)
+		}
+
+		// 8. Update item in database
+		if err := r.UpdateItem(ctx, item); err != nil {
+			return fmt.Errorf("failed to update item costs: %w", err)
+		}
+
+		// 9. Sum to budget totals
+		totalFilamentCost += itemFilamentCost
+		totalWasteCost += itemWasteCost
+		totalEnergyCost += itemEnergyCost
+		totalLaborCost += itemLaborCost
 	}
 
-	// 5. Update budget with calculated costs
-	budget.FilamentCost = filamentCost
-	budget.WasteCost = wasteCost
-	budget.EnergyCost = energyCost
-	budget.LaborCost = laborCost
-	budget.TotalCost = filamentCost + wasteCost + energyCost + laborCost
+	// Update budget totals
+	budget.FilamentCost = totalFilamentCost
+	budget.WasteCost = totalWasteCost
+	budget.EnergyCost = totalEnergyCost
+	budget.LaborCost = totalLaborCost
+	budget.TotalCost = totalFilamentCost + totalWasteCost + totalEnergyCost + totalLaborCost
 
 	if err := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).

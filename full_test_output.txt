@@ -1,0 +1,712 @@
+======================================
+🚀 Spooliq SaaS - Complete Flow Test
+======================================
+
+Test email: test_1760531653@example.com
+API URL: http://localhost:8080/v1
+
+1️⃣  Registering new company...
+{
+  "user_id": "6ba4d49c-53b9-446f-b1ba-465b2eaa0d75",
+  "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+  "trial_ends_at": "2025-10-29T09:34:13-03:00",
+  "message": "Registration successful! Your 14-day trial has started."
+}
+✅ Company registered successfully
+
+2️⃣  Logging in...
+{
+  "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJZdU02RzhVemdJUXZ1bG5CajlDd3lfTFE3Vms3bldNdVZ1NDhMbldtWjFjIn0.eyJleHAiOjE3NjA1MzE5NTUsImlhdCI6MTc2MDUzMTY1NSwianRpIjoib25ydHJvOmZiMTM0NjQ2LTc1ODMtNDY2YS04M2I3LTdjZjJiZmJmZjlmMyIsImlzcyI6Imh0dHBzOi8vYXV0aC5yb2RvbGZvZGVib25pcy5jb20uYnIvcmVhbG1zL3Nwb29saXEiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMzFiMTFiZWEtZjc0MC00MjZhLWJlMjktMzExZmExYzY2YmM1IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoic3Bvb2xpcSIsInNpZCI6ImZiY2U4ZjY4LTgyNDQtNGZiZi04OWFiLWQ1NWQ5ZWU2NjE5MyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDo4MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLXNwb29saXEiLCJPd25lciIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBvcmdhbml6YXRpb24gZW1haWwgcHJvZmlsZSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJvcmdhbml6YXRpb25faWQiOiJmYmU1Y2E3My1jYTk4LTQxMDEtOWI2Yi0wMDU3MDIzODQ1NGUiLCJuYW1lIjoiSm_Do28gU2lsdmEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ0ZXN0XzE3NjA1MzE2NTNAZXhhbXBsZS5jb20iLCJnaXZlbl9uYW1lIjoiSm_Do28iLCJmYW1pbHlfbmFtZSI6IlNpbHZhIiwiZW1haWwiOiJ0ZXN0XzE3NjA1MzE2NTNAZXhhbXBsZS5jb20ifQ.pofz2D3cVmI9jmgdaRV4dk-BU4LNOzCMCCHuGagjyVUVxxdnTL_jLt2IZ7aFo0LSXISH5xExXUuuIUpp2fxs09aA2Uc0PfBbeHtj6NKIuW-ApjC8ZC7ApwThJztiE4G8zaawlm6XJz2xmoQ32qR2A5tVviJI-S9-R9lUQ8jS2A3jG3WA77tRRL16zFkwFmwVcXBSE9wU9JKzjjadQrSLV2CD9m8d_AFhbMcAONa4NyNsuG1jWbAeHwbWNt9IcsgA9O-DNQwV7LpSpNW9JS_NLMuthIuuBDFkr5LoKnfmUaXDc8E5PmJSzSF5Mb0KKiX0f0pcoqNKVOQmYiAm4zE8pA",
+  "refreshToken": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI2YzFlZTU1My01N2M2LTQyNjEtYjg2ZS03MzkzZGExNjY1NjUifQ.eyJleHAiOjE3NjA1MzM0NTYsImlhdCI6MTc2MDUzMTY1NiwianRpIjoiZGU3ZTI5NDgtOTBlNi0zMWJjLTIxMTMtOTIyNjI0MjRlNmU1IiwiaXNzIjoiaHR0cHM6Ly9hdXRoLnJvZG9sZm9kZWJvbmlzLmNvbS5ici9yZWFsbXMvc3Bvb2xpcSIsImF1ZCI6Imh0dHBzOi8vYXV0aC5yb2RvbGZvZGVib25pcy5jb20uYnIvcmVhbG1zL3Nwb29saXEiLCJzdWIiOiIzMWIxMWJlYS1mNzQwLTQyNmEtYmUyOS0zMTFmYTFjNjZiYzUiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoic3Bvb2xpcSIsInNpZCI6ImZiY2U4ZjY4LTgyNDQtNGZiZi04OWFiLWQ1NWQ5ZWU2NjE5MyIsInNjb3BlIjoib3BlbmlkIHNlcnZpY2VfYWNjb3VudCBhY3Igcm9sZXMgYmFzaWMgb3JnYW5pemF0aW9uIHdlYi1vcmlnaW5zIGVtYWlsIHByb2ZpbGUifQ.fo1LUMbB-f4FbRLXLBDZ5OMGwlgpPs8i_WZ1g2WhJmi5r2kGO6bDKhKR2kFM1sRgg1EbGee4npMw084tRvJ6AA",
+  "expiresIn": 299
+}
+✅ Login successful
+Token: eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6IC...
+
+3️⃣  Getting company info...
+jq: parse error: Invalid numeric literal at line 1, column 3
+✅ Company info retrieved
+
+4️⃣  Creating and uploading company logo...
+{
+  "error": "Logo file is required"
+}
+✅ Logo uploaded successfully
+
+5️⃣  Getting branding templates...
+{
+  "templates": [
+    {
+      "name": "modern_pink",
+      "display_name": "Rosa Moderno",
+      "description": "Design vibrante e moderno em tons de rosa",
+      "colors": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "organization_id": "",
+        "template_name": "modern_pink",
+        "header_bg_color": "#ec4899",
+        "header_text_color": "#ffffff",
+        "primary_color": "#db2777",
+        "primary_text_color": "#ffffff",
+        "secondary_color": "#f9a8d4",
+        "secondary_text_color": "#831843",
+        "title_color": "#be185d",
+        "body_text_color": "#404040",
+        "accent_color": "#a855f7",
+        "border_color": "#fbcfe8",
+        "background_color": "#ffffff",
+        "table_header_bg_color": "#fce7f3",
+        "table_row_alt_bg_color": "#fdf2f8",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "corporate_blue",
+      "display_name": "Azul Corporativo",
+      "description": "Profissional e confiável em tons de azul",
+      "colors": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "organization_id": "",
+        "template_name": "corporate_blue",
+        "header_bg_color": "#1e40af",
+        "header_text_color": "#ffffff",
+        "primary_color": "#3b82f6",
+        "primary_text_color": "#ffffff",
+        "secondary_color": "#60a5fa",
+        "secondary_text_color": "#1e3a8a",
+        "title_color": "#1e40af",
+        "body_text_color": "#374151",
+        "accent_color": "#0ea5e9",
+        "border_color": "#93c5fd",
+        "background_color": "#ffffff",
+        "table_header_bg_color": "#dbeafe",
+        "table_row_alt_bg_color": "#eff6ff",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "tech_green",
+      "display_name": "Verde Tecnologia",
+      "description": "Sustentável e inovador em tons de verde",
+      "colors": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "organization_id": "",
+        "template_name": "tech_green",
+        "header_bg_color": "#059669",
+        "header_text_color": "#ffffff",
+        "primary_color": "#10b981",
+        "primary_text_color": "#ffffff",
+        "secondary_color": "#34d399",
+        "secondary_text_color": "#064e3b",
+        "title_color": "#047857",
+        "body_text_color": "#374151",
+        "accent_color": "#14b8a6",
+        "border_color": "#a7f3d0",
+        "background_color": "#ffffff",
+        "table_header_bg_color": "#d1fae5",
+        "table_row_alt_bg_color": "#ecfdf5",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "elegant_purple",
+      "display_name": "Roxo Elegante",
+      "description": "Sofisticado e criativo em tons de roxo",
+      "colors": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "organization_id": "",
+        "template_name": "elegant_purple",
+        "header_bg_color": "#7c3aed",
+        "header_text_color": "#ffffff",
+        "primary_color": "#8b5cf6",
+        "primary_text_color": "#ffffff",
+        "secondary_color": "#a78bfa",
+        "secondary_text_color": "#5b21b6",
+        "title_color": "#6d28d9",
+        "body_text_color": "#374151",
+        "accent_color": "#d946ef",
+        "border_color": "#c4b5fd",
+        "background_color": "#ffffff",
+        "table_header_bg_color": "#ede9fe",
+        "table_row_alt_bg_color": "#f5f3ff",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z"
+      }
+    }
+  ]
+}
+✅ Branding templates retrieved
+
+6️⃣  Getting current branding configuration...
+{
+  "branding": {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+    "template_name": "modern_pink",
+    "header_bg_color": "#ec4899",
+    "header_text_color": "#ffffff",
+    "primary_color": "#db2777",
+    "primary_text_color": "#ffffff",
+    "secondary_color": "#f9a8d4",
+    "secondary_text_color": "#831843",
+    "title_color": "#be185d",
+    "body_text_color": "#404040",
+    "accent_color": "#a855f7",
+    "border_color": "#fbcfe8",
+    "background_color": "#ffffff",
+    "table_header_bg_color": "#fce7f3",
+    "table_row_alt_bg_color": "#fdf2f8",
+    "created_at": "0001-01-01T00:00:00Z",
+    "updated_at": "0001-01-01T00:00:00Z"
+  }
+}
+✅ Current branding retrieved
+
+7️⃣  Updating branding to 'corporate_blue' template...
+{
+  "branding": {
+    "id": "f72e548d-d221-4048-939d-44b1a23f0ffa",
+    "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+    "template_name": "corporate_blue",
+    "header_bg_color": "#1e40af",
+    "header_text_color": "#ffffff",
+    "primary_color": "#3b82f6",
+    "primary_text_color": "#ffffff",
+    "secondary_color": "#60a5fa",
+    "secondary_text_color": "#1e3a8a",
+    "title_color": "#1e40af",
+    "body_text_color": "#374151",
+    "accent_color": "#0ea5e9",
+    "border_color": "#93c5fd",
+    "background_color": "#ffffff",
+    "table_header_bg_color": "#dbeafe",
+    "table_row_alt_bg_color": "#eff6ff",
+    "created_at": "2025-10-15T09:34:16.337864-03:00",
+    "updated_at": "2025-10-15T09:34:16.337864-03:00"
+  },
+  "message": "Branding configuration saved successfully"
+}
+✅ Branding updated successfully
+
+8️⃣  Updating company info...
+✅ Company updated
+
+9️⃣  Creating brand...
+{
+  "id": "cfa43c24-4a64-47ad-9906-64dbe87173ef",
+  "organization_id": "",
+  "name": "Creality",
+  "description": "Marca de filamentos Creality",
+  "created_at": "2025-10-15T09:34:16.424791-03:00",
+  "updated_at": "2025-10-15T09:34:16.424791-03:00"
+}
+✅ Brand created: cfa43c24-4a64-47ad-9906-64dbe87173ef
+
+🔟 Creating material...
+{
+  "id": "27b95432-a517-4ace-a633-bde69f3b6904",
+  "organization_id": "",
+  "name": "PLA",
+  "description": "Ácido Polilático",
+  "created_at": "2025-10-15T09:34:16.492705-03:00",
+  "updated_at": "2025-10-15T09:34:16.492705-03:00"
+}
+✅ Material created: 27b95432-a517-4ace-a633-bde69f3b6904
+
+1️⃣1️⃣  Creating filament...
+{
+  "id": "077404d6-77dc-4b13-a901-0eb7655dff52",
+  "organization_id": "",
+  "name": "PLA Rosa Pink",
+  "brand_id": "cfa43c24-4a64-47ad-9906-64dbe87173ef",
+  "material_id": "27b95432-a517-4ace-a633-bde69f3b6904",
+  "color": "Rosa Pink",
+  "color_hex": "#ec4899",
+  "color_type": "",
+  "diameter": 1.75,
+  "price_per_kg": 8990,
+  "owner_user_id": "31b11bea-f740-426a-be29-311fa1c66bc5",
+  "is_active": false,
+  "created_at": "2025-10-15T09:34:16.584008-03:00",
+  "updated_at": "2025-10-15T09:34:16.584008-03:00"
+}
+✅ Filament created: 077404d6-77dc-4b13-a901-0eb7655dff52
+
+1️⃣2️⃣  Creating machine preset...
+{
+  "id": "9339297a-7a54-45ec-8611-7d17606cd88a",
+  "name": "Ender 3 V2",
+  "type": "machine",
+  "is_active": true,
+  "is_default": false,
+  "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+  "created_at": "2025-10-15T09:34:16.649444-03:00",
+  "updated_at": "2025-10-15T09:34:16.649444-03:00"
+}
+✅ Machine preset created: 9339297a-7a54-45ec-8611-7d17606cd88a
+
+1️⃣3️⃣  Creating energy preset...
+{
+  "id": "bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6",
+  "name": "Padrão Residencial",
+  "type": "energy",
+  "is_active": true,
+  "is_default": false,
+  "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+  "created_at": "2025-10-15T09:34:16.727041-03:00",
+  "updated_at": "2025-10-15T09:34:16.727041-03:00"
+}
+✅ Energy preset created: bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6
+
+1️⃣4️⃣  Creating cost preset...
+{
+  "id": "4b03e359-ebd4-4191-850b-b3447404674e",
+  "name": "Padrão",
+  "type": "cost",
+  "is_active": true,
+  "is_default": false,
+  "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+  "created_at": "2025-10-15T09:34:16.907993-03:00",
+  "updated_at": "2025-10-15T09:34:16.907993-03:00"
+}
+✅ Cost preset created: 4b03e359-ebd4-4191-850b-b3447404674e
+
+1️⃣5️⃣  Creating customer...
+{
+  "customer": {
+    "id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+    "name": "Maria Souza",
+    "email": "maria.souza_1760531656@example.com",
+    "phone": "+5511987654321",
+    "document": "123.456.789-00",
+    "city": "São Paulo",
+    "state": "SP",
+    "zip_code": "01234-567",
+    "owner_user_id": "31b11bea-f740-426a-be29-311fa1c66bc5",
+    "is_active": true,
+    "created_at": "2025-10-15T09:34:17.006482-03:00",
+    "updated_at": "2025-10-15T09:34:17.006482-03:00"
+  }
+}
+✅ Customer created: ed69548b-c0fd-4b74-971b-237ef4546963
+
+1️⃣6️⃣  Creating budget with product information...
+{
+  "budget": {
+    "id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+    "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+    "name": "Orçamento - Chaveiros Outubro Rosa",
+    "description": "100 chaveiros personalizados para campanha Outubro Rosa",
+    "customer_id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "status": "draft",
+    "print_time_hours": 0,
+    "print_time_minutes": 0,
+    "machine_preset_id": "9339297a-7a54-45ec-8611-7d17606cd88a",
+    "energy_preset_id": "bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6",
+    "include_energy_cost": true,
+    "include_labor_cost": false,
+    "include_waste_cost": true,
+    "filament_cost": 2517200,
+    "waste_cost": 0,
+    "energy_cost": 0,
+    "labor_cost": 5000,
+    "total_cost": 2522200,
+    "delivery_days": 7,
+    "payment_terms": "50% entrada, 50% na entrega",
+    "notes": "Entrega em caixa personalizada com laços rosas",
+    "owner_user_id": "31b11bea-f740-426a-be29-311fa1c66bc5",
+    "created_at": "2025-10-15T12:34:17.094919Z",
+    "updated_at": "2025-10-15T12:34:17.110153Z"
+  },
+  "customer": {
+    "id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "name": "Maria Souza",
+    "email": "maria.souza_1760531656@example.com",
+    "phone": "+5511987654321",
+    "document": "123.456.789-00"
+  },
+  "items": [
+    {
+      "id": "a28e6f0d-2656-495d-abc3-21a34d1d4b4b",
+      "budget_id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+      "product_name": "Chaveiro Laço Rosa (PLA) com argola",
+      "product_description": "Chaveiro em formato de laço da campanha Outubro Rosa, impressão 3D em PLA rosa, inclui argola metálica",
+      "product_quantity": 100,
+      "product_dimensions": "26×48×9 mm",
+      "print_time_hours": 5,
+      "print_time_minutes": 30,
+      "print_time_display": "5h30m",
+      "cost_preset_id": "4b03e359-ebd4-4191-850b-b3447404674e",
+      "additional_labor_cost": 5000,
+      "additional_notes": "Inclui montagem manual da argola metálica",
+      "filament_cost": 2517200,
+      "waste_cost": 0,
+      "energy_cost": 0,
+      "labor_cost": 5000,
+      "item_total_cost": 2522200,
+      "unit_price": 25222,
+      "filaments": [
+        {
+          "filament_id": "077404d6-77dc-4b13-a901-0eb7655dff52",
+          "filament_name": "PLA Rosa Pink",
+          "brand_name": "Creality",
+          "material_name": "PLA",
+          "color": "Rosa Pink",
+          "quantity": 2800,
+          "cost": 2517200,
+          "order": 1
+        }
+      ],
+      "order": 1,
+      "created_at": "2025-10-15T12:34:17.097239Z",
+      "updated_at": "2025-10-15T12:34:17.108792Z"
+    }
+  ],
+  "total_print_time_hours": 5,
+  "total_print_time_minutes": 30,
+  "total_print_time_display": "5h30m"
+}
+✅ Budget created: 1b3d07a2-b696-423d-86b0-e0ff9b33a487
+
+1️⃣7️⃣  Getting budget details...
+{
+  "budget": {
+    "id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+    "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+    "name": "Orçamento - Chaveiros Outubro Rosa",
+    "description": "100 chaveiros personalizados para campanha Outubro Rosa",
+    "customer_id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "status": "draft",
+    "print_time_hours": 0,
+    "print_time_minutes": 0,
+    "machine_preset_id": "9339297a-7a54-45ec-8611-7d17606cd88a",
+    "energy_preset_id": "bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6",
+    "include_energy_cost": true,
+    "include_labor_cost": false,
+    "include_waste_cost": true,
+    "filament_cost": 2517200,
+    "waste_cost": 0,
+    "energy_cost": 0,
+    "labor_cost": 5000,
+    "total_cost": 2522200,
+    "delivery_days": 7,
+    "payment_terms": "50% entrada, 50% na entrega",
+    "notes": "Entrega em caixa personalizada com laços rosas",
+    "owner_user_id": "31b11bea-f740-426a-be29-311fa1c66bc5",
+    "created_at": "2025-10-15T12:34:17.094919Z",
+    "updated_at": "2025-10-15T12:34:17.110153Z"
+  },
+  "customer": {
+    "id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "name": "Maria Souza",
+    "email": "maria.souza_1760531656@example.com",
+    "phone": "+5511987654321",
+    "document": "123.456.789-00"
+  },
+  "items": [
+    {
+      "id": "a28e6f0d-2656-495d-abc3-21a34d1d4b4b",
+      "budget_id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+      "product_name": "Chaveiro Laço Rosa (PLA) com argola",
+      "product_description": "Chaveiro em formato de laço da campanha Outubro Rosa, impressão 3D em PLA rosa, inclui argola metálica",
+      "product_quantity": 100,
+      "product_dimensions": "26×48×9 mm",
+      "print_time_hours": 5,
+      "print_time_minutes": 30,
+      "print_time_display": "5h30m",
+      "cost_preset_id": "4b03e359-ebd4-4191-850b-b3447404674e",
+      "additional_labor_cost": 5000,
+      "additional_notes": "Inclui montagem manual da argola metálica",
+      "filament_cost": 2517200,
+      "waste_cost": 0,
+      "energy_cost": 0,
+      "labor_cost": 5000,
+      "item_total_cost": 2522200,
+      "unit_price": 25222,
+      "filaments": [
+        {
+          "filament_id": "077404d6-77dc-4b13-a901-0eb7655dff52",
+          "filament_name": "PLA Rosa Pink",
+          "brand_name": "Creality",
+          "material_name": "PLA",
+          "color": "Rosa Pink",
+          "quantity": 2800,
+          "cost": 2517200,
+          "order": 1
+        }
+      ],
+      "order": 1,
+      "created_at": "2025-10-15T12:34:17.097239Z",
+      "updated_at": "2025-10-15T12:34:17.108792Z"
+    }
+  ],
+  "total_print_time_hours": 5,
+  "total_print_time_minutes": 30,
+  "total_print_time_display": "5h30m"
+}
+✅ Budget details retrieved
+
+📦 Product Information:
+{
+  "product_name": "Chaveiro Laço Rosa (PLA) com argola",
+  "product_quantity": 100,
+  "product_dimensions": "26×48×9 mm",
+  "print_time_display": "5h30m",
+  "filaments": 1,
+  "unit_price": 25222,
+  "item_total_cost": 2522200
+}
+
+⏱️  Total Print Time:
+{
+  "total_print_time_display": "5h30m",
+  "total_print_time_hours": 5,
+  "total_print_time_minutes": 30
+}
+
+💰 Cost Breakdown:
+{
+  "filament_cost": 2517200,
+  "waste_cost": 0,
+  "energy_cost": 0,
+  "labor_cost": 5000,
+  "total_cost": 2522200
+}
+
+1️⃣8️⃣  Generating PDF...
+✅ PDF generated successfully: budget_1b3d07a2-b696-423d-86b0-e0ff9b33a487.pdf (2.8K)
+
+1️⃣9️⃣  Updating budget status to 'sent'...
+{
+  "budget": {
+    "id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+    "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+    "name": "Orçamento - Chaveiros Outubro Rosa",
+    "description": "100 chaveiros personalizados para campanha Outubro Rosa",
+    "customer_id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "status": "sent",
+    "print_time_hours": 0,
+    "print_time_minutes": 0,
+    "machine_preset_id": "9339297a-7a54-45ec-8611-7d17606cd88a",
+    "energy_preset_id": "bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6",
+    "include_energy_cost": true,
+    "include_labor_cost": false,
+    "include_waste_cost": true,
+    "filament_cost": 2517200,
+    "waste_cost": 0,
+    "energy_cost": 0,
+    "labor_cost": 5000,
+    "total_cost": 2522200,
+    "delivery_days": 7,
+    "payment_terms": "50% entrada, 50% na entrega",
+    "notes": "Entrega em caixa personalizada com laços rosas",
+    "pdf_url": "https://rb-cdn.rodolfodebonis.com.br/v1/cdn/spooliq/org-fbe5ca73-ca98-4101-9b6b-00570238454e/budgets/orcamento_Orçamento - Chaveiros Outubro Rosa_1b3d07a2-b696-423d-86b0-e0ff9b33a487.pdf",
+    "owner_user_id": "31b11bea-f740-426a-be29-311fa1c66bc5",
+    "created_at": "2025-10-15T12:34:17.094919Z",
+    "updated_at": "2025-10-15T12:34:17.495358Z"
+  },
+  "customer": {
+    "id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+    "name": "Maria Souza",
+    "email": "maria.souza_1760531656@example.com",
+    "phone": "+5511987654321",
+    "document": "123.456.789-00"
+  },
+  "items": [
+    {
+      "id": "a28e6f0d-2656-495d-abc3-21a34d1d4b4b",
+      "budget_id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+      "product_name": "Chaveiro Laço Rosa (PLA) com argola",
+      "product_description": "Chaveiro em formato de laço da campanha Outubro Rosa, impressão 3D em PLA rosa, inclui argola metálica",
+      "product_quantity": 100,
+      "product_dimensions": "26×48×9 mm",
+      "print_time_hours": 5,
+      "print_time_minutes": 30,
+      "print_time_display": "5h30m",
+      "cost_preset_id": "4b03e359-ebd4-4191-850b-b3447404674e",
+      "additional_labor_cost": 5000,
+      "additional_notes": "Inclui montagem manual da argola metálica",
+      "filament_cost": 2517200,
+      "waste_cost": 0,
+      "energy_cost": 0,
+      "labor_cost": 5000,
+      "item_total_cost": 2522200,
+      "unit_price": 25222,
+      "filaments": [
+        {
+          "filament_id": "077404d6-77dc-4b13-a901-0eb7655dff52",
+          "filament_name": "PLA Rosa Pink",
+          "brand_name": "Creality",
+          "material_name": "PLA",
+          "color": "Rosa Pink",
+          "quantity": 2800,
+          "cost": 2517200,
+          "order": 1
+        }
+      ],
+      "order": 1,
+      "created_at": "2025-10-15T12:34:17.097239Z",
+      "updated_at": "2025-10-15T12:34:17.108792Z"
+    }
+  ],
+  "total_print_time_hours": 5,
+  "total_print_time_minutes": 30,
+  "total_print_time_display": "5h30m"
+}
+✅ Budget status updated
+
+2️⃣0️⃣  Listing all budgets...
+{
+  "data": [
+    {
+      "budget": {
+        "id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+        "organization_id": "fbe5ca73-ca98-4101-9b6b-00570238454e",
+        "name": "Orçamento - Chaveiros Outubro Rosa",
+        "description": "100 chaveiros personalizados para campanha Outubro Rosa",
+        "customer_id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+        "status": "sent",
+        "print_time_hours": 0,
+        "print_time_minutes": 0,
+        "machine_preset_id": "9339297a-7a54-45ec-8611-7d17606cd88a",
+        "energy_preset_id": "bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6",
+        "include_energy_cost": true,
+        "include_labor_cost": false,
+        "include_waste_cost": true,
+        "filament_cost": 2517200,
+        "waste_cost": 0,
+        "energy_cost": 0,
+        "labor_cost": 5000,
+        "total_cost": 2522200,
+        "delivery_days": 7,
+        "payment_terms": "50% entrada, 50% na entrega",
+        "notes": "Entrega em caixa personalizada com laços rosas",
+        "pdf_url": "https://rb-cdn.rodolfodebonis.com.br/v1/cdn/spooliq/org-fbe5ca73-ca98-4101-9b6b-00570238454e/budgets/orcamento_Orçamento - Chaveiros Outubro Rosa_1b3d07a2-b696-423d-86b0-e0ff9b33a487.pdf",
+        "owner_user_id": "31b11bea-f740-426a-be29-311fa1c66bc5",
+        "created_at": "2025-10-15T12:34:17.094919Z",
+        "updated_at": "2025-10-15T12:34:17.495358Z"
+      },
+      "customer": {
+        "id": "ed69548b-c0fd-4b74-971b-237ef4546963",
+        "name": "Maria Souza",
+        "email": "maria.souza_1760531656@example.com",
+        "phone": "+5511987654321",
+        "document": "123.456.789-00"
+      },
+      "items": [
+        {
+          "id": "a28e6f0d-2656-495d-abc3-21a34d1d4b4b",
+          "budget_id": "1b3d07a2-b696-423d-86b0-e0ff9b33a487",
+          "product_name": "Chaveiro Laço Rosa (PLA) com argola",
+          "product_description": "Chaveiro em formato de laço da campanha Outubro Rosa, impressão 3D em PLA rosa, inclui argola metálica",
+          "product_quantity": 100,
+          "product_dimensions": "26×48×9 mm",
+          "print_time_hours": 5,
+          "print_time_minutes": 30,
+          "print_time_display": "5h30m",
+          "cost_preset_id": "4b03e359-ebd4-4191-850b-b3447404674e",
+          "additional_labor_cost": 5000,
+          "additional_notes": "Inclui montagem manual da argola metálica",
+          "filament_cost": 2517200,
+          "waste_cost": 0,
+          "energy_cost": 0,
+          "labor_cost": 5000,
+          "item_total_cost": 2522200,
+          "unit_price": 25222,
+          "filaments": [
+            {
+              "filament_id": "077404d6-77dc-4b13-a901-0eb7655dff52",
+              "filament_name": "PLA Rosa Pink",
+              "brand_name": "Creality",
+              "material_name": "PLA",
+              "color": "Rosa Pink",
+              "quantity": 2800,
+              "cost": 2517200,
+              "order": 1
+            }
+          ],
+          "order": 1,
+          "created_at": "2025-10-15T12:34:17.097239Z",
+          "updated_at": "2025-10-15T12:34:17.108792Z"
+        }
+      ],
+      "total_print_time_hours": 5,
+      "total_print_time_minutes": 30,
+      "total_print_time_display": "5h30m"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 10,
+  "total_pages": 1
+}
+✅ Found 1 budget(s)
+
+======================================
+✅ TEST COMPLETED SUCCESSFULLY!
+======================================
+
+📊 Summary:
+  - Company: Test Company 1760531653
+  - Email: test_1760531653@example.com
+  - Brand ID: cfa43c24-4a64-47ad-9906-64dbe87173ef
+  - Material ID: 27b95432-a517-4ace-a633-bde69f3b6904
+  - Filament ID: 077404d6-77dc-4b13-a901-0eb7655dff52
+  - Machine Preset ID: 9339297a-7a54-45ec-8611-7d17606cd88a
+  - Energy Preset ID: bf7fd331-3ef8-4977-8d3e-d6f1a19f3bc6
+  - Cost Preset ID: 4b03e359-ebd4-4191-850b-b3447404674e
+  - Customer ID: ed69548b-c0fd-4b74-971b-237ef4546963
+  - Budget ID: 1b3d07a2-b696-423d-86b0-e0ff9b33a487
+  - PDF: budget_1b3d07a2-b696-423d-86b0-e0ff9b33a487.pdf
+
+🎨 Features Tested:
+  ✅ Company Registration
+  ✅ Login & Authentication
+  ✅ Logo Upload to CDN
+  ✅ Branding Templates
+  ✅ Branding Customization
+  ✅ Brand CRUD
+  ✅ Material CRUD
+  ✅ Filament CRUD
+  ✅ Presets (Machine, Energy, Cost)
+  ✅ Customer CRUD
+  ✅ Budget with Product Info
+  ✅ PDF Generation with Branding
+  ✅ PDF Upload to CDN
+  ✅ Budget Status Management
+
+📄 Generated files:
+  - 01_register.json (436B)
+  - 02_login.json (2.3K)
+  - 03_company.json (0B)
+  - 04_logo.json (39B)
+  - 05_templates.json (3.5K)
+  - 06_branding_get.json (710B)
+  - 07_branding_update.json (468B)
+  - 09_brand.json (251B)
+  - 10_material.json (236B)
+  - 11_filament.json (235B)
+  - 12_machine.json (400B)
+  - 13_energy.json (272B)
+  - 14_cost.json (299B)
+  - 15_customer.json (306B)
+  - 16_budget.json (1.2K)
+  - 17_budget_details.json (2.6K)
+  - 20_budgets_list.json (3.2K)
+  - branding_response.json (795B)
+  - budget_1b3d07a2-b696-423d-86b0-e0ff9b33a487.pdf (2.8K)
+  - budget_response.json (2.6K)
+  - company_update.json (0B)
+  - customer_response.json (545B)
+  - energy_response.json (313B)
+  - filament_response.json (513B)
+  - machine_response.json (305B)
+  - register_response.json (237B)
+  - status_response.json (2.8K)
+  - test_logo.png (70B)
+
+🎉 All tests passed!

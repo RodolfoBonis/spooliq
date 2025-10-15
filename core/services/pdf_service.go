@@ -21,11 +21,13 @@ type PDFService struct {
 
 // BudgetPDFData contains all data needed to generate a budget PDF
 type BudgetPDFData struct {
-	Budget   *budgetEntities.BudgetEntity
-	Customer *budgetEntities.CustomerInfo
-	Items    []budgetEntities.BudgetItemResponse
-	Company  *budgetEntities.CompanyInfo
-	Branding *companyEntities.CompanyBrandingEntity // NEW: Branding configuration
+	Budget                *budgetEntities.BudgetEntity
+	Customer              *budgetEntities.CustomerInfo
+	Items                 []budgetEntities.BudgetItemResponse
+	Company               *budgetEntities.CompanyInfo
+	Branding              *companyEntities.CompanyBrandingEntity // Branding configuration
+	TotalPrintTimeHours   int                                    // Total print time (sum of all items)
+	TotalPrintTimeMinutes int                                    // Total print time (sum of all items)
 }
 
 // NewPDFService creates a new PDF service instance
@@ -65,7 +67,7 @@ func (s *PDFService) GenerateBudgetPDF(ctx context.Context, data BudgetPDFData) 
 	s.addItemsTable(pdf, data.Items, data.Branding)
 
 	// Add cost summary
-	s.addCostSummary(pdf, data.Budget, data.Branding)
+	s.addCostSummary(pdf, data.Budget, data.TotalPrintTimeHours, data.TotalPrintTimeMinutes, data.Branding)
 
 	// Add additional info (delivery, payment, notes)
 	s.addAdditionalInfo(pdf, data.Budget, data.Branding)
@@ -284,7 +286,7 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 }
 
 // addCostSummary adds the cost summary section
-func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
+func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, totalHours, totalMinutes int, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 11)
 	r, g, b := s.hexToRGB(branding.SecondaryColor)
 	pdf.SetTextColor(r, g, b)
@@ -295,8 +297,13 @@ func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.Bud
 	r, g, b = s.hexToRGB(branding.BodyTextColor)
 	pdf.SetTextColor(r, g, b)
 
-	// Print time
-	printTime := fmt.Sprintf("%dh%02dm", budget.PrintTimeHours, budget.PrintTimeMinutes)
+	// Print time (total from all items)
+	printTime := ""
+	if totalHours > 0 {
+		printTime = fmt.Sprintf("%dh%02dm", totalHours, totalMinutes)
+	} else {
+		printTime = fmt.Sprintf("%dm", totalMinutes)
+	}
 	pdf.Cell(120, 6, s.utf8ToLatin1("Tempo de Impressão:"))
 	pdf.Cell(0, 6, printTime)
 	pdf.Ln(5)
@@ -306,22 +313,22 @@ func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.Bud
 	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.FilamentCost)/100.0))
 	pdf.Ln(5)
 
-	// Waste cost (if included)
+	// Waste cost (if included and > 0)
 	if budget.IncludeWasteCost && budget.WasteCost > 0 {
 		pdf.Cell(120, 6, s.utf8ToLatin1("Custo de Desperdício (AMS):"))
 		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.WasteCost)/100.0))
 		pdf.Ln(5)
 	}
 
-	// Energy cost (if included)
+	// Energy cost (if included and > 0)
 	if budget.IncludeEnergyCost && budget.EnergyCost > 0 {
 		pdf.Cell(120, 6, s.utf8ToLatin1("Custo de Energia:"))
 		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.EnergyCost)/100.0))
 		pdf.Ln(5)
 	}
 
-	// Labor cost (if included)
-	if budget.IncludeLaborCost && budget.LaborCost > 0 {
+	// Labor cost (if > 0)
+	if budget.LaborCost > 0 {
 		pdf.Cell(120, 6, s.utf8ToLatin1("Custo de Mão de Obra:"))
 		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.LaborCost)/100.0))
 		pdf.Ln(5)

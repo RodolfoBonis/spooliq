@@ -15,13 +15,20 @@ type BudgetItemModel struct {
 	FilamentID     uuid.UUID `gorm:"type:uuid;not null" json:"filament_id"`
 	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
 
-	// Quantity and order
+	// Filament quantity (internal - for cost calculation)
 	Quantity float64 `gorm:"type:numeric;not null" json:"quantity"` // grams
 	Order    int     `gorm:"type:integer;not null" json:"order"`    // sequence
 
+	// Product information (customer-facing - for PDF and quotes)
+	ProductName        string  `gorm:"type:varchar(255);not null" json:"product_name"`
+	ProductDescription *string `gorm:"type:text" json:"product_description,omitempty"`
+	ProductQuantity    int     `gorm:"type:integer;not null" json:"product_quantity"` // number of units
+	UnitPrice          int64   `gorm:"type:bigint;not null" json:"unit_price"`        // cents per unit
+	ProductDimensions  *string `gorm:"type:varchar(100)" json:"product_dimensions,omitempty"`
+
 	// Calculated values
 	WasteAmount float64 `gorm:"type:numeric;default:0" json:"waste_amount"` // grams
-	ItemCost    int64   `gorm:"type:bigint;default:0" json:"item_cost"`     // cents
+	ItemCost    int64   `gorm:"type:bigint;default:0" json:"item_cost"`     // cents (total cost for this item)
 
 	// Timestamps
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
@@ -44,15 +51,20 @@ func (bi *BudgetItemModel) BeforeCreate(tx *gorm.DB) error {
 // ToEntity converts the GORM model to domain entity
 func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 	return &entities.BudgetItemEntity{
-		ID:          bi.ID,
-		BudgetID:    bi.BudgetID,
-		FilamentID:  bi.FilamentID,
-		Quantity:    bi.Quantity,
-		Order:       bi.Order,
-		WasteAmount: bi.WasteAmount,
-		ItemCost:    bi.ItemCost,
-		CreatedAt:   bi.CreatedAt,
-		UpdatedAt:   bi.UpdatedAt,
+		ID:                 bi.ID,
+		BudgetID:           bi.BudgetID,
+		FilamentID:         bi.FilamentID,
+		Quantity:           bi.Quantity,
+		Order:              bi.Order,
+		ProductName:        bi.ProductName,
+		ProductDescription: bi.ProductDescription,
+		ProductQuantity:    bi.ProductQuantity,
+		UnitPrice:          bi.UnitPrice,
+		ProductDimensions:  bi.ProductDimensions,
+		WasteAmount:        bi.WasteAmount,
+		ItemCost:           bi.ItemCost,
+		CreatedAt:          bi.CreatedAt,
+		UpdatedAt:          bi.UpdatedAt,
 	}
 }
 
@@ -63,6 +75,11 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.FilamentID = entity.FilamentID
 	bi.Quantity = entity.Quantity
 	bi.Order = entity.Order
+	bi.ProductName = entity.ProductName
+	bi.ProductDescription = entity.ProductDescription
+	bi.ProductQuantity = entity.ProductQuantity
+	bi.UnitPrice = entity.UnitPrice
+	bi.ProductDimensions = entity.ProductDimensions
 	bi.WasteAmount = entity.WasteAmount
 	bi.ItemCost = entity.ItemCost
 	bi.CreatedAt = entity.CreatedAt

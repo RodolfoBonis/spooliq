@@ -226,7 +226,7 @@ func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.
 	pdf.Ln(8)
 }
 
-// addItemsTable adds the items table
+// addItemsTable adds the items table showing products (customer-facing)
 func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.BudgetItemResponse, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 11)
 	r, g, b := s.hexToRGB(branding.SecondaryColor)
@@ -234,21 +234,20 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 	pdf.Cell(0, 8, s.utf8ToLatin1("Itens do Orçamento"))
 	pdf.Ln(6)
 
-	// Table header
+	// Table header - showing products, not filaments
 	r, g, b = s.hexToRGB(branding.TableHeaderBgColor)
 	pdf.SetFillColor(r, g, b)
 	r, g, b = s.hexToRGB(branding.HeaderTextColor)
 	pdf.SetTextColor(r, g, b)
 	pdf.SetFont("Arial", "B", 9)
 
-	pdf.CellFormat(70, 7, s.utf8ToLatin1("Filamento"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 7, s.utf8ToLatin1("Qtd (g)"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 7, s.utf8ToLatin1("Cor"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 7, s.utf8ToLatin1("Preço/kg"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 7, s.utf8ToLatin1("Total"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(95, 7, s.utf8ToLatin1("Descrição"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(20, 7, s.utf8ToLatin1("Qtd."), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 7, s.utf8ToLatin1("Valor Unitário (R$)"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 7, s.utf8ToLatin1("Subtotal (R$)"), "1", 0, "C", true, 0, "")
 	pdf.Ln(-1)
 
-	// Table rows
+	// Table rows - showing products
 	pdf.SetFont("Arial", "", 8)
 	r, g, b = s.hexToRGB(branding.BodyTextColor)
 	pdf.SetTextColor(r, g, b)
@@ -260,16 +259,24 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 			pdf.SetFillColor(r, g, b)
 		}
 
-		filamentName := item.Filament.Name
-		if len(filamentName) > 30 {
-			filamentName = filamentName[:27] + "..."
+		// Build product description
+		description := item.ProductName
+		if item.ProductDimensions != nil && *item.ProductDimensions != "" {
+			description += " - " + *item.ProductDimensions
 		}
 
-		pdf.CellFormat(70, 6, s.utf8ToLatin1(filamentName), "1", 0, "L", fillColor, 0, "")
-		pdf.CellFormat(30, 6, fmt.Sprintf("%.1f", item.Quantity), "1", 0, "C", fillColor, 0, "")
-		pdf.CellFormat(30, 6, s.utf8ToLatin1(item.Filament.Color), "1", 0, "C", fillColor, 0, "")
-		pdf.CellFormat(30, 6, fmt.Sprintf("R$ %.2f", item.Filament.PricePerKg), "1", 0, "R", fillColor, 0, "")
-		pdf.CellFormat(25, 6, fmt.Sprintf("R$ %.2f", float64(item.ItemCost)/100.0), "1", 0, "R", fillColor, 0, "")
+		// Truncate if too long
+		if len(description) > 60 {
+			description = description[:57] + "..."
+		}
+
+		// Calculate subtotal (ProductQuantity * UnitPrice)
+		subtotal := float64(item.ProductQuantity) * (float64(item.UnitPrice) / 100.0)
+
+		pdf.CellFormat(95, 6, s.utf8ToLatin1(description), "1", 0, "L", fillColor, 0, "")
+		pdf.CellFormat(20, 6, fmt.Sprintf("%d", item.ProductQuantity), "1", 0, "C", fillColor, 0, "")
+		pdf.CellFormat(35, 6, fmt.Sprintf("%.2f", float64(item.UnitPrice)/100.0), "1", 0, "R", fillColor, 0, "")
+		pdf.CellFormat(35, 6, fmt.Sprintf("%.2f", subtotal), "1", 0, "R", fillColor, 0, "")
 		pdf.Ln(-1)
 	}
 

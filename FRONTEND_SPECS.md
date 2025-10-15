@@ -602,8 +602,15 @@ Body: {
   notes?: string;
   items: Array<{
     filament_id: string;
-    quantity: number;      // em gramas
-    order: number;         // ordem do item
+    quantity: number;          // em gramas (interno - para cálculo de custo)
+    order: number;             // ordem do item (para AMS)
+    
+    // Product information (customer-facing - appears in PDF)
+    product_name: string;      // Nome do produto impresso
+    product_description?: string; // Descrição detalhada
+    product_quantity: number;  // Quantidade de unidades (não gramas)
+    unit_price: number;        // Preço por unidade em centavos
+    product_dimensions?: string; // ex: "26×48×9 mm"
   }>;
 }
 ```
@@ -640,10 +647,17 @@ Response: {
         material_name: string;
         price_per_kg: number;
       };
-      quantity: number;
+      quantity: number;          // gramas (interno)
       waste_amount: number;
-      item_cost: number;
+      item_cost: number;         // custo total calculado
       order: number;
+      
+      // Product information (customer-facing - appears in PDF)
+      product_name: string;      // Nome do produto impresso
+      product_description?: string;
+      product_quantity: number;  // Quantidade de unidades
+      unit_price: number;        // Preço por unidade em centavos
+      product_dimensions?: string; // ex: "26×48×9 mm"
     }>;
     history: Array<{
       id: string;

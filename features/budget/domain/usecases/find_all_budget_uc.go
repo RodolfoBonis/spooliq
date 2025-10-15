@@ -74,16 +74,21 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 		for j, item := range items {
 			filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
 			itemResponses[j] = entities.BudgetItemResponse{
-				ID:          item.ID.String(),
-				BudgetID:    item.BudgetID.String(),
-				FilamentID:  item.FilamentID.String(),
-				Filament:    filamentInfo,
-				Quantity:    item.Quantity,
-				Order:       item.Order,
-				WasteAmount: item.WasteAmount,
-				ItemCost:    item.ItemCost,
-				CreatedAt:   item.CreatedAt,
-				UpdatedAt:   item.UpdatedAt,
+				ID:                 item.ID.String(),
+				BudgetID:           item.BudgetID.String(),
+				FilamentID:         item.FilamentID.String(),
+				Filament:           filamentInfo,
+				Quantity:           item.Quantity,
+				Order:              item.Order,
+				WasteAmount:        item.WasteAmount,
+				ItemCost:           item.ItemCost,
+				ProductName:        item.ProductName,
+				ProductDescription: item.ProductDescription,
+				ProductQuantity:    item.ProductQuantity,
+				UnitPrice:          item.UnitPrice,
+				ProductDimensions:  item.ProductDimensions,
+				CreatedAt:          item.CreatedAt,
+				UpdatedAt:          item.UpdatedAt,
 			}
 		}
 

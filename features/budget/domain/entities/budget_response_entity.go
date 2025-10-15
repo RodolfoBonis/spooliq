@@ -38,8 +38,16 @@ type BudgetItemResponse struct {
 	Order       int           `json:"order"`
 	WasteAmount float64       `json:"waste_amount"`
 	ItemCost    int64         `json:"item_cost"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
+
+	// Product information (customer-facing)
+	ProductName        string  `json:"product_name"`
+	ProductDescription *string `json:"product_description,omitempty"`
+	ProductQuantity    int     `json:"product_quantity"`
+	UnitPrice          int64   `json:"unit_price"`
+	ProductDimensions  *string `json:"product_dimensions,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // BudgetResponse represents the response for a single budget

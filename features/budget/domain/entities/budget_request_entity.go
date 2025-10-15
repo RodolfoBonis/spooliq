@@ -7,6 +7,13 @@ type BudgetItemRequest struct {
 	FilamentID uuid.UUID `json:"filament_id" validate:"required"`
 	Quantity   float64   `json:"quantity" validate:"required,gt=0"` // grams
 	Order      int       `json:"order" validate:"gte=0"`            // sequence for AMS
+
+	// Product information (customer-facing)
+	ProductName        string  `json:"product_name" validate:"required,min=1,max=255"`
+	ProductDescription *string `json:"product_description,omitempty" validate:"omitempty,max=1000"`
+	ProductQuantity    int     `json:"product_quantity" validate:"required,gt=0"`
+	UnitPrice          int64   `json:"unit_price" validate:"required,gte=0"` // cents per unit
+	ProductDimensions  *string `json:"product_dimensions,omitempty" validate:"omitempty,max=100"`
 }
 
 // CreateBudgetRequest represents the request to create a new budget

@@ -38,6 +38,7 @@ func InitializeRoutes(
 	brandUc branduc.IBrandUseCase,
 	budgetUc budgetuc.IBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
+	brandingUc companyuc.IBrandingUseCase,
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
@@ -60,7 +61,7 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
-	company.Routes(root, companyUc, protectFactory)
+	company.Routes(root, companyUc, brandingUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)

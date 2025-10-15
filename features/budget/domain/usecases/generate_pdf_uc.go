@@ -128,12 +128,23 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		return
 	}
 
+	// Get branding configuration (use default if not found)
+	branding, err := uc.brandingRepository.FindByOrganizationID(ctx, organizationID)
+	if err != nil {
+		uc.logger.Info(ctx, "No custom branding found, using default template", map[string]interface{}{
+			"organization_id": organizationID,
+		})
+		// Use default template if branding not found
+		branding = nil // PDFService will use default
+	}
+
 	// Generate PDF
 	pdfData := services.BudgetPDFData{
 		Budget:   budget,
 		Customer: customer,
 		Items:    itemsResponse,
 		Company:  company,
+		Branding: branding,
 	}
 
 	pdfService := uc.pdfService

@@ -4,6 +4,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -28,6 +29,7 @@ type IBudgetUseCase interface {
 type BudgetUseCase struct {
 	budgetRepository   budgetRepo.BudgetRepository
 	customerRepository customerRepo.CustomerRepository
+	brandingRepository companyRepo.BrandingRepository
 	pdfService         *services.PDFService
 	cdnService         *services.CDNService
 	validator          *validator.Validate
@@ -38,6 +40,7 @@ type BudgetUseCase struct {
 func NewBudgetUseCase(
 	budgetRepository budgetRepo.BudgetRepository,
 	customerRepository customerRepo.CustomerRepository,
+	brandingRepository companyRepo.BrandingRepository,
 	pdfService *services.PDFService,
 	cdnService *services.CDNService,
 	logger logger.Logger,
@@ -45,6 +48,7 @@ func NewBudgetUseCase(
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
 		customerRepository: customerRepository,
+		brandingRepository: brandingRepository,
 		pdfService:         pdfService,
 		cdnService:         cdnService,
 		validator:          validator.New(),

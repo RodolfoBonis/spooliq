@@ -1,0 +1,1109 @@
+# Spooliq SaaS - Frontend Development Rules
+
+## 📋 Project Overview
+Building a Next.js 14+ SaaS platform for 3D printing budget management with multi-tenancy, subscription system, and PDF generation.
+
+## 🎯 Core Principles
+
+### Code Style
+- **TypeScript only** - No JavaScript files
+- **Functional components** - Use React hooks
+- **Server components by default** - Use "use client" only when needed
+- **Composition over inheritance**
+- **DRY principle** - Extract reusable logic
+
+### Naming Conventions
+```typescript
+// Files: kebab-case
+budget-card.tsx
+use-budgets.ts
+budget-service.ts
+
+// Components: PascalCase
+BudgetCard, FilamentSelector, DashboardLayout
+
+// Functions/variables: camelCase
+const fetchBudgets = () => {}
+const isLoading = true
+
+// Constants: SCREAMING_SNAKE_CASE
+const API_BASE_URL = ''
+const MAX_FILE_SIZE = 5000000
+
+// Types/Interfaces: PascalCase
+interface BudgetFormData {}
+type BudgetStatus = 'draft' | 'sent'
+```
+
+### Language Rules
+- **Portuguese (Brazil)** for ALL user-facing text
+- **English** for code (variables, functions, comments)
+- **English** for technical documentation
+
+## 🛠 Technology Stack
+
+### Required Dependencies
+```json
+{
+  "next": "^14.0.0",
+  "react": "^18.2.0",
+  "typescript": "^5.0.0",
+  "tailwindcss": "^3.4.0",
+  "zustand": "^4.4.0",
+  "@tanstack/react-query": "^5.0.0",
+  "axios": "^1.6.0",
+  "react-hook-form": "^7.48.0",
+  "zod": "^3.22.0",
+  "date-fns": "^2.30.0",
+  "lucide-react": "^0.292.0",
+  "sonner": "^1.2.0"
+}
+```
+
+### shadcn/ui Components
+Install all required components:
+```bash
+npx shadcn-ui@latest add button input card dialog table tabs form select badge avatar alert toast skeleton sheet separator popover command dropdown-menu
+```
+
+## 📁 Project Structure
+
+```
+src/
+├── app/
+│   ├── (auth)/              # Auth pages (login, register)
+│   ├── (platform)/          # Protected pages with sidebar
+│   ├── (admin)/             # Platform admin pages
+│   └── (marketing)/         # Landing page
+│
+├── components/
+│   ├── ui/                  # shadcn/ui components
+│   ├── layout/              # Layout components (sidebar, topbar)
+│   ├── budgets/             # Budget-specific components
+│   ├── customers/           # Customer components
+│   ├── catalog/             # Filament/material/brand components
+│   ├── branding/            # PDF branding/color customization components
+│   └── common/              # Shared components
+│
+├── lib/
+│   ├── api/                 # API clients
+│   ├── hooks/               # Custom hooks
+│   ├── utils/               # Utility functions
+│   ├── validations/         # Zod schemas
+│   └── constants/           # Constants
+│
+├── stores/                  # Zustand stores
+│   ├── auth-store.ts
+│   ├── company-store.ts
+│   └── ui-store.ts
+│
+├── types/                   # TypeScript types
+│   ├── api.ts
+│   ├── models.ts
+│   └── common.ts
+│
+└── services/                # Business logic
+    ├── budget-service.ts
+    ├── customer-service.ts
+    └── auth-service.ts
+```
+
+## 🎨 Design System
+
+### Colors (Tailwind Config)
+```javascript
+// tailwind.config.ts
+colors: {
+  primary: {
+    50: '#fdf2f8',
+    500: '#ec4899',  // Main pink
+    600: '#db2777',
+    700: '#be185d',
+  },
+  secondary: {
+    500: '#a855f7',  // Purple
+  },
+  status: {
+    draft: '#94a3b8',
+    sent: '#3b82f6',
+    approved: '#22c55e',
+    rejected: '#ef4444',
+    printing: '#f59e0b',
+    completed: '#8b5cf6',
+  }
+}
+```
+
+### Component Patterns
+
+#### 1. Page Component
+```typescript
+// app/(platform)/budgets/page.tsx
+import { Suspense } from 'react';
+import { BudgetList } from '@/components/budgets/budget-list';
+import { BudgetListSkeleton } from '@/components/budgets/budget-list-skeleton';
+
+export default function BudgetsPage() {
+  return (
+    <div className="container py-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Orçamentos</h1>
+        <Button asChild>
+          <Link href="/budgets/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Orçamento
+          </Link>
+        </Button>
+      </div>
+      
+      <Suspense fallback={<BudgetListSkeleton />}>
+        <BudgetList />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+#### 2. Component with React Query
+```typescript
+// components/budgets/budget-list.tsx
+'use client';
+
+import { useBudgets } from '@/lib/hooks/use-budgets';
+import { BudgetCard } from './budget-card';
+import { BudgetFilters } from './budget-filters';
+
+export function BudgetList() {
+  const [filters, setFilters] = useState({});
+  const { data, isLoading, error } = useBudgets(filters);
+
+  if (isLoading) return <Skeleton />;
+  if (error) return <Alert variant="destructive">{error.message}</Alert>;
+
+  return (
+    <div className="space-y-4">
+      <BudgetFilters filters={filters} onChange={setFilters} />
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {data?.budgets.map((budget) => (
+          <BudgetCard key={budget.id} budget={budget} />
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+#### 3. Form with React Hook Form + Zod
+```typescript
+// components/budgets/budget-form.tsx
+'use client';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { budgetSchema } from '@/lib/validations/budget';
+
+export function BudgetForm() {
+  const form = useForm({
+    resolver: zodResolver(budgetSchema),
+    defaultValues: {
+      name: '',
+      customer_id: '',
+      // ...
+    },
+  });
+
+  const onSubmit = async (data) => {
+    try {
+      await createBudget(data);
+      toast.success('Orçamento criado com sucesso!');
+      router.push('/budgets');
+    } catch (error) {
+      toast.error('Erro ao criar orçamento');
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* Form fields */}
+      </form>
+    </Form>
+  );
+}
+```
+
+#### 4. API Service
+```typescript
+// services/budget-service.ts
+import { api } from '@/lib/api/client';
+import type { Budget, CreateBudgetDTO } from '@/types/models';
+
+export const budgetService = {
+  async list(filters?: BudgetFilters) {
+    const { data } = await api.get<{ budgets: Budget[] }>('/budgets', {
+      params: filters,
+    });
+    return data;
+  },
+
+  async create(dto: CreateBudgetDTO) {
+    const { data } = await api.post<Budget>('/budgets', dto);
+    return data;
+  },
+
+  async generatePDF(id: string) {
+    const { data } = await api.get(`/budgets/${id}/pdf`, {
+      responseType: 'blob',
+    });
+    return data;
+  },
+};
+```
+
+#### 5. Custom Hook
+```typescript
+// lib/hooks/use-budgets.ts
+import { useQuery } from '@tanstack/react-query';
+import { budgetService } from '@/services/budget-service';
+
+export function useBudgets(filters?: BudgetFilters) {
+  return useQuery({
+    queryKey: ['budgets', filters],
+    queryFn: () => budgetService.list(filters),
+    staleTime: 30000, // 30 seconds
+  });
+}
+
+export function useCreateBudget() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: budgetService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    },
+  });
+}
+```
+
+## 🔐 Authentication
+
+### Auth Flow
+```typescript
+// stores/auth-store.ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  hasRole: (roles: string[]) => boolean;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      token: null,
+      
+      login: async (email, password) => {
+        const { data } = await api.post('/auth/login', { email, password });
+        set({ user: data.user, token: data.accessToken });
+      },
+      
+      logout: () => {
+        set({ user: null, token: null });
+      },
+      
+      hasRole: (roles) => {
+        const user = get().user;
+        return user?.roles.some(r => roles.includes(r)) ?? false;
+      },
+    }),
+    { name: 'auth-storage' }
+  )
+);
+```
+
+### Protected Route
+```typescript
+// components/auth/protected-route.tsx
+export function ProtectedRoute({ 
+  children, 
+  requiredRoles 
+}: { 
+  children: React.ReactNode;
+  requiredRoles?: string[];
+}) {
+  const { user, isAuthenticated } = useAuthStore();
+  
+  if (!isAuthenticated) {
+    redirect('/login');
+  }
+  
+  if (requiredRoles && !hasRole(requiredRoles)) {
+    return <AccessDenied />;
+  }
+  
+  return children;
+}
+```
+
+## 💅 Styling Rules
+
+### Use Tailwind Utility Classes
+```typescript
+// ✅ Good
+<div className="flex items-center justify-between p-4 rounded-lg bg-primary-50">
+  <h2 className="text-xl font-semibold text-primary-700">Title</h2>
+</div>
+
+// ❌ Bad - Avoid inline styles
+<div style={{ display: 'flex', padding: '16px' }}>
+```
+
+### Component Variants (cn utility)
+```typescript
+import { cn } from '@/lib/utils';
+
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function Button({ variant = 'primary', size = 'md', className, ...props }) {
+  return (
+    <button
+      className={cn(
+        'rounded-md font-medium transition-colors',
+        {
+          'bg-primary-500 text-white hover:bg-primary-600': variant === 'primary',
+          'bg-secondary-500 text-white hover:bg-secondary-600': variant === 'secondary',
+          'bg-transparent hover:bg-neutral-100': variant === 'ghost',
+        },
+        {
+          'px-3 py-1.5 text-sm': size === 'sm',
+          'px-4 py-2 text-base': size === 'md',
+          'px-6 py-3 text-lg': size === 'lg',
+        },
+        className
+      )}
+      {...props}
+    />
+  );
+}
+```
+
+## 🎨 PDF Branding / Color Customization
+
+### API Endpoints
+
+#### Get Branding
+```typescript
+GET /company/branding
+Response: {
+  branding: CompanyBrandingEntity
+}
+```
+
+#### Update Branding
+```typescript
+PUT /company/branding
+Body: CompanyBrandingColors
+Response: {
+  message: string;
+  branding: CompanyBrandingEntity;
+}
+```
+
+#### List Templates
+```typescript
+GET /company/branding/templates
+Response: {
+  templates: BrandingTemplate[];
+}
+```
+
+### TypeScript Types
+
+```typescript
+// types/branding.ts
+export interface CompanyBrandingColors {
+  template_name?: string;
+  header_bg_color: string;        // #HEX
+  header_text_color: string;      // #HEX
+  primary_color: string;          // #HEX
+  primary_text_color: string;     // #HEX
+  secondary_color: string;        // #HEX
+  secondary_text_color: string;   // #HEX
+  title_color: string;            // #HEX
+  body_text_color: string;        // #HEX
+  accent_color: string;           // #HEX
+  border_color: string;           // #HEX
+  background_color: string;       // #HEX
+  table_header_bg_color: string;  // #HEX
+  table_row_alt_bg_color: string; // #HEX
+}
+
+export interface CompanyBrandingEntity extends CompanyBrandingColors {
+  id: string;
+  organization_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrandingTemplate {
+  name: string;                   // "modern_pink", "corporate_blue", etc.
+  display_name: string;           // "Rosa Moderno", "Azul Corporativo", etc.
+  description: string;
+  colors: CompanyBrandingEntity;
+}
+
+// Available templates:
+// 1. modern_pink - Rosa Moderno (default)
+// 2. corporate_blue - Azul Corporativo
+// 3. tech_green - Verde Tecnologia
+// 4. elegant_purple - Roxo Elegante
+```
+
+### Components
+
+#### BrandingTemplateGallery
+```typescript
+// components/branding/template-gallery.tsx
+'use client';
+
+interface BrandingTemplateGalleryProps {
+  templates: BrandingTemplate[];
+  selectedTemplate?: string;
+  onSelectTemplate: (template: BrandingTemplate) => void;
+}
+
+export function BrandingTemplateGallery({ templates, selectedTemplate, onSelectTemplate }: BrandingTemplateGalleryProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {templates.map((template) => (
+        <Card
+          key={template.name}
+          className={cn(
+            'cursor-pointer transition-all hover:shadow-lg',
+            selectedTemplate === template.name && 'ring-2 ring-primary-500'
+          )}
+          onClick={() => onSelectTemplate(template)}
+        >
+          <CardHeader>
+            <CardTitle className="text-base">{template.display_name}</CardTitle>
+            <CardDescription className="text-xs">{template.description}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Color preview circles */}
+            <div className="flex gap-2">
+              <div 
+                className="w-8 h-8 rounded-full" 
+                style={{ backgroundColor: template.colors.primary_color }}
+              />
+              <div 
+                className="w-8 h-8 rounded-full" 
+                style={{ backgroundColor: template.colors.secondary_color }}
+              />
+              <div 
+                className="w-8 h-8 rounded-full" 
+                style={{ backgroundColor: template.colors.accent_color }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+```
+
+#### BrandingColorEditor
+```typescript
+// components/branding/color-editor.tsx
+'use client';
+
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+interface BrandingColorEditorProps {
+  colors: CompanyBrandingColors;
+  onChange: (colors: CompanyBrandingColors) => void;
+}
+
+export function BrandingColorEditor({ colors, onChange }: BrandingColorEditorProps) {
+  const updateColor = (key: keyof CompanyBrandingColors, value: string) => {
+    onChange({ ...colors, [key]: value });
+  };
+
+  return (
+    <Accordion type="multiple" className="w-full">
+      <AccordionItem value="header">
+        <AccordionTrigger>Cores do Cabeçalho</AccordionTrigger>
+        <AccordionContent>
+          <div className="space-y-4">
+            <ColorInput
+              label="Cor de Fundo"
+              value={colors.header_bg_color}
+              onChange={(v) => updateColor('header_bg_color', v)}
+            />
+            <ColorInput
+              label="Cor do Texto"
+              value={colors.header_text_color}
+              onChange={(v) => updateColor('header_text_color', v)}
+            />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+      
+      {/* Repeat for other color groups */}
+    </Accordion>
+  );
+}
+
+function ColorInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-4">
+      <Label className="min-w-[120px]">{label}</Label>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-14 cursor-pointer rounded border"
+      />
+      <Input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="#000000"
+        pattern="^#[0-9A-Fa-f]{6}$"
+        className="max-w-[120px] font-mono"
+      />
+    </div>
+  );
+}
+```
+
+### Custom Hooks
+
+```typescript
+// lib/hooks/use-branding.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { brandingService } from '@/services/branding-service';
+import { toast } from 'sonner';
+
+export function useBranding() {
+  return useQuery({
+    queryKey: ['branding'],
+    queryFn: () => brandingService.get(),
+  });
+}
+
+export function useBrandingTemplates() {
+  return useQuery({
+    queryKey: ['branding-templates'],
+    queryFn: () => brandingService.listTemplates(),
+    staleTime: Infinity, // Templates don't change
+  });
+}
+
+export function useUpdateBranding() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: brandingService.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branding'] });
+      toast.success('Cores do PDF atualizadas com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar cores do PDF');
+    },
+  });
+}
+```
+
+### Service
+
+```typescript
+// services/branding-service.ts
+import { api } from '@/lib/api/client';
+import type { CompanyBrandingEntity, CompanyBrandingColors, BrandingTemplate } from '@/types/branding';
+
+export const brandingService = {
+  async get() {
+    const { data } = await api.get<{ branding: CompanyBrandingEntity }>('/company/branding');
+    return data.branding;
+  },
+
+  async update(colors: CompanyBrandingColors) {
+    const { data } = await api.put<{ branding: CompanyBrandingEntity }>('/company/branding', colors);
+    return data.branding;
+  },
+
+  async listTemplates() {
+    const { data } = await api.get<{ templates: BrandingTemplate[] }>('/company/branding/templates');
+    return data.templates;
+  },
+};
+```
+
+### Validation Schema
+
+```typescript
+// lib/validations/branding.ts
+import { z } from 'zod';
+
+const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+
+export const brandingSchema = z.object({
+  template_name: z.string().optional(),
+  header_bg_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  header_text_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  primary_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  primary_text_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  secondary_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  secondary_text_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  title_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  body_text_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  accent_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  border_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  background_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  table_header_bg_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+  table_row_alt_bg_color: z.string().regex(hexColorRegex, 'Deve ser uma cor HEX válida (#RRGGBB)'),
+});
+```
+
+### Page Implementation
+
+```typescript
+// app/(platform)/settings/branding/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useBranding, useBrandingTemplates, useUpdateBranding } from '@/lib/hooks/use-branding';
+import { BrandingTemplateGallery } from '@/components/branding/template-gallery';
+import { BrandingColorEditor } from '@/components/branding/color-editor';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+export default function BrandingPage() {
+  const { data: branding, isLoading } = useBranding();
+  const { data: templates } = useBrandingTemplates();
+  const { mutate: updateBranding, isPending } = useUpdateBranding();
+  
+  const [currentColors, setCurrentColors] = useState(branding?.colors);
+
+  const handleApplyTemplate = (template: BrandingTemplate) => {
+    setCurrentColors(template.colors);
+  };
+
+  const handleSave = () => {
+    if (currentColors) {
+      updateBranding(currentColors);
+    }
+  };
+
+  if (isLoading) return <Skeleton />;
+
+  return (
+    <div className="container py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Personalização do PDF</h1>
+          <p className="text-muted-foreground">
+            Customize as cores dos orçamentos em PDF gerados para seus clientes
+          </p>
+        </div>
+        <Button onClick={handleSave} disabled={isPending}>
+          {isPending ? 'Salvando...' : 'Salvar Alterações'}
+        </Button>
+      </div>
+
+      <Tabs defaultValue="templates">
+        <TabsList>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="custom">Personalizado</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="templates" className="space-y-4">
+          <BrandingTemplateGallery
+            templates={templates || []}
+            selectedTemplate={currentColors?.template_name}
+            onSelectTemplate={handleApplyTemplate}
+          />
+        </TabsContent>
+        
+        <TabsContent value="custom" className="space-y-4">
+          <BrandingColorEditor
+            colors={currentColors}
+            onChange={setCurrentColors}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+```
+
+---
+
+## 🎯 Best Practices
+
+### 1. Always Handle Loading States
+```typescript
+// ✅ Good
+if (isLoading) return <Skeleton />;
+if (error) return <ErrorMessage error={error} />;
+if (!data) return <EmptyState />;
+
+return <Content data={data} />;
+```
+
+### 2. Use TypeScript Strictly
+```typescript
+// ✅ Good - Full type safety
+interface Budget {
+  id: string;
+  name: string;
+  status: BudgetStatus;
+  total_cost: number;
+}
+
+function BudgetCard({ budget }: { budget: Budget }) {
+  // ...
+}
+
+// ❌ Bad - Avoid 'any'
+function BudgetCard({ budget }: { budget: any }) {
+```
+
+### 3. Validate Forms
+```typescript
+// ✅ Always use Zod schemas
+import { z } from 'zod';
+
+const budgetSchema = z.object({
+  name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
+  customer_id: z.string().uuid('Cliente inválido'),
+  items: z.array(z.object({
+    filament_id: z.string(),
+    quantity: z.number().positive(),
+  })).min(1, 'Adicione pelo menos um item'),
+});
+```
+
+### 4. Format Currency
+```typescript
+// lib/utils/format.ts
+export function formatCurrency(cents: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(cents / 100);
+}
+
+// Usage
+<span>{formatCurrency(budget.total_cost)}</span>
+// Output: R$ 1.234,56
+```
+
+### 5. Format Dates
+```typescript
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+export function formatDate(date: string) {
+  return format(new Date(date), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+}
+
+// Output: 15 de outubro de 2024
+```
+
+### 6. Error Handling
+```typescript
+// lib/api/client.ts
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Logout and redirect to login
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
+    }
+    
+    // Show toast notification
+    toast.error(error.response?.data?.error || 'Erro ao processar requisição');
+    
+    return Promise.reject(error);
+  }
+);
+```
+
+### 7. Optimistic Updates
+```typescript
+export function useUpdateBudgetStatus() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, status }) => budgetService.updateStatus(id, status),
+    
+    // Optimistic update
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['budgets', id] });
+      
+      const previous = queryClient.getQueryData(['budgets', id]);
+      
+      queryClient.setQueryData(['budgets', id], (old: Budget) => ({
+        ...old,
+        status,
+      }));
+      
+      return { previous };
+    },
+    
+    // Rollback on error
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(['budgets', variables.id], context.previous);
+    },
+  });
+}
+```
+
+## 🚀 Performance
+
+### 1. Use Dynamic Imports
+```typescript
+// For heavy components
+const PDFViewer = dynamic(() => import('@/components/pdf-viewer'), {
+  loading: () => <Skeleton />,
+  ssr: false,
+});
+```
+
+### 2. Memoize Expensive Calculations
+```typescript
+const totalCost = useMemo(() => {
+  return items.reduce((sum, item) => sum + item.cost, 0);
+}, [items]);
+```
+
+### 3. Debounce Search Inputs
+```typescript
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value';
+
+const [search, setSearch] = useState('');
+const debouncedSearch = useDebouncedValue(search, 500);
+
+// Use debouncedSearch in API call
+```
+
+## 📝 Comments
+
+### When to Comment
+```typescript
+// ✅ Complex business logic
+// Calculate AMS waste: 15% of total filament usage for multi-color prints
+const amsWaste = totalFilament * (amsPercentage / 100);
+
+// ✅ Non-obvious algorithms
+// Fisher-Yates shuffle algorithm
+for (let i = array.length - 1; i > 0; i--) {
+  // ...
+}
+
+// ❌ Obvious code - let the code speak
+// Set the name - BAD COMMENT
+const name = 'John';
+```
+
+## 🧪 Testing (TODO)
+
+```typescript
+// __tests__/components/budget-card.test.tsx
+import { render, screen } from '@testing-library/react';
+import { BudgetCard } from '@/components/budgets/budget-card';
+
+describe('BudgetCard', () => {
+  it('renders budget information correctly', () => {
+    const budget = {
+      id: '1',
+      name: 'Test Budget',
+      status: 'draft',
+      total_cost: 10000,
+    };
+    
+    render(<BudgetCard budget={budget} />);
+    
+    expect(screen.getByText('Test Budget')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100,00')).toBeInTheDocument();
+  });
+});
+```
+
+## 🎨 Accessibility
+
+```typescript
+// Always include proper ARIA attributes
+<button
+  aria-label="Deletar orçamento"
+  aria-describedby="delete-description"
+  onClick={handleDelete}
+>
+  <Trash2 className="h-4 w-4" />
+</button>
+
+// Use semantic HTML
+<nav aria-label="Navegação principal">
+  <ul>
+    <li><a href="/budgets">Orçamentos</a></li>
+  </ul>
+</nav>
+
+// Form labels
+<label htmlFor="customer-name">Nome do Cliente</label>
+<input id="customer-name" type="text" />
+```
+
+## 📦 API Integration Checklist
+
+When calling an API endpoint:
+- [ ] Add TypeScript types for request/response
+- [ ] Handle loading state
+- [ ] Handle error state
+- [ ] Show user feedback (toast)
+- [ ] Invalidate related queries on success
+- [ ] Add optimistic updates when applicable
+
+## 🚨 Common Pitfalls to Avoid
+
+1. ❌ Don't fetch data in components - use React Query
+2. ❌ Don't store server state in Zustand - use React Query
+3. ❌ Don't forget error boundaries
+4. ❌ Don't use `any` type
+5. ❌ Don't commit console.logs
+6. ❌ Don't hardcode API URLs - use env variables
+7. ❌ Don't forget loading/empty states
+8. ❌ Don't forget mobile responsive design
+
+## ✅ Code Review Checklist
+
+Before submitting:
+- [ ] TypeScript types are correct
+- [ ] No console.logs or debugger statements
+- [ ] Loading and error states handled
+- [ ] Mobile responsive
+- [ ] Accessible (keyboard navigation, ARIA)
+- [ ] Portuguese text for UI
+- [ ] English for code/comments
+- [ ] No hardcoded values
+- [ ] Toast notifications for user feedback
+
+---
+
+## 🎯 Quick Reference
+
+### Environment Variables
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080/v1
+NEXT_PUBLIC_KEYCLOAK_URL=https://auth.rodolfodebonis.com.br
+NEXT_PUBLIC_KEYCLOAK_REALM=spooliq
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=spooliq
+```
+
+### Common Imports
+```typescript
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
+
+// Hooks
+import { useAuthStore } from '@/stores/auth-store';
+import { useBudgets } from '@/lib/hooks/use-budgets';
+
+// Utils
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/format';
+
+// Icons
+import { Plus, Edit, Trash2 } from 'lucide-react';
+```
+
+---
+
+---
+
+## ⚠️ CRITICAL API CONVENTIONS
+
+### Field Naming
+**ALL API fields use snake_case, EXCEPT:**
+- `whatsapp` (NO underscore - NOT `whats_app`)
+
+### Data Formats
+- **Money**: Always in **cents** (10000 = R$ 100.00)
+- **Dates**: **ISO 8601** format ("2024-10-15T10:30:00Z")
+- **IDs**: **UUID v4**
+- **Status**: lowercase strings ('draft', 'sent', etc.)
+
+### Critical Fields
+```typescript
+// ✅ CORRECT
+interface Company {
+  whatsapp?: string;          // NO underscore
+  organization_id: string;    // snake_case
+  created_at: string;         // snake_case
+}
+
+// ❌ WRONG
+interface Company {
+  whats_app?: string;         // INCORRECT - will fail
+  organizationId: string;     // INCORRECT - backend uses snake_case
+}
+```
+
+### RegisterRequest Structure
+```typescript
+// Registration is FLAT, not nested
+interface RegisterRequest {
+  // User
+  name: string;
+  email: string;
+  password: string;
+  
+  // Company (flat, not nested!)
+  company_name: string;           // required
+  company_trade_name?: string;
+  company_document: string;        // required
+  company_phone: string;           // required
+  
+  // Address (ALL required)
+  address: string;
+  address_number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;                   // 2 chars: "SP"
+  zip_code: string;
+}
+```
+
+---
+
+**Document Version:** 1.2  
+**Last Updated:** 15/10/2024  
+**For:** Spooliq SaaS Frontend Development
+
+**Changelog:**
+- v1.2: Added CRITICAL API CONVENTIONS section, fixed whatsapp naming, corrected RegisterRequest structure
+- v1.1: Added PDF Branding/Color Customization section with types, components, hooks, and implementation examples
+- v1.0: Initial version
+
+🚀 **Happy coding!**
+

@@ -7,7 +7,7 @@ import (
 )
 
 // Routes registers all company routes
-func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUseCase usecases.IBrandingUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	companyRoutes := route.Group("/company")
 	{
 		// Platform Admin can create companies
@@ -18,5 +18,13 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, protectFac
 		companyRoutes.PUT("/", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole))
 		// Owner and OrgAdmin can upload logo
 		companyRoutes.POST("/logo", protectFactory(useCase.UploadLogo, roles.OwnerRole, roles.OrgAdminRole))
+
+		// Branding endpoints
+		// All authenticated users can view branding
+		companyRoutes.GET("/branding", protectFactory(brandingUseCase.GetBranding, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Owner and OrgAdmin can update branding
+		companyRoutes.PUT("/branding", protectFactory(brandingUseCase.UpdateBranding, roles.OwnerRole, roles.OrgAdminRole))
+		// All authenticated users can list templates
+		companyRoutes.GET("/branding/templates", protectFactory(brandingUseCase.ListTemplates, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 	}
 }

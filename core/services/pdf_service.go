@@ -9,6 +9,7 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	budgetEntities "github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/jung-kurt/gofpdf/v2"
 )
 
@@ -24,6 +25,7 @@ type BudgetPDFData struct {
 	Customer *budgetEntities.CustomerInfo
 	Items    []budgetEntities.BudgetItemResponse
 	Company  *budgetEntities.CompanyInfo
+	Branding *companyEntities.CompanyBrandingEntity // NEW: Branding configuration
 }
 
 // NewPDFService creates a new PDF service instance
@@ -36,35 +38,40 @@ func NewPDFService(cdnService *CDNService, logger logger.Logger) *PDFService {
 
 // GenerateBudgetPDF generates a PDF for a budget
 func (s *PDFService) GenerateBudgetPDF(ctx context.Context, data BudgetPDFData) ([]byte, error) {
+	// Use default branding if not provided
+	if data.Branding == nil {
+		data.Branding = companyEntities.GetDefaultTemplate()
+	}
+
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(15, 15, 15)
 	pdf.SetAutoPageBreak(true, 20)
 	pdf.AddPage()
 
 	// Add header
-	if err := s.addHeader(pdf, data.Company); err != nil {
+	if err := s.addHeader(pdf, data.Company, data.Branding); err != nil {
 		s.logger.Error(ctx, "Failed to add header to PDF", map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
 
 	// Add title
-	s.addTitle(pdf, data.Budget)
+	s.addTitle(pdf, data.Budget, data.Branding)
 
 	// Add customer info
-	s.addCustomerInfo(pdf, data.Customer)
+	s.addCustomerInfo(pdf, data.Customer, data.Branding)
 
 	// Add items table
-	s.addItemsTable(pdf, data.Items)
+	s.addItemsTable(pdf, data.Items, data.Branding)
 
 	// Add cost summary
-	s.addCostSummary(pdf, data.Budget)
+	s.addCostSummary(pdf, data.Budget, data.Branding)
 
 	// Add additional info (delivery, payment, notes)
-	s.addAdditionalInfo(pdf, data.Budget)
+	s.addAdditionalInfo(pdf, data.Budget, data.Branding)
 
 	// Add footer
-	s.addFooter(pdf, data.Company)
+	s.addFooter(pdf, data.Company, data.Branding)
 
 	// Generate PDF bytes
 	var buf bytes.Buffer
@@ -109,10 +116,7 @@ func (s *PDFService) GenerateAndUploadBudgetPDF(ctx context.Context, data Budget
 }
 
 // addHeader adds the company header with logo
-func (s *PDFService) addHeader(pdf *gofpdf.Fpdf, company *budgetEntities.CompanyInfo) error {
-	// Pink/rose theme
-	pdf.SetFillColor(255, 192, 203) // Light pink
-
+func (s *PDFService) addHeader(pdf *gofpdf.Fpdf, company *budgetEntities.CompanyInfo, branding *companyEntities.CompanyBrandingEntity) error {
 	// Company logo (if available)
 	if company.LogoURL != nil && *company.LogoURL != "" {
 		// Try to download and add logo
@@ -128,13 +132,15 @@ func (s *PDFService) addHeader(pdf *gofpdf.Fpdf, company *budgetEntities.Company
 	// Company info on the right
 	pdf.SetXY(120, 15)
 	pdf.SetFont("Arial", "B", 14)
-	pdf.SetTextColor(219, 112, 147) // Medium pink
+	r, g, b := s.hexToRGB(branding.PrimaryColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(75, 8, s.utf8ToLatin1(company.Name))
 
 	pdf.Ln(6)
 	pdf.SetX(120)
 	pdf.SetFont("Arial", "", 9)
-	pdf.SetTextColor(100, 100, 100)
+	r, g, b = s.hexToRGB(branding.BodyTextColor)
+	pdf.SetTextColor(r, g, b)
 
 	if company.Email != nil && *company.Email != "" {
 		pdf.Cell(75, 5, s.utf8ToLatin1(*company.Email))
@@ -163,14 +169,16 @@ func (s *PDFService) addHeader(pdf *gofpdf.Fpdf, company *budgetEntities.Company
 }
 
 // addTitle adds the budget title
-func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity) {
+func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 16)
-	pdf.SetTextColor(219, 112, 147) // Medium pink
+	r, g, b := s.hexToRGB(branding.TitleColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 10, s.utf8ToLatin1("ORÇAMENTO"))
 	pdf.Ln(8)
 
 	pdf.SetFont("Arial", "", 10)
-	pdf.SetTextColor(100, 100, 100)
+	r, g, b = s.hexToRGB(branding.BodyTextColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 6, s.utf8ToLatin1(budget.Name))
 	pdf.Ln(4)
 
@@ -183,14 +191,16 @@ func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEnt
 }
 
 // addCustomerInfo adds customer information
-func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.CustomerInfo) {
+func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.CustomerInfo, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 11)
-	pdf.SetTextColor(219, 112, 147)
+	r, g, b := s.hexToRGB(branding.SecondaryColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 8, s.utf8ToLatin1("Cliente"))
 	pdf.Ln(6)
 
 	pdf.SetFont("Arial", "", 10)
-	pdf.SetTextColor(60, 60, 60)
+	r, g, b = s.hexToRGB(branding.BodyTextColor)
+	pdf.SetTextColor(r, g, b)
 
 	// Name
 	pdf.Cell(0, 5, s.utf8ToLatin1(customer.Name))
@@ -217,15 +227,18 @@ func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.
 }
 
 // addItemsTable adds the items table
-func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.BudgetItemResponse) {
+func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.BudgetItemResponse, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 11)
-	pdf.SetTextColor(219, 112, 147)
+	r, g, b := s.hexToRGB(branding.SecondaryColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 8, s.utf8ToLatin1("Itens do Orçamento"))
 	pdf.Ln(6)
 
 	// Table header
-	pdf.SetFillColor(255, 192, 203) // Light pink
-	pdf.SetTextColor(255, 255, 255) // White text
+	r, g, b = s.hexToRGB(branding.TableHeaderBgColor)
+	pdf.SetFillColor(r, g, b)
+	r, g, b = s.hexToRGB(branding.HeaderTextColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.SetFont("Arial", "B", 9)
 
 	pdf.CellFormat(70, 7, s.utf8ToLatin1("Filamento"), "1", 0, "C", true, 0, "")
@@ -237,12 +250,14 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 
 	// Table rows
 	pdf.SetFont("Arial", "", 8)
-	pdf.SetTextColor(60, 60, 60)
+	r, g, b = s.hexToRGB(branding.BodyTextColor)
+	pdf.SetTextColor(r, g, b)
 
 	for i, item := range items {
 		fillColor := i%2 == 0
 		if fillColor {
-			pdf.SetFillColor(250, 250, 250) // Very light gray
+			r, g, b = s.hexToRGB(branding.TableRowAltBgColor)
+			pdf.SetFillColor(r, g, b)
 		}
 
 		filamentName := item.Filament.Name
@@ -262,14 +277,16 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 }
 
 // addCostSummary adds the cost summary section
-func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity) {
+func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 11)
-	pdf.SetTextColor(219, 112, 147)
+	r, g, b := s.hexToRGB(branding.SecondaryColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 8, s.utf8ToLatin1("Resumo de Custos"))
 	pdf.Ln(6)
 
 	pdf.SetFont("Arial", "", 10)
-	pdf.SetTextColor(60, 60, 60)
+	r, g, b = s.hexToRGB(branding.BodyTextColor)
+	pdf.SetTextColor(r, g, b)
 
 	// Print time
 	printTime := fmt.Sprintf("%dh%02dm", budget.PrintTimeHours, budget.PrintTimeMinutes)
@@ -307,7 +324,8 @@ func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.Bud
 
 	// Total
 	pdf.SetFont("Arial", "B", 12)
-	pdf.SetTextColor(219, 112, 147)
+	r, g, b = s.hexToRGB(branding.AccentColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(120, 8, s.utf8ToLatin1("TOTAL:"))
 	pdf.SetFont("Arial", "B", 14)
 	pdf.Cell(0, 8, fmt.Sprintf("R$ %.2f", float64(budget.TotalCost)/100.0))
@@ -316,14 +334,16 @@ func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.Bud
 }
 
 // addAdditionalInfo adds delivery, payment and notes
-func (s *PDFService) addAdditionalInfo(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity) {
+func (s *PDFService) addAdditionalInfo(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 11)
-	pdf.SetTextColor(219, 112, 147)
+	r, g, b := s.hexToRGB(branding.SecondaryColor)
+	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 8, s.utf8ToLatin1("Informações Adicionais"))
 	pdf.Ln(6)
 
 	pdf.SetFont("Arial", "", 10)
-	pdf.SetTextColor(60, 60, 60)
+	r, g, b = s.hexToRGB(branding.BodyTextColor)
+	pdf.SetTextColor(r, g, b)
 
 	// Delivery days
 	if budget.DeliveryDays != nil && *budget.DeliveryDays > 0 {
@@ -351,10 +371,11 @@ func (s *PDFService) addAdditionalInfo(pdf *gofpdf.Fpdf, budget *budgetEntities.
 }
 
 // addFooter adds footer with company info
-func (s *PDFService) addFooter(pdf *gofpdf.Fpdf, company *budgetEntities.CompanyInfo) {
+func (s *PDFService) addFooter(pdf *gofpdf.Fpdf, company *budgetEntities.CompanyInfo, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetY(-25)
 	pdf.SetFont("Arial", "I", 8)
-	pdf.SetTextColor(150, 150, 150)
+	r, g, b := s.hexToRGB(branding.BorderColor)
+	pdf.SetTextColor(r, g, b)
 
 	footerText := "Orçamento gerado em " + time.Now().Format("02/01/2006 às 15:04")
 	if company.Website != nil && *company.Website != "" {
@@ -427,4 +448,20 @@ func (s *PDFService) utf8ToLatin1(str string) string {
 	}
 
 	return result
+}
+
+// hexToRGB converts hex color string to RGB values
+func (s *PDFService) hexToRGB(hex string) (int, int, int) {
+	// Remove # if present
+	hex = strings.TrimPrefix(hex, "#")
+
+	// Default to black if invalid
+	if len(hex) != 6 {
+		return 0, 0, 0
+	}
+
+	// Parse hex to RGB
+	var r, g, b int
+	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	return r, g, b
 }

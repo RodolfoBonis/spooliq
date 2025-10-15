@@ -12,7 +12,11 @@ import (
 // Module exports the company feature's dependencies
 var Module = fx.Options(
 	fx.Provide(dataRepositories.NewCompanyRepository),
+	fx.Provide(dataRepositories.NewBrandingRepository),
 	fx.Provide(func(repo domainRepositories.CompanyRepository, cdnService *services.CDNService, logger logger.Logger) usecases.ICompanyUseCase {
 		return usecases.NewCompanyUseCase(repo, cdnService, logger)
+	}),
+	fx.Provide(func(repo domainRepositories.BrandingRepository, logger logger.Logger) usecases.IBrandingUseCase {
+		return usecases.NewBrandingUseCase(repo, logger)
 	}),
 )

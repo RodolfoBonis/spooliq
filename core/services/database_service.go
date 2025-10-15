@@ -303,6 +303,15 @@ func RunMigrations() {
 		_ = Connector.Migrator().AutoMigrate(&companies.CompanyModel{})
 	}
 
+	// Company Branding migration
+	if !Connector.Migrator().HasTable(&companies.CompanyBrandingModel{}) {
+		if err := Connector.AutoMigrate(&companies.CompanyBrandingModel{}); err != nil {
+			panic(fmt.Sprintf("ERROR DURING COMPANY_BRANDING MIGRATION: %s", err.Error()))
+		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&companies.CompanyBrandingModel{})
+	}
+
 	if !Connector.Migrator().HasTable(&filaments.FilamentModel{}) {
 		if err := Connector.AutoMigrate(&filaments.FilamentModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING FILAMENT MIGRATION: %s", err.Error()))

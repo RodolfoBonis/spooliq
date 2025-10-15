@@ -1,0 +1,18 @@
+{
+  "id": "4d26ee1a-59bf-4c11-ae07-a0cde22b669a",
+  "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca",
+  "name": "Impressões 3D Premium LTDA",
+  "trade_name": "3D Premium",
+  "document": "12345678000190",
+  "phone": "+5511987654321",
+  "address": "Rua das Impressoras",
+  "city": "São Paulo",
+  "state": "SP",
+  "zip_code": "01234-567",
+  "subscription_status": "trial",
+  "is_platform_company": false,
+  "subscription_plan": "basic",
+  "trial_ends_at": "2025-10-29T01:03:29.675278Z",
+  "created_at": "2025-10-15T04:03:29.675291Z",
+  "updated_at": "2025-10-15T04:03:29.675291Z"
+}

@@ -497,7 +497,7 @@ func (r *budgetRepositoryImpl) GetCompanyByOrganizationID(ctx context.Context, o
 		Name      string    `gorm:"column:name"`
 		Email     *string   `gorm:"column:email"`
 		Phone     *string   `gorm:"column:phone"`
-		WhatsApp  *string   `gorm:"column:whatsapp"`
+		WhatsApp  *string   `gorm:"column:whats_app"`
 		Instagram *string   `gorm:"column:instagram"`
 		Website   *string   `gorm:"column:website"`
 		LogoURL   *string   `gorm:"column:logo_url"`
@@ -505,7 +505,7 @@ func (r *budgetRepositoryImpl) GetCompanyByOrganizationID(ctx context.Context, o
 
 	if err := r.db.WithContext(ctx).
 		Table("companies").
-		Select("id, name, email, phone, whatsapp, instagram, website, logo_url").
+		Select("id, name, email, phone, whats_app, instagram, website, logo_url").
 		Where("organization_id = ?", organizationID).
 		Where("deleted_at IS NULL").
 		First(&company).Error; err != nil {

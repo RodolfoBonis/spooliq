@@ -1,0 +1,22 @@
+{
+  "id": "4d26ee1a-59bf-4c11-ae07-a0cde22b669a",
+  "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca",
+  "name": "Impressões 3D Premium",
+  "trade_name": "3D Premium",
+  "document": "12345678000190",
+  "email": "contato@impressoes3d.com.br",
+  "phone": "+5511987654321",
+  "whatsapp": "+5511987654321",
+  "instagram": "@impressoes3dpremium",
+  "website": "https://impressoes3d.com.br",
+  "logo_url": "https://via.placeholder.com/200x200.png?text=3D+Premium",
+  "address": "Rua das Impressoras, 123",
+  "city": "São Paulo",
+  "state": "SP",
+  "zip_code": "01234-567",
+  "subscription_status": "",
+  "is_platform_company": false,
+  "subscription_plan": "",
+  "created_at": "2025-10-15T04:03:29.675291Z",
+  "updated_at": "2025-10-15T01:03:30.095377-03:00"
+}

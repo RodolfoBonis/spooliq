@@ -1,1 +1,328 @@
-(eval):5: no such file or directory: ./spooliq
+[Fx] PROVIDE	fx.Lifecycle <= go.uber.org/fx.New.func1()
+[Fx] PROVIDE	fx.Shutdowner <= go.uber.org/fx.(*App).shutdowner-fm()
+[Fx] PROVIDE	fx.DotGraph <= go.uber.org/fx.(*App).dotGraph-fm()
+[Fx] PROVIDE	repositories.CompanyRepository <= github.com/RodolfoBonis/spooliq/features/company/data/repositories.NewCompanyRepository()
+[Fx] PROVIDE	usecases.ICompanyUseCase <= github.com/RodolfoBonis/spooliq/features/company/di.init.func1()
+[Fx] PROVIDE	usecases.IUploadUseCase <= github.com/RodolfoBonis/spooliq/features/uploads/di.init.func1()
+[Fx] PROVIDE	*gin.Engine <= github.com/gin-gonic/gin.New()
+[Fx] PROVIDE	*services.CDNService <= github.com/RodolfoBonis/spooliq/app.NewFxApp.func1()
+[Fx] PROVIDE	*services.PDFService <= github.com/RodolfoBonis/spooliq/app.NewFxApp.func2()
+[Fx] PROVIDE	logger.Logger <= github.com/RodolfoBonis/spooliq/core/logger.NewLogger() from module "logger"
+[Fx] PROVIDE	logger.TraceLogger <= github.com/RodolfoBonis/spooliq/core/logger.NewTraceLogger() from module "logger"
+[Fx] PROVIDE	*config.AppConfig <= github.com/RodolfoBonis/spooliq/core/config.NewAppConfig() from module "config"
+[Fx] PROVIDE	*observability.Manager <= github.com/RodolfoBonis/spooliq/core/observability.NewManager() from module "observability"
+[Fx] PROVIDE	*observability.Helper <= github.com/RodolfoBonis/spooliq/core/observability.NewHelper() from module "observability"
+[Fx] PROVIDE	observability.ManagerInterface <= fx.Annotate(github.com/RodolfoBonis/spooliq/core/observability.init.func2(), fx.As([[observability.ManagerInterface]]) from module "observability"
+[Fx] PROVIDE	*services.AmqpService <= github.com/RodolfoBonis/spooliq/core/services.NewAmqpService() from module "services"
+[Fx] PROVIDE	*services.RedisService <= github.com/RodolfoBonis/spooliq/core/services.NewRedisService() from module "services"
+[Fx] PROVIDE	*services.AuthService <= github.com/RodolfoBonis/spooliq/core/services.NewAuthService() from module "services"
+[Fx] PROVIDE	services.IAsaasService <= github.com/RodolfoBonis/spooliq/core/services.NewAsaasService() from module "services"
+[Fx] PROVIDE	services.IKeycloakAdminService <= github.com/RodolfoBonis/spooliq/core/services.NewKeycloakAdminService() from module "services"
+[Fx] PROVIDE	*gorm.DB <= github.com/RodolfoBonis/spooliq/core/services.init.func1() from module "services"
+[Fx] PROVIDE	*middlewares.MonitoringMiddleware <= github.com/RodolfoBonis/spooliq/core/middlewares.NewMonitoringMiddleware() from module "middlewares"
+[Fx] PROVIDE	func(gin.HandlerFunc, ...string) gin.HandlerFunc <= github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware() from module "middlewares"
+[Fx] PROVIDE	*middlewares.CacheMiddleware <= github.com/RodolfoBonis/spooliq/core/middlewares.NewCacheMiddleware() from module "middlewares"
+[Fx] PROVIDE	*middlewares.SubscriptionMiddleware <= github.com/RodolfoBonis/spooliq/core/middlewares.NewSubscriptionMiddleware() from module "middlewares"
+[Fx] PROVIDE	usecases.AuthUseCase <= github.com/RodolfoBonis/spooliq/features/auth/di.init.func1() from module "auth"
+[Fx] PROVIDE	*usecases.RegisterUseCase <= github.com/RodolfoBonis/spooliq/features/auth/di.init.func2() from module "auth"
+[Fx] PROVIDE	repositories.BrandRepository <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/brand/di.init.func1() from module "brand"
+[Fx] PROVIDE	usecases.IBrandUseCase <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/brand/di.init.func2() from module "brand"
+[Fx] PROVIDE	repositories.BudgetRepository <= github.com/RodolfoBonis/spooliq/features/budget/data/repositories.NewBudgetRepository() from module "budget"
+[Fx] PROVIDE	usecases.IBudgetUseCase <= github.com/RodolfoBonis/spooliq/features/budget/domain/usecases.NewBudgetUseCase() from module "budget"
+[Fx] PROVIDE	repositories.CustomerRepository <= github.com/RodolfoBonis/spooliq/features/customer/data/repositories.NewCustomerRepository() from module "customer"
+[Fx] PROVIDE	usecases.ICustomerUseCase <= github.com/RodolfoBonis/spooliq/features/customer/domain/usecases.NewCustomerUseCase() from module "customer"
+[Fx] PROVIDE	repositories.FilamentRepository <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/filament/di.init.func1() from module "filament"
+[Fx] PROVIDE	usecases.IFilamentUseCase <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/filament/di.init.func2() from module "filament"
+[Fx] PROVIDE	repositories.MaterialRepository <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/material/di.init.func1() from module "material"
+[Fx] PROVIDE	usecases.IMaterialUseCase <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/material/di.init.func2() from module "material"
+[Fx] PROVIDE	repositories.PresetRepository <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/preset/data/repositories.NewPresetRepository(), fx.As([[repositories.PresetRepository]]) from module "preset"
+[Fx] PROVIDE	*usecases.CreatePresetUseCase <= github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewCreatePresetUseCase() from module "preset"
+[Fx] PROVIDE	*usecases.FindPresetUseCase <= github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewFindPresetUseCase() from module "preset"
+[Fx] PROVIDE	*usecases.UpdatePresetUseCase <= github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewUpdatePresetUseCase() from module "preset"
+[Fx] PROVIDE	*usecases.DeletePresetUseCase <= github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewDeletePresetUseCase() from module "preset"
+[Fx] PROVIDE	*preset.Handler <= github.com/RodolfoBonis/spooliq/features/preset.NewPresetHandler() from module "preset"
+[Fx] PROVIDE	repositories.UserRepository <= github.com/RodolfoBonis/spooliq/features/users/di.init.func1() from module "users"
+[Fx] PROVIDE	*usecases.CreateUserUseCase <= github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewCreateUserUseCase() from module "users"
+[Fx] PROVIDE	*usecases.ListUsersUseCase <= github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewListUsersUseCase() from module "users"
+[Fx] PROVIDE	*usecases.FindUserUseCase <= github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewFindUserUseCase() from module "users"
+[Fx] PROVIDE	*usecases.UpdateUserUseCase <= github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewUpdateUserUseCase() from module "users"
+[Fx] PROVIDE	*usecases.DeleteUserUseCase <= github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewDeleteUserUseCase() from module "users"
+[Fx] PROVIDE	*users.Handler <= github.com/RodolfoBonis/spooliq/features/users/di.init.func2() from module "users"
+[Fx] PROVIDE	*usecases.AsaasWebhookUseCase <= github.com/RodolfoBonis/spooliq/features/webhooks/di.init.func1() from module "webhooks"
+[Fx] PROVIDE	*webhooks.Handler <= github.com/RodolfoBonis/spooliq/features/webhooks.NewWebhookHandler() from module "webhooks"
+[Fx] PROVIDE	*usecases.ListCompaniesUseCase <= github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewListCompaniesUseCase() from module "admin"
+[Fx] PROVIDE	*usecases.GetCompanyDetailsUseCase <= github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetCompanyDetailsUseCase() from module "admin"
+[Fx] PROVIDE	*usecases.UpdateCompanyStatusUseCase <= github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewUpdateCompanyStatusUseCase() from module "admin"
+[Fx] PROVIDE	*usecases.ListSubscriptionsUseCase <= github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewListSubscriptionsUseCase() from module "admin"
+[Fx] PROVIDE	*usecases.GetSubscriptionDetailsUseCase <= github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetSubscriptionDetailsUseCase() from module "admin"
+[Fx] PROVIDE	*usecases.GetPaymentHistoryUseCase <= github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetPaymentHistoryUseCase() from module "admin"
+[Fx] PROVIDE	*admin.Handler <= github.com/RodolfoBonis/spooliq/features/admin/di.init.func1() from module "admin"
+[Fx] PROVIDE	repositories.SubscriptionRepository <= fx.Annotate(github.com/RodolfoBonis/spooliq/features/subscriptions/di.init.func1(), fx.As([[repositories.SubscriptionRepository]]) from module "subscriptions"
+[Fx] INVOKE		github.com/RodolfoBonis/spooliq/core/observability.init.func1() from module "observability"
+[Fx] BEFORE RUN	provide: go.uber.org/fx.New.func1()
+[Fx] RUN	provide: go.uber.org/fx.New.func1() in 4.708µs
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/logger.NewLogger() from module "logger"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/logger.NewLogger() in 14.041µs from module "logger"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/observability.NewManager() from module "observability"
+2025-10-15T01:03:21.294-0300	INFO	observability/observability.go:83	Observability disabled by configuration
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/observability.NewManager() in 503.417µs from module "observability"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/observability.NewHelper() from module "observability"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/observability.NewHelper() in 3.625µs from module "observability"
+[Fx] INVOKE		github.com/RodolfoBonis/spooliq/app.NewFxApp.func3()
+[Fx] BEFORE RUN	provide: github.com/gin-gonic/gin.New()
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[Fx] RUN	provide: github.com/gin-gonic/gin.New() in 10.083µs
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/config.NewAppConfig() from module "config"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/config.NewAppConfig() in 408.792µs from module "config"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewAuthService() from module "services"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewAuthService() in 15.625µs from module "services"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/auth/di.init.func1() from module "auth"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/auth/di.init.func1() in 2.666µs from module "auth"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewKeycloakAdminService() from module "services"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewKeycloakAdminService() in 3.667µs from module "services"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewAsaasService() from module "services"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewAsaasService() in 2.708µs from module "services"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/services.init.func1() from module "services"
+2025-10-15T01:03:21.312-0300	INFO	services/database_service.go:142	Database connection established	{"db_config": "host=localhost port=5432 user=user dbname=spooliq_db password=password sslmode=disable"}
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/services.init.func1() in 16.872958ms from module "services"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/company/data/repositories.NewCompanyRepository()
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/company/data/repositories.NewCompanyRepository() in 9.166µs
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/di.init.func1() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/di.init.func1() in 4.209µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/auth/di.init.func2() from module "auth"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/auth/di.init.func2() in 34.833µs from module "auth"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/brand/di.init.func1() from module "brand"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/brand/di.init.func1() in 21.167µs from module "brand"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/brand/di.init.func2() from module "brand"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/brand/di.init.func2() in 38.542µs from module "brand"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/budget/data/repositories.NewBudgetRepository() from module "budget"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/budget/data/repositories.NewBudgetRepository() in 3.458µs from module "budget"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/customer/data/repositories.NewCustomerRepository() from module "customer"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/customer/data/repositories.NewCustomerRepository() in 5.25µs from module "customer"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/app.NewFxApp.func1()
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/app.NewFxApp.func1() in 3.167µs
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/app.NewFxApp.func2()
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/app.NewFxApp.func2() in 3.584µs
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/budget/domain/usecases.NewBudgetUseCase() from module "budget"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/budget/domain/usecases.NewBudgetUseCase() in 17.375µs from module "budget"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/company/di.init.func1()
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/company/di.init.func1() in 15.625µs
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/customer/domain/usecases.NewCustomerUseCase() from module "customer"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/customer/domain/usecases.NewCustomerUseCase() in 13.833µs from module "customer"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/filament/di.init.func1() from module "filament"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/filament/di.init.func1() in 1.916µs from module "filament"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/filament/di.init.func2() from module "filament"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/filament/di.init.func2() in 14.5µs from module "filament"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/material/di.init.func1() from module "material"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/material/di.init.func1() in 1.75µs from module "material"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/material/di.init.func2() from module "material"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/material/di.init.func2() in 13.917µs from module "material"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/uploads/di.init.func1()
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/uploads/di.init.func1() in 2.292µs
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/preset/data/repositories.NewPresetRepository(), fx.As([[repositories.PresetRepository]]) from module "preset"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/preset/data/repositories.NewPresetRepository(), fx.As([[repositories.PresetRepository]]) in 13.208µs from module "preset"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewCreatePresetUseCase() from module "preset"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewCreatePresetUseCase() in 3.042µs from module "preset"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewFindPresetUseCase() from module "preset"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewFindPresetUseCase() in 1.334µs from module "preset"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewUpdatePresetUseCase() from module "preset"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewUpdatePresetUseCase() in 4.666µs from module "preset"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewDeletePresetUseCase() from module "preset"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/preset/domain/usecases.NewDeletePresetUseCase() in 1.5µs from module "preset"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/preset.NewPresetHandler() from module "preset"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/preset.NewPresetHandler() in 2.125µs from module "preset"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/webhooks/di.init.func1() from module "webhooks"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/webhooks/di.init.func1() in 2.084µs from module "webhooks"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/webhooks.NewWebhookHandler() from module "webhooks"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/webhooks.NewWebhookHandler() in 1.833µs from module "webhooks"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewCreateUserUseCase() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewCreateUserUseCase() in 16.917µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewListUsersUseCase() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewListUsersUseCase() in 2.625µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewFindUserUseCase() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewFindUserUseCase() in 1.666µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewUpdateUserUseCase() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewUpdateUserUseCase() in 12.125µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewDeleteUserUseCase() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/domain/usecases.NewDeleteUserUseCase() in 1.333µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/users/di.init.func2() from module "users"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/users/di.init.func2() in 1.833µs from module "users"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewListCompaniesUseCase() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewListCompaniesUseCase() in 2.416µs from module "admin"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetCompanyDetailsUseCase() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetCompanyDetailsUseCase() in 2.334µs from module "admin"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewUpdateCompanyStatusUseCase() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewUpdateCompanyStatusUseCase() in 14.458µs from module "admin"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewListSubscriptionsUseCase() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewListSubscriptionsUseCase() in 1.541µs from module "admin"
+[Fx] BEFORE RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/subscriptions/di.init.func1(), fx.As([[repositories.SubscriptionRepository]]) from module "subscriptions"
+[Fx] RUN	provide: fx.Annotate(github.com/RodolfoBonis/spooliq/features/subscriptions/di.init.func1(), fx.As([[repositories.SubscriptionRepository]]) in 4.208µs from module "subscriptions"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetSubscriptionDetailsUseCase() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetSubscriptionDetailsUseCase() in 1.667µs from module "admin"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetPaymentHistoryUseCase() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/domain/usecases.NewGetPaymentHistoryUseCase() in 1.5µs from module "admin"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/di.init.func1() from module "admin"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/features/admin/di.init.func1() in 1.916µs from module "admin"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewMonitoringMiddleware() from module "middlewares"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewMonitoringMiddleware() in 4.292µs from module "middlewares"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewRedisService() from module "services"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewRedisService() in 4.917µs from module "services"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewCacheMiddleware() from module "middlewares"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewCacheMiddleware() in 1.667µs from module "middlewares"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewSubscriptionMiddleware() from module "middlewares"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewSubscriptionMiddleware() in 1.625µs from module "middlewares"
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware() from module "middlewares"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware() in 1.875µs from module "middlewares"
+2025-10-15T01:03:21.315-0300	INFO	services/redis_service.go:68	Redis connected successfully with OpenTelemetry instrumentation	{"redis_host": "localhost", "redis_port": "6379"}
+[GIN-debug] GET    /v1/docs/*any             --> github.com/swaggo/gin-swagger.CustomWrapHandler.func1 (6 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/RodolfoBonis/spooliq/routes.InitializeRoutes.WrapH.func1 (6 handlers)
+[GIN-debug] GET    /v1/health_check          --> github.com/RodolfoBonis/spooliq/core/health.Routes.func1 (6 handlers)
+[GIN-debug] POST   /v1/register              --> github.com/RodolfoBonis/spooliq/features/auth/domain/usecases.(*RegisterUseCase).Register-fm (6 handlers)
+[GIN-debug] POST   /v1/login                 --> github.com/RodolfoBonis/spooliq/features/auth/domain/usecases.AuthUseCase.ValidateLogin-fm (6 handlers)
+[GIN-debug] POST   /v1/logout                --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/refresh               --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/validate_token        --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/brands                --> github.com/RodolfoBonis/spooliq/features/brand.Routes.(*CacheMiddleware).Cache15Min.(*CacheMiddleware).Cache.func1 (7 handlers)
+[GIN-debug] GET    /v1/brands/:id            --> github.com/RodolfoBonis/spooliq/features/brand.Routes.(*CacheMiddleware).Cache1Hour.(*CacheMiddleware).Cache.func2 (7 handlers)
+[GIN-debug] POST   /v1/brands                --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/brands/:id            --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/brands/:id            --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/budgets               --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/budgets               --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/budgets/:id           --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/budgets/:id           --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PATCH  /v1/budgets/:id/status    --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/budgets/:id/duplicate --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/budgets/:id/calculate --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/budgets/:id/history   --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/budgets/by-customer/:customer_id --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/budgets/:id/pdf       --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/budgets/:id           --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/company/              --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/company/              --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/company/              --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/customers             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/customers             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/customers/search      --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/customers/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/customers/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/customers/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/filaments             --> github.com/RodolfoBonis/spooliq/features/filament.Routes.(*CacheMiddleware).Cache5Min.(*CacheMiddleware).Cache.func1 (7 handlers)
+[GIN-debug] GET    /v1/filaments/search      --> github.com/RodolfoBonis/spooliq/features/filament.Routes.(*CacheMiddleware).Cache5Min.(*CacheMiddleware).Cache.func2 (7 handlers)
+[GIN-debug] GET    /v1/filaments/:id         --> github.com/RodolfoBonis/spooliq/features/filament.Routes.(*CacheMiddleware).Cache15Min.(*CacheMiddleware).Cache.func3 (7 handlers)
+[GIN-debug] POST   /v1/filaments             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/filaments/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/filaments/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/materials             --> github.com/RodolfoBonis/spooliq/features/material.Routes.(*CacheMiddleware).Cache15Min.(*CacheMiddleware).Cache.func1 (7 handlers)
+[GIN-debug] GET    /v1/materials/:id         --> github.com/RodolfoBonis/spooliq/features/material.Routes.(*CacheMiddleware).Cache1Hour.(*CacheMiddleware).Cache.func2 (7 handlers)
+[GIN-debug] POST   /v1/materials             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/materials/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/materials/:id         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets               --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/:id           --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/presets/:id           --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/presets/machines      --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/machines      --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/machines/:id  --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/presets/machines/:id  --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/machines/brand/:brand --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/presets/energy        --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/energy        --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/energy/:id    --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/presets/energy/:id    --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/energy/location --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/energy/currency/:currency --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/presets/costs         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/costs         --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/presets/costs/:id     --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/presets/costs/:id     --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/uploads/logo          --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/uploads/file          --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/users                 --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/users/:id             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/users                 --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PUT    /v1/users/:id             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] DELETE /v1/users/:id             --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] POST   /v1/webhooks/asaas        --> github.com/RodolfoBonis/spooliq/features/webhooks/domain/usecases.(*AsaasWebhookUseCase).HandleWebhook-fm (6 handlers)
+[GIN-debug] GET    /v1/admin/companies       --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/admin/companies/:organization_id --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] PATCH  /v1/admin/companies/:organization_id/status --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/admin/subscriptions   --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/admin/subscriptions/:organization_id --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+[GIN-debug] GET    /v1/admin/subscriptions/:organization_id/payments --> github.com/RodolfoBonis/spooliq/core/middlewares.NewProtectMiddleware.func1.1 (6 handlers)
+2025-10-15T01:03:21.383-0300	INFO	app/hooks.go:136	Routes initialized after middleware setup
+[Fx] INVOKE		github.com/RodolfoBonis/spooliq/app.InitAndRun.func1()
+[Fx] BEFORE RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewAmqpService() from module "services"
+[Fx] RUN	provide: github.com/RodolfoBonis/spooliq/core/services.NewAmqpService() in 41.875µs from module "services"
+[Fx] HOOK OnStart		github.com/RodolfoBonis/spooliq/core/observability.init.func1.1() executing (caller: github.com/RodolfoBonis/spooliq/core/observability.init.func1)
+[Fx] HOOK OnStart		github.com/RodolfoBonis/spooliq/core/observability.init.func1.1() called by github.com/RodolfoBonis/spooliq/core/observability.init.func1 ran successfully in 2.166µs
+[Fx] HOOK OnStart		github.com/RodolfoBonis/spooliq/app.SetupMiddlewaresAndRoutes.func1() executing (caller: github.com/RodolfoBonis/spooliq/app.SetupMiddlewaresAndRoutes)
+2025-10-15T01:03:21.383-0300	INFO	app/hooks.go:142	Application started with enhanced observability	{"observability_enabled": false, "auto_instrumentation": true}
+[Fx] HOOK OnStart		github.com/RodolfoBonis/spooliq/app.SetupMiddlewaresAndRoutes.func1() called by github.com/RodolfoBonis/spooliq/app.SetupMiddlewaresAndRoutes ran successfully in 9.875µs
+[Fx] HOOK OnStart		github.com/RodolfoBonis/spooliq/app.InitAndRun.func1.1() executing (caller: github.com/RodolfoBonis/spooliq/app.InitAndRun.func1)
+2025-10-15T01:03:21.385-0300	INFO	app/init.go:45	📊 Database connection verified
+2025-10-15T01:03:21.385-0300	INFO	app/init.go:47	Running migrations...
+2025-10-15T01:03:21.515-0300	INFO	app/init.go:51	Migrations done
+[Fx] HOOK OnStart		github.com/RodolfoBonis/spooliq/app.InitAndRun.func1.1() called by github.com/RodolfoBonis/spooliq/app.InitAndRun.func1 ran successfully in 131.833167ms
+[Fx] RUNNING
+[GIN-debug] Listening and serving HTTP on :8080
+2025-10-15T01:03:29.344-0300	INFO	usecases/register_uc.go:66	Registration attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:29.350-0300	INFO	usecases/register_uc.go:115	Creating new organization	{"company_name": "Impressões 3D Premium LTDA", "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca"}
+2025-10-15T01:03:29.350-0300	INFO	usecases/register_uc.go:270	Creating Keycloak user	{"email": "admin@impressoes3d.com.br", "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca"}
+2025-10-15T01:03:29.506-0300	INFO	usecases/register_uc.go:308	Keycloak user created	{"email": "admin@impressoes3d.com.br", "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e"}
+2025-10-15T01:03:29.675-0300	INFO	usecases/register_uc.go:371	Keycloak user setup completed	{"user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br"}
+2025-10-15T01:03:29.684-0300	INFO	usecases/register_uc.go:234	Asaas integration disabled for testing - trial mode only
+2025-10-15T01:03:29.685-0300	INFO	usecases/register_uc.go:236	Registration completed successfully	{"user_id": "8280daed-aa54-4383-b587-62c6e09b84cc", "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca", "email": "admin@impressoes3d.com.br"}
+[GIN] 2025/10/15 - 01:03:29 | 201 |  340.325416ms |             ::1 | POST     "/v1/register"
+2025-10-15T01:03:29.768-0300	INFO	usecases/login_uc.go:35	Login attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:29.977-0300	INFO	usecases/login_uc.go:77	Login successful	{"email": "admin@impressoes3d.com.br", "ip": "::1", "user_agent": "curl/8.15.0"}
+[GIN] 2025/10/15 - 01:03:29 | 200 |   209.49525ms |             ::1 | POST     "/v1/login"
+2025-10-15T01:03:30.036-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br", "request_id": "3cae836f-be51-43a8-94f6-769d861d7a62", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"]}
+2025-10-15T01:03:30.039-0300	INFO	usecases/get_company_uc.go:25	Company retrieval attempt started	{"user_agent": "curl/8.15.0", "ip": "::1"}
+2025-10-15T01:03:30.042-0300	INFO	usecases/get_company_uc.go:58	Company retrieved successfully	{"company_id": "4d26ee1a-59bf-4c11-ae07-a0cde22b669a", "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca"}
+[GIN] 2025/10/15 - 01:03:30 | 200 |   21.534458ms |             ::1 | GET      "/v1/company/"
+2025-10-15T01:03:30.090-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"required_roles": ["Owner", "OrgAdmin"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br", "request_id": "331dda38-6f90-4f4d-a19c-bcaf6c619a2f", "ip": "::1", "matched_role": "Owner"}
+2025-10-15T01:03:30.092-0300	INFO	usecases/update_company_uc.go:28	Company update attempt started	{"user_agent": "curl/8.15.0", "ip": "::1"}
+2025-10-15T01:03:30.097-0300	INFO	usecases/update_company_uc.go:134	Company updated successfully	{"company_id": "4d26ee1a-59bf-4c11-ae07-a0cde22b669a", "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca"}
+[GIN] 2025/10/15 - 01:03:30 | 200 |   13.619417ms |             ::1 | PUT      "/v1/company/"
+2025-10-15T01:03:30.131-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"email": "admin@impressoes3d.com.br", "request_id": "43224b4b-340f-4a8d-bc77-e2bcfd43b168", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e"}
+2025-10-15T01:03:30.133-0300	INFO	usecases/create_brand_uc.go:39	Brand creation attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:30.138-0300	INFO	usecases/create_brand_uc.go:119	Brand created successfully	{"brand_name": "Bambu Lab", "brand_id": "a11e2d9d-9315-47f3-8dbc-126723c7643e"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |    13.19175ms |             ::1 | POST     "/v1/brands"
+2025-10-15T01:03:30.180-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"email": "admin@impressoes3d.com.br", "request_id": "82048ed7-0a92-44e9-921b-dc16d7f01887", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e"}
+2025-10-15T01:03:30.183-0300	INFO	usecases/create_material_uc.go:40	Material creation attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:30.189-0300	INFO	usecases/create_material_uc.go:127	Material created successfully	{"material_name": "PLA", "material_id": "f443aff2-fe60-4137-b677-8c2b28efa397"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   14.383125ms |             ::1 | POST     "/v1/materials"
+2025-10-15T01:03:30.231-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br", "request_id": "a0a6b378-1879-40e7-ae6d-42215891773a", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"]}
+2025-10-15T01:03:30.234-0300	INFO	usecases/create_filament_uc.go:32	Filament creation attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:30.239-0300	INFO	usecases/create_filament_uc.go:189	Filament created successfully	{"filament_id": "e7b12079-5609-4b0d-8353-aab129b527c1", "filament_name": "PLA Vermelho Ferrari", "owner_user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "is_global": false}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   13.909125ms |             ::1 | POST     "/v1/filaments"
+2025-10-15T01:03:30.282-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br", "request_id": "67b684f2-1221-4710-bff9-8e333265654f", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"]}
+2025-10-15T01:03:30.285-0300	INFO	usecases/create_filament_uc.go:32	Filament creation attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:30.289-0300	INFO	usecases/create_filament_uc.go:189	Filament created successfully	{"filament_id": "68cc3e29-b367-4aad-a6ab-4d6520a09b06", "filament_name": "PLA Branco", "owner_user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "is_global": false}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   13.861042ms |             ::1 | POST     "/v1/filaments"
+2025-10-15T01:03:30.326-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"email": "admin@impressoes3d.com.br", "request_id": "7fdf9e2d-43c4-4dbd-b456-52b40fa29213", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   17.566708ms |             ::1 | POST     "/v1/presets/machines"
+2025-10-15T01:03:30.372-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br", "request_id": "8b985d46-fad2-47ca-ad43-f27a6ee8e39f", "ip": "::1", "matched_role": "Owner"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   15.243333ms |             ::1 | POST     "/v1/presets/energy"
+2025-10-15T01:03:30.431-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"request_id": "fab9d16e-d137-48a2-84bf-336f453efc74", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   22.487666ms |             ::1 | POST     "/v1/presets/costs"
+2025-10-15T01:03:30.492-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"request_id": "86970323-b86c-4841-9272-351c3ccee71e", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br"}
+2025-10-15T01:03:30.498-0300	INFO	usecases/create_customer_uc.go:30	Customer creation attempt started	{"user_agent": "curl/8.15.0", "ip": "::1"}
+2025-10-15T01:03:30.503-0300	INFO	usecases/create_customer_uc.go:122	Customer created successfully	{"name": "Maria Souza", "customer_id": "02900705-a6d1-441c-b089-d438e07241b3"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   16.469834ms |             ::1 | POST     "/v1/customers"
+2025-10-15T01:03:30.566-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"email": "admin@impressoes3d.com.br", "request_id": "1b09bbbd-2fa0-4808-bfba-268cc33bcac9", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e"}
+2025-10-15T01:03:30.569-0300	INFO	usecases/create_budget_uc.go:30	Budget creation attempt started	{"user_agent": "curl/8.15.0", "ip": "::1"}
+2025-10-15T01:03:30.596-0300	INFO	usecases/create_budget_uc.go:190	Budget created successfully	{"name": "Chaveiros Personalizados - Outubro Rosa", "budget_id": "976a180f-1fca-4bb1-9a26-64eda5966ce5"}
+[GIN] 2025/10/15 - 01:03:30 | 201 |   36.342292ms |             ::1 | POST     "/v1/budgets"
+2025-10-15T01:03:30.667-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br", "request_id": "7ea92cc0-47ae-4365-a5d3-10d071fcc196", "ip": "::1", "matched_role": "Owner"}
+2025-10-15T01:03:30.670-0300	INFO	usecases/generate_pdf_uc.go:38	PDF generation attempt started	{"user_agent": "curl/8.15.0", "ip": "::1"}
+2025-10-15T01:03:31.335-0300	INFO	usecases/generate_pdf_uc.go:149	PDF generated successfully	{"budget_id": "976a180f-1fca-4bb1-9a26-64eda5966ce5", "size": 2876}
+[GIN] 2025/10/15 - 01:03:31 | 200 |  674.112042ms |             ::1 | GET      "/v1/budgets/976a180f-1fca-4bb1-9a26-64eda5966ce5/pdf"
+2025-10-15T01:03:31.556-0300	INFO	middlewares/auth_middleware.go:138	Auth success	{"request_id": "55c7d4b4-84ab-40b4-ab22-23551b2c4d64", "ip": "::1", "matched_role": "Owner", "required_roles": ["Owner", "OrgAdmin", "User"], "user_roles": ["default-roles-spooliq","Owner","offline_access","uma_authorization"], "user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e", "email": "admin@impressoes3d.com.br"}
+2025-10-15T01:03:31.574-0300	INFO	usecases/find_all_brand_uc.go:39	Brands retrieval attempt started	{"ip": "::1", "user_agent": "curl/8.15.0"}
+2025-10-15T01:03:31.575-0300	INFO	usecases/find_all_brand_uc.go:59	Brands retrieved successfully	{"total_brands": 0}
+[GIN] 2025/10/15 - 01:03:31 | 200 |   26.355375ms |             ::1 | GET      "/v1/brands?page=1&pageSize=10"

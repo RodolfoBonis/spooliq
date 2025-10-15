@@ -1,0 +1,74 @@
+{
+  "budget": {
+    "id": "976a180f-1fca-4bb1-9a26-64eda5966ce5",
+    "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca",
+    "name": "Chaveiros Personalizados - Outubro Rosa",
+    "description": "Chaveiros personalizados para campanha Outubro Rosa",
+    "customer_id": "02900705-a6d1-441c-b089-d438e07241b3",
+    "status": "draft",
+    "print_time_hours": 2,
+    "print_time_minutes": 30,
+    "machine_preset_id": "20c61c15-72c3-4cd0-9213-5a40b87224a6",
+    "energy_preset_id": "35266a3f-55a7-4e75-9fbb-76986942e47d",
+    "cost_preset_id": "77a45f7a-22d6-4a1a-bc32-33fc623c749f",
+    "include_energy_cost": true,
+    "include_labor_cost": true,
+    "include_waste_cost": false,
+    "filament_cost": 688,
+    "waste_cost": 0,
+    "energy_cost": 0,
+    "labor_cost": 0,
+    "total_cost": 688,
+    "notes": "Entrega urgente - prazo de 5 dias úteis",
+    "owner_user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e",
+    "created_at": "2025-10-15T04:03:30.571066Z",
+    "updated_at": "2025-10-15T04:03:30.58796Z"
+  },
+  "customer": {
+    "id": "02900705-a6d1-441c-b089-d438e07241b3",
+    "name": "Maria Souza",
+    "email": "maria.souza@email.com",
+    "phone": "+5511999887766",
+    "document": "12345678900"
+  },
+  "items": [
+    {
+      "id": "99442bcb-09c0-495f-b25b-9082d8515d86",
+      "budget_id": "976a180f-1fca-4bb1-9a26-64eda5966ce5",
+      "filament_id": "e7b12079-5609-4b0d-8353-aab129b527c1",
+      "filament": {
+        "id": "e7b12079-5609-4b0d-8353-aab129b527c1",
+        "name": "PLA Vermelho Ferrari",
+        "brand_name": "Bambu Lab",
+        "material_name": "PLA",
+        "color": "Vermelho Ferrari",
+        "price_per_kg": 89.9
+      },
+      "quantity": 50,
+      "order": 0,
+      "waste_amount": 0,
+      "item_cost": 449,
+      "created_at": "2025-10-15T04:03:30.574783Z",
+      "updated_at": "2025-10-15T04:03:30.583044Z"
+    },
+    {
+      "id": "c599f467-2254-448d-84d4-94891c0f34f8",
+      "budget_id": "976a180f-1fca-4bb1-9a26-64eda5966ce5",
+      "filament_id": "68cc3e29-b367-4aad-a6ab-4d6520a09b06",
+      "filament": {
+        "id": "68cc3e29-b367-4aad-a6ab-4d6520a09b06",
+        "name": "PLA Branco",
+        "brand_name": "Bambu Lab",
+        "material_name": "PLA",
+        "color": "Branco",
+        "price_per_kg": 79.9
+      },
+      "quantity": 30,
+      "order": 0,
+      "waste_amount": 0,
+      "item_cost": 239,
+      "created_at": "2025-10-15T04:03:30.576962Z",
+      "updated_at": "2025-10-15T04:03:30.586277Z"
+    }
+  ]
+}

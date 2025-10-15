@@ -11,8 +11,8 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 	budgetRoutes := route.Group("/budgets")
 	{
 		// All users can manage budgets
-		budgetRoutes.POST("/", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
-		budgetRoutes.GET("/", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.POST("", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))

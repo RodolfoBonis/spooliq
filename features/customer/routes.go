@@ -11,8 +11,8 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICustomerUseCase, protectFa
 	customerRoutes := route.Group("/customers")
 	{
 		// All users can manage customers
-		customerRoutes.POST("/", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
-		customerRoutes.GET("/", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		customerRoutes.POST("", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		customerRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		customerRoutes.GET("/search", protectFactory(useCase.Search, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		customerRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		customerRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))

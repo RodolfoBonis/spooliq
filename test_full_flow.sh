@@ -287,7 +287,7 @@ CUSTOMER_RESPONSE=$(curl -s -X POST "$API_URL/v1/customers" \
   }')
 
 echo "$CUSTOMER_RESPONSE" | jq '.' > "$OUTPUT_DIR/09_customer.json"
-CUSTOMER_ID=$(echo "$CUSTOMER_RESPONSE" | jq -r '.id')
+CUSTOMER_ID=$(echo "$CUSTOMER_RESPONSE" | jq -r '.customer.id')
 echo -e "${GREEN}✅ Cliente criado (ID: $CUSTOMER_ID)${NC}"
 
 # ========================================
@@ -301,8 +301,12 @@ BUDGET_RESPONSE=$(curl -s -X POST "$API_URL/v1/budgets" \
   -d "{
     \"name\": \"Chaveiros Personalizados - Outubro Rosa\",
     \"customer_id\": \"$CUSTOMER_ID\",
-    \"preset_id\": \"$PRESET_ID\",
+    \"machine_preset_id\": \"$MACHINE_ID\",
+    \"energy_preset_id\": \"$ENERGY_ID\",
+    \"cost_preset_id\": \"$COST_ID\",
     \"description\": \"Chaveiros personalizados para campanha Outubro Rosa\",
+    \"print_time_hours\": 2,
+    \"print_time_minutes\": 30,
     \"items\": [
       {
         \"name\": \"Chaveiro Laço Rosa\",
@@ -333,19 +337,19 @@ BUDGET_RESPONSE=$(curl -s -X POST "$API_URL/v1/budgets" \
   }")
 
 echo "$BUDGET_RESPONSE" | jq '.' > "$OUTPUT_DIR/10_budget.json"
-BUDGET_ID=$(echo "$BUDGET_RESPONSE" | jq -r '.id')
+BUDGET_ID=$(echo "$BUDGET_RESPONSE" | jq -r '.budget.id')
 echo -e "${GREEN}✅ Orçamento criado (ID: $BUDGET_ID)${NC}"
 
 # Mostrar resumo do orçamento
 echo -e "\n${YELLOW}📊 Resumo do Orçamento:${NC}"
 echo "$BUDGET_RESPONSE" | jq '{
-  id: .id,
-  name: .name,
-  status: .status,
-  total_cost: .total_cost,
-  final_price: .final_price,
+  id: .budget.id,
+  name: .budget.name,
+  status: .budget.status,
+  total_cost: .budget.total_cost,
+  filament_cost: .budget.filament_cost,
   items_count: (.items | length),
-  created_at: .created_at
+  created_at: .budget.created_at
 }'
 
 # ========================================

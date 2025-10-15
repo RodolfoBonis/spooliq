@@ -1,0 +1,82 @@
+🚀 Iniciando teste do fluxo completo do SaaS Spooliq
+==================================================
+
+[0;34m📝 STEP 1: Registrando nova empresa[0m
+[0;32m✅ Empresa registrada[0m
+{
+  "user_id": "2c64a162-9c97-4cd2-8f5d-8971f82abd96",
+  "organization_id": "bdadafb8-dece-49b6-815d-ac9a85ca07d0",
+  "trial_ends_at": "2025-10-29T00:48:39-03:00",
+  "message": "Registration successful! Your 14-day trial has started."
+}
+
+[0;34m🔐 STEP 2: Fazendo login[0m
+[0;32m✅ Login realizado[0m
+Token: eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6IC...
+
+[0;34m🏢 STEP 3: Buscando informações da empresa[0m
+[0;32m✅ Informações da empresa obtidas[0m
+{
+  "id": "5e6bd16c-b071-4e72-9604-7d0388df24ca",
+  "organization_id": "bdadafb8-dece-49b6-815d-ac9a85ca07d0",
+  "name": "Impressões 3D Premium LTDA",
+  "trade_name": "3D Premium",
+  "document": "12345678000190",
+  "phone": "+5511987654321",
+  "address": "Rua das Impressoras",
+  "city": "São Paulo",
+  "state": "SP",
+  "zip_code": "01234-567",
+  "subscription_status": "trial",
+  "is_platform_company": false,
+  "subscription_plan": "basic",
+  "trial_ends_at": "2025-10-29T00:48:39.469847Z",
+  "created_at": "2025-10-15T03:48:39.469857Z",
+  "updated_at": "2025-10-15T03:48:39.469857Z"
+}
+
+[0;34m🎨 STEP 4: Atualizando dados da empresa[0m
+[0;32m✅ Dados da empresa atualizados[0m
+
+[0;34m🏷️  STEP 5: Criando marca de filamento[0m
+[0;32m✅ Marca criada (ID: 1724d9c5-b6e6-4b87-a846-952e4e927a43)[0m
+
+[0;34m🧪 STEP 6: Criando material[0m
+[0;32m✅ Material criado (ID: fcf53737-2e94-4718-8f0e-70814f0943ad)[0m
+
+[0;34m🎨 STEP 7: Criando filamento[0m
+[0;32m✅ Filamento criado (ID: 4163a284-9eb0-45d7-ae19-4500edd8b8e2)[0m
+[0;32m✅ Segundo filamento criado (ID: 3dbb4ce7-a168-4825-b951-8eb4647f5126)[0m
+
+[0;34m⚙️  STEP 8: Criando presets[0m
+[0;32m✅ Machine Preset criado (ID: 68de2a48-3634-44b6-94c3-484c409b4155)[0m
+[0;32m✅ Energy Preset criado (ID: 39d50f8b-ff94-4ce3-a7b1-305fb273a2eb)[0m
+[0;32m✅ Cost Preset criado (ID: 3c290ae0-3df8-4414-ae61-d86f6cc67d9e)[0m
+
+[0;34m👤 STEP 9: Criando cliente[0m
+[0;32m✅ Cliente criado (ID: e8ca2371-63d3-4f56-878f-477b5821ae00)[0m
+
+[0;34m💰 STEP 10: Criando orçamento[0m
+[0;32m✅ Orçamento criado (ID: null)[0m
+
+[1;33m📊 Resumo do Orçamento:[0m
+{
+  "id": null,
+  "name": null,
+  "status": null,
+  "total_cost": null,
+  "final_price": null,
+  "items_count": 0,
+  "created_at": null
+}
+
+[0;34m📄 STEP 11: Gerando PDF do orçamento[0m
+[0;32m✅ PDF gerado com sucesso[0m
+   Arquivo: test_results/11_orcamento_null.pdf
+-rw-r--r--@ 1 rodolfodebonis  staff    36B Oct 15 00:48 test_results/11_orcamento_null.pdf
+   📖 PDF aberto automaticamente
+
+[0;34m📋 STEP 12: Listando recursos criados[0m
+
+[1;33mMarcas:[0m
+jq: error (at <stdin>:0): Cannot iterate over null (null)

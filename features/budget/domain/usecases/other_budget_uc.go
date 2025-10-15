@@ -1,6 +1,8 @@
 package usecases
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -83,56 +85,49 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 		return
 	}
 
-	// Copy items
+	// Copy items with filaments
 	originalItems, _ := uc.budgetRepository.GetItems(ctx, originalBudget.ID)
 	for _, originalItem := range originalItems {
+		// Create new item (copy product data)
 		newItem := &entities.BudgetItemEntity{
-			ID:         uuid.New(),
-			BudgetID:   newBudget.ID,
-			FilamentID: originalItem.FilamentID,
-			Quantity:   originalItem.Quantity,
-			Order:      originalItem.Order,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
+			ID:                  uuid.New(),
+			BudgetID:            newBudget.ID,
+			ProductName:         originalItem.ProductName,
+			ProductDescription:  originalItem.ProductDescription,
+			ProductQuantity:     originalItem.ProductQuantity,
+			ProductDimensions:   originalItem.ProductDimensions,
+			PrintTimeHours:      originalItem.PrintTimeHours,
+			PrintTimeMinutes:    originalItem.PrintTimeMinutes,
+			CostPresetID:        originalItem.CostPresetID,
+			AdditionalLaborCost: originalItem.AdditionalLaborCost,
+			AdditionalNotes:     originalItem.AdditionalNotes,
+			Order:               originalItem.Order,
+			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
 		}
 		uc.budgetRepository.AddItem(ctx, newItem)
+
+		// Copy filaments
+		originalFilaments, _ := uc.budgetRepository.GetItemFilaments(ctx, originalItem.ID)
+		for _, originalFil := range originalFilaments {
+			newFil := &entities.BudgetItemFilamentEntity{
+				ID:           uuid.New(),
+				BudgetItemID: newItem.ID,
+				FilamentID:   originalFil.FilamentID,
+				Quantity:     originalFil.Quantity,
+				Order:        originalFil.Order,
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			}
+			uc.budgetRepository.AddItemFilament(ctx, newFil)
+		}
 	}
 
 	// Calculate costs
 	uc.budgetRepository.CalculateCosts(ctx, newBudget.ID)
 
 	// Return new budget
-	newBudget, _ = uc.budgetRepository.FindByID(ctx, newBudget.ID, organizationID)
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, newBudget.CustomerID)
-	items, _ := uc.budgetRepository.GetItems(ctx, newBudget.ID)
-
-	itemResponses := make([]entities.BudgetItemResponse, len(items))
-	for i, item := range items {
-		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
-		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                 item.ID.String(),
-			BudgetID:           item.BudgetID.String(),
-			FilamentID:         item.FilamentID.String(),
-			Filament:           filamentInfo,
-			Quantity:           item.Quantity,
-			Order:              item.Order,
-			WasteAmount:        item.WasteAmount,
-			ItemCost:           item.ItemCost,
-			ProductName:        item.ProductName,
-			ProductDescription: item.ProductDescription,
-			ProductQuantity:    item.ProductQuantity,
-			UnitPrice:          item.UnitPrice,
-			ProductDimensions:  item.ProductDimensions,
-			CreatedAt:          item.CreatedAt,
-			UpdatedAt:          item.UpdatedAt,
-		}
-	}
-
-	response := entities.BudgetResponse{
-		Budget:   newBudget,
-		Customer: customerInfo,
-		Items:    itemResponses,
-	}
+	response, _ := uc.buildBudgetResponse(ctx, newBudget.ID, organizationID)
 
 	c.JSON(http.StatusCreated, response)
 }
@@ -182,38 +177,7 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	}
 
 	// Return updated budget
-	budget, _ := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
-	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
-
-	itemResponses := make([]entities.BudgetItemResponse, len(items))
-	for i, item := range items {
-		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
-		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                 item.ID.String(),
-			BudgetID:           item.BudgetID.String(),
-			FilamentID:         item.FilamentID.String(),
-			Filament:           filamentInfo,
-			Quantity:           item.Quantity,
-			Order:              item.Order,
-			WasteAmount:        item.WasteAmount,
-			ItemCost:           item.ItemCost,
-			ProductName:        item.ProductName,
-			ProductDescription: item.ProductDescription,
-			ProductQuantity:    item.ProductQuantity,
-			UnitPrice:          item.UnitPrice,
-			ProductDimensions:  item.ProductDimensions,
-			CreatedAt:          item.CreatedAt,
-			UpdatedAt:          item.UpdatedAt,
-		}
-	}
-
-	response := entities.BudgetResponse{
-		Budget:   budget,
-		Customer: customerInfo,
-		Items:    itemResponses,
-	}
-
+	response, _ := uc.buildBudgetResponse(ctx, budgetID, organizationID)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -260,34 +224,8 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 	// Build response
 	budgetResponses := make([]entities.BudgetResponse, len(budgets))
 	for i, budget := range budgets {
-		customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
-		items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
-		itemResponses := make([]entities.BudgetItemResponse, len(items))
-		for j, item := range items {
-			filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
-			itemResponses[j] = entities.BudgetItemResponse{
-				ID:                 item.ID.String(),
-				BudgetID:           item.BudgetID.String(),
-				FilamentID:         item.FilamentID.String(),
-				Filament:           filamentInfo,
-				Quantity:           item.Quantity,
-				Order:              item.Order,
-				WasteAmount:        item.WasteAmount,
-				ItemCost:           item.ItemCost,
-				ProductName:        item.ProductName,
-				ProductDescription: item.ProductDescription,
-				ProductQuantity:    item.ProductQuantity,
-				UnitPrice:          item.UnitPrice,
-				ProductDimensions:  item.ProductDimensions,
-				CreatedAt:          item.CreatedAt,
-				UpdatedAt:          item.UpdatedAt,
-			}
-		}
-		budgetResponses[i] = entities.BudgetResponse{
-			Budget:   budget,
-			Customer: customerInfo,
-			Items:    itemResponses,
-		}
+		response, _ := uc.buildBudgetResponse(ctx, budget.ID, organizationID)
+		budgetResponses[i] = *response
 	}
 
 	total := len(budgets)
@@ -348,4 +286,85 @@ func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, history)
+}
+
+// buildBudgetResponse builds a complete budget response with items and filaments
+func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.UUID, organizationID string) (*entities.BudgetResponse, error) {
+	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
+	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
+
+	itemResponses := make([]entities.BudgetItemResponse, len(items))
+	var totalPrintMinutes int
+
+	for i, item := range items {
+		// Get filament usage info for this item
+		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+
+		// Calculate print time display
+		printTimeDisplay := ""
+		if item.PrintTimeHours > 0 {
+			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
+		} else {
+			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
+		}
+
+		// Sum total print time
+		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
+
+		// Convert CostPresetID to string pointer
+		var costPresetIDStr *string
+		if item.CostPresetID != nil {
+			s := item.CostPresetID.String()
+			costPresetIDStr = &s
+		}
+
+		itemResponses[i] = entities.BudgetItemResponse{
+			ID:                  item.ID.String(),
+			BudgetID:            item.BudgetID.String(),
+			ProductName:         item.ProductName,
+			ProductDescription:  item.ProductDescription,
+			ProductQuantity:     item.ProductQuantity,
+			ProductDimensions:   item.ProductDimensions,
+			PrintTimeHours:      item.PrintTimeHours,
+			PrintTimeMinutes:    item.PrintTimeMinutes,
+			PrintTimeDisplay:    printTimeDisplay,
+			CostPresetID:        costPresetIDStr,
+			AdditionalLaborCost: item.AdditionalLaborCost,
+			AdditionalNotes:     item.AdditionalNotes,
+			FilamentCost:        item.FilamentCost,
+			WasteCost:           item.WasteCost,
+			EnergyCost:          item.EnergyCost,
+			LaborCost:           item.LaborCost,
+			ItemTotalCost:       item.ItemTotalCost,
+			UnitPrice:           item.UnitPrice,
+			Filaments:           filaments,
+			Order:               item.Order,
+			CreatedAt:           item.CreatedAt,
+			UpdatedAt:           item.UpdatedAt,
+		}
+	}
+
+	// Calculate total print time
+	totalHours := totalPrintMinutes / 60
+	totalMins := totalPrintMinutes % 60
+	totalPrintTimeDisplay := ""
+	if totalHours > 0 {
+		totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
+	} else {
+		totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
+	}
+
+	return &entities.BudgetResponse{
+		Budget:                budget,
+		Customer:              customerInfo,
+		Items:                 itemResponses,
+		TotalPrintTimeHours:   totalHours,
+		TotalPrintTimeMinutes: totalMins,
+		TotalPrintTimeDisplay: totalPrintTimeDisplay,
+	}, nil
 }

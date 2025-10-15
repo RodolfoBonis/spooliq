@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"fmt"
 	"net/http"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -63,49 +64,76 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 	// Get customer info
 	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
 
-	// Get items
+	// Get items with filaments
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 	itemResponses := make([]entities.BudgetItemResponse, len(items))
+	var totalPrintMinutes int
+
 	for i, item := range items {
-		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
+		// Get filament usage info for this item
+		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+
+		// Calculate print time display
+		printTimeDisplay := ""
+		if item.PrintTimeHours > 0 {
+			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
+		} else {
+			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
+		}
+
+		// Sum total print time
+		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
+
+		// Convert CostPresetID to string pointer
+		var costPresetIDStr *string
+		if item.CostPresetID != nil {
+			s := item.CostPresetID.String()
+			costPresetIDStr = &s
+		}
+
 		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                 item.ID.String(),
-			BudgetID:           item.BudgetID.String(),
-			FilamentID:         item.FilamentID.String(),
-			Filament:           filamentInfo,
-			Quantity:           item.Quantity,
-			Order:              item.Order,
-			WasteAmount:        item.WasteAmount,
-			ItemCost:           item.ItemCost,
-			ProductName:        item.ProductName,
-			ProductDescription: item.ProductDescription,
-			ProductQuantity:    item.ProductQuantity,
-			UnitPrice:          item.UnitPrice,
-			ProductDimensions:  item.ProductDimensions,
-			CreatedAt:          item.CreatedAt,
-			UpdatedAt:          item.UpdatedAt,
+			ID:                  item.ID.String(),
+			BudgetID:            item.BudgetID.String(),
+			ProductName:         item.ProductName,
+			ProductDescription:  item.ProductDescription,
+			ProductQuantity:     item.ProductQuantity,
+			ProductDimensions:   item.ProductDimensions,
+			PrintTimeHours:      item.PrintTimeHours,
+			PrintTimeMinutes:    item.PrintTimeMinutes,
+			PrintTimeDisplay:    printTimeDisplay,
+			CostPresetID:        costPresetIDStr,
+			AdditionalLaborCost: item.AdditionalLaborCost,
+			AdditionalNotes:     item.AdditionalNotes,
+			FilamentCost:        item.FilamentCost,
+			WasteCost:           item.WasteCost,
+			EnergyCost:          item.EnergyCost,
+			LaborCost:           item.LaborCost,
+			ItemTotalCost:       item.ItemTotalCost,
+			UnitPrice:           item.UnitPrice,
+			Filaments:           filaments,
+			Order:               item.Order,
+			CreatedAt:           item.CreatedAt,
+			UpdatedAt:           item.UpdatedAt,
 		}
 	}
 
-	// Get presets info
-	var machinePreset, energyPreset, costPreset *entities.PresetInfo
-	if budget.MachinePresetID != nil {
-		machinePreset, _ = uc.budgetRepository.GetPresetInfo(ctx, *budget.MachinePresetID, "machine")
-	}
-	if budget.EnergyPresetID != nil {
-		energyPreset, _ = uc.budgetRepository.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy")
-	}
-	if budget.CostPresetID != nil {
-		costPreset, _ = uc.budgetRepository.GetPresetInfo(ctx, *budget.CostPresetID, "cost")
+	// Calculate total print time
+	totalHours := totalPrintMinutes / 60
+	totalMins := totalPrintMinutes % 60
+	totalPrintTimeDisplay := ""
+	if totalHours > 0 {
+		totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
+	} else {
+		totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
 	}
 
 	response := entities.BudgetResponse{
-		Budget:        budget,
-		Customer:      customerInfo,
-		Items:         itemResponses,
-		MachinePreset: machinePreset,
-		EnergyPreset:  energyPreset,
-		CostPreset:    costPreset,
+		Budget:                budget,
+		Customer:              customerInfo,
+		Items:                 itemResponses,
+		TotalPrintTimeHours:   totalHours,
+		TotalPrintTimeMinutes: totalMins,
+		TotalPrintTimeDisplay: totalPrintTimeDisplay,
 	}
 
 	uc.logger.Info(ctx, "Budget retrieved successfully", map[string]interface{}{

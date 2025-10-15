@@ -249,23 +249,6 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func (uc *RegisterUseCase) createAsaasCustomer(ctx context.Context, request authEntities.RegisterRequest, organizationID string) (*services.AsaasCustomerResponse, error) {
-	asaasRequest := services.AsaasCustomerRequest{
-		Name:              request.CompanyName,
-		Email:             request.Email,
-		CpfCnpj:           request.CompanyDocument,
-		Phone:             request.CompanyPhone,
-		Address:           request.Address,
-		AddressNumber:     request.AddressNumber,
-		Complement:        request.Complement,
-		Province:          request.Neighborhood,
-		PostalCode:        request.ZipCode,
-		ExternalReference: organizationID,
-	}
-
-	return uc.asaasService.CreateCustomer(ctx, asaasRequest)
-}
-
 func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authEntities.RegisterRequest, organizationID string) (string, error) {
 	uc.logger.Info(ctx, "Creating Keycloak user", map[string]interface{}{
 		"email":           request.Email,
@@ -374,18 +357,4 @@ func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authE
 	})
 
 	return userID, nil
-}
-
-func (uc *RegisterUseCase) createAsaasSubscription(ctx context.Context, customerID, nextDueDate, organizationID string) (*services.AsaasSubscriptionResponse, error) {
-	asaasRequest := services.AsaasSubscriptionRequest{
-		Customer:          customerID,
-		BillingType:       "BOLETO", // Can be configurable
-		Value:             99.90,    // Monthly subscription price
-		NextDueDate:       nextDueDate,
-		Cycle:             "MONTHLY",
-		Description:       fmt.Sprintf("Assinatura mensal - %s", organizationID),
-		ExternalReference: organizationID,
-	}
-
-	return uc.asaasService.CreateSubscription(ctx, asaasRequest)
 }

@@ -23,9 +23,25 @@ type BudgetItemEntity struct {
 	UnitPrice          int64   `json:"unit_price"`       // cents per unit
 	ProductDimensions  *string `json:"product_dimensions,omitempty"`
 
-	// Calculated values
-	WasteAmount float64 `json:"waste_amount"` // grams (for AMS color changes)
-	ItemCost    int64   `json:"item_cost"`    // cents (total cost for this item)
+	// Print time for THIS item (not global)
+	PrintTimeHours   int `json:"print_time_hours"`
+	PrintTimeMinutes int `json:"print_time_minutes"`
+
+	// Additional costs specific to this item
+	CostPresetID        *uuid.UUID `json:"cost_preset_id,omitempty"`
+	AdditionalLaborCost *int64     `json:"additional_labor_cost,omitempty"` // cents
+	AdditionalNotes     *string    `json:"additional_notes,omitempty"`
+
+	// Calculated costs per item
+	FilamentCost  int64 `json:"filament_cost"`   // cents
+	WasteCost     int64 `json:"waste_cost"`      // cents
+	EnergyCost    int64 `json:"energy_cost"`     // cents
+	LaborCost     int64 `json:"labor_cost"`      // cents
+	ItemTotalCost int64 `json:"item_total_cost"` // cents (sum of all costs)
+
+	// OLD FIELDS (deprecated, kept for compatibility)
+	WasteAmount float64 `json:"waste_amount"` // grams (deprecated)
+	ItemCost    int64   `json:"item_cost"`    // cents (deprecated, use ItemTotalCost)
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at"`

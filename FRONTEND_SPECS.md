@@ -581,95 +581,164 @@ Response: {
 }
 ```
 
-#### 2. Create Budget
+#### 2. Create Budget (✨ Multi-Filament Support)
 ```typescript
-POST /budgets
+POST /v1/budgets
 Body: {
   name: string;
   description?: string;
   customer_id: string;
-  print_time_hours: number;
-  print_time_minutes: number;
+  
+  // Presets globais (aplicados a todos os items)
   machine_preset_id?: string;
   energy_preset_id?: string;
-  cost_preset_id?: string;
+  
+  // Flags de inclusão de custos
   include_energy_cost: boolean;
-  include_labor_cost: boolean;
   include_waste_cost: boolean;
-  labor_cost_per_hour?: number;
+  
+  // Informações comerciais
   delivery_days?: number;
   payment_terms?: string;
   notes?: string;
+  
+  // ITEMS = PRODUTOS (o que o cliente vê e compra)
   items: Array<{
-    filament_id: string;
-    quantity: number;          // em gramas (interno - para cálculo de custo)
-    order: number;             // ordem do item (para AMS)
+    // === PRODUTO (Customer-facing) ===
+    product_name: string;              // Nome do produto (ex: "Chaveiro Rosa/Branco")
+    product_description?: string;      // Descrição detalhada
+    product_quantity: number;          // Quantidade de UNIDADES (ex: 100 chaveiros)
+    product_dimensions?: string;       // Dimensões (ex: "26×48×9 mm")
     
-    // Product information (customer-facing - appears in PDF)
-    product_name: string;      // Nome do produto impresso
-    product_description?: string; // Descrição detalhada
-    product_quantity: number;  // Quantidade de unidades (não gramas)
-    unit_price: number;        // Preço por unidade em centavos
-    product_dimensions?: string; // ex: "26×48×9 mm"
+    // === TEMPO DE IMPRESSÃO (deste item) ===
+    print_time_hours: number;          // Tempo para imprimir TODAS as unidades
+    print_time_minutes: number;
+    
+    // === CUSTOS ADICIONAIS (opcionais) ===
+    cost_preset_id?: string;           // Preset de custo específico para este item
+    additional_labor_cost?: number;    // Custo extra de mão de obra em centavos (ex: pintura)
+    additional_notes?: string;         // Observações sobre o item
+    
+    // === FILAMENTOS (Multi-filament support - AMS) ===
+    filaments: Array<{
+      filament_id: string;
+      quantity: number;                // ⚠️ GRAMAS TOTAIS para este item (não por unidade!)
+      order: number;                   // Ordem de aplicação (importante para AMS)
+    }>;
+    
+    order: number;                     // Ordem de impressão (opcional)
   }>;
 }
+
+// ⚠️ IMPORTANTE: Quantidade de Filamento
+// A quantidade é o TOTAL em gramas para o lote completo, NÃO por unidade!
+// Exemplo: Para imprimir 100 chaveiros:
+// - quantity: 2800.0  ✅ (total para os 100 chaveiros)
+// - quantity: 28.0    ❌ (isso seria apenas 28g total!)
+// 
+// Por quê? Porque imprimir em lote tem economias de escala:
+// - Menos desperdício (purge/prime)
+// - Melhor aproveitamento do espaço
+// - Otimização de camadas
+// - 200 unidades ≠ 2× filamento de 100 unidades
 ```
 
-#### 3. Get Budget
+#### 3. Get Budget (✨ Multi-Filament Response)
 ```typescript
-GET /budgets/:id
+GET /v1/budgets/:id
 Response: {
   budget: {
     id: string;
+    organization_id: string;
     name: string;
     description?: string;
-    customer: CustomerInfo;
-    status: BudgetStatus;
-    print_time_hours: number;
-    print_time_minutes: number;
-    filament_cost: number;
-    waste_cost: number;
-    energy_cost: number;
-    labor_cost: number;
-    total_cost: number;
+    customer_id: string;
+    status: 'draft' | 'sent' | 'approved' | 'rejected' | 'printing' | 'completed';
+    
+    // Presets
+    machine_preset_id?: string;
+    energy_preset_id?: string;
+    
+    // Flags
+    include_energy_cost: boolean;
+    include_waste_cost: boolean;
+    
+    // Custos calculados (SOMA de todos os items)
+    filament_cost: number;        // em centavos
+    waste_cost: number;           // em centavos
+    energy_cost: number;          // em centavos
+    labor_cost: number;           // em centavos
+    total_cost: number;           // em centavos
+    
+    // Informações comerciais
     delivery_days?: number;
     payment_terms?: string;
     notes?: string;
     pdf_url?: string;
-    items: Array<{
-      id: string;
-      filament: {
-        id: string;
-        name: string;
-        color: string;
-        color_data: any;
-        brand_name: string;
-        material_name: string;
-        price_per_kg: number;
-      };
-      quantity: number;          // gramas (interno)
-      waste_amount: number;
-      item_cost: number;         // custo total calculado
-      order: number;
-      
-      // Product information (customer-facing - appears in PDF)
-      product_name: string;      // Nome do produto impresso
-      product_description?: string;
-      product_quantity: number;  // Quantidade de unidades
-      unit_price: number;        // Preço por unidade em centavos
-      product_dimensions?: string; // ex: "26×48×9 mm"
-    }>;
-    history: Array<{
-      id: string;
-      from_status: string;
-      to_status: string;
-      changed_by: string;
-      notes?: string;
-      created_at: string;
-    }>;
+    owner_user_id: string;
+    
     created_at: string;
     updated_at: string;
   };
+  
+  customer: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    whatsapp?: string;
+    document?: string;
+  };
+  
+  items: Array<{
+    id: string;
+    budget_id: string;
+    
+    // === PRODUTO ===
+    product_name: string;
+    product_description?: string;
+    product_quantity: number;          // unidades
+    product_dimensions?: string;
+    
+    // === TEMPO DE IMPRESSÃO (deste item) ===
+    print_time_hours: number;
+    print_time_minutes: number;
+    print_time_display: string;        // "5h30m" ou "45m"
+    
+    // === CUSTOS ADICIONAIS ===
+    cost_preset_id?: string;
+    additional_labor_cost?: number;    // centavos
+    additional_notes?: string;
+    
+    // === CUSTOS CALCULADOS (deste item) ===
+    filament_cost: number;             // centavos
+    waste_cost: number;                // centavos
+    energy_cost: number;               // centavos
+    labor_cost: number;                // centavos
+    item_total_cost: number;           // centavos (soma de todos acima)
+    unit_price: number;                // centavos (item_total_cost ÷ product_quantity)
+    
+    // === FILAMENTOS (Multi-filament) ===
+    filaments: Array<{
+      filament_id: string;
+      filament_name: string;
+      brand_name: string;
+      material_name: string;
+      color: string;                   // Nome da cor ou hex
+      quantity: number;                // gramas TOTAIS usadas neste item
+      cost: number;                    // centavos (custo deste filamento)
+      order: number;                   // ordem de aplicação
+    }>;
+    
+    order: number;
+    created_at: string;
+    updated_at: string;
+  }>;
+  
+  // === TEMPO TOTAL (calculado - soma de todos os items) ===
+  total_print_time_hours: number;
+  total_print_time_minutes: number;
+  total_print_time_display: string;    // "14h15m"
 }
 ```
 

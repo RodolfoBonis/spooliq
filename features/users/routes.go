@@ -39,23 +39,21 @@ func NewUserHandler(
 }
 
 // SetupRoutes configures user-related HTTP routes
-func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	users := route.Group("/users")
 	{
-		// List all users (Owner, OrgAdmin)
-		users.GET("", protectFactory(handler.ListUsers, roles.UserRole))
+		// All users can view their own info; Owner and OrgAdmin can view all users
+		users.GET("", protectFactory(handler.ListUsers, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		users.GET("/:id", protectFactory(handler.GetUser, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 
-		// Get user by ID (Owner, OrgAdmin, or self)
-		users.GET("/:id", protectFactory(handler.GetUser, roles.UserRole))
+		// Only Owner and OrgAdmin can create users
+		users.POST("", protectFactory(handler.CreateUser, roles.OwnerRole, roles.OrgAdminRole))
 
-		// Create user (Owner, OrgAdmin)
-		users.POST("", protectFactory(handler.CreateUser, roles.UserRole))
+		// Owner and OrgAdmin can update users (with permission checks in use case)
+		users.PUT("/:id", protectFactory(handler.UpdateUser, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 
-		// Update user (Owner, OrgAdmin with restrictions)
-		users.PUT("/:id", protectFactory(handler.UpdateUser, roles.UserRole))
-
-		// Delete user (Owner, OrgAdmin with restrictions)
-		users.DELETE("/:id", protectFactory(handler.DeleteUser, roles.UserRole))
+		// Only Owner and OrgAdmin can delete users (with permission checks in use case)
+		users.DELETE("/:id", protectFactory(handler.DeleteUser, roles.OwnerRole, roles.OrgAdminRole))
 	}
 }
 

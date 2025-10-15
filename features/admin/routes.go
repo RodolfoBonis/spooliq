@@ -43,10 +43,10 @@ func NewAdminHandler(
 }
 
 // SetupRoutes configures admin-related HTTP routes (all require PlatformAdmin role)
-func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	admin := route.Group("/admin")
 	{
-		// Company Management
+		// Company Management (PlatformAdmin only)
 		companies := admin.Group("/companies")
 		{
 			companies.GET("", protectFactory(handler.ListCompanies, roles.PlatformAdminRole))
@@ -54,7 +54,7 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 			companies.PATCH("/:organization_id/status", protectFactory(handler.UpdateCompanyStatus, roles.PlatformAdminRole))
 		}
 
-		// Billing & Subscription Management
+		// Billing & Subscription Management (PlatformAdmin only)
 		subscriptions := admin.Group("/subscriptions")
 		{
 			subscriptions.GET("", protectFactory(handler.ListSubscriptions, roles.PlatformAdminRole))

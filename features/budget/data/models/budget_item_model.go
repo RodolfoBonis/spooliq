@@ -10,9 +10,10 @@ import (
 
 // BudgetItemModel represents the budget item data model for GORM
 type BudgetItemModel struct {
-	ID         uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	BudgetID   uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_id"`
-	FilamentID uuid.UUID `gorm:"type:uuid;not null" json:"filament_id"`
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	BudgetID       uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_id"`
+	FilamentID     uuid.UUID `gorm:"type:uuid;not null" json:"filament_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
 
 	// Quantity and order
 	Quantity float64 `gorm:"type:numeric;not null" json:"quantity"` // grams

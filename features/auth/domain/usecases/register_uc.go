@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
@@ -116,16 +117,21 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		"company_name":    request.CompanyName,
 	})
 
-	// Create customer in Asaas
-	asaasCustomer, err := uc.createAsaasCustomer(ctx, request, organizationID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": organizationID,
-		})
-		appError := errors.UsecaseError("Failed to create payment account: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
-		return
+	// Create customer in Asaas (TEMPORARILY DISABLED - NO ASAAS ACCOUNT YET)
+	// asaasCustomer, err := uc.createAsaasCustomer(ctx, request, organizationID)
+	// if err != nil {
+	// 	uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
+	// 		"error":           err.Error(),
+	// 		"organization_id": organizationID,
+	// 	})
+	// 	appError := errors.UsecaseError("Failed to create payment account: " + err.Error())
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+	// 	return
+	// }
+
+	// Mock Asaas customer response for testing
+	asaasCustomer := &services.AsaasCustomerResponse{
+		ID: "mock_customer_" + organizationID[:8],
 	}
 
 	// Create user in Keycloak
@@ -203,27 +209,29 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		return
 	}
 
-	// Create subscription in Asaas (first charge in 14 days)
-	nextDueDate := trialEndsAt.Format("2006-01-02")
-	asaasSubscription, err := uc.createAsaasSubscription(ctx, asaasCustomer.ID, nextDueDate, organizationID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to create Asaas subscription", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": organizationID,
-		})
-		// Non-fatal error, we can continue
-		uc.logger.Error(ctx, "Subscription will need to be created manually", nil)
-	} else {
-		// Update company with subscription ID
-		company.AsaasSubscriptionID = &asaasSubscription.ID
-		err = uc.companyRepository.Update(ctx, company)
-		if err != nil {
-			uc.logger.Error(ctx, "Failed to update company with subscription ID", map[string]interface{}{
-				"error":           err.Error(),
-				"organization_id": organizationID,
-			})
-		}
-	}
+	// Create subscription in Asaas (TEMPORARILY DISABLED - NO ASAAS ACCOUNT YET)
+	// nextDueDate := trialEndsAt.Format("2006-01-02")
+	// asaasSubscription, err := uc.createAsaasSubscription(ctx, asaasCustomer.ID, nextDueDate, organizationID)
+	// if err != nil {
+	// 	uc.logger.Error(ctx, "Failed to create Asaas subscription", map[string]interface{}{
+	// 		"error":           err.Error(),
+	// 		"organization_id": organizationID,
+	// 	})
+	// 	// Non-fatal error, we can continue
+	// 	uc.logger.Error(ctx, "Subscription will need to be created manually", nil)
+	// } else {
+	// 	// Update company with subscription ID
+	// 	company.AsaasSubscriptionID = &asaasSubscription.ID
+	// 	err = uc.companyRepository.Update(ctx, company)
+	// 	if err != nil {
+	// 		uc.logger.Error(ctx, "Failed to update company with subscription ID", map[string]interface{}{
+	// 			"error":           err.Error(),
+	// 			"organization_id": organizationID,
+	// 		})
+	// 	}
+	// }
+
+	uc.logger.Info(ctx, "Asaas integration disabled for testing - trial mode only", nil)
 
 	uc.logger.Info(ctx, "Registration completed successfully", map[string]interface{}{
 		"user_id":         user.ID.String(),
@@ -265,13 +273,23 @@ func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authE
 	})
 
 	// 1. Create user in Keycloak
+	// Split name into first and last (Keycloak requires both)
+	nameParts := strings.Split(strings.TrimSpace(request.Name), " ")
+	firstName := nameParts[0]
+	lastName := ""
+	if len(nameParts) > 1 {
+		lastName = strings.Join(nameParts[1:], " ")
+	} else {
+		lastName = "User" // Default last name if not provided
+	}
+
 	keycloakReq := services.KeycloakUserRequest{
 		Username:      request.Email,
 		Email:         request.Email,
-		EmailVerified: false,
+		EmailVerified: true, // Allow immediate login without email verification
 		Enabled:       true,
-		FirstName:     request.Name,
-		LastName:      "",
+		FirstName:     firstName,
+		LastName:      lastName,
 		Attributes: map[string][]string{
 			"organization_id": {organizationID},
 			"user_type":       {"owner"},

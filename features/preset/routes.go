@@ -34,42 +34,42 @@ func NewPresetHandler(
 }
 
 // SetupRoutes configures the preset routes with authentication middleware
-func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	presets := router.Group("/presets")
 	{
-		// Base preset routes - GET endpoints accessible to all authenticated users
-		presets.GET("", protectFactory(handler.GetPresets, roles.UserRole))
-		presets.GET("/:id", protectFactory(handler.GetPresetByID, roles.UserRole))
-		presets.DELETE("/:id", protectFactory(handler.DeletePreset, roles.UserRole))
+		// Base preset routes - all users can view, create, and update; only Owner and OrgAdmin can delete
+		presets.GET("", protectFactory(handler.GetPresets, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		presets.GET("/:id", protectFactory(handler.GetPresetByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		presets.DELETE("/:id", protectFactory(handler.DeletePreset, roles.OwnerRole, roles.OrgAdminRole))
 
 		// Machine preset routes
 		machines := presets.Group("/machines")
 		{
-			machines.POST("", protectFactory(handler.CreateMachinePreset, roles.UserRole))
-			machines.GET("", protectFactory(handler.GetMachinePresets, roles.UserRole))
-			machines.GET("/:id", protectFactory(handler.GetMachinePresetByID, roles.UserRole))
-			machines.PUT("/:id", protectFactory(handler.UpdateMachinePreset, roles.UserRole))
-			machines.GET("/brand/:brand", protectFactory(handler.GetMachinePresetsByBrand, roles.UserRole))
+			machines.POST("", protectFactory(handler.CreateMachinePreset, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			machines.GET("", protectFactory(handler.GetMachinePresets, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			machines.GET("/:id", protectFactory(handler.GetMachinePresetByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			machines.PUT("/:id", protectFactory(handler.UpdateMachinePreset, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			machines.GET("/brand/:brand", protectFactory(handler.GetMachinePresetsByBrand, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		}
 
 		// Energy preset routes
 		energy := presets.Group("/energy")
 		{
-			energy.POST("", protectFactory(handler.CreateEnergyPreset, roles.UserRole))
-			energy.GET("", protectFactory(handler.GetEnergyPresets, roles.UserRole))
-			energy.GET("/:id", protectFactory(handler.GetEnergyPresetByID, roles.UserRole))
-			energy.PUT("/:id", protectFactory(handler.UpdateEnergyPreset, roles.UserRole))
-			energy.GET("/location", protectFactory(handler.GetEnergyPresetsByLocation, roles.UserRole))
-			energy.GET("/currency/:currency", protectFactory(handler.GetEnergyPresetsByCurrency, roles.UserRole))
+			energy.POST("", protectFactory(handler.CreateEnergyPreset, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			energy.GET("", protectFactory(handler.GetEnergyPresets, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			energy.GET("/:id", protectFactory(handler.GetEnergyPresetByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			energy.PUT("/:id", protectFactory(handler.UpdateEnergyPreset, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			energy.GET("/location", protectFactory(handler.GetEnergyPresetsByLocation, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			energy.GET("/currency/:currency", protectFactory(handler.GetEnergyPresetsByCurrency, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		}
 
 		// Cost preset routes
 		costs := presets.Group("/costs")
 		{
-			costs.POST("", protectFactory(handler.CreateCostPreset, roles.UserRole))
-			costs.GET("", protectFactory(handler.GetCostPresets, roles.UserRole))
-			costs.GET("/:id", protectFactory(handler.GetCostPresetByID, roles.UserRole))
-			costs.PUT("/:id", protectFactory(handler.UpdateCostPreset, roles.UserRole))
+			costs.POST("", protectFactory(handler.CreateCostPreset, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			costs.GET("", protectFactory(handler.GetCostPresets, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			costs.GET("/:id", protectFactory(handler.GetCostPresetByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+			costs.PUT("/:id", protectFactory(handler.UpdateCostPreset, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		}
 	}
 }
@@ -204,7 +204,14 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.createUC.CreateMachinePreset(&req)
+	// Extract organization_id from context
+	organizationID, exists := c.Get("organization_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization_id not found in context"})
+		return
+	}
+
+	preset, err := h.createUC.CreateMachinePreset(&req, organizationID.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -341,7 +348,14 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.createUC.CreateEnergyPreset(&req)
+	// Extract organization_id from context
+	organizationID, exists := c.Get("organization_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization_id not found in context"})
+		return
+	}
+
+	preset, err := h.createUC.CreateEnergyPreset(&req, organizationID.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -505,7 +519,14 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.createUC.CreateCostPreset(&req)
+	// Extract organization_id from context
+	organizationID, exists := c.Get("organization_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization_id not found in context"})
+		return
+	}
+
+	preset, err := h.createUC.CreateCostPreset(&req, organizationID.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

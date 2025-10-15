@@ -12,6 +12,7 @@ import (
 type BudgetStatusHistoryModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	BudgetID       uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
 	PreviousStatus string    `gorm:"type:varchar(20);not null" json:"previous_status"`
 	NewStatus      string    `gorm:"type:varchar(20);not null" json:"new_status"`
 	ChangedBy      string    `gorm:"type:varchar(255);not null" json:"changed_by"`

@@ -22,16 +22,17 @@ const (
 
 // PresetEntity represents the base preset entity
 type PresetEntity struct {
-	ID          uuid.UUID  `json:"id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description,omitempty"`
-	Type        PresetType `json:"type"`
-	IsActive    bool       `json:"is_active"`
-	IsDefault   bool       `json:"is_default"`
-	UserID      *uuid.UUID `json:"user_id,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
+	ID             uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description,omitempty"`
+	Type           PresetType `json:"type"`
+	IsActive       bool       `json:"is_active"`
+	IsDefault      bool       `json:"is_default"`
+	UserID         *uuid.UUID `json:"user_id,omitempty"`
+	OrganizationID string     `json:"organization_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	DeletedAt      *time.Time `json:"deleted_at,omitempty"`
 }
 
 // IsGlobal returns true if the preset is global (not user-specific)

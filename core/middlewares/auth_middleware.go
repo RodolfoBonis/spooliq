@@ -15,8 +15,9 @@ import (
 )
 
 // NewProtectMiddleware creates a new authentication middleware with subscription check.
-func NewProtectMiddleware(logger logger.Logger, authService *services.AuthService, subscriptionMiddleware *SubscriptionMiddleware) func(handler gin.HandlerFunc, role string) gin.HandlerFunc {
-	return func(handler gin.HandlerFunc, role string) gin.HandlerFunc {
+// Accepts multiple roles - user must have at least one of the specified roles to access the endpoint.
+func NewProtectMiddleware(logger logger.Logger, authService *services.AuthService, subscriptionMiddleware *SubscriptionMiddleware) func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc {
+	return func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			ctx := c.Request.Context()
 			requestID, _ := c.Get("requestID")
@@ -110,9 +111,22 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 				}
 			}
 
-			containsRole := userClaim.Roles.Contains(role)
+			// Check if user has at least one of the required roles
+			hasRequiredRole := false
+			matchedRole := ""
+			for _, requiredRole := range roles {
+				if userClaim.Roles.Contains(requiredRole) {
+					hasRequiredRole = true
+					matchedRole = requiredRole
+					break
+				}
+			}
 
-			if !containsRole {
+			if !hasRequiredRole {
+				logger.Info(ctx, "Role check failed", map[string]interface{}{
+					"required_roles": roles,
+					"user_roles":     userClaim.Roles,
+				})
 				appError := errors.NewAppError(entities.ErrUnauthorized, "Perfil de acesso necessário ausente", nil, nil)
 				httpError := appError.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: missing required role", appError)
@@ -122,12 +136,13 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			}
 
 			logger.Info(ctx, "Auth success", map[string]interface{}{
-				"request_id": requestID,
-				"ip":         c.ClientIP(),
-				"role":       role,
-				"user_roles": userClaim.Roles,
-				"user_id":    userClaim.ID,
-				"email":      userClaim.Email,
+				"request_id":     requestID,
+				"ip":             c.ClientIP(),
+				"matched_role":   matchedRole,
+				"required_roles": roles,
+				"user_roles":     userClaim.Roles,
+				"user_id":        userClaim.ID,
+				"email":          userClaim.Email,
 			})
 
 			// Set claims and individual user data for easy access
@@ -135,7 +150,7 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			c.Set("user_id", userClaim.ID.String())
 			c.Set("user_username", userClaim.Username)
 			c.Set("user_email", userClaim.Email)
-			c.Set("user_role", role)
+			c.Set("user_role", matchedRole) // The role that matched
 			c.Set("user_roles", userClaim.Roles)
 			if userClaim.OrganizationID != nil {
 				c.Set("organization_id", *userClaim.OrganizationID)

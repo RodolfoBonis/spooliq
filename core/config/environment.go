@@ -29,10 +29,12 @@ func EnvPort() string {
 // EnvKeyCloak returns the Keycloak configuration from environment variables.
 func EnvKeyCloak() entities.KeyCloakDataEntity {
 	return entities.KeyCloakDataEntity{
-		ClientID:     GetEnv("CLIENT_ID", ""),
-		ClientSecret: GetEnv("CLIENT_SECRET", ""),
-		Realm:        GetEnv("REALM", ""),
-		Host:         GetEnv("KEYCLOAK_HOST", ""),
+		ClientID:      GetEnv("CLIENT_ID", ""),
+		ClientSecret:  GetEnv("CLIENT_SECRET", ""),
+		Realm:         GetEnv("REALM", ""),
+		Host:          GetEnv("KEYCLOAK_HOST", ""),
+		AdminUsername: GetEnv("KEYCLOAK_ADMIN_USERNAME", "admin"),
+		AdminPassword: GetEnv("KEYCLOAK_ADMIN_PASSWORD", "admin123"),
 	}
 }
 

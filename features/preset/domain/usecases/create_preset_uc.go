@@ -77,18 +77,19 @@ type CreateCostPresetRequest struct {
 }
 
 // CreateMachinePreset Execute creates a new machine preset
-func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetRequest) (*entities.PresetEntity, error) {
+func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetRequest, organizationID string) (*entities.PresetEntity, error) {
 	// Create base preset entity
 	preset := &entities.PresetEntity{
-		ID:          uuid.New(),
-		Name:        req.Name,
-		Description: req.Description,
-		Type:        entities.PresetTypeMachine,
-		IsActive:    true,
-		IsDefault:   req.IsDefault,
-		UserID:      req.UserID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             uuid.New(),
+		Name:           req.Name,
+		Description:    req.Description,
+		Type:           entities.PresetTypeMachine,
+		IsActive:       true,
+		IsDefault:      req.IsDefault,
+		UserID:         req.UserID,
+		OrganizationID: organizationID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// Validate base preset
@@ -129,18 +130,19 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 }
 
 // CreateEnergyPreset creates a new energy preset
-func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest) (*entities.PresetEntity, error) {
+func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest, organizationID string) (*entities.PresetEntity, error) {
 	// Create base preset entity
 	preset := &entities.PresetEntity{
-		ID:          uuid.New(),
-		Name:        req.Name,
-		Description: req.Description,
-		Type:        entities.PresetTypeEnergy,
-		IsActive:    true,
-		IsDefault:   req.IsDefault,
-		UserID:      req.UserID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             uuid.New(),
+		Name:           req.Name,
+		Description:    req.Description,
+		Type:           entities.PresetTypeEnergy,
+		IsActive:       true,
+		IsDefault:      req.IsDefault,
+		UserID:         req.UserID,
+		OrganizationID: organizationID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// Validate base preset
@@ -176,18 +178,19 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 }
 
 // CreateCostPreset creates a new cost preset
-func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest) (*entities.PresetEntity, error) {
+func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, organizationID string) (*entities.PresetEntity, error) {
 	// Create base preset entity
 	preset := &entities.PresetEntity{
-		ID:          uuid.New(),
-		Name:        req.Name,
-		Description: req.Description,
-		Type:        entities.PresetTypeCost,
-		IsActive:    true,
-		IsDefault:   req.IsDefault,
-		UserID:      req.UserID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             uuid.New(),
+		Name:           req.Name,
+		Description:    req.Description,
+		Type:           entities.PresetTypeCost,
+		IsActive:       true,
+		IsDefault:      req.IsDefault,
+		UserID:         req.UserID,
+		OrganizationID: organizationID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// Validate base preset

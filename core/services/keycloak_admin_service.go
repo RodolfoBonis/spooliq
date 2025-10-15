@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
@@ -29,14 +30,16 @@ type IKeycloakAdminService interface {
 
 // KeycloakAdminService implements IKeycloakAdminService.
 type KeycloakAdminService struct {
-	baseURL      string
-	realm        string
-	clientID     string
-	clientSecret string
-	logger       logger.Logger
-	client       *http.Client
-	accessToken  string
-	tokenExpiry  time.Time
+	baseURL       string
+	realm         string
+	clientID      string
+	clientSecret  string
+	adminUsername string
+	adminPassword string
+	logger        logger.Logger
+	client        *http.Client
+	accessToken   string
+	tokenExpiry   time.Time
 }
 
 // KeycloakUserRequest represents a request to create a user in Keycloak
@@ -95,29 +98,37 @@ type KeycloakGroupResponse struct {
 // NewKeycloakAdminService creates a new KeycloakAdminService instance.
 func NewKeycloakAdminService(cfg *config.AppConfig, logger logger.Logger) IKeycloakAdminService {
 	return &KeycloakAdminService{
-		baseURL:      cfg.Keycloak.Host,
-		realm:        cfg.Keycloak.Realm,
-		clientID:     cfg.Keycloak.ClientID,
-		clientSecret: cfg.Keycloak.ClientSecret,
-		logger:       logger,
+		baseURL:       cfg.Keycloak.Host,
+		realm:         cfg.Keycloak.Realm,
+		clientID:      cfg.Keycloak.ClientID,
+		clientSecret:  cfg.Keycloak.ClientSecret,
+		adminUsername: cfg.Keycloak.AdminUsername,
+		adminPassword: cfg.Keycloak.AdminPassword,
+		logger:        logger,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 	}
 }
 
-// getAccessToken obtains an access token from Keycloak using client credentials
+// getAccessToken obtains an access token from Keycloak using admin credentials
 func (s *KeycloakAdminService) getAccessToken(ctx context.Context) *errors.AppError {
 	// Check if token is still valid
 	if s.accessToken != "" && time.Now().Before(s.tokenExpiry) {
 		return nil
 	}
 
-	tokenURL := fmt.Sprintf("%s/realms/%s/protocol/openid-connect/token", s.baseURL, s.realm)
+	// Use master realm for admin authentication
+	tokenURL := fmt.Sprintf("%s/realms/master/protocol/openid-connect/token", s.baseURL)
 
-	data := fmt.Sprintf("grant_type=client_credentials&client_id=%s&client_secret=%s", s.clientID, s.clientSecret)
+	// Use password grant type with admin credentials (URL-encoded)
+	data := url.Values{}
+	data.Set("grant_type", "password")
+	data.Set("client_id", "admin-cli")
+	data.Set("username", s.adminUsername)
+	data.Set("password", s.adminPassword)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewBufferString(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {
 		s.logger.Error(ctx, "Failed to create token request", map[string]interface{}{"error": err.Error()})
 		return errors.NewAppError(entities.ErrService, "Failed to authenticate with Keycloak", nil, err)

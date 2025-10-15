@@ -7,11 +7,11 @@ import (
 )
 
 // Routes registers all upload routes
-func Routes(route *gin.RouterGroup, useCase usecases.IUploadUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, useCase usecases.IUploadUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	uploadRoutes := route.Group("/uploads")
 	{
-		// All upload routes require UserRole
-		uploadRoutes.POST("/logo", protectFactory(useCase.UploadLogo, roles.UserRole))
-		uploadRoutes.POST("/file", protectFactory(useCase.UploadFile, roles.UserRole))
+		// All users can upload files
+		uploadRoutes.POST("/logo", protectFactory(useCase.UploadLogo, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		uploadRoutes.POST("/file", protectFactory(useCase.UploadFile, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 	}
 }

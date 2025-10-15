@@ -7,12 +7,14 @@ import (
 )
 
 // Routes registers all company routes
-func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	companyRoutes := route.Group("/company")
 	{
-		// All company routes require UserRole
+		// Platform Admin can create companies
 		companyRoutes.POST("/", protectFactory(useCase.Create, roles.PlatformAdminRole))
-		companyRoutes.GET("/", protectFactory(useCase.Get, roles.UserRole))
-		companyRoutes.PUT("/", protectFactory(useCase.Update, roles.OrgAdminRole))
+		// Owner, OrgAdmin, and User can view company info
+		companyRoutes.GET("/", protectFactory(useCase.Get, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Owner and OrgAdmin can update company info
+		companyRoutes.PUT("/", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole))
 	}
 }

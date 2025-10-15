@@ -46,7 +46,7 @@ func InitializeRoutes(
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
 	adminHandler *admin.Handler,
-	protectFactory func(handler gin.HandlerFunc, role string) gin.HandlerFunc,
+	protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
 ) {

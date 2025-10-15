@@ -1,6 +1,6 @@
 {
-  "id": "4d26ee1a-59bf-4c11-ae07-a0cde22b669a",
-  "organization_id": "0b830e8f-397c-4618-870e-d4be866b62ca",
+  "id": "1c9e9acf-4e02-4fe4-aff0-f59147ae7be4",
+  "organization_id": "0dec4dbf-ff31-44fd-b9a5-9d3ee59513ef",
   "name": "Impressões 3D Premium",
   "trade_name": "3D Premium",
   "document": "12345678000190",
@@ -17,6 +17,6 @@
   "subscription_status": "",
   "is_platform_company": false,
   "subscription_plan": "",
-  "created_at": "2025-10-15T04:03:29.675291Z",
-  "updated_at": "2025-10-15T01:03:30.095377-03:00"
+  "created_at": "2025-10-15T04:17:02.498379Z",
+  "updated_at": "2025-10-15T01:17:02.860446-03:00"
 }

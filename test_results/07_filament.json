@@ -1,9 +1,9 @@
 {
-  "id": "e7b12079-5609-4b0d-8353-aab129b527c1",
+  "id": "b574fc0d-0563-4360-9285-f459779889c1",
   "organization_id": "",
   "name": "PLA Vermelho Ferrari",
-  "brand_id": "a11e2d9d-9315-47f3-8dbc-126723c7643e",
-  "material_id": "f443aff2-fe60-4137-b677-8c2b28efa397",
+  "brand_id": "d654181c-fc44-42b7-b093-843258c35121",
+  "material_id": "e9b0bd92-6cbb-4e7d-a895-e3561c7de3f4",
   "color": "Vermelho Ferrari",
   "color_hex": "#DC0000",
   "color_type": "solid",
@@ -14,10 +14,10 @@
   "diameter": 1.75,
   "weight": 1000,
   "price_per_kg": 89.9,
-  "owner_user_id": "d10eff20-b430-4190-bd1b-9cd2690d7a4e",
+  "owner_user_id": "11129295-e18f-4048-9067-09b535122ac0",
   "is_active": false,
   "print_temperature": 200,
   "bed_temperature": 55,
-  "created_at": "2025-10-15T01:03:30.236676-03:00",
-  "updated_at": "2025-10-15T01:03:30.236676-03:00"
+  "created_at": "2025-10-15T01:17:03.02029-03:00",
+  "updated_at": "2025-10-15T01:17:03.02029-03:00"
 }

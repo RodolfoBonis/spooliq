@@ -29,6 +29,7 @@ type BudgetUseCase struct {
 	budgetRepository   budgetRepo.BudgetRepository
 	customerRepository customerRepo.CustomerRepository
 	pdfService         *services.PDFService
+	cdnService         *services.CDNService
 	validator          *validator.Validate
 	logger             logger.Logger
 }
@@ -38,12 +39,14 @@ func NewBudgetUseCase(
 	budgetRepository budgetRepo.BudgetRepository,
 	customerRepository customerRepo.CustomerRepository,
 	pdfService *services.PDFService,
+	cdnService *services.CDNService,
 	logger logger.Logger,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
 		customerRepository: customerRepository,
 		pdfService:         pdfService,
+		cdnService:         cdnService,
 		validator:          validator.New(),
 		logger:             logger,
 	}

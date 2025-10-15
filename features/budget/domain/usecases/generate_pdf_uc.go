@@ -1,6 +1,8 @@
 package usecases
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
@@ -151,8 +153,39 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		"size":      len(pdfBytes),
 	})
 
+	// Upload PDF to CDN
+	filename := fmt.Sprintf("orcamento_%s_%s.pdf", budget.Name, budgetID.String())
+	folder := fmt.Sprintf("org-%s/budgets", organizationID)
+	
+	pdfReader := bytes.NewReader(pdfBytes)
+	cdnURL, err := uc.cdnService.UploadFile(ctx, pdfReader, filename, folder)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to upload PDF to CDN", map[string]interface{}{
+			"error":     err.Error(),
+			"budget_id": budgetID,
+		})
+		// Continue even if CDN upload fails - user can still download the PDF
+	} else {
+		// Save CDN URL to database
+		budget.PDFUrl = &cdnURL
+		err = uc.budgetRepository.Update(ctx, budget)
+		if err != nil {
+			uc.logger.Error(ctx, "Failed to save PDF URL to database", map[string]interface{}{
+				"error":     err.Error(),
+				"budget_id": budgetID,
+				"cdn_url":   cdnURL,
+			})
+			// Continue - PDF is uploaded but URL not saved
+		} else {
+			uc.logger.Info(ctx, "PDF uploaded to CDN and URL saved", map[string]interface{}{
+				"budget_id": budgetID,
+				"cdn_url":   cdnURL,
+			})
+		}
+	}
+
 	// Return PDF
 	c.Header("Content-Type", "application/pdf")
-	c.Header("Content-Disposition", "attachment; filename=orcamento_"+budget.Name+"_"+budgetID.String()+".pdf")
+	c.Header("Content-Disposition", "attachment; filename="+filename)
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }

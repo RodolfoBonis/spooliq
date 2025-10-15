@@ -222,6 +222,114 @@ func (r *budgetRepositoryImpl) DeleteAllItems(ctx context.Context, budgetID uuid
 	return nil
 }
 
+// ============================================================================
+// Item Filament Operations (NEW - Multi-filament support)
+// ============================================================================
+
+func (r *budgetRepositoryImpl) AddItemFilament(ctx context.Context, filament *entities.BudgetItemFilamentEntity) error {
+	model := &models.BudgetItemFilamentModel{}
+	model.FromEntity(filament)
+	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
+		return fmt.Errorf("failed to add item filament: %w", err)
+	}
+	return nil
+}
+
+func (r *budgetRepositoryImpl) RemoveItemFilament(ctx context.Context, filamentID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Delete(&models.BudgetItemFilamentModel{}, "id = ?", filamentID).Error; err != nil {
+		return fmt.Errorf("failed to remove item filament: %w", err)
+	}
+	return nil
+}
+
+func (r *budgetRepositoryImpl) GetItemFilaments(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemFilamentEntity, error) {
+	var filaments []*models.BudgetItemFilamentModel
+
+	if err := r.db.WithContext(ctx).
+		Where("budget_item_id = ?", itemID).
+		Order("\"order\" ASC").
+		Find(&filaments).Error; err != nil {
+		return nil, fmt.Errorf("failed to get item filaments: %w", err)
+	}
+
+	entities := make([]*entities.BudgetItemFilamentEntity, len(filaments))
+	for i, f := range filaments {
+		entities[i] = f.ToEntity()
+	}
+
+	return entities, nil
+}
+
+func (r *budgetRepositoryImpl) DeleteAllItemFilaments(ctx context.Context, itemID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).
+		Where("budget_item_id = ?", itemID).
+		Delete(&models.BudgetItemFilamentModel{}).Error; err != nil {
+		return fmt.Errorf("failed to delete item filaments: %w", err)
+	}
+	return nil
+}
+
+// GetFilamentUsageInfo retrieves detailed filament usage info for a budget item
+func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID) ([]entities.FilamentUsageInfo, error) {
+	// Get filaments with all related info via JOIN
+	var results []struct {
+		FilamentID   uuid.UUID
+		Quantity     float64
+		Order        int
+		FilamentName string
+		BrandName    string
+		MaterialName string
+		Color        string
+		PricePerKg   float64
+	}
+
+	err := r.db.WithContext(ctx).
+		Table("budget_item_filaments bif").
+		Select(`
+			bif.filament_id,
+			bif.quantity,
+			bif."order",
+			f.name as filament_name,
+			b.name as brand_name,
+			m.name as material_name,
+			f.color,
+			f.price_per_kg
+		`).
+		Joins("JOIN filaments f ON f.id = bif.filament_id").
+		Joins("JOIN brands b ON b.id = f.brand_id").
+		Joins("JOIN materials m ON m.id = f.material_id").
+		Where("bif.budget_item_id = ?", itemID).
+		Order("bif.\"order\" ASC").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get filament usage info: %w", err)
+	}
+
+	infos := make([]entities.FilamentUsageInfo, len(results))
+	for i, r := range results {
+		// Quantity já é o total, não precisa multiplicar!
+		cost := int64((r.Quantity / 1000.0) * r.PricePerKg * 100) // to cents
+
+		infos[i] = entities.FilamentUsageInfo{
+			FilamentID:   r.FilamentID.String(),
+			FilamentName: r.FilamentName,
+			BrandName:    r.BrandName,
+			MaterialName: r.MaterialName,
+			Color:        r.Color,
+			Quantity:     r.Quantity,
+			Cost:         cost,
+			Order:        r.Order,
+		}
+	}
+
+	return infos, nil
+}
+
+// ============================================================================
+// Status History Operations
+// ============================================================================
+
 func (r *budgetRepositoryImpl) AddStatusHistory(ctx context.Context, history *entities.BudgetStatusHistoryEntity) error {
 	model := &models.BudgetStatusHistoryModel{}
 	model.FromEntity(history)

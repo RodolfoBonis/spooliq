@@ -345,6 +345,15 @@ func RunMigrations() {
 		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetStatusHistoryModel{})
 	}
 
+	// Budget Item Filaments migration (new table for multi-filament support)
+	if !Connector.Migrator().HasTable(&budgets.BudgetItemFilamentModel{}) {
+		if err := Connector.AutoMigrate(&budgets.BudgetItemFilamentModel{}); err != nil {
+			panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_FILAMENT MIGRATION: %s", err.Error()))
+		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetItemFilamentModel{})
+	}
+
 	// Preset migrations
 	if !Connector.Migrator().HasTable(&presets.PresetModel{}) {
 		if err := Connector.AutoMigrate(&presets.PresetModel{}); err != nil {

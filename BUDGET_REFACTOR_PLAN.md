@@ -60,7 +60,7 @@ budget_items (PRODUTOS)
 budget_item_filaments (NOVA TABELA)
   - budget_item_id
   - filament_id
-  - quantity_per_unit (gramas por unidade)
+  - quantity (gramas totais desse filamento usado no produto)
   - order (ordem de aplicação/cor)
 ```
 

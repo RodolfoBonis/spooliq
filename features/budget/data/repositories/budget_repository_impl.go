@@ -510,7 +510,7 @@ func (r *budgetRepositoryImpl) GetCompanyByOrganizationID(ctx context.Context, o
 		Where("deleted_at IS NULL").
 		First(&company).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("company not found for organization")
+			return nil, fmt.Errorf("company not found for organization %s (please configure your company settings)", organizationID)
 		}
 		return nil, fmt.Errorf("failed to fetch company: %w", err)
 	}

@@ -364,14 +364,21 @@ curl -s -X GET "$API_URL/v1/budgets/$BUDGET_ID/pdf" \
   --output "$PDF_FILE"
 
 if [ -f "$PDF_FILE" ] && [ -s "$PDF_FILE" ]; then
-  echo -e "${GREEN}✅ PDF gerado com sucesso${NC}"
-  echo "   Arquivo: $PDF_FILE"
-  ls -lh "$PDF_FILE"
-  
-  # Abrir o PDF automaticamente (macOS)
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    open "$PDF_FILE"
-    echo "   📖 PDF aberto automaticamente"
+  # Verificar se o arquivo é realmente um PDF ou um JSON de erro
+  FILE_HEADER=$(head -c 4 "$PDF_FILE")
+  if [[ "$FILE_HEADER" == "%PDF" ]]; then
+    echo -e "${GREEN}✅ PDF gerado com sucesso${NC}"
+    echo "   Arquivo: $PDF_FILE"
+    ls -lh "$PDF_FILE"
+    
+    # Abrir o PDF automaticamente (macOS)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      open "$PDF_FILE"
+      echo "   📖 PDF aberto automaticamente"
+    fi
+  else
+    echo -e "${RED}❌ Erro ao gerar PDF (resposta da API):${NC}"
+    cat "$PDF_FILE" | jq '.' 2>/dev/null || cat "$PDF_FILE"
   fi
 else
   echo -e "${YELLOW}⚠️  Aviso: PDF não foi gerado ou está vazio${NC}"

@@ -29,6 +29,13 @@ type BudgetRepository interface {
 	GetItems(ctx context.Context, budgetID uuid.UUID) ([]*entities.BudgetItemEntity, error)
 	DeleteAllItems(ctx context.Context, budgetID uuid.UUID) error
 
+	// Item Filament operations (NEW - multi-filament support)
+	AddItemFilament(ctx context.Context, filament *entities.BudgetItemFilamentEntity) error
+	RemoveItemFilament(ctx context.Context, filamentID uuid.UUID) error
+	GetItemFilaments(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemFilamentEntity, error)
+	DeleteAllItemFilaments(ctx context.Context, itemID uuid.UUID) error
+	GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID) ([]entities.FilamentUsageInfo, error)
+
 	// Status history operations
 	AddStatusHistory(ctx context.Context, history *entities.BudgetStatusHistoryEntity) error
 	GetStatusHistory(ctx context.Context, budgetID uuid.UUID) ([]entities.BudgetStatusHistoryEntity, error)

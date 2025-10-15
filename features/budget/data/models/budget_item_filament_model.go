@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// BudgetItemFilamentModel represents the relationship between budget items and filaments
 type BudgetItemFilamentModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	BudgetItemID   uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_item_id"`
@@ -25,6 +26,7 @@ type BudgetItemFilamentModel struct {
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
+// TableName returns the database table name for budget item filaments
 func (BudgetItemFilamentModel) TableName() string {
 	return "budget_item_filaments"
 }
@@ -52,4 +54,3 @@ func (m *BudgetItemFilamentModel) FromEntity(e *entities.BudgetItemFilamentEntit
 	m.CreatedAt = e.CreatedAt
 	m.UpdatedAt = e.UpdatedAt
 }
-

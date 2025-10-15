@@ -166,8 +166,8 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 
 			if err := uc.budgetRepository.AddItemFilament(ctx, filament); err != nil {
 				uc.logger.Error(ctx, "Failed to add filament to item", map[string]interface{}{
-					"error":      err.Error(),
-					"item_id":    item.ID,
+					"error":       err.Error(),
+					"item_id":     item.ID,
 					"filament_id": filReq.FilamentID,
 				})
 				// Rollback: delete the budget

@@ -26,5 +26,5 @@ type AsaasPaymentWebhook struct {
 	ClientPaymentDate string  `json:"clientPaymentDate"`
 	Description       string  `json:"description"`
 	ExternalReference string  `json:"externalReference"`
-	InvoiceUrl        string  `json:"invoiceUrl"`
+	InvoiceURL        string  `json:"invoiceUrl"`
 }

@@ -159,7 +159,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		IsPlatformCompany:  false,
 		TrialEndsAt:        &trialEndsAt,
 		SubscriptionPlan:   "basic",
-		AsaasCustomerID:    asaasCustomer.ID,
+		AsaasCustomerID:    &asaasCustomer.ID,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
 	}
@@ -215,7 +215,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		uc.logger.Error(ctx, "Subscription will need to be created manually", nil)
 	} else {
 		// Update company with subscription ID
-		company.AsaasSubscriptionID = asaasSubscription.ID
+		company.AsaasSubscriptionID = &asaasSubscription.ID
 		err = uc.companyRepository.Update(ctx, company)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to update company with subscription ID", map[string]interface{}{

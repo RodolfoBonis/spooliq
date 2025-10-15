@@ -27,13 +27,13 @@ type CompanyModel struct {
 	ZipCode        *string   `gorm:"type:varchar(20)" json:"zip_code"`
 
 	// Subscription fields
-	SubscriptionStatus    string     `gorm:"type:varchar(20);default:'trial'" json:"subscription_status"`
-	IsPlatformCompany     bool       `gorm:"default:false" json:"is_platform_company"`
+	SubscriptionStatus    string     `gorm:"type:varchar(20);not null;default:'trial'" json:"subscription_status"`
+	IsPlatformCompany     bool       `gorm:"not null;default:false" json:"is_platform_company"`
 	TrialEndsAt           *time.Time `gorm:"type:timestamp" json:"trial_ends_at"`
 	SubscriptionStartedAt *time.Time `gorm:"type:timestamp" json:"subscription_started_at"`
-	SubscriptionPlan      string     `gorm:"type:varchar(50);default:'basic'" json:"subscription_plan"`
-	AsaasCustomerID       string     `gorm:"type:varchar(255)" json:"asaas_customer_id"`
-	AsaasSubscriptionID   string     `gorm:"type:varchar(255)" json:"asaas_subscription_id"`
+	SubscriptionPlan      string     `gorm:"type:varchar(50);not null;default:'basic'" json:"subscription_plan"`
+	AsaasCustomerID       *string    `gorm:"type:varchar(255)" json:"asaas_customer_id"`
+	AsaasSubscriptionID   *string    `gorm:"type:varchar(255)" json:"asaas_subscription_id"`
 	LastPaymentCheck      *time.Time `gorm:"type:timestamp" json:"last_payment_check"`
 	NextPaymentDue        *time.Time `gorm:"type:timestamp" json:"next_payment_due"`
 

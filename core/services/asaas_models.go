@@ -76,9 +76,9 @@ type AsaasPaymentResponse struct {
 	Status                string  `json:"status"` // PENDING, RECEIVED, CONFIRMED, OVERDUE
 	DueDate               string  `json:"dueDate"`
 	PaymentDate           *string `json:"paymentDate"`
-	InvoiceUrl            string  `json:"invoiceUrl"`
-	BankSlipUrl           string  `json:"bankSlipUrl"`
-	TransactionReceiptUrl string  `json:"transactionReceiptUrl"`
+	InvoiceURL            string  `json:"invoiceUrl"`
+	BankSlipURL           string  `json:"bankSlipUrl"`
+	TransactionReceiptURL string  `json:"transactionReceiptUrl"`
 	ExternalReference     string  `json:"externalReference"`
 	Description           string  `json:"description"`
 }

@@ -2,6 +2,7 @@ package di
 
 import (
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/data/repositories"
+	domainRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
@@ -9,9 +10,11 @@ import (
 // Module provides the fx module for subscriptions dependencies
 var Module = fx.Module("subscriptions",
 	fx.Provide(
-		// Repositories
-		func(db *gorm.DB) *repositories.SubscriptionRepositoryImpl {
-			return repositories.NewSubscriptionRepository(db).(*repositories.SubscriptionRepositoryImpl)
-		},
+		fx.Annotate(
+			func(db *gorm.DB) domainRepositories.SubscriptionRepository {
+				return repositories.NewSubscriptionRepository(db)
+			},
+			fx.As(new(domainRepositories.SubscriptionRepository)),
+		),
 	),
 )

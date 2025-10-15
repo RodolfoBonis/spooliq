@@ -30,8 +30,8 @@ type CompanyEntity struct {
 	TrialEndsAt           *time.Time `json:"trial_ends_at,omitempty"`
 	SubscriptionStartedAt *time.Time `json:"subscription_started_at,omitempty"`
 	SubscriptionPlan      string     `json:"subscription_plan"`
-	AsaasCustomerID       string     `json:"asaas_customer_id,omitempty"`
-	AsaasSubscriptionID   string     `json:"asaas_subscription_id,omitempty"`
+	AsaasCustomerID       *string    `json:"asaas_customer_id,omitempty"`
+	AsaasSubscriptionID   *string    `json:"asaas_subscription_id,omitempty"`
 	LastPaymentCheck      *time.Time `json:"last_payment_check,omitempty"`
 	NextPaymentDue        *time.Time `json:"next_payment_due,omitempty"`
 

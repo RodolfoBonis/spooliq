@@ -127,9 +127,9 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, authU
 	router.Use(gin.Recovery())
 	router.Use(gin.ErrorLogger())
 
-	// Register subscription middleware (checks subscription status)
-	// This runs AFTER auth middleware (applied per-route) but BEFORE route handlers
-	router.Use(subscriptionMiddleware.CheckSubscription())
+	// NOTE: Subscription middleware is integrated into protectFactory
+	// It runs automatically after authentication for all protected routes
+	// This ensures organization_id is available before subscription check
 
 	// Now register routes (AFTER all middlewares are set up)
 	routes.InitializeRoutes(router, authUc, registerUc, brandUc, budgetUc, companyUc, customerUc, filamentUc, materialUc, uploadsUc, presetHandler, webhookHandler, userHandler, adminHandler, protectFactory, cacheMiddleware, logger)

@@ -76,7 +76,13 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 		City:           company.City,
 		State:          company.State,
 		ZipCode:        company.ZipCode,
-		CreatedAt:      company.CreatedAt,
-		UpdatedAt:      company.UpdatedAt,
+		// Subscription fields
+		SubscriptionStatus:    company.SubscriptionStatus,
+		IsPlatformCompany:     company.IsPlatformCompany,
+		SubscriptionPlan:      company.SubscriptionPlan,
+		TrialEndsAt:           company.TrialEndsAt,
+		SubscriptionStartedAt: company.SubscriptionStartedAt,
+		CreatedAt:             company.CreatedAt,
+		UpdatedAt:             company.UpdatedAt,
 	})
 }

@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"context"
-	"math"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
@@ -89,12 +88,4 @@ func (uc *ListCompaniesUseCase) Execute(ctx context.Context, userRoles []string,
 	}
 
 	return response, nil
-}
-
-// calculateTotalPages calculates total pages from total count and page size
-func calculateTotalPages(totalCount int64, pageSize int) int {
-	if pageSize == 0 {
-		return 0
-	}
-	return int(math.Ceil(float64(totalCount) / float64(pageSize)))
 }

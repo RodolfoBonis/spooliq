@@ -14,8 +14,8 @@ import (
 	jsonToken "github.com/golang-jwt/jwt/v4"
 )
 
-// NewProtectMiddleware creates a new authentication middleware.
-func NewProtectMiddleware(logger logger.Logger, authService *services.AuthService) func(handler gin.HandlerFunc, role string) gin.HandlerFunc {
+// NewProtectMiddleware creates a new authentication middleware with subscription check.
+func NewProtectMiddleware(logger logger.Logger, authService *services.AuthService, subscriptionMiddleware *SubscriptionMiddleware) func(handler gin.HandlerFunc, role string) gin.HandlerFunc {
 	return func(handler gin.HandlerFunc, role string) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			ctx := c.Request.Context()
@@ -139,6 +139,14 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			c.Set("user_roles", userClaim.Roles)
 			if userClaim.OrganizationID != nil {
 				c.Set("organization_id", *userClaim.OrganizationID)
+			}
+
+			// Check subscription status after authentication
+			subscriptionMiddleware.CheckSubscription()(c)
+
+			// If subscription check aborted, don't call handler
+			if c.IsAborted() {
+				return
 			}
 
 			handler(c)

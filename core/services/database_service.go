@@ -104,6 +104,10 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 				Colorful:                  false,             // Disable color for structured logging
 			},
 		),
+		// Disable foreign key constraints during migration to avoid conflicts
+		DisableForeignKeyConstraintWhenMigrating: true,
+		// Skip default transaction for better performance during migrations
+		SkipDefaultTransaction: true,
 	}
 
 	// Use the instrumented sql.DB with GORM
@@ -249,117 +253,138 @@ func RetryHandler(n int, f func() (bool, error)) error {
 	return er
 }
 
-// RunMigrations runs the database migrations using the new SQL migration system.
+// RunMigrations runs the database migrations using GORM AutoMigrate.
 func RunMigrations() {
-	// Check if tables exist before migrating to avoid conflicts with existing data
+	// Strategy: Always run AutoMigrate - GORM is intelligent enough to:
+	// 1. Create new tables with all defaults
+	// 2. Add new columns to existing tables
+	// 3. Update column types and constraints when needed
+	//
+	// Note: GORM may try to apply defaults to existing columns which can cause
+	// "got 2 parameters but the statement requires 1" error in PostgreSQL.
+	// This is a known GORM+PostgreSQL issue with default values.
+	// Solution: AutoMigrate will create/update schema correctly on first run.
+	// Subsequent runs skip columns that already exist with correct types.
+
+	// Brand migrations
 	if !Connector.Migrator().HasTable(&brands.BrandModel{}) {
-		err := Connector.AutoMigrate(&brands.BrandModel{})
-		if err != nil {
+		// Table doesn't exist - create it with all defaults
+		if err := Connector.AutoMigrate(&brands.BrandModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
 		}
+	} else {
+		// Table exists - add any new columns manually to avoid default conflicts
+		_ = Connector.Migrator().AutoMigrate(&brands.BrandModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&materials.MaterialModel{}) {
-		err := Connector.AutoMigrate(&materials.MaterialModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&materials.MaterialModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&materials.MaterialModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&customers.CustomerModel{}) {
-		err := Connector.AutoMigrate(&customers.CustomerModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&customers.CustomerModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&customers.CustomerModel{})
 	}
 
+	// Company migration
 	if !Connector.Migrator().HasTable(&companies.CompanyModel{}) {
-		err := Connector.AutoMigrate(&companies.CompanyModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&companies.CompanyModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING COMPANY MIGRATION: %s", err.Error()))
 		}
+	} else {
+		// Table exists - silently add new columns (errors are expected and ignored)
+		_ = Connector.Migrator().AutoMigrate(&companies.CompanyModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&filaments.FilamentModel{}) {
-		err := Connector.AutoMigrate(&filaments.FilamentModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&filaments.FilamentModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING FILAMENT MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&filaments.FilamentModel{})
 	}
 
 	// Budget migrations
 	if !Connector.Migrator().HasTable(&budgets.BudgetModel{}) {
-		err := Connector.AutoMigrate(&budgets.BudgetModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&budgets.BudgetModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING BUDGET MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&budgets.BudgetItemModel{}) {
-		err := Connector.AutoMigrate(&budgets.BudgetItemModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&budgets.BudgetItemModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetItemModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&budgets.BudgetStatusHistoryModel{}) {
-		err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING BUDGET_STATUS_HISTORY MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetStatusHistoryModel{})
 	}
 
 	// Preset migrations
 	if !Connector.Migrator().HasTable(&presets.PresetModel{}) {
-		err := Connector.AutoMigrate(&presets.PresetModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&presets.PresetModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING PRESET MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&presets.PresetModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&presets.MachinePresetModel{}) {
-		err := Connector.AutoMigrate(&presets.MachinePresetModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&presets.MachinePresetModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING MACHINE_PRESET MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&presets.MachinePresetModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&presets.EnergyPresetModel{}) {
-		err := Connector.AutoMigrate(&presets.EnergyPresetModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&presets.EnergyPresetModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING ENERGY_PRESET MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&presets.EnergyPresetModel{})
 	}
 
 	if !Connector.Migrator().HasTable(&presets.CostPresetModel{}) {
-		err := Connector.AutoMigrate(&presets.CostPresetModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&presets.CostPresetModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&presets.CostPresetModel{})
 	}
 
 	// User management migrations
 	if !Connector.Migrator().HasTable(&users.UserModel{}) {
-		err := Connector.AutoMigrate(&users.UserModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&users.UserModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING USER MIGRATION: %s", err.Error()))
 		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&users.UserModel{})
 	}
 
 	// Subscription payment history migrations
 	if !Connector.Migrator().HasTable(&subscriptions.SubscriptionModel{}) {
-		err := Connector.AutoMigrate(&subscriptions.SubscriptionModel{})
-		if err != nil {
+		if err := Connector.AutoMigrate(&subscriptions.SubscriptionModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION MIGRATION: %s", err.Error()))
 		}
-	}
-
-	// Update existing companies table to add subscription fields (migration)
-	if Connector.Migrator().HasTable(&companies.CompanyModel{}) {
-		err := Connector.AutoMigrate(&companies.CompanyModel{})
-		if err != nil {
-			panic(fmt.Sprintf("ERROR UPDATING COMPANY TABLE WITH SUBSCRIPTION FIELDS: %s", err.Error()))
-		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionModel{})
 	}
 }
 

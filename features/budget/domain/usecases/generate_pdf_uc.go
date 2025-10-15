@@ -156,13 +156,3 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename=orcamento_"+budget.Name+"_"+budgetID.String()+".pdf")
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
-
-// getOrganizationID extracts organization ID from context
-func getOrganizationID(c *gin.Context) string {
-	if orgID, exists := c.Get("organization_id"); exists {
-		if id, ok := orgID.(string); ok {
-			return id
-		}
-	}
-	return ""
-}

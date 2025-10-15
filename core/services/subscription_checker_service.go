@@ -47,36 +47,6 @@ func (s *SubscriptionCheckerService) CheckAllSubscriptions(ctx context.Context) 
 	return nil
 }
 
-// checkCompanySubscription checks a single company's subscription status
-func (s *SubscriptionCheckerService) checkCompanySubscription(ctx context.Context, company interface{}) error {
-	// Type assertion to get company entity
-	// This should be implemented based on your company entity structure
-
-	// For trial companies
-	// if company.SubscriptionStatus == "trial" {
-	//     if company.TrialEndsAt != nil && time.Now().After(*company.TrialEndsAt) {
-	//         // Check Asaas subscription status
-	//         // If subscription active and first payment confirmed, update to 'active'
-	//         // If no payment, update to 'suspended', send notification email
-	//     }
-	// }
-
-	// For active companies
-	// if company.SubscriptionStatus == "active" {
-	//     // Check Asaas subscription status
-	//     // If overdue, update to 'suspended'
-	//     // If cancelled in Asaas, update to 'cancelled'
-	// }
-
-	// TODO: Implement full subscription checking logic
-	// This is a placeholder implementation
-	s.logger.Info(ctx, "Checking company subscription", map[string]interface{}{
-		"company": "placeholder",
-	})
-
-	return nil
-}
-
 // StartDailyChecker starts the daily subscription checker (runs at 3 AM)
 func (s *SubscriptionCheckerService) StartDailyChecker(ctx context.Context) {
 	// Calculate time until next 3 AM

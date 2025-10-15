@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"time"
 
@@ -370,27 +368,12 @@ func (s *PDFService) addFooter(pdf *gofpdf.Fpdf, company *budgetEntities.Company
 	pdf.Cell(0, 4, s.utf8ToLatin1("Este orçamento é válido por 15 dias a partir da data de emissão."))
 }
 
-// downloadImage downloads an image from URL
-func (s *PDFService) downloadImage(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to download image: status %d", resp.StatusCode)
-	}
-
-	return io.ReadAll(resp.Body)
-}
-
 // downloadLogoFromCDN downloads logo from CDN with authentication
 func (s *PDFService) downloadLogoFromCDN(ctx context.Context, logoURL string) ([]byte, error) {
 	// Extract path from CDN URL
 	// Expected format: https://rb-cdn.rodolfodebonis.com.br/v1/cdn/spooliq/org-{id}/company/logo.{ext}
 	// We need: org-{id}/company/logo.{ext}
-	
+
 	// Parse URL to extract path after bucket name
 	parts := strings.Split(logoURL, "/v1/cdn/spooliq/")
 	if len(parts) != 2 {
@@ -399,9 +382,9 @@ func (s *PDFService) downloadLogoFromCDN(ctx context.Context, logoURL string) ([
 		})
 		return nil, fmt.Errorf("invalid CDN URL format")
 	}
-	
+
 	path := parts[1]
-	
+
 	// Download from CDN with authentication
 	logoBytes, err := s.cdnService.DownloadFile(ctx, path)
 	if err != nil {
@@ -411,7 +394,7 @@ func (s *PDFService) downloadLogoFromCDN(ctx context.Context, logoURL string) ([
 		})
 		return nil, fmt.Errorf("failed to download logo from CDN: %w", err)
 	}
-	
+
 	return logoBytes, nil
 }
 

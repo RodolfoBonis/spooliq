@@ -163,7 +163,7 @@ func (s *CDNService) GetFileURL(path string) string {
 func (s *CDNService) DownloadFile(ctx context.Context, path string) ([]byte, error) {
 	// Construct CDN URL
 	fileURL := s.GetFileURL(path)
-	
+
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "GET", fileURL, nil)
 	if err != nil {

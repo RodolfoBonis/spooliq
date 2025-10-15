@@ -126,8 +126,8 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 	err = uc.repository.Update(ctx, company)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to update company logo URL", map[string]interface{}{
-			"error":     err.Error(),
-			"cdn_url":   cdnURL,
+			"error":      err.Error(),
+			"cdn_url":    cdnURL,
 			"company_id": company.ID,
 		})
 		appError := coreErrors.RepositoryError("Failed to update company logo")
@@ -147,4 +147,3 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 		"logo_url": cdnURL,
 	})
 }
-

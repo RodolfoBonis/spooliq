@@ -21,20 +21,28 @@ type BudgetModel struct {
 	// Status
 	Status string `gorm:"type:varchar(20);not null" json:"status"`
 
-	// Print time
+	// DEPRECATED: Print time moved to budget_items (per-item, not global)
+	// Will be calculated as sum of all items print times
 	PrintTimeHours   int `gorm:"type:integer;not null" json:"print_time_hours"`
 	PrintTimeMinutes int `gorm:"type:integer;not null" json:"print_time_minutes"`
 
-	// Presets (foreign keys)
+	// Presets (global - apply to all items unless overridden at item level)
 	MachinePresetID *uuid.UUID `gorm:"type:uuid" json:"machine_preset_id"`
 	EnergyPresetID  *uuid.UUID `gorm:"type:uuid" json:"energy_preset_id"`
-	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"`
+	
+	// DEPRECATED: CostPresetID moved to budget_items (per-item, not global)
+	CostPresetID *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"`
 
 	// Configuration flags
-	IncludeEnergyCost bool     `gorm:"default:false" json:"include_energy_cost"`
-	IncludeLaborCost  bool     `gorm:"default:false" json:"include_labor_cost"`
-	IncludeWasteCost  bool     `gorm:"default:false" json:"include_waste_cost"`
-	LaborCostPerHour  *float64 `gorm:"type:numeric" json:"labor_cost_per_hour"`
+	IncludeEnergyCost bool `gorm:"default:false" json:"include_energy_cost"`
+	
+	// DEPRECATED: IncludeLaborCost moved to item level (via CostPreset or AdditionalLaborCost)
+	IncludeLaborCost bool `gorm:"default:false" json:"include_labor_cost"`
+	
+	IncludeWasteCost bool `gorm:"default:false" json:"include_waste_cost"`
+	
+	// DEPRECATED: LaborCostPerHour moved to item level (via CostPreset)
+	LaborCostPerHour *float64 `gorm:"type:numeric" json:"labor_cost_per_hour"`
 
 	// Calculated costs (in cents)
 	FilamentCost int64 `gorm:"type:bigint;default:0" json:"filament_cost"`

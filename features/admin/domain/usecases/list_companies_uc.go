@@ -66,26 +66,53 @@ func (uc *ListCompaniesUseCase) Execute(ctx context.Context, userRoles []string,
 		pageSize = 20
 	}
 
-	// NOTE: This implementation requires a FindAllPaginated method in CompanyRepository
-	// For now, we'll return a placeholder response
-	// Full implementation would:
-	// 1. Call companyRepository.FindAllPaginated(ctx, page, pageSize, statusFilter)
-	// 2. Map entities to CompanyListItem
-	// 3. Calculate pagination metadata
+	// Fetch companies with pagination
+	companies, totalCount, err := uc.companyRepository.FindAllPaginated(ctx, page, pageSize, statusFilter)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to fetch companies", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, errors.InternalServerError("Failed to fetch companies")
+	}
 
-	uc.logger.Info(ctx, "Companies listed (placeholder)", map[string]interface{}{
-		"page":      page,
-		"page_size": pageSize,
-	})
+	// Map entities to response items
+	companyItems := make([]adminEntities.CompanyListItem, len(companies))
+	for i, company := range companies {
+		email := ""
+		if company.Email != nil {
+			email = *company.Email
+		}
 
-	// Placeholder response
+		companyItems[i] = adminEntities.CompanyListItem{
+			OrganizationID:     company.OrganizationID,
+			Name:               company.Name,
+			Email:              email,
+			SubscriptionStatus: company.SubscriptionStatus,
+			IsPlatformCompany:  company.IsPlatformCompany,
+			SubscriptionPlan:   company.SubscriptionPlan,
+			CreatedAt:          company.CreatedAt,
+		}
+	}
+
+	// Calculate total pages
+	totalPages := int(totalCount) / pageSize
+	if int(totalCount)%pageSize > 0 {
+		totalPages++
+	}
+
 	response := &adminEntities.ListCompaniesResponse{
-		Companies:  []adminEntities.CompanyListItem{},
+		Companies:  companyItems,
 		Page:       page,
 		PageSize:   pageSize,
-		TotalCount: 0,
-		TotalPages: 0,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
 	}
+
+	uc.logger.Info(ctx, "Companies listed successfully", map[string]interface{}{
+		"total_count": totalCount,
+		"page":        page,
+		"page_size":   pageSize,
+	})
 
 	return response, nil
 }

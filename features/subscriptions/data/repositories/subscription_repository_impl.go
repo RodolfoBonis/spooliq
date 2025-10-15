@@ -101,3 +101,14 @@ func (r *SubscriptionRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, o
 		Where("id = ? AND organization_id = ?", id, organizationID).
 		Delete(&models.SubscriptionModel{}).Error
 }
+
+// CountByOrganizationID counts total subscription payment records for an organization
+func (r *SubscriptionRepositoryImpl) CountByOrganizationID(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.SubscriptionModel{}).
+		Where("organization_id = ?", organizationID).
+		Count(&count).Error
+
+	return count, err
+}

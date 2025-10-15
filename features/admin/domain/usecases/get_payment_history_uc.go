@@ -90,20 +90,61 @@ func (uc *GetPaymentHistoryUseCase) Execute(ctx context.Context, userRoles []str
 		pageSize = 20
 	}
 
-	// NOTE: This requires FindByOrganizationIDPaginated method in SubscriptionRepository
-	// For now, returning placeholder
-	payments := []adminEntities.PaymentHistoryItem{}
+	// Calculate offset
+	offset := (page - 1) * pageSize
 
-	response := &adminEntities.PaymentHistoryResponse{
-		Payments:   payments,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalCount: 0,
-		TotalPages: 0,
+	// Fetch subscription payment history
+	subscriptions, err := uc.subscriptionRepository.FindAll(ctx, organizationID, pageSize, offset)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to fetch payment history", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": organizationID,
+		})
+		return nil, errors.InternalServerError("Failed to fetch payment history")
 	}
 
-	uc.logger.Info(ctx, "Payment history retrieved (placeholder)", map[string]interface{}{
+	// Get total count
+	totalCount, err := uc.subscriptionRepository.CountByOrganizationID(ctx, organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to count payments", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": organizationID,
+		})
+		return nil, errors.InternalServerError("Failed to count payments")
+	}
+
+	// Map entities to response items
+	paymentItems := make([]adminEntities.PaymentHistoryItem, len(subscriptions))
+	for i, subscription := range subscriptions {
+		paymentItems[i] = adminEntities.PaymentHistoryItem{
+			ID:             subscription.ID.String(),
+			Amount:         subscription.Amount,
+			Status:         subscription.Status,
+			DueDate:        subscription.DueDate,
+			PaymentDate:    subscription.PaymentDate,
+			InvoiceURL:     subscription.InvoiceURL,
+			AsaasPaymentID: subscription.AsaasPaymentID,
+			CreatedAt:      subscription.CreatedAt,
+		}
+	}
+
+	// Calculate total pages
+	totalPages := int(totalCount) / pageSize
+	if int(totalCount)%pageSize > 0 {
+		totalPages++
+	}
+
+	response := &adminEntities.PaymentHistoryResponse{
+		Payments:   paymentItems,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+	}
+
+	uc.logger.Info(ctx, "Payment history retrieved successfully", map[string]interface{}{
 		"organization_id": organizationID,
+		"total_count":     totalCount,
 	})
 
 	return response, nil

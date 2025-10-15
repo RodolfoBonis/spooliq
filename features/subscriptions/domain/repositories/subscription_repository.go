@@ -15,4 +15,7 @@ type SubscriptionRepository interface {
 	Create(ctx context.Context, subscription *entities.SubscriptionEntity) error
 	Update(ctx context.Context, id uuid.UUID, organizationID uuid.UUID, subscription *entities.SubscriptionEntity) error
 	Delete(ctx context.Context, id uuid.UUID, organizationID uuid.UUID) error
+
+	// Admin operations
+	CountByOrganizationID(ctx context.Context, organizationID uuid.UUID) (int64, error)
 }

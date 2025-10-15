@@ -106,3 +106,60 @@ func (r *companyRepositoryImpl) ExistsByOrganizationID(ctx context.Context, orga
 
 	return count > 0, nil
 }
+
+// FindAllPaginated retrieves all companies with pagination and optional status filter
+func (r *companyRepositoryImpl) FindAllPaginated(ctx context.Context, page, pageSize int, statusFilter string) ([]*entities.CompanyEntity, int64, error) {
+	var companyModels []models.CompanyModel
+	var totalCount int64
+
+	query := r.db.WithContext(ctx).Model(&models.CompanyModel{})
+
+	// Apply status filter if provided
+	if statusFilter != "" {
+		query = query.Where("subscription_status = ?", statusFilter)
+	}
+
+	// Get total count
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Calculate offset
+	offset := (page - 1) * pageSize
+
+	// Fetch paginated results
+	if err := query.
+		Order("created_at DESC").
+		Limit(pageSize).
+		Offset(offset).
+		Find(&companyModels).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Convert to entities
+	companies := make([]*entities.CompanyEntity, len(companyModels))
+	for i, model := range companyModels {
+		companies[i] = model.ToEntity()
+	}
+
+	return companies, totalCount, nil
+}
+
+// FindAllActive retrieves all companies that are not suspended or cancelled
+func (r *companyRepositoryImpl) FindAllActive(ctx context.Context) ([]*entities.CompanyEntity, error) {
+	var companyModels []models.CompanyModel
+
+	if err := r.db.WithContext(ctx).
+		Where("subscription_status NOT IN (?)", []string{"suspended", "cancelled"}).
+		Find(&companyModels).Error; err != nil {
+		return nil, err
+	}
+
+	// Convert to entities
+	companies := make([]*entities.CompanyEntity, len(companyModels))
+	for i, model := range companyModels {
+		companies[i] = model.ToEntity()
+	}
+
+	return companies, nil
+}

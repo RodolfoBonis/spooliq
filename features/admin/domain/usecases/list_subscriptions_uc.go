@@ -65,21 +65,53 @@ func (uc *ListSubscriptionsUseCase) Execute(ctx context.Context, userRoles []str
 		pageSize = 20
 	}
 
-	// NOTE: This requires a FindAllPaginated method in CompanyRepository
-	// For now, returning placeholder
-	uc.logger.Info(ctx, "Subscriptions listed (placeholder)", map[string]interface{}{
-		"page":      page,
-		"page_size": pageSize,
-	})
+	// Fetch companies (subscriptions are company-based)
+	companies, totalCount, err := uc.companyRepository.FindAllPaginated(ctx, page, pageSize, statusFilter)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to fetch subscriptions", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, errors.InternalServerError("Failed to fetch subscriptions")
+	}
 
-	// Placeholder response
+	// Map entities to subscription list items
+	subscriptionItems := make([]adminEntities.SubscriptionListItem, len(companies))
+	for i, company := range companies {
+		asaasSubID := ""
+		if company.AsaasSubscriptionID != nil {
+			asaasSubID = *company.AsaasSubscriptionID
+		}
+
+		subscriptionItems[i] = adminEntities.SubscriptionListItem{
+			OrganizationID:      company.OrganizationID,
+			CompanyName:         company.Name,
+			SubscriptionStatus:  company.SubscriptionStatus,
+			SubscriptionPlan:    company.SubscriptionPlan,
+			AsaasSubscriptionID: asaasSubID,
+			TrialEndsAt:         company.TrialEndsAt,
+			NextPaymentDue:      company.NextPaymentDue,
+		}
+	}
+
+	// Calculate total pages
+	totalPages := int(totalCount) / pageSize
+	if int(totalCount)%pageSize > 0 {
+		totalPages++
+	}
+
 	response := &adminEntities.ListSubscriptionsResponse{
-		Subscriptions: []adminEntities.SubscriptionListItem{},
+		Subscriptions: subscriptionItems,
 		Page:          page,
 		PageSize:      pageSize,
-		TotalCount:    0,
-		TotalPages:    0,
+		TotalCount:    totalCount,
+		TotalPages:    totalPages,
 	}
+
+	uc.logger.Info(ctx, "Subscriptions listed successfully", map[string]interface{}{
+		"total_count": totalCount,
+		"page":        page,
+		"page_size":   pageSize,
+	})
 
 	return response, nil
 }

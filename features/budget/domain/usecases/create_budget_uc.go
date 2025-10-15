@@ -124,13 +124,18 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	// Create budget items
 	for _, itemReq := range request.Items {
 		item := &entities.BudgetItemEntity{
-			ID:         uuid.New(),
-			BudgetID:   budget.ID,
-			FilamentID: itemReq.FilamentID,
-			Quantity:   itemReq.Quantity,
-			Order:      itemReq.Order,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
+			ID:                 uuid.New(),
+			BudgetID:           budget.ID,
+			FilamentID:         itemReq.FilamentID,
+			Quantity:           itemReq.Quantity,
+			Order:              itemReq.Order,
+			ProductName:        itemReq.ProductName,
+			ProductDescription: itemReq.ProductDescription,
+			ProductQuantity:    itemReq.ProductQuantity,
+			UnitPrice:          itemReq.UnitPrice,
+			ProductDimensions:  itemReq.ProductDimensions,
+			CreatedAt:          time.Now(),
+			UpdatedAt:          time.Now(),
 		}
 
 		if err := uc.budgetRepository.AddItem(ctx, item); err != nil {

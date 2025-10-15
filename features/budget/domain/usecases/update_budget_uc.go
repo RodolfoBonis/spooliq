@@ -165,17 +165,22 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 
 		// Create new items
 		for _, itemReq := range *request.Items {
-			item := &entities.BudgetItemEntity{
-				ID:         uuid.New(),
-				BudgetID:   budget.ID,
-				FilamentID: itemReq.FilamentID,
-				Quantity:   itemReq.Quantity,
-				Order:      itemReq.Order,
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
-			}
+		item := &entities.BudgetItemEntity{
+			ID:                 uuid.New(),
+			BudgetID:           budget.ID,
+			FilamentID:         itemReq.FilamentID,
+			Quantity:           itemReq.Quantity,
+			Order:              itemReq.Order,
+			ProductName:        itemReq.ProductName,
+			ProductDescription: itemReq.ProductDescription,
+			ProductQuantity:    itemReq.ProductQuantity,
+			UnitPrice:          itemReq.UnitPrice,
+			ProductDimensions:  itemReq.ProductDimensions,
+			CreatedAt:          time.Now(),
+			UpdatedAt:          time.Now(),
+		}
 
-			if err := uc.budgetRepository.AddItem(ctx, item); err != nil {
+		if err := uc.budgetRepository.AddItem(ctx, item); err != nil {
 				uc.logger.Error(ctx, "Failed to create budget item", map[string]interface{}{
 					"error": err.Error(),
 				})

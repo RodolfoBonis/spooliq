@@ -31,3 +31,8 @@ spooliq
 spooliq_docs
 # Added by goreleaser init:
 dist/
+*.json
+api.log
+test_logo.png
+*.pdf
+test_*.sh

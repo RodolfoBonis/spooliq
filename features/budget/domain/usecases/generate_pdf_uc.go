@@ -156,7 +156,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	// Upload PDF to CDN
 	filename := fmt.Sprintf("orcamento_%s_%s.pdf", budget.Name, budgetID.String())
 	folder := fmt.Sprintf("org-%s/budgets", organizationID)
-	
+
 	pdfReader := bytes.NewReader(pdfBytes)
 	cdnURL, err := uc.cdnService.UploadFile(ctx, pdfReader, filename, folder)
 	if err != nil {

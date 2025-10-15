@@ -16,5 +16,7 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, protectFac
 		companyRoutes.GET("/", protectFactory(useCase.Get, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Owner and OrgAdmin can update company info
 		companyRoutes.PUT("/", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole))
+		// Owner and OrgAdmin can upload logo
+		companyRoutes.POST("/logo", protectFactory(useCase.UploadLogo, roles.OwnerRole, roles.OrgAdminRole))
 	}
 }

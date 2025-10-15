@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"
@@ -117,7 +118,7 @@ func (s *PDFService) addHeader(pdf *gofpdf.Fpdf, company *budgetEntities.Company
 	// Company logo (if available)
 	if company.LogoURL != nil && *company.LogoURL != "" {
 		// Try to download and add logo
-		logoBytes, err := s.downloadImage(*company.LogoURL)
+		logoBytes, err := s.downloadLogoFromCDN(context.Background(), *company.LogoURL)
 		if err == nil {
 			// Create temp file for logo
 			tmpFile := fmt.Sprintf("/tmp/logo_%d.png", time.Now().UnixNano())
@@ -382,6 +383,36 @@ func (s *PDFService) downloadImage(url string) ([]byte, error) {
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+// downloadLogoFromCDN downloads logo from CDN with authentication
+func (s *PDFService) downloadLogoFromCDN(ctx context.Context, logoURL string) ([]byte, error) {
+	// Extract path from CDN URL
+	// Expected format: https://rb-cdn.rodolfodebonis.com.br/v1/cdn/spooliq/org-{id}/company/logo.{ext}
+	// We need: org-{id}/company/logo.{ext}
+	
+	// Parse URL to extract path after bucket name
+	parts := strings.Split(logoURL, "/v1/cdn/spooliq/")
+	if len(parts) != 2 {
+		s.logger.Error(ctx, "Invalid CDN URL format", map[string]interface{}{
+			"url": logoURL,
+		})
+		return nil, fmt.Errorf("invalid CDN URL format")
+	}
+	
+	path := parts[1]
+	
+	// Download from CDN with authentication
+	logoBytes, err := s.cdnService.DownloadFile(ctx, path)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to download logo from CDN", map[string]interface{}{
+			"error": err.Error(),
+			"path":  path,
+		})
+		return nil, fmt.Errorf("failed to download logo from CDN: %w", err)
+	}
+	
+	return logoBytes, nil
 }
 
 // utf8ToLatin1 converts UTF-8 string to Latin1 (required by gofpdf)

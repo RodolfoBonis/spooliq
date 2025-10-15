@@ -158,3 +158,62 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 func (s *CDNService) GetFileURL(path string) string {
 	return fmt.Sprintf("%s/v1/cdn/%s/%s", s.baseURL, s.bucket, path)
 }
+
+// DownloadFile downloads a file from the CDN with authentication
+func (s *CDNService) DownloadFile(ctx context.Context, path string) ([]byte, error) {
+	// Construct CDN URL
+	fileURL := s.GetFileURL(path)
+	
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, "GET", fileURL, nil)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to create download request", map[string]interface{}{
+			"error": err.Error(),
+			"url":   fileURL,
+		})
+		return nil, fmt.Errorf("failed to create download request: %w", err)
+	}
+
+	// Set authentication header
+	req.Header.Set("X-API-KEY", s.apiKey)
+
+	s.logger.Info(ctx, "Downloading file from CDN", map[string]interface{}{
+		"path": path,
+		"url":  fileURL,
+	})
+
+	// Execute request
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to execute download request", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, fmt.Errorf("failed to execute download request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to read download response", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, fmt.Errorf("failed to read download response: %w", err)
+	}
+
+	// Check status code
+	if resp.StatusCode != http.StatusOK {
+		s.logger.Error(ctx, "CDN download failed", map[string]interface{}{
+			"status_code": resp.StatusCode,
+			"response":    string(data),
+		})
+		return nil, fmt.Errorf("CDN download failed with status %d: %s", resp.StatusCode, string(data))
+	}
+
+	s.logger.Info(ctx, "File downloaded successfully from CDN", map[string]interface{}{
+		"path": path,
+		"size": len(data),
+	})
+
+	return data, nil
+}

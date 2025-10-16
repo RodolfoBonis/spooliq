@@ -24,7 +24,7 @@ import (
 // @Failure 403 {object} errors.HTTPError
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Router /auth/validate [post]
+// @Router /validate_token [post]
 // @Example request {"Authorization": "Bearer <access-token>"}
 // @Example response true
 func (uc *authUseCaseImpl) ValidateToken(c *gin.Context) {

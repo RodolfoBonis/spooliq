@@ -59,7 +59,7 @@ func NewRegisterUseCase(
 // @Failure 400 {object} map[string]string
 // @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /v1/register [post]
+// @Router /register [post]
 func (uc *RegisterUseCase) Register(c *gin.Context) {
 	ctx := c.Request.Context()
 

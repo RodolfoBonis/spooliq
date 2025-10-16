@@ -24,7 +24,7 @@ import (
 // @Failure 403 {object} errors.HTTPError
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Router /auth/logout [post]
+// @Router /logout [post]
 // @Example request {"Authorization": "Bearer <refresh-token>"}
 // @Example response true
 func (uc *authUseCaseImpl) Logout(c *gin.Context) {

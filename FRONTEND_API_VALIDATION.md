@@ -2,7 +2,7 @@
 
 ## ❌ Discrepâncias Encontradas
 
-### 1. **POST /auth/register** - CRÍTICO
+### 1. **POST /register** - CRÍTICO
 
 **Documentado:**
 ```typescript

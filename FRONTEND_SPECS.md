@@ -65,52 +65,211 @@
 
 ## 🎨 Design System
 
-### Paleta de Cores (Tema Rosa/Rose - Impressão 3D)
+### Paleta de Cores (Profissional e Neutra - Inspirada em Airbnb)
 
 ```css
 :root {
-  /* Primary - Rosa/Pink (tema principal) */
-  --primary-50: #fdf2f8;
-  --primary-100: #fce7f3;
-  --primary-200: #fbcfe8;
-  --primary-300: #f9a8d4;
-  --primary-400: #f472b6;
-  --primary-500: #ec4899; /* Main Pink */
-  --primary-600: #db2777;
-  --primary-700: #be185d;
-  --primary-800: #9d174d;
-  --primary-900: #831843;
+  /* Primary - Coral/Vermelho suave (Airbnb-inspired) */
+  --primary-50: #fff5f5;
+  --primary-100: #ffe3e3;
+  --primary-200: #ffc9c9;
+  --primary-300: #ffa8a8;
+  --primary-400: #ff8787;
+  --primary-500: #ff6b6b; /* Main Coral */
+  --primary-600: #e85d5d;
+  --primary-700: #c94f4f;
+  --primary-800: #a84141;
+  --primary-900: #873434;
 
-  /* Secondary - Roxo/Purple (complementar) */
-  --secondary-500: #a855f7;
-  --secondary-600: #9333ea;
+  /* Secondary - Cinza azulado escuro (profissional) */
+  --secondary-50: #f8f9fa;
+  --secondary-100: #f1f3f5;
+  --secondary-200: #e9ecef;
+  --secondary-300: #dee2e6;
+  --secondary-400: #ced4da;
+  --secondary-500: #6c757d;
+  --secondary-600: #5a6268;
+  --secondary-700: #484e53;
+  --secondary-800: #343a40;
+  --secondary-900: #212529;
 
-  /* Neutral - Cinzas */
-  --neutral-50: #fafafa;
-  --neutral-100: #f5f5f5;
-  --neutral-200: #e5e5e5;
-  --neutral-300: #d4d4d4;
-  --neutral-400: #a3a3a3;
-  --neutral-500: #737373;
-  --neutral-600: #525252;
-  --neutral-700: #404040;
-  --neutral-800: #262626;
-  --neutral-900: #171717;
+  /* Neutral - Sistema de cinzas profissional */
+  --neutral-white: #ffffff;
+  --neutral-50: #f7f7f7;
+  --neutral-100: #e9e9e9;
+  --neutral-200: #d9d9d9;
+  --neutral-300: #c4c4c4;
+  --neutral-400: #9d9d9d;
+  --neutral-500: #7b7b7b;
+  --neutral-600: #555555;
+  --neutral-700: #434343;
+  --neutral-800: #2e2e2e;
+  --neutral-900: #222222;
 
-  /* Status Colors */
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --info: #3b82f6;
+  /* Accent - Teal suave (call-to-action secundário) */
+  --accent-50: #e6f7f7;
+  --accent-100: #c2eded;
+  --accent-200: #9be3e3;
+  --accent-300: #74d9d9;
+  --accent-400: #4dcfcf;
+  --accent-500: #26c5c5;
+  --accent-600: #20a5a5;
+  --accent-700: #1a8585;
+  --accent-800: #146565;
+  --accent-900: #0e4545;
 
-  /* Budget Status Colors */
-  --status-draft: #94a3b8;
-  --status-sent: #3b82f6;
-  --status-approved: #22c55e;
-  --status-rejected: #ef4444;
-  --status-printing: #f59e0b;
-  --status-completed: #8b5cf6;
+  /* Status Colors - Tons mais suaves e profissionais */
+  --success-light: #d4edda;
+  --success: #00a699;
+  --success-dark: #008489;
+  
+  --warning-light: #fff3cd;
+  --warning: #f4a261;
+  --warning-dark: #e76f51;
+  
+  --error-light: #f8d7da;
+  --error: #d93025;
+  --error-dark: #b71c1c;
+  
+  --info-light: #d1ecf1;
+  --info: #0288d1;
+  --info-dark: #01579b;
+
+  /* Budget Status Colors - Profissional */
+  --status-draft: #9d9d9d;      /* Cinza neutro */
+  --status-sent: #0288d1;        /* Azul confiável */
+  --status-approved: #00a699;    /* Verde Airbnb */
+  --status-rejected: #d93025;    /* Vermelho suave */
+  --status-printing: #f4a261;    /* Laranja suave */
+  --status-completed: #5a6268;   /* Cinza escuro elegante */
+
+  /* Backgrounds - Tons neutros para aplicação */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f7;
+  --bg-tertiary: #e9e9e9;
+  --bg-overlay: rgba(34, 34, 34, 0.6);
+
+  /* Text Colors - Hierarquia visual clara */
+  --text-primary: #222222;
+  --text-secondary: #555555;
+  --text-tertiary: #7b7b7b;
+  --text-disabled: #9d9d9d;
+  --text-inverse: #ffffff;
+
+  /* Borders - Sutis e profissionais */
+  --border-light: #e9e9e9;
+  --border-medium: #d9d9d9;
+  --border-dark: #c4c4c4;
 }
+```
+
+### Guia de Uso das Cores
+
+**Cores Primárias (Coral)**
+- Usar para: Botões CTA principais, links importantes, elementos destacados
+- Exemplos: "Criar Orçamento", "Salvar", "Confirmar", badges importantes
+- Sempre com texto branco (#ffffff) por cima
+
+**Cores Neutras (Cinzas)**
+- Background principal: `--bg-primary` (#ffffff) - Fundo de cards e páginas
+- Background secundário: `--bg-secondary` (#f7f7f7) - Fundo da aplicação, áreas secundárias
+- Textos: Usar hierarquia `--text-primary` → `--text-secondary` → `--text-tertiary`
+- Bordas: Sempre sutis, preferir `--border-light` (#e9e9e9) para separadores
+
+**Cores de Accent (Teal)**
+- Usar para: CTAs secundários, hover states, badges informativos
+- Menos frequente que o coral, cria contraste interessante
+- Bom para elementos de suporte como tooltips e notificações neutras
+
+**Cores de Status**
+- Verde (#00a699): Sucesso, aprovação, status positivo
+- Azul (#0288d1): Informação, estados neutros, enviado
+- Laranja (#f4a261): Atenção, em progresso, warning suave
+- Vermelho (#d93025): Erro, rejeição, ações destrutivas
+- Cinza (#9d9d9d): Rascunhos, desabilitado, neutro
+
+**Princípios de Design**
+- ✅ Priorizar branco e cinzas claros para backgrounds amplos
+- ✅ Usar coral (#ff6b6b) com parcimônia para CTAs importantes
+- ✅ Manter contraste mínimo de 4.5:1 para acessibilidade (WCAG AA)
+- ✅ Evitar múltiplas cores chamativas na mesma tela
+- ✅ Preferir espaço em branco (whitespace) para respirar o design
+
+### Configuração Tailwind CSS
+
+Para usar essas cores no Tailwind, adicione no `tailwind.config.js`:
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#fff5f5',
+          100: '#ffe3e3',
+          200: '#ffc9c9',
+          300: '#ffa8a8',
+          400: '#ff8787',
+          500: '#ff6b6b', // Main
+          600: '#e85d5d',
+          700: '#c94f4f',
+          800: '#a84141',
+          900: '#873434',
+        },
+        neutral: {
+          50: '#f7f7f7',
+          100: '#e9e9e9',
+          200: '#d9d9d9',
+          300: '#c4c4c4',
+          400: '#9d9d9d',
+          500: '#7b7b7b',
+          600: '#555555',
+          700: '#434343',
+          800: '#2e2e2e',
+          900: '#222222',
+        },
+        accent: {
+          50: '#e6f7f7',
+          100: '#c2eded',
+          200: '#9be3e3',
+          300: '#74d9d9',
+          400: '#4dcfcf',
+          500: '#26c5c5', // Main
+          600: '#20a5a5',
+          700: '#1a8585',
+          800: '#146565',
+          900: '#0e4545',
+        },
+        success: '#00a699',
+        warning: '#f4a261',
+        error: '#d93025',
+        info: '#0288d1',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+    },
+  },
+}
+```
+
+**Exemplos de uso:**
+```jsx
+// Botão primário
+<button className="bg-primary-500 hover:bg-primary-600 text-white">
+  Criar Orçamento
+</button>
+
+// Card com fundo neutro
+<div className="bg-neutral-50 border border-neutral-200 rounded-lg">
+  ...
+</div>
+
+// Badge de status
+<span className="bg-success/10 text-success px-3 py-1 rounded-full">
+  Aprovado
+</span>
 ```
 
 ### Tipografia
@@ -1094,7 +1253,7 @@ Logo | Features | Pricing | Docs | Login | [Começar Grátis]
 
 #### 2. Hero Section
 ```
-Background: Gradiente rosa suave com ilustração de impressora 3D
+Background: Branco limpo com sutil overlay cinza neutro (#f7f7f7)
 
 Título: "Gerencie seus orçamentos de impressão 3D de forma profissional"
 
@@ -1102,10 +1261,10 @@ Subtítulo: "Plataforma completa para criar orçamentos detalhados,
 gerenciar clientes e aumentar suas vendas de impressão 3D"
 
 CTAs:
-- [Começar agora - 14 dias grátis] (Primary Button - Rosa)
-- [Ver demonstração] (Secondary Button)
+- [Começar agora - 14 dias grátis] (Primary Button - Coral #ff6b6b)
+- [Ver demonstração] (Secondary Button - Outline cinza)
 
-Preview: Screenshot animado da plataforma
+Preview: Screenshot animado da plataforma com bordas sutis
 ```
 
 #### 3. Features Section
@@ -1179,11 +1338,11 @@ Carrossel de depoimentos com foto, nome e empresa
 
 #### 7. CTA Final
 ```
-Background: Rosa gradiente
+Background: Cinza suave neutro (#f7f7f7) com sutil borda superior
 
 "Pronto para profissionalizar seus orçamentos?"
 
-[Começar agora - 14 dias grátis] [Ver demonstração]
+[Começar agora - 14 dias grátis] (Coral #ff6b6b) [Ver demonstração] (Outline)
 
 ✓ Sem cartão de crédito para teste
 ✓ Cancele quando quiser
@@ -1277,12 +1436,12 @@ interface BudgetCardProps {
 ```typescript
 // components/budgets/status-badge.tsx
 const STATUS_CONFIG = {
-  draft: { label: 'Rascunho', color: 'gray', icon: PencilIcon },
-  sent: { label: 'Enviado', color: 'blue', icon: SendIcon },
-  approved: { label: 'Aprovado', color: 'green', icon: CheckIcon },
-  rejected: { label: 'Rejeitado', color: 'red', icon: XIcon },
-  printing: { label: 'Imprimindo', color: 'yellow', icon: PrinterIcon },
-  completed: { label: 'Concluído', color: 'purple', icon: CheckCheckIcon },
+  draft: { label: 'Rascunho', color: '#9d9d9d', icon: PencilIcon },         // Cinza neutro
+  sent: { label: 'Enviado', color: '#0288d1', icon: SendIcon },             // Azul confiável
+  approved: { label: 'Aprovado', color: '#00a699', icon: CheckIcon },       // Verde Airbnb
+  rejected: { label: 'Rejeitado', color: '#d93025', icon: XIcon },          // Vermelho suave
+  printing: { label: 'Imprimindo', color: '#f4a261', icon: PrinterIcon },   // Laranja suave
+  completed: { label: 'Concluído', color: '#5a6268', icon: CheckCheckIcon },// Cinza escuro elegante
 }
 ```
 
@@ -1646,6 +1805,17 @@ Este documento serve como especificação completa para construção do frontend
 
 ## 📋 Changelog da Documentação
 
+### v1.3 - 16/10/2024
+- ✅ Atualizado Design System com paleta de cores profissional e neutra (inspirada em Airbnb)
+- ✅ Substituída paleta rosa vibrante por coral suave (#ff6b6b) como cor primária
+- ✅ Adicionado sistema completo de cinzas neutros para maior profissionalismo
+- ✅ Incluídas cores accent (teal) e status colors mais sutis
+- ✅ Adicionadas variáveis para backgrounds, text colors e borders
+- ✅ Atualizada Landing Page para refletir nova identidade visual neutra e profissional
+- ✅ Adicionado Guia de Uso das Cores com princípios de design
+- ✅ Incluída configuração completa do Tailwind CSS com exemplos práticos
+- ✅ Atualizado BudgetStatusBadge com novos códigos de cores profissionais
+
 ### v1.2 - 15/10/2024
 - ✅ Corrigido RegisterRequest com estrutura flat e campos de endereço obrigatórios
 - ✅ Corrigido `whats_app` → `whatsapp` (sem underscore) em todos os endpoints
@@ -1659,7 +1829,7 @@ Este documento serve como especificação completa para construção do frontend
 ---
 
 **Documento criado em:** 15/10/2024  
-**Última atualização:** 15/10/2024 v1.2  
+**Última atualização:** 16/10/2024 v1.3  
 **Versão da API:** v1  
 **Backend:** Go 1.21+  
 **Frontend Recomendado:** Next.js 14+ com TypeScript

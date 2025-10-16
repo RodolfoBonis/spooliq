@@ -25,7 +25,7 @@ import (
 // @Failure 403 {object} errors.HTTPError
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Router /auth/refresh [post]
+// @Router /refresh [post]
 // @Example request {"Authorization": "Bearer <refresh-token>"}
 // @Example response {"accessToken": "jwt-token", "refreshToken": "refresh-token", "expiresIn": 3600}
 func (uc *authUseCaseImpl) RefreshAuthToken(c *gin.Context) {

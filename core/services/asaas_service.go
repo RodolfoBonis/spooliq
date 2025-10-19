@@ -23,6 +23,8 @@ type IAsaasService interface {
 	ListPayments(ctx context.Context, customerID string, offset, limit int) (*AsaasPaymentListResponse, error)
 	UpdateCustomer(ctx context.Context, customerID string, req AsaasCustomerRequest) (*AsaasCustomerResponse, error)
 	GetCustomer(ctx context.Context, customerID string) (*AsaasCustomerResponse, error)
+	TokenizeCreditCard(ctx context.Context, req AsaasTokenizeCreditCardRequest) (*AsaasTokenizeCreditCardResponse, error)
+	CreatePayment(ctx context.Context, req AsaasPaymentRequest) (*AsaasPaymentCreateResponse, error)
 }
 
 // AsaasService handles integration with Asaas payment gateway
@@ -337,4 +339,73 @@ func (s *AsaasService) GetCustomer(ctx context.Context, customerID string) (*Asa
 	}
 
 	return &customer, nil
+}
+
+// TokenizeCreditCard tokenizes a credit card for future use
+func (s *AsaasService) TokenizeCreditCard(ctx context.Context, request AsaasTokenizeCreditCardRequest) (*AsaasTokenizeCreditCardResponse, error) {
+	url := fmt.Sprintf("%s/creditCard/tokenize", s.baseURL)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to marshal Asaas tokenize credit card request", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	resp, err := s.doRequest(ctx, "POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var tokenResponse AsaasTokenizeCreditCardResponse
+	if err := json.Unmarshal(resp, &tokenResponse); err != nil {
+		s.logger.Error(ctx, "Failed to unmarshal Asaas tokenize credit card response", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	s.logger.Info(ctx, "Credit card tokenized successfully in Asaas", map[string]interface{}{
+		"customer_id": request.Customer,
+		"card_brand":  tokenResponse.CreditCardBrand,
+		"last_4":      tokenResponse.CreditCardNumber,
+	})
+
+	return &tokenResponse, nil
+}
+
+// CreatePayment creates a single payment (charge) in Asaas
+func (s *AsaasService) CreatePayment(ctx context.Context, request AsaasPaymentRequest) (*AsaasPaymentCreateResponse, error) {
+	url := fmt.Sprintf("%s/payments", s.baseURL)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to marshal Asaas payment request", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	resp, err := s.doRequest(ctx, "POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var payment AsaasPaymentCreateResponse
+	if err := json.Unmarshal(resp, &payment); err != nil {
+		s.logger.Error(ctx, "Failed to unmarshal Asaas payment response", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	s.logger.Info(ctx, "Payment created successfully in Asaas", map[string]interface{}{
+		"payment_id":   payment.ID,
+		"customer_id":  payment.Customer,
+		"value":        payment.Value,
+		"billing_type": payment.BillingType,
+	})
+
+	return &payment, nil
 }

@@ -57,5 +57,7 @@ var Module = fx.Module("subscriptions",
 		usecases.NewPaymentMethodUseCase,
 		// SubscriptionPlanUseCase (concrete type, not interface)
 		usecases.NewSubscriptionPlanUseCase,
+		// ManageSubscriptionUseCase (concrete type, not interface)
+		usecases.NewManageSubscriptionUseCase,
 	),
 )

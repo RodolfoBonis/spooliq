@@ -27,15 +27,6 @@ func Routes(
 	// Subscription Plans routes (public)
 	route.GET("/plans", subscriptionPlanUC.ListActivePlans)
 
-	// Admin Subscription Plans routes
-	adminPlans := route.Group("/admin/plans")
-	{
-		adminPlans.POST("", protectFactory(subscriptionPlanUC.CreatePlan, roles.AdminRole))
-		adminPlans.GET("", protectFactory(subscriptionPlanUC.ListAllPlans, roles.AdminRole))
-		adminPlans.PUT("/:id", protectFactory(subscriptionPlanUC.UpdatePlan, roles.AdminRole))
-		adminPlans.DELETE("/:id", protectFactory(subscriptionPlanUC.DeletePlan, roles.AdminRole))
-	}
-
 	// Subscriptions routes
 	subscriptions := route.Group("/subscriptions")
 	{

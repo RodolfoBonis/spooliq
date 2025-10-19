@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases/plans"
 	planRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
+	subscriptionUsecases "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"go.uber.org/fx"
 )
 
@@ -58,6 +59,7 @@ var AdminModule = fx.Module("admin",
 			addFeatureUC *plans.AddPlanFeatureUseCase,
 			updateFeatureUC *plans.UpdatePlanFeatureUseCase,
 			deleteFeatureUC *plans.DeletePlanFeatureUseCase,
+			subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
 		) *admin.Handler {
 			return admin.NewAdminHandler(
 				listCompaniesUC,
@@ -73,6 +75,7 @@ var AdminModule = fx.Module("admin",
 				addFeatureUC,
 				updateFeatureUC,
 				deleteFeatureUC,
+				subscriptionPlanUC,
 			)
 		},
 	),

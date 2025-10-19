@@ -10,6 +10,7 @@ import (
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases/plans"
+	subscriptionUsecases "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -29,6 +30,7 @@ type Handler struct {
 	addFeatureUC             *plans.AddPlanFeatureUseCase
 	updateFeatureUC          *plans.UpdatePlanFeatureUseCase
 	deleteFeatureUC          *plans.DeletePlanFeatureUseCase
+	subscriptionPlanUC       *subscriptionUsecases.SubscriptionPlanUseCase
 }
 
 // NewAdminHandler creates a new admin handler
@@ -46,6 +48,7 @@ func NewAdminHandler(
 	addFeatureUC *plans.AddPlanFeatureUseCase,
 	updateFeatureUC *plans.UpdatePlanFeatureUseCase,
 	deleteFeatureUC *plans.DeletePlanFeatureUseCase,
+	subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
 ) *Handler {
 	return &Handler{
 		listCompaniesUC:          listCompaniesUC,
@@ -61,6 +64,7 @@ func NewAdminHandler(
 		addFeatureUC:             addFeatureUC,
 		updateFeatureUC:          updateFeatureUC,
 		deleteFeatureUC:          deleteFeatureUC,
+		subscriptionPlanUC:       subscriptionPlanUC,
 	}
 }
 
@@ -96,6 +100,15 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 			plansGroup.POST("/features", protectFactory(handler.AddFeature, roles.PlatformAdminRole))
 			plansGroup.PUT("/features/:featureId", protectFactory(handler.UpdateFeature, roles.PlatformAdminRole))
 			plansGroup.DELETE("/features/:featureId", protectFactory(handler.DeleteFeature, roles.PlatformAdminRole))
+		}
+
+		// Subscription Plan Management (PlatformAdmin only) - NEW system
+		subscriptionPlansGroup := admin.Group("/subscription-plans")
+		{
+			subscriptionPlansGroup.POST("", protectFactory(handler.subscriptionPlanUC.CreatePlan, roles.PlatformAdminRole))
+			subscriptionPlansGroup.GET("", protectFactory(handler.subscriptionPlanUC.ListAllPlans, roles.PlatformAdminRole))
+			subscriptionPlansGroup.PUT("/:id", protectFactory(handler.subscriptionPlanUC.UpdatePlan, roles.PlatformAdminRole))
+			subscriptionPlansGroup.DELETE("/:id", protectFactory(handler.subscriptionPlanUC.DeletePlan, roles.PlatformAdminRole))
 		}
 	}
 }

@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
-	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -77,7 +76,7 @@ func NewManageSubscriptionUseCase(
 // @Router /v1/subscriptions/subscribe [post]
 func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 
 	var req SubscribeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -238,7 +237,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 // @Router /v1/subscriptions/cancel [delete]
 func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 
 	// Get company
 	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)
@@ -303,7 +302,7 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 // @Router /v1/subscriptions/status [get]
 func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 
 	// Get company
 	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)

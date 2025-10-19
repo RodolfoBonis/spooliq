@@ -1,7 +1,6 @@
 package usecases
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/logger"

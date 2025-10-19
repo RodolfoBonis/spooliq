@@ -1,12 +1,10 @@
 package usecases
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/logger"
-	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
@@ -53,7 +51,7 @@ func NewPaymentMethodUseCase(
 // @Router /v1/payment-methods [post]
 func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 
 	var req entities.PaymentMethodCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -194,7 +192,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 // @Router /v1/payment-methods [get]
 func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 
 	paymentMethods, err := uc.paymentMethodRepo.FindByOrganizationID(ctx, orgID)
 	if err != nil {
@@ -227,7 +225,7 @@ func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
 // @Router /v1/payment-methods/{id}/set-primary [put]
 func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -288,7 +286,7 @@ func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 // @Router /v1/payment-methods/{id} [delete]
 func (uc *PaymentMethodUseCase) DeletePaymentMethod(c *gin.Context) {
 	ctx := c.Request.Context()
-	orgID := middlewares.GetOrganizationID(c)
+	orgID := helpers.GetOrganizationIDString(c)
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)

@@ -46,6 +46,8 @@ func InitializeRoutes(
 	materialUc materialuc.IMaterialUseCase,
 	uploadsUc uploadsuc.IUploadUseCase,
 	subscriptionUc subscriptionuc.ISubscriptionUseCase,
+	paymentMethodUc *subscriptionuc.PaymentMethodUseCase,
+	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
 	presetHandler *preset.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
@@ -73,5 +75,5 @@ func InitializeRoutes(
 	users.SetupRoutes(root, userHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
 	admin.SetupRoutes(root, adminHandler, protectFactory)
-	subscriptions.Routes(root, subscriptionUc, protectFactory)
+	subscriptions.Routes(root, subscriptionUc, paymentMethodUc, subscriptionPlanUc, protectFactory)
 }

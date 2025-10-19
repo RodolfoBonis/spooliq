@@ -27,6 +27,18 @@ var Module = fx.Module("subscriptions",
 			},
 			fx.As(new(domainRepositories.PlanRepository)),
 		),
+		fx.Annotate(
+			func(db *gorm.DB) domainRepositories.PaymentMethodRepository {
+				return repositories.NewPaymentMethodRepository(db)
+			},
+			fx.As(new(domainRepositories.PaymentMethodRepository)),
+		),
+		fx.Annotate(
+			func(db *gorm.DB) domainRepositories.SubscriptionPlanRepository {
+				return repositories.NewSubscriptionPlanRepository(db)
+			},
+			fx.As(new(domainRepositories.SubscriptionPlanRepository)),
+		),
 
 		// Use Cases
 		fx.Annotate(
@@ -41,5 +53,9 @@ var Module = fx.Module("subscriptions",
 			},
 			fx.As(new(usecases.ISubscriptionUseCase)),
 		),
+		// PaymentMethodUseCase (concrete type, not interface)
+		usecases.NewPaymentMethodUseCase,
+		// SubscriptionPlanUseCase (concrete type, not interface)
+		usecases.NewSubscriptionPlanUseCase,
 	),
 )

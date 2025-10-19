@@ -413,6 +413,24 @@ func RunMigrations() {
 	} else {
 		_ = Connector.Migrator().AutoMigrate(&subscriptions.PlanModel{}, &subscriptions.PlanFeatureModel{})
 	}
+
+	// Payment methods migration (for credit card tokenization)
+	if !Connector.Migrator().HasTable(&subscriptions.PaymentMethodModel{}) {
+		if err := Connector.AutoMigrate(&subscriptions.PaymentMethodModel{}); err != nil {
+			panic(fmt.Sprintf("ERROR DURING PAYMENT_METHOD MIGRATION: %s", err.Error()))
+		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&subscriptions.PaymentMethodModel{})
+	}
+
+	// Subscription plans migration (new table for plan management)
+	if !Connector.Migrator().HasTable(&subscriptions.SubscriptionPlanModel{}) {
+		if err := Connector.AutoMigrate(&subscriptions.SubscriptionPlanModel{}); err != nil {
+			panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION_PLAN MIGRATION: %s", err.Error()))
+		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionPlanModel{})
+	}
 }
 
 // addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM using the official plugin

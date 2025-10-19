@@ -12,6 +12,7 @@ func Routes(
 	subscriptionUC usecases.ISubscriptionUseCase,
 	paymentMethodUC *usecases.PaymentMethodUseCase,
 	subscriptionPlanUC *usecases.SubscriptionPlanUseCase,
+	manageSubscriptionUC *usecases.ManageSubscriptionUseCase,
 	protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc,
 ) {
 	// Payment Methods routes
@@ -35,15 +36,18 @@ func Routes(
 		adminPlans.DELETE("/:id", protectFactory(subscriptionPlanUC.DeletePlan, roles.AdminRole))
 	}
 
-	// Subscriptions routes (existing)
+	// Subscriptions routes
 	subscriptions := route.Group("/subscriptions")
 	{
-		// Public routes - anyone can view available plans
-		subscriptions.GET("/plans", subscriptionUC.GetPlanFeatures)
+		// New subscription management endpoints
+		subscriptions.POST("/subscribe", protectFactory(manageSubscriptionUC.SubscribeToPlan, roles.OwnerRole))
+		subscriptions.DELETE("/cancel", protectFactory(manageSubscriptionUC.CancelSubscription, roles.OwnerRole))
+		subscriptions.GET("/status", protectFactory(manageSubscriptionUC.GetSubscriptionStatus, roles.OwnerRole))
 
-		// Protected routes - Owner can manage subscriptions
+		// Existing routes
+		subscriptions.GET("/plans", subscriptionUC.GetPlanFeatures)
 		subscriptions.GET("/payment-history", protectFactory(subscriptionUC.GetPaymentHistory, roles.OwnerRole))
-		subscriptions.POST("/cancel", protectFactory(subscriptionUC.CancelSubscription, roles.OwnerRole))
+		subscriptions.POST("/cancel-old", protectFactory(subscriptionUC.CancelSubscription, roles.OwnerRole))
 		subscriptions.POST("/change-plan", protectFactory(subscriptionUC.ChangePlan, roles.OwnerRole))
 	}
 }

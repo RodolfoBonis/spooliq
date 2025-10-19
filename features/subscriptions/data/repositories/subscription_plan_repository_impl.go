@@ -37,7 +37,7 @@ func (r *subscriptionPlanRepositoryImpl) Create(ctx context.Context, plan *entit
 // FindByID finds a subscription plan by ID
 func (r *subscriptionPlanRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID) (*entities.SubscriptionPlanEntity, error) {
 	var model models.SubscriptionPlanModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Features").Where("id = ?", id).First(&model).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -50,7 +50,7 @@ func (r *subscriptionPlanRepositoryImpl) FindByID(ctx context.Context, id uuid.U
 // FindByName finds a subscription plan by name
 func (r *subscriptionPlanRepositoryImpl) FindByName(ctx context.Context, name string) (*entities.SubscriptionPlanEntity, error) {
 	var model models.SubscriptionPlanModel
-	if err := r.db.WithContext(ctx).Where("name = ?", name).First(&model).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Features").Where("name = ?", name).First(&model).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -63,7 +63,7 @@ func (r *subscriptionPlanRepositoryImpl) FindByName(ctx context.Context, name st
 // FindAll finds all subscription plans
 func (r *subscriptionPlanRepositoryImpl) FindAll(ctx context.Context) ([]*entities.SubscriptionPlanEntity, error) {
 	var models []models.SubscriptionPlanModel
-	if err := r.db.WithContext(ctx).Order("price ASC").Find(&models).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Features").Order("price ASC").Find(&models).Error; err != nil {
 		return nil, err
 	}
 
@@ -79,6 +79,7 @@ func (r *subscriptionPlanRepositoryImpl) FindAll(ctx context.Context) ([]*entiti
 func (r *subscriptionPlanRepositoryImpl) FindAllActive(ctx context.Context) ([]*entities.SubscriptionPlanEntity, error) {
 	var models []models.SubscriptionPlanModel
 	if err := r.db.WithContext(ctx).
+		Preload("Features").
 		Where("is_active = ?", true).
 		Order("price ASC").
 		Find(&models).Error; err != nil {
@@ -98,7 +99,33 @@ func (r *subscriptionPlanRepositoryImpl) Update(ctx context.Context, plan *entit
 	model := &models.SubscriptionPlanModel{}
 	model.FromEntity(plan)
 
-	return r.db.WithContext(ctx).Save(model).Error
+	// Start transaction to update plan and features
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Update plan
+		if err := tx.Model(&models.SubscriptionPlanModel{}).Where("id = ?", model.ID).Updates(map[string]interface{}{
+			"name":        model.Name,
+			"description": model.Description,
+			"price":       model.Price,
+			"cycle":       model.Cycle,
+			"is_active":   model.IsActive,
+		}).Error; err != nil {
+			return err
+		}
+
+		// Delete existing features
+		if err := tx.Where("subscription_plan_id = ?", model.ID).Delete(&models.PlanFeatureModel{}).Error; err != nil {
+			return err
+		}
+
+		// Create new features
+		if len(model.Features) > 0 {
+			if err := tx.Create(&model.Features).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 // Delete soft deletes a subscription plan

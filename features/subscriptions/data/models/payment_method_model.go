@@ -10,17 +10,17 @@ import (
 
 // PaymentMethodModel represents the payment method data model for GORM
 type PaymentMethodModel struct {
-	ID                   uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID       string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
-	AsaasCreditCardToken string    `gorm:"type:varchar(255);not null" json:"asaas_credit_card_token"`
-	HolderName           string    `gorm:"type:varchar(255);not null" json:"holder_name"`
-	Last4Digits          string    `gorm:"type:varchar(4);not null" json:"last_4_digits"`
-	Brand                string    `gorm:"type:varchar(50);not null" json:"brand"`
-	ExpiryMonth          string    `gorm:"type:varchar(2);not null" json:"expiry_month"`
-	ExpiryYear           string    `gorm:"type:varchar(4);not null" json:"expiry_year"`
-	IsPrimary            bool      `gorm:"not null;default:false" json:"is_primary"`
-	CreatedAt            time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt            time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID                   uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID       string         `gorm:"type:varchar(255);not null;index" json:"organization_id"`
+	AsaasCreditCardToken string         `gorm:"type:varchar(255);not null" json:"asaas_credit_card_token"`
+	HolderName           string         `gorm:"type:varchar(255);not null" json:"holder_name"`
+	Last4Digits          string         `gorm:"type:varchar(4);not null" json:"last_4_digits"`
+	Brand                string         `gorm:"type:varchar(50);not null" json:"brand"`
+	ExpiryMonth          string         `gorm:"type:varchar(2);not null" json:"expiry_month"`
+	ExpiryYear           string         `gorm:"type:varchar(4);not null" json:"expiry_year"`
+	IsPrimary            bool           `gorm:"not null;default:false" json:"is_primary"`
+	CreatedAt            time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt            time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 

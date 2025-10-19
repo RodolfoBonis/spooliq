@@ -8,7 +8,7 @@ import (
 )
 
 // Routes registers all company routes
-func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUseCase usecases.IBrandingUseCase, subscriptionUseCase subscriptionUsecases.ISubscriptionUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUseCase usecases.IBrandingUseCase, paymentMethodUseCase *subscriptionUsecases.PaymentMethodUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	companyRoutes := route.Group("/company")
 	{
 		// Platform Admin can create companies
@@ -30,6 +30,6 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUs
 
 		// Subscription endpoints
 		// Owner can view payment history
-		companyRoutes.GET("/subscription/payments", protectFactory(subscriptionUseCase.GetPaymentHistory, roles.OwnerRole))
+		companyRoutes.GET("/subscription/payments", protectFactory(paymentMethodUseCase.ListPaymentMethods, roles.OwnerRole))
 	}
 }

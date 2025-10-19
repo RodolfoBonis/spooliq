@@ -45,7 +45,6 @@ func InitializeRoutes(
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
 	uploadsUc uploadsuc.IUploadUseCase,
-	subscriptionUc subscriptionuc.ISubscriptionUseCase,
 	paymentMethodUc *subscriptionuc.PaymentMethodUseCase,
 	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
 	manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase,
@@ -67,7 +66,7 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
-	company.Routes(root, companyUc, brandingUc, subscriptionUc, protectFactory)
+	company.Routes(root, companyUc, brandingUc, paymentMethodUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
@@ -76,5 +75,5 @@ func InitializeRoutes(
 	users.SetupRoutes(root, userHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
 	admin.SetupRoutes(root, adminHandler, protectFactory)
-	subscriptions.Routes(root, subscriptionUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, protectFactory)
+	subscriptions.Routes(root, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, protectFactory)
 }

@@ -406,14 +406,6 @@ func RunMigrations() {
 	}
 
 	// Subscription plans and features migrations (together to handle foreign keys)
-	if !Connector.Migrator().HasTable(&subscriptions.PlanModel{}) {
-		if err := Connector.AutoMigrate(&subscriptions.PlanModel{}, &subscriptions.PlanFeatureModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING PLAN/PLAN_FEATURE MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&subscriptions.PlanModel{}, &subscriptions.PlanFeatureModel{})
-	}
-
 	// Payment methods migration (for credit card tokenization)
 	if !Connector.Migrator().HasTable(&subscriptions.PaymentMethodModel{}) {
 		if err := Connector.AutoMigrate(&subscriptions.PaymentMethodModel{}); err != nil {
@@ -423,13 +415,13 @@ func RunMigrations() {
 		_ = Connector.Migrator().AutoMigrate(&subscriptions.PaymentMethodModel{})
 	}
 
-	// Subscription plans migration (new table for plan management)
+	// Subscription plans migration (for Asaas integration)
 	if !Connector.Migrator().HasTable(&subscriptions.SubscriptionPlanModel{}) {
-		if err := Connector.AutoMigrate(&subscriptions.SubscriptionPlanModel{}); err != nil {
+		if err := Connector.AutoMigrate(&subscriptions.SubscriptionPlanModel{}, &subscriptions.PlanFeatureModel{}); err != nil {
 			panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION_PLAN MIGRATION: %s", err.Error()))
 		}
 	} else {
-		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionPlanModel{})
+		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionPlanModel{}, &subscriptions.PlanFeatureModel{})
 	}
 }
 

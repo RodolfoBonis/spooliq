@@ -112,7 +112,9 @@
       "Bash(PASSWORD='U{}z3N!B]xubk$ZK*DU/q7H4R8S8CG4%' curl -s -X POST http://localhost:8080/v1/login -H \"Content-Type: application/json\" -d \"{\"\"email\"\": \"\"dev@rodolfodebonis.com.br\"\", \"\"password\"\": \"\"$PASSWORD\"\"}\")",
       "Bash(tee /tmp/admin_token.txt)",
       "Bash(lsof -i :8080)",
-      "Bash(PGPASSWORD=password psql -h localhost -U user -d spooliq_db -c \"\\d subscription_plans\")"
+      "Bash(PGPASSWORD=password psql -h localhost -U user -d spooliq_db -c \"\\d subscription_plans\")",
+      "Bash(PASSWORD='U{}z3N!B]xubk$ZK*DU/q7H4R8S8CG4%')",
+      "Bash(cat /tmp/admin_token.txt)"
     ],
     "deny": [],
     "ask": []

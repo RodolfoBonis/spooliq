@@ -5,27 +5,29 @@ import (
 
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // SubscriptionModel represents the subscription payment history data model for GORM
 type SubscriptionModel struct {
-	ID                  uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	OrganizationID      string     `gorm:"type:varchar(255);not null;index"`
-	AsaasPaymentID      string     `gorm:"type:varchar(255);index"`
-	AsaasInvoiceID      string     `gorm:"type:varchar(255)"`
-	AsaasCustomerID     string     `gorm:"type:varchar(255)"`
-	AsaasSubscriptionID string     `gorm:"type:varchar(255)"`
-	Amount              float64    `gorm:"type:decimal(10,2)"`
-	NetValue            float64    `gorm:"type:decimal(10,2)"`
-	Status              string     `gorm:"type:varchar(50);index"` // 35 possible statuses
-	BillingType         string     `gorm:"type:varchar(20)"`       // CREDIT_CARD, BOLETO, PIX
-	EventType           string     `gorm:"type:varchar(100)"`      // Last webhook event type
-	Description         string     `gorm:"type:text"`
-	PaymentDate         *time.Time `gorm:"type:timestamp"`
-	DueDate             time.Time  `gorm:"type:timestamp"`
-	InvoiceURL          string     `gorm:"type:text"`
-	CreatedAt           time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt           time.Time  `gorm:"autoUpdateTime"`
+	ID                  uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	OrganizationID      string         `gorm:"type:varchar(255);not null;index"`
+	AsaasPaymentID      string         `gorm:"type:varchar(255);index"`
+	AsaasInvoiceID      string         `gorm:"type:varchar(255)"`
+	AsaasCustomerID     string         `gorm:"type:varchar(255)"`
+	AsaasSubscriptionID string         `gorm:"type:varchar(255)"`
+	Amount              float64        `gorm:"type:decimal(10,2)"`
+	NetValue            float64        `gorm:"type:decimal(10,2)"`
+	Status              string         `gorm:"type:varchar(50);index"` // 35 possible statuses
+	BillingType         string         `gorm:"type:varchar(20)"`       // CREDIT_CARD, BOLETO, PIX
+	EventType           string         `gorm:"type:varchar(100)"`      // Last webhook event type
+	Description         string         `gorm:"type:text"`
+	PaymentDate         *time.Time     `gorm:"type:timestamp"`
+	DueDate             time.Time      `gorm:"type:timestamp"`
+	InvoiceURL          string         `gorm:"type:text"`
+	CreatedAt           time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt           time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 // TableName specifies the table name for GORM
@@ -53,6 +55,7 @@ func (s *SubscriptionModel) ToEntity() *entities.SubscriptionEntity {
 		InvoiceURL:          s.InvoiceURL,
 		CreatedAt:           s.CreatedAt,
 		UpdatedAt:           s.UpdatedAt,
+		DeletedAt:           getDeletedAt(s.DeletedAt),
 	}
 }
 
@@ -75,4 +78,7 @@ func (s *SubscriptionModel) FromEntity(entity *entities.SubscriptionEntity) {
 	s.InvoiceURL = entity.InvoiceURL
 	s.CreatedAt = entity.CreatedAt
 	s.UpdatedAt = entity.UpdatedAt
+	if entity.DeletedAt != nil {
+		s.DeletedAt = gorm.DeletedAt{Time: *entity.DeletedAt, Valid: true}
+	}
 }

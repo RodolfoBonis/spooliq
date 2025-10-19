@@ -9,7 +9,6 @@ import (
 // Routes registers all subscription routes
 func Routes(
 	route *gin.RouterGroup,
-	subscriptionUC usecases.ISubscriptionUseCase,
 	paymentMethodUC *usecases.PaymentMethodUseCase,
 	subscriptionPlanUC *usecases.SubscriptionPlanUseCase,
 	manageSubscriptionUC *usecases.ManageSubscriptionUseCase,
@@ -30,15 +29,8 @@ func Routes(
 	// Subscriptions routes
 	subscriptions := route.Group("/subscriptions")
 	{
-		// New subscription management endpoints
 		subscriptions.POST("/subscribe", protectFactory(manageSubscriptionUC.SubscribeToPlan, roles.OwnerRole))
 		subscriptions.DELETE("/cancel", protectFactory(manageSubscriptionUC.CancelSubscription, roles.OwnerRole))
 		subscriptions.GET("/status", protectFactory(manageSubscriptionUC.GetSubscriptionStatus, roles.OwnerRole))
-
-		// Existing routes
-		subscriptions.GET("/plans", subscriptionUC.GetPlanFeatures)
-		subscriptions.GET("/payment-history", protectFactory(subscriptionUC.GetPaymentHistory, roles.OwnerRole))
-		subscriptions.POST("/cancel-old", protectFactory(subscriptionUC.CancelSubscription, roles.OwnerRole))
-		subscriptions.POST("/change-plan", protectFactory(subscriptionUC.ChangePlan, roles.OwnerRole))
 	}
 }

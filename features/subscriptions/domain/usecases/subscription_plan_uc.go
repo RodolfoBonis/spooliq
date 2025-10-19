@@ -67,13 +67,23 @@ func (uc *SubscriptionPlanUseCase) CreatePlan(c *gin.Context) {
 		return
 	}
 
+	// Convert feature requests to entities
+	features := make([]entities.PlanFeatureEntity, len(req.Features))
+	for i, f := range req.Features {
+		features[i] = entities.PlanFeatureEntity{
+			Name:        f.Name,
+			Description: f.Description,
+			IsActive:    f.IsActive,
+		}
+	}
+
 	// Create plan
 	plan := &entities.SubscriptionPlanEntity{
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
 		Cycle:       req.Cycle,
-		Features:    req.Features,
+		Features:    features,
 		IsActive:    true,
 	}
 
@@ -155,8 +165,17 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 	if req.Cycle != nil {
 		plan.Cycle = *req.Cycle
 	}
-	if req.Features != nil {
-		plan.Features = *req.Features
+	if len(req.Features) > 0 {
+		// Convert feature requests to entities
+		features := make([]entities.PlanFeatureEntity, len(req.Features))
+		for i, f := range req.Features {
+			features[i] = entities.PlanFeatureEntity{
+				Name:        f.Name,
+				Description: f.Description,
+				IsActive:    f.IsActive,
+			}
+		}
+		plan.Features = features
 	}
 	if req.IsActive != nil {
 		plan.IsActive = *req.IsActive

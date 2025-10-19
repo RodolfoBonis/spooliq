@@ -9,7 +9,6 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases"
-	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases/plans"
 	subscriptionUsecases "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,13 +22,6 @@ type Handler struct {
 	listSubscriptionsUC      *usecases.ListSubscriptionsUseCase
 	getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase
 	getPaymentHistoryUC      *usecases.GetPaymentHistoryUseCase
-	listPlansUC              *plans.ListPlansUseCase
-	createPlanUC             *plans.CreatePlanUseCase
-	updatePlanUC             *plans.UpdatePlanUseCase
-	deletePlanUC             *plans.DeletePlanUseCase
-	addFeatureUC             *plans.AddPlanFeatureUseCase
-	updateFeatureUC          *plans.UpdatePlanFeatureUseCase
-	deleteFeatureUC          *plans.DeletePlanFeatureUseCase
 	subscriptionPlanUC       *subscriptionUsecases.SubscriptionPlanUseCase
 }
 
@@ -41,13 +33,6 @@ func NewAdminHandler(
 	listSubscriptionsUC *usecases.ListSubscriptionsUseCase,
 	getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase,
 	getPaymentHistoryUC *usecases.GetPaymentHistoryUseCase,
-	listPlansUC *plans.ListPlansUseCase,
-	createPlanUC *plans.CreatePlanUseCase,
-	updatePlanUC *plans.UpdatePlanUseCase,
-	deletePlanUC *plans.DeletePlanUseCase,
-	addFeatureUC *plans.AddPlanFeatureUseCase,
-	updateFeatureUC *plans.UpdatePlanFeatureUseCase,
-	deleteFeatureUC *plans.DeletePlanFeatureUseCase,
 	subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
 ) *Handler {
 	return &Handler{
@@ -57,13 +42,6 @@ func NewAdminHandler(
 		listSubscriptionsUC:      listSubscriptionsUC,
 		getSubscriptionDetailsUC: getSubscriptionDetailsUC,
 		getPaymentHistoryUC:      getPaymentHistoryUC,
-		listPlansUC:              listPlansUC,
-		createPlanUC:             createPlanUC,
-		updatePlanUC:             updatePlanUC,
-		deletePlanUC:             deletePlanUC,
-		addFeatureUC:             addFeatureUC,
-		updateFeatureUC:          updateFeatureUC,
-		deleteFeatureUC:          deleteFeatureUC,
 		subscriptionPlanUC:       subscriptionPlanUC,
 	}
 }
@@ -88,27 +66,13 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 			subscriptions.GET("/:organization_id/payments", protectFactory(handler.GetPaymentHistory, roles.PlatformAdminRole))
 		}
 
-		// Plan Management (PlatformAdmin only)
-		plansGroup := admin.Group("/plans")
+		// Subscription Plan Management (PlatformAdmin only)
+		plansGroup := admin.Group("/subscription-plans")
 		{
-			plansGroup.GET("", protectFactory(handler.ListPlans, roles.PlatformAdminRole))
-			plansGroup.POST("", protectFactory(handler.CreatePlan, roles.PlatformAdminRole))
-			plansGroup.PUT("/:id", protectFactory(handler.UpdatePlan, roles.PlatformAdminRole))
-			plansGroup.DELETE("/:id", protectFactory(handler.DeletePlan, roles.PlatformAdminRole))
-
-			// Feature management
-			plansGroup.POST("/features", protectFactory(handler.AddFeature, roles.PlatformAdminRole))
-			plansGroup.PUT("/features/:featureId", protectFactory(handler.UpdateFeature, roles.PlatformAdminRole))
-			plansGroup.DELETE("/features/:featureId", protectFactory(handler.DeleteFeature, roles.PlatformAdminRole))
-		}
-
-		// Subscription Plan Management (PlatformAdmin only) - NEW system
-		subscriptionPlansGroup := admin.Group("/subscription-plans")
-		{
-			subscriptionPlansGroup.POST("", protectFactory(handler.subscriptionPlanUC.CreatePlan, roles.PlatformAdminRole))
-			subscriptionPlansGroup.GET("", protectFactory(handler.subscriptionPlanUC.ListAllPlans, roles.PlatformAdminRole))
-			subscriptionPlansGroup.PUT("/:id", protectFactory(handler.subscriptionPlanUC.UpdatePlan, roles.PlatformAdminRole))
-			subscriptionPlansGroup.DELETE("/:id", protectFactory(handler.subscriptionPlanUC.DeletePlan, roles.PlatformAdminRole))
+			plansGroup.POST("", protectFactory(handler.subscriptionPlanUC.CreatePlan, roles.PlatformAdminRole))
+			plansGroup.GET("", protectFactory(handler.subscriptionPlanUC.ListAllPlans, roles.PlatformAdminRole))
+			plansGroup.PUT("/:id", protectFactory(handler.subscriptionPlanUC.UpdatePlan, roles.PlatformAdminRole))
+			plansGroup.DELETE("/:id", protectFactory(handler.subscriptionPlanUC.DeletePlan, roles.PlatformAdminRole))
 		}
 	}
 }
@@ -390,37 +354,3 @@ func (h *Handler) GetPaymentHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// ListPlans handles listing all plans
-func (h *Handler) ListPlans(c *gin.Context) {
-	h.listPlansUC.Execute(c)
-}
-
-// CreatePlan handles creating a new plan
-func (h *Handler) CreatePlan(c *gin.Context) {
-	h.createPlanUC.Execute(c)
-}
-
-// UpdatePlan handles updating an existing plan
-func (h *Handler) UpdatePlan(c *gin.Context) {
-	h.updatePlanUC.Execute(c)
-}
-
-// DeletePlan handles deleting a plan
-func (h *Handler) DeletePlan(c *gin.Context) {
-	h.deletePlanUC.Execute(c)
-}
-
-// AddFeature handles adding a feature to a plan
-func (h *Handler) AddFeature(c *gin.Context) {
-	h.addFeatureUC.Execute(c)
-}
-
-// UpdateFeature handles updating a plan feature
-func (h *Handler) UpdateFeature(c *gin.Context) {
-	h.updateFeatureUC.Execute(c)
-}
-
-// DeleteFeature handles deleting a plan feature
-func (h *Handler) DeleteFeature(c *gin.Context) {
-	h.deleteFeatureUC.Execute(c)
-}

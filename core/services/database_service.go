@@ -112,7 +112,8 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 
 	// Use the instrumented sql.DB with GORM
 	db, err := gorm.Open(postgres.New(postgres.Config{
-		Conn: sqlDB,
+		Conn:                 sqlDB,
+		PreferSimpleProtocol: true, // Avoid prepared statement parameter mismatch errors during migrations
 	}), gormConfig)
 
 	if err != nil {
@@ -415,13 +416,8 @@ func RunMigrations() {
 		_ = Connector.Migrator().AutoMigrate(&subscriptions.PaymentMethodModel{})
 	}
 
-	// Subscription plans migration (for Asaas integration)
-	if !Connector.Migrator().HasTable(&subscriptions.SubscriptionPlanModel{}) {
-		if err := Connector.AutoMigrate(&subscriptions.SubscriptionPlanModel{}, &subscriptions.PlanFeatureModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION_PLAN MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionPlanModel{}, &subscriptions.PlanFeatureModel{})
+	if err := Connector.AutoMigrate(&subscriptions.SubscriptionPlanModel{}, &subscriptions.PlanFeatureModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION_PLAN MIGRATION: %s", err.Error()))
 	}
 }
 

@@ -104,8 +104,8 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 				Colorful:                  false,             // Disable color for structured logging
 			},
 		),
-		// Disable foreign key constraints during migration to avoid conflicts
-		DisableForeignKeyConstraintWhenMigrating: true,
+		// Enable foreign key constraints for referential integrity
+		DisableForeignKeyConstraintWhenMigrating: false,
 		// Skip default transaction for better performance during migrations
 		SkipDefaultTransaction: true,
 	}

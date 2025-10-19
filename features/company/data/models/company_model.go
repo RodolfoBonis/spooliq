@@ -31,7 +31,7 @@ type CompanyModel struct {
 	IsPlatformCompany     bool       `gorm:"not null;default:false" json:"is_platform_company"`
 	TrialEndsAt           *time.Time `gorm:"type:timestamp" json:"trial_ends_at"`
 	SubscriptionStartedAt *time.Time `gorm:"type:timestamp" json:"subscription_started_at"`
-	SubscriptionPlan      string     `gorm:"type:varchar(50);not null;default:'basic'" json:"subscription_plan"`
+	SubscriptionPlan      string     `gorm:"type:varchar(50);not null;default:'trial'" json:"subscription_plan"`
 	AsaasCustomerID       *string    `gorm:"type:varchar(255)" json:"asaas_customer_id"`
 	AsaasSubscriptionID   *string    `gorm:"type:varchar(255)" json:"asaas_subscription_id"`
 	LastPaymentCheck      *time.Time `gorm:"type:timestamp" json:"last_payment_check"`

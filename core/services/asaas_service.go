@@ -18,8 +18,11 @@ type IAsaasService interface {
 	CreateSubscription(ctx context.Context, req AsaasSubscriptionRequest) (*AsaasSubscriptionResponse, error)
 	GetSubscription(ctx context.Context, subscriptionID string) (*AsaasSubscriptionResponse, error)
 	CancelSubscription(ctx context.Context, subscriptionID string) error
+	UpdateSubscription(ctx context.Context, subscriptionID string, req AsaasSubscriptionUpdateRequest) (*AsaasSubscriptionResponse, error)
 	GetPayment(ctx context.Context, paymentID string) (*AsaasPaymentResponse, error)
 	ListPayments(ctx context.Context, customerID string, offset, limit int) (*AsaasPaymentListResponse, error)
+	UpdateCustomer(ctx context.Context, customerID string, req AsaasCustomerRequest) (*AsaasCustomerResponse, error)
+	GetCustomer(ctx context.Context, customerID string) (*AsaasCustomerResponse, error)
 }
 
 // AsaasService handles integration with Asaas payment gateway
@@ -250,4 +253,88 @@ func (s *AsaasService) doRequest(ctx context.Context, method, url string, body [
 	}
 
 	return respBody, nil
+}
+
+// UpdateSubscription updates a subscription in Asaas
+func (s *AsaasService) UpdateSubscription(ctx context.Context, subscriptionID string, request AsaasSubscriptionUpdateRequest) (*AsaasSubscriptionResponse, error) {
+	url := fmt.Sprintf("%s/subscriptions/%s", s.baseURL, subscriptionID)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to marshal Asaas subscription update request", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	resp, err := s.doRequest(ctx, "POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var subscription AsaasSubscriptionResponse
+	if err := json.Unmarshal(resp, &subscription); err != nil {
+		s.logger.Error(ctx, "Failed to unmarshal Asaas subscription response", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	s.logger.Info(ctx, "Subscription updated successfully in Asaas", map[string]interface{}{
+		"subscription_id": subscription.ID,
+	})
+
+	return &subscription, nil
+}
+
+// UpdateCustomer updates a customer in Asaas
+func (s *AsaasService) UpdateCustomer(ctx context.Context, customerID string, request AsaasCustomerRequest) (*AsaasCustomerResponse, error) {
+	url := fmt.Sprintf("%s/customers/%s", s.baseURL, customerID)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to marshal Asaas customer update request", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	resp, err := s.doRequest(ctx, "POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var customer AsaasCustomerResponse
+	if err := json.Unmarshal(resp, &customer); err != nil {
+		s.logger.Error(ctx, "Failed to unmarshal Asaas customer response", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	s.logger.Info(ctx, "Customer updated successfully in Asaas", map[string]interface{}{
+		"customer_id": customer.ID,
+	})
+
+	return &customer, nil
+}
+
+// GetCustomer retrieves a customer from Asaas
+func (s *AsaasService) GetCustomer(ctx context.Context, customerID string) (*AsaasCustomerResponse, error) {
+	url := fmt.Sprintf("%s/customers/%s", s.baseURL, customerID)
+
+	resp, err := s.doRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var customer AsaasCustomerResponse
+	if err := json.Unmarshal(resp, &customer); err != nil {
+		s.logger.Error(ctx, "Failed to unmarshal Asaas customer response", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
+	}
+
+	return &customer, nil
 }

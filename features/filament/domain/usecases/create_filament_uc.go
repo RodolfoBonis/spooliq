@@ -34,6 +34,19 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 		"user_agent": c.Request.UserAgent(),
 	})
 
+	// Extract organization ID from context
+	organizationID, _ := c.Get("organization_id")
+	organizationIDStr, ok := organizationID.(string)
+	if !ok || organizationIDStr == "" {
+		appError := errors.UsecaseError("Organization ID not found in context")
+		httpError := appError.ToHTTPError()
+		uc.logger.Error(ctx, "Organization ID not found in context", map[string]interface{}{
+			"error": "organization_id not found or invalid type",
+		})
+		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		return
+	}
+
 	// Extract user data from context
 	userID, _ := c.Get("user_id")
 	userIDStr, ok := userID.(string)
@@ -134,6 +147,7 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 	// Create filament entity
 	filament := &filamentEntities.FilamentEntity{
 		ID:               uuid.New(),
+		OrganizationID:   organizationIDStr,
 		Name:             request.Name,
 		Description:      request.Description,
 		BrandID:          request.BrandID,

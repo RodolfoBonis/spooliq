@@ -14,6 +14,7 @@ type SubscriptionRepository interface {
 	FindByAsaasPaymentID(ctx context.Context, asaasPaymentID string) (*entities.SubscriptionEntity, error)
 	Create(ctx context.Context, subscription *entities.SubscriptionEntity) error
 	Update(ctx context.Context, id uuid.UUID, organizationID uuid.UUID, subscription *entities.SubscriptionEntity) error
+	UpdateByEntity(ctx context.Context, subscription *entities.SubscriptionEntity) error
 	Delete(ctx context.Context, id uuid.UUID, organizationID uuid.UUID) error
 
 	// Admin operations

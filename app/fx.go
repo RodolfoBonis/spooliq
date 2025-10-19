@@ -26,6 +26,7 @@ import (
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	subscriptionsDi "github.com/RodolfoBonis/spooliq/features/subscriptions/di"
+	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	uploadsDi "github.com/RodolfoBonis/spooliq/features/uploads/di"
 	uploadsuc "github.com/RodolfoBonis/spooliq/features/uploads/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/users"
@@ -73,7 +74,7 @@ func NewFxApp() *fx.App {
 			},
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, presetHandler *preset.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, adminHandler *admin.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, subscriptionUc subscriptionuc.ISubscriptionUseCase, presetHandler *preset.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, adminHandler *admin.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -82,7 +83,7 @@ func NewFxApp() *fx.App {
 				}
 
 				// Setup middlewares and lifecycle hooks
-				SetupMiddlewaresAndRoutes(lc, router, authUc, registerUc, brandUc, budgetUc, companyUc, brandingUc, customerUc, filamentUc, materialUc, uploadsUc, presetHandler, webhookHandler, userHandler, adminHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, obsManager, helper)
+				SetupMiddlewaresAndRoutes(lc, router, authUc, registerUc, brandUc, budgetUc, companyUc, brandingUc, customerUc, filamentUc, materialUc, uploadsUc, subscriptionUc, presetHandler, webhookHandler, userHandler, adminHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, obsManager, helper)
 			},
 		),
 		// Incluir as migrações e seeds do init.go

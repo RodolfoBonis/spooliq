@@ -3,8 +3,6 @@ package usecases
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -13,27 +11,32 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
+	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	webhookEntities "github.com/RodolfoBonis/spooliq/features/webhooks/domain/entities"
 	"github.com/gin-gonic/gin"
 )
 
 // AsaasWebhookUseCase handles Asaas webhook events
 type AsaasWebhookUseCase struct {
-	companyRepository companyRepositories.CompanyRepository
-	logger            logger.Logger
-	webhookSecret     string
+	companyRepository      companyRepositories.CompanyRepository
+	subscriptionRepository subscriptionRepositories.SubscriptionRepository
+	logger                 logger.Logger
+	webhookSecret          string
 }
 
 // NewAsaasWebhookUseCase creates a new webhook use case
 func NewAsaasWebhookUseCase(
 	companyRepository companyRepositories.CompanyRepository,
+	subscriptionRepository subscriptionRepositories.SubscriptionRepository,
 	cfg *config.AppConfig,
 	logger logger.Logger,
 ) *AsaasWebhookUseCase {
 	return &AsaasWebhookUseCase{
-		companyRepository: companyRepository,
-		logger:            logger,
-		webhookSecret:     cfg.AsaasWebhookSecret,
+		companyRepository:      companyRepository,
+		subscriptionRepository: subscriptionRepository,
+		logger:                 logger,
+		webhookSecret:          cfg.AsaasWebhookSecret,
 	}
 }
 
@@ -67,20 +70,24 @@ func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	// 2. Validate webhook signature
-	signature := c.GetHeader("Asaas-Signature")
-	if signature == "" {
-		uc.logger.Error(ctx, "Missing Asaas-Signature header", nil)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing signature"})
-		return
-	}
+	// 2. Validate webhook signature (if webhook secret is configured)
+	if uc.webhookSecret != "" {
+		signature := c.GetHeader("asaas-access-token")
+		if signature == "" {
+			uc.logger.Error(ctx, "Missing asaas-access-token header", nil)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing signature"})
+			return
+		}
 
-	if !uc.validateSignature(ctx, bodyBytes, signature) {
-		uc.logger.Error(ctx, "Invalid webhook signature", map[string]interface{}{
-			"signature": signature,
-		})
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
-		return
+		if !uc.validateSignature(ctx, bodyBytes, signature) {
+			uc.logger.Error(ctx, "Invalid webhook signature", map[string]interface{}{
+				"signature": signature,
+			})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+			return
+		}
+	} else {
+		uc.logger.Warning(ctx, "Webhook signature validation disabled (no secret configured)", nil)
 	}
 
 	// 3. Parse webhook event
@@ -120,11 +127,9 @@ func (uc *AsaasWebhookUseCase) validateSignature(ctx context.Context, body []byt
 	// Use environment variable ASAAS_WEBHOOK_SECRET
 	// This is a simplified implementation for demonstration
 
-	mac := hmac.New(sha256.New, []byte(uc.webhookSecret))
-	mac.Write(body)
-	expectedSignature := hex.EncodeToString(mac.Sum(nil))
+	webhookSecret := config.EnvAsaasWebhookSecret()
 
-	valid := hmac.Equal([]byte(signature), []byte(expectedSignature))
+	valid := hmac.Equal([]byte(signature), []byte(webhookSecret))
 
 	uc.logger.Info(ctx, "Signature validation", map[string]interface{}{
 		"valid": valid,
@@ -164,6 +169,15 @@ func (uc *AsaasWebhookUseCase) handlePaymentReceived(ctx context.Context, paymen
 	if orgID == "" {
 		uc.logger.Error(ctx, "Missing external_reference (organization_id)", nil)
 		return nil // Don't fail, just log
+	}
+
+	// Register payment in subscription history
+	if err := uc.recordPayment(ctx, payment, subscriptionEntities.StatusReceived); err != nil {
+		uc.logger.Error(ctx, "Failed to record payment", map[string]interface{}{
+			"error":      err.Error(),
+			"payment_id": payment.ID,
+		})
+		// Don't return error, continue processing
 	}
 
 	// Fetch company
@@ -221,6 +235,15 @@ func (uc *AsaasWebhookUseCase) handlePaymentOverdue(ctx context.Context, payment
 		return nil
 	}
 
+	// Register payment in subscription history as overdue
+	if err := uc.recordPayment(ctx, payment, subscriptionEntities.StatusOverdue); err != nil {
+		uc.logger.Error(ctx, "Failed to record overdue payment", map[string]interface{}{
+			"error":      err.Error(),
+			"payment_id": payment.ID,
+		})
+		// Don't return error, continue processing
+	}
+
 	// Fetch company
 	company, err := uc.companyRepository.FindByOrganizationID(ctx, orgID)
 	if err != nil {
@@ -252,6 +275,66 @@ func (uc *AsaasWebhookUseCase) handlePaymentRefunded(ctx context.Context, paymen
 	uc.logger.Info(ctx, "Processing PAYMENT_REFUNDED", map[string]interface{}{
 		"payment_id": payment.ID,
 	})
-	// Log refund, potentially notify admin
+
+	// Register payment in subscription history as failed
+	if err := uc.recordPayment(ctx, payment, subscriptionEntities.StatusFailed); err != nil {
+		uc.logger.Error(ctx, "Failed to record refunded payment", map[string]interface{}{
+			"error":      err.Error(),
+			"payment_id": payment.ID,
+		})
+	}
+
 	return nil
+}
+
+// recordPayment records payment in subscription history
+func (uc *AsaasWebhookUseCase) recordPayment(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook, status string) error {
+	// Check if payment already exists
+	existing, err := uc.subscriptionRepository.FindByAsaasPaymentID(ctx, payment.ID)
+	if err != nil {
+		uc.logger.Error(ctx, "Error checking existing payment", map[string]interface{}{
+			"error":      err.Error(),
+			"payment_id": payment.ID,
+		})
+	}
+
+	// Parse dates
+	var paymentDate *time.Time
+	if payment.PaymentDate != "" {
+		parsed, err := time.Parse("2006-01-02", payment.PaymentDate)
+		if err == nil {
+			paymentDate = &parsed
+		}
+	}
+
+	dueDate, err := time.Parse("2006-01-02", payment.DueDate)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to parse due date", map[string]interface{}{
+			"error":    err.Error(),
+			"due_date": payment.DueDate,
+		})
+		dueDate = time.Now()
+	}
+
+	if existing != nil {
+		// Update existing payment
+		existing.Status = status
+		existing.PaymentDate = paymentDate
+		existing.InvoiceURL = payment.InvoiceURL
+
+		return uc.subscriptionRepository.UpdateByEntity(ctx, existing)
+	}
+
+	// Create new payment record
+	subscriptionPayment := &subscriptionEntities.SubscriptionEntity{
+		OrganizationID: payment.ExternalReference,
+		AsaasPaymentID: payment.ID,
+		Amount:         payment.Value,
+		Status:         status,
+		PaymentDate:    paymentDate,
+		DueDate:        dueDate,
+		InvoiceURL:     payment.InvoiceURL,
+	}
+
+	return uc.subscriptionRepository.Create(ctx, subscriptionPayment)
 }

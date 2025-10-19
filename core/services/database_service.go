@@ -404,6 +404,15 @@ func RunMigrations() {
 	} else {
 		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionModel{})
 	}
+
+	// Subscription plans and features migrations (together to handle foreign keys)
+	if !Connector.Migrator().HasTable(&subscriptions.PlanModel{}) {
+		if err := Connector.AutoMigrate(&subscriptions.PlanModel{}, &subscriptions.PlanFeatureModel{}); err != nil {
+			panic(fmt.Sprintf("ERROR DURING PLAN/PLAN_FEATURE MIGRATION: %s", err.Error()))
+		}
+	} else {
+		_ = Connector.Migrator().AutoMigrate(&subscriptions.PlanModel{}, &subscriptions.PlanFeatureModel{})
+	}
 }
 
 // addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM using the official plugin

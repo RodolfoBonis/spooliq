@@ -63,6 +63,18 @@ type AsaasSubscriptionResponse struct {
 	ExternalReference string  `json:"externalReference"`
 }
 
+// AsaasSubscriptionUpdateRequest represents a request to update a subscription in Asaas
+type AsaasSubscriptionUpdateRequest struct {
+	BillingType       string  `json:"billingType,omitempty"` // CREDIT_CARD, BOLETO, PIX
+	Value             float64 `json:"value,omitempty"`
+	NextDueDate       string  `json:"nextDueDate,omitempty"` // YYYY-MM-DD
+	Cycle             string  `json:"cycle,omitempty"`       // MONTHLY, WEEKLY, YEARLY
+	Description       string  `json:"description,omitempty"`
+	EndDate           string  `json:"endDate,omitempty"` // YYYY-MM-DD
+	ExternalReference string  `json:"externalReference,omitempty"`
+	UpdatePendingPayments bool `json:"updatePendingPayments,omitempty"` // Update pending payments with new value
+}
+
 // AsaasPaymentResponse represents a payment from Asaas
 type AsaasPaymentResponse struct {
 	Object                string  `json:"object"`

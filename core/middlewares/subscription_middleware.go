@@ -165,6 +165,7 @@ func isPublicEndpoint(path string) bool {
 		"/docs",
 		"/swagger",
 		"/v1/webhooks",
+		"/v1/subscriptions/plans", // Public endpoint - anyone can view available plans
 	}
 
 	for _, endpoint := range publicEndpoints {

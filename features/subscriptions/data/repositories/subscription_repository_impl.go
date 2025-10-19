@@ -95,6 +95,25 @@ func (r *SubscriptionRepositoryImpl) Update(ctx context.Context, id uuid.UUID, o
 		}).Error
 }
 
+// UpdateByEntity updates an existing subscription payment record using the entity's ID
+func (r *SubscriptionRepositoryImpl) UpdateByEntity(ctx context.Context, subscription *entities.SubscriptionEntity) error {
+	var subscriptionModel models.SubscriptionModel
+	subscriptionModel.FromEntity(subscription)
+
+	return r.db.WithContext(ctx).
+		Model(&models.SubscriptionModel{}).
+		Where("id = ?", subscription.ID).
+		Updates(map[string]interface{}{
+			"status":           subscription.Status,
+			"amount":           subscription.Amount,
+			"due_date":         subscription.DueDate,
+			"payment_date":     subscription.PaymentDate,
+			"invoice_url":      subscription.InvoiceURL,
+			"asaas_payment_id": subscription.AsaasPaymentID,
+			"asaas_invoice_id": subscription.AsaasInvoiceID,
+		}).Error
+}
+
 // Delete soft deletes a subscription payment record
 func (r *SubscriptionRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organizationID uuid.UUID) error {
 	return r.db.WithContext(ctx).

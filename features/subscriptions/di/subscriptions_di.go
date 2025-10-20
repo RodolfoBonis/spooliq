@@ -30,10 +30,22 @@ var Module = fx.Module("subscriptions",
 			},
 			fx.As(new(domainRepositories.SubscriptionPlanRepository)),
 		),
+		fx.Annotate(
+			func(db *gorm.DB) domainRepositories.PaymentGatewayLinkRepository {
+				return repositories.NewPaymentGatewayLinkRepository(db)
+			},
+			fx.As(new(domainRepositories.PaymentGatewayLinkRepository)),
+		),
 
 		// Use Cases
-		usecases.NewPaymentMethodUseCase,
+		fx.Annotate(
+			usecases.NewPaymentMethodUseCase,
+			fx.ParamTags(``, ``, ``, ``, ``), // PaymentMethodRepo, PaymentGatewayLinkRepo, CompanyRepo, AsaasService, Logger
+		),
 		usecases.NewSubscriptionPlanUseCase,
-		usecases.NewManageSubscriptionUseCase,
+		fx.Annotate(
+			usecases.NewManageSubscriptionUseCase,
+			fx.ParamTags(``, ``, ``, ``, ``, ``), // PlanRepo, PaymentMethodRepo, PaymentGatewayLinkRepo, CompanyRepo, AsaasService, Logger
+		),
 	),
 )

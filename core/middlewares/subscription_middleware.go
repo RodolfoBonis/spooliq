@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -9,23 +10,28 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // SubscriptionMiddleware handles subscription status checking
 type SubscriptionMiddleware struct {
-	companyRepository companyRepositories.CompanyRepository
-	logger            logger.Logger
+	companyRepository      companyRepositories.CompanyRepository
+	subscriptionRepository subscriptionRepositories.SubscriptionRepository
+	logger                 logger.Logger
 }
 
 // NewSubscriptionMiddleware creates a new subscription middleware
 func NewSubscriptionMiddleware(
 	companyRepository companyRepositories.CompanyRepository,
+	subscriptionRepository subscriptionRepositories.SubscriptionRepository,
 	logger logger.Logger,
 ) *SubscriptionMiddleware {
 	return &SubscriptionMiddleware{
-		companyRepository: companyRepository,
-		logger:            logger,
+		companyRepository:      companyRepository,
+		subscriptionRepository: subscriptionRepository,
+		logger:                 logger,
 	}
 }
 
@@ -106,8 +112,37 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			c.Next()
 			return
 
-		case "active", "permanent":
-			// Subscription is active, allow access
+		case "active", "permanent", "ACTIVE", "PERMANENT":
+			// Subscription is active, but verify payment status
+			hasValidPayment, err := m.hasValidPayment(ctx, organizationID)
+			if err != nil {
+				m.logger.Error(ctx, "Failed to verify payment status", map[string]interface{}{
+					"error":           err.Error(),
+					"organization_id": organizationID,
+				})
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error":   "Unable to verify subscription status",
+					"message": "Please contact support",
+				})
+				c.Abort()
+				return
+			}
+			
+			if !hasValidPayment {
+				m.logger.Error(ctx, "Access denied: active subscription but no valid payment", map[string]interface{}{
+					"organization_id": organizationID,
+					"status":          company.SubscriptionStatus,
+				})
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error":               "Payment required to activate subscription",
+					"subscription_status": "payment_pending",
+					"message":             "Your subscription is active but payment is still being processed. Please wait or contact support.",
+				})
+				c.Abort()
+				return
+			}
+			
+			// Valid payment found, allow access
 			c.Next()
 			return
 
@@ -125,7 +160,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			c.Abort()
 			return
 
-		case "cancelled":
+		case "cancelled", "CANCELLED":
 			m.logger.Error(ctx, "Access denied: subscription cancelled", map[string]interface{}{
 				"organization_id": organizationID,
 				"status":          company.SubscriptionStatus,
@@ -183,4 +218,28 @@ func formatTimePtr(t *time.Time) string {
 		return ""
 	}
 	return t.Format("2006-01-02T15:04:05Z07:00")
+}
+
+// hasValidPayment checks if the organization has at least one confirmed/received payment  
+func (m *SubscriptionMiddleware) hasValidPayment(ctx context.Context, organizationID string) (bool, error) {
+	// Convert string organizationID to UUID
+	orgUUID, err := uuid.Parse(organizationID)
+	if err != nil {
+		return false, err
+	}
+	
+	// Get latest subscription payments for the organization (limit 10 to check recent payments)
+	payments, err := m.subscriptionRepository.FindAll(ctx, orgUUID, 10, 0)
+	if err != nil {
+		return false, err
+	}
+	
+	// Check if there's at least one confirmed or received payment
+	for _, payment := range payments {
+		if payment.Status == "confirmed" || payment.Status == "received" || payment.Status == "anticipated" {
+			return true, nil
+		}
+	}
+	
+	return false, nil
 }

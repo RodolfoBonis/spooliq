@@ -15,24 +15,27 @@ import (
 
 // PaymentMethodUseCase handles payment method operations
 type PaymentMethodUseCase struct {
-	paymentMethodRepo repositories.PaymentMethodRepository
-	companyRepo       companyRepo.CompanyRepository
-	asaasService      services.IAsaasService
-	logger            logger.Logger
+	paymentMethodRepo      repositories.PaymentMethodRepository
+	paymentGatewayLinkRepo repositories.PaymentGatewayLinkRepository
+	companyRepo            companyRepo.CompanyRepository
+	asaasService           services.IAsaasService
+	logger                 logger.Logger
 }
 
 // NewPaymentMethodUseCase creates a new instance of PaymentMethodUseCase
 func NewPaymentMethodUseCase(
 	paymentMethodRepo repositories.PaymentMethodRepository,
+	paymentGatewayLinkRepo repositories.PaymentGatewayLinkRepository,
 	companyRepo companyRepo.CompanyRepository,
 	asaasService services.IAsaasService,
 	logger logger.Logger,
 ) *PaymentMethodUseCase {
 	return &PaymentMethodUseCase{
-		paymentMethodRepo: paymentMethodRepo,
-		companyRepo:       companyRepo,
-		asaasService:      asaasService,
-		logger:            logger,
+		paymentMethodRepo:      paymentMethodRepo,
+		paymentGatewayLinkRepo: paymentGatewayLinkRepo,
+		companyRepo:            companyRepo,
+		asaasService:           asaasService,
+		logger:                 logger,
 	}
 }
 
@@ -62,7 +65,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 		return
 	}
 
-	// Get company to ensure it exists and get asaas_customer_id
+	// Get company to ensure it exists
 	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to find company", map[string]interface{}{
@@ -78,24 +81,67 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 		return
 	}
 
-	// TODO: Refactor to use PaymentGatewayLink
-	// Need to query PaymentGatewayLinkRepository to get/create Asaas customer ID
-	// For now, this endpoint is disabled until PaymentGatewayLinkRepository is implemented
-	uc.logger.Error(ctx, "Payment method creation not yet implemented for new FK structure", map[string]interface{}{
-		"organization_id": orgID,
-	})
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error":   "Payment method creation temporarily unavailable",
-		"message": "This feature is being updated to support the new payment gateway structure",
-	})
-	return
+	// Query PaymentGatewayLinkRepository to get/create Asaas customer ID
+	paymentGatewayLink, err := uc.paymentGatewayLinkRepo.FindByOrganizationID(ctx, orgID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to query PaymentGatewayLink", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": orgID,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query payment gateway link"})
+		return
+	}
 
-	// OLD CODE - needs refactoring:
-	// 1. Query PaymentGatewayLinkRepository by organization_id
-	// 2. If not exists, create Asaas customer and PaymentGatewayLink record
-	// 3. If exists, get customer_id from PaymentGatewayLink
-	// 4. Continue with tokenization below
-	asaasCustomerID := "" // This will come from PaymentGatewayLink
+	var asaasCustomerID string
+
+	if paymentGatewayLink == nil {
+		// Create Asaas customer first
+		asaasCustomerReq := services.AsaasCustomerRequest{
+			Name:    company.Name,
+			CpfCnpj: stringPtrValue(company.Document),
+			Email:   stringPtrValue(company.Email),
+			Phone:   stringPtrValue(company.Phone),
+		}
+
+		asaasCustomer, err := uc.asaasService.CreateCustomer(ctx, asaasCustomerReq)
+		if err != nil {
+			uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
+				"error":           err.Error(),
+				"organization_id": orgID,
+			})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment account"})
+			return
+		}
+
+		// Create PaymentGatewayLink record
+		newPaymentGatewayLink := &entities.PaymentGatewayLinkEntity{
+			OrganizationID: orgID,
+			Gateway:        "asaas",
+			CustomerID:     asaasCustomer.ID,
+		}
+
+		if err := uc.paymentGatewayLinkRepo.Create(ctx, newPaymentGatewayLink); err != nil {
+			uc.logger.Error(ctx, "Failed to create PaymentGatewayLink", map[string]interface{}{
+				"error":           err.Error(),
+				"organization_id": orgID,
+				"customer_id":     asaasCustomer.ID,
+			})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save payment gateway link"})
+			return
+		}
+
+		asaasCustomerID = asaasCustomer.ID
+		uc.logger.Info(ctx, "Created Asaas customer and PaymentGatewayLink for payment method", map[string]interface{}{
+			"organization_id": orgID,
+			"customer_id":     asaasCustomerID,
+		})
+	} else {
+		asaasCustomerID = paymentGatewayLink.CustomerID
+		uc.logger.Info(ctx, "Using existing Asaas customer for payment method", map[string]interface{}{
+			"organization_id": orgID,
+			"customer_id":     asaasCustomerID,
+		})
+	}
 
 	// Tokenize credit card in Asaas
 	tokenReq := services.AsaasTokenizeCreditCardRequest{
@@ -149,7 +195,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 	if req.SetAsPrimary {
 		if err := uc.paymentMethodRepo.SetAsPrimary(ctx, orgID, paymentMethod.ID); err != nil {
 			uc.logger.Error(ctx, "Failed to set payment method as primary", map[string]interface{}{
-				"error":           err.Error(),
+				"error":             err.Error(),
 				"payment_method_id": paymentMethod.ID,
 			})
 			// Continue anyway, payment method was saved
@@ -341,7 +387,7 @@ func toPaymentMethodResponse(pm *entities.PaymentMethodEntity) *entities.Payment
 	}
 }
 
-func stringValue(s *string) string {
+func stringPtrValue(s *string) string {
 	if s == nil {
 		return ""
 	}

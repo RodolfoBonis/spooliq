@@ -13,6 +13,8 @@ import (
 	authEntities "github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
+	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	userEntities "github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	userRepositories "github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,7 @@ type RegisterUseCase struct {
 	asaasService      services.IAsaasService
 	companyRepository companyRepositories.CompanyRepository
 	userRepository    userRepositories.UserRepository
+	gatewayLinkRepo   subscriptionRepositories.PaymentGatewayLinkRepository
 	logger            logger.Logger
 	validator         *validator.Validate
 }
@@ -36,6 +39,7 @@ func NewRegisterUseCase(
 	asaasService services.IAsaasService,
 	companyRepository companyRepositories.CompanyRepository,
 	userRepository userRepositories.UserRepository,
+	gatewayLinkRepo subscriptionRepositories.PaymentGatewayLinkRepository,
 	logger logger.Logger,
 ) *RegisterUseCase {
 	return &RegisterUseCase{
@@ -43,6 +47,7 @@ func NewRegisterUseCase(
 		asaasService:      asaasService,
 		companyRepository: companyRepository,
 		userRepository:    userRepository,
+		gatewayLinkRepo:   gatewayLinkRepo,
 		logger:            logger,
 		validator:         validator.New(),
 	}
@@ -117,25 +122,20 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		"company_name":    request.CompanyName,
 	})
 
-	// Create customer in Asaas (TEMPORARILY DISABLED - NO ASAAS ACCOUNT YET)
-	// asaasCustomer, err := uc.createAsaasCustomer(ctx, request, organizationID)
-	// if err != nil {
-	// 	uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
-	// 		"error":           err.Error(),
-	// 		"organization_id": organizationID,
-	// 	})
-	// 	appError := errors.UsecaseError("Failed to create payment account: " + err.Error())
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
-	// 	return
-	// }
-
-	// Mock Asaas customer response for testing
-	asaasCustomer := &services.AsaasCustomerResponse{
-		ID: "mock_customer_" + organizationID[:8],
+	// Create customer in Asaas
+	asaasCustomer, err := uc.createAsaasCustomer(ctx, request, organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": organizationID,
+		})
+		appError := errors.UsecaseError("Failed to create payment account: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		return
 	}
 
 	// Create user in Keycloak
-	keycloakUserID, err := uc.createKeycloakUser(ctx, request, organizationID)
+	keycloakUserID, err := uc.createKeycloakUser(ctx, request, organizationID, request.CompanyName)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to create Keycloak user", map[string]interface{}{
 			"error":           err.Error(),
@@ -149,20 +149,22 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 	// Calculate trial end date (14 days from now)
 	trialEndsAt := time.Now().Add(14 * 24 * time.Hour)
 
+	// Get Trial plan ID
+	trialPlanID := uuid.MustParse("7e45a0e9-0a8c-4843-b519-c208d150e41c")
+
 	// Create company in database
 	company := &companyEntities.CompanyEntity{
-		ID:             uuid.New(),
-		OrganizationID: organizationID,
-		Name:           request.CompanyName,
-		Document:       &request.CompanyDocument,
-		Phone:          &request.CompanyPhone,
-		Address:        &request.Address,
-		City:           &request.City,
-		State:          &request.State,
-		ZipCode:        &request.ZipCode,
-		// Subscription fields
+		ID:                    uuid.New(),
+		OrganizationID:        organizationID,
+		Name:                  request.CompanyName,
+		Document:              &request.CompanyDocument,
+		Phone:                 &request.CompanyPhone,
+		Address:               &request.Address,
+		City:                  &request.City,
+		State:                 &request.State,
+		ZipCode:               &request.ZipCode,
 		SubscriptionStatus:    "trial",
-		SubscriptionPlanID:    nil,             // Trial users don't have a plan yet
+		SubscriptionPlanID:    &trialPlanID,
 		StatusUpdatedAt:       time.Now(),
 		IsPlatformCompany:     false,
 		TrialEndsAt:           &trialEndsAt,
@@ -186,13 +188,35 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		return
 	}
 
-	// TODO: Create PaymentGatewayLink record to store Asaas customer ID
-	// This requires a PaymentGatewayLinkRepository which doesn't exist yet
-	// For now, we skip this step - the user won't be able to subscribe until this is implemented
-	uc.logger.Info(ctx, "Company created - PaymentGatewayLink creation pending implementation", map[string]interface{}{
-		"organization_id":   organizationID,
-		"asaas_customer_id": asaasCustomer.ID,
-	})
+	// Create PaymentGatewayLink record to store Asaas customer ID
+	gatewayLink := &subscriptionEntities.PaymentGatewayLinkEntity{
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Gateway:        "asaas",
+		CustomerID:     asaasCustomer.ID,
+		SubscriptionID: nil, // Will be set when subscription is created
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	err = uc.gatewayLinkRepo.Create(ctx, gatewayLink)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to create PaymentGatewayLink", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": organizationID,
+		})
+		// Non-fatal error, continue
+		uc.logger.Warning(ctx, "PaymentGatewayLink will need to be created manually", map[string]interface{}{
+			"organization_id":   organizationID,
+			"asaas_customer_id": asaasCustomer.ID,
+		})
+	} else {
+		uc.logger.Info(ctx, "PaymentGatewayLink created successfully", map[string]interface{}{
+			"organization_id":   organizationID,
+			"asaas_customer_id": asaasCustomer.ID,
+		})
+	}
 
 	// Create user in database
 	user := &userEntities.UserEntity{
@@ -218,29 +242,13 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		return
 	}
 
-	// Create subscription in Asaas (TEMPORARILY DISABLED - NO ASAAS ACCOUNT YET)
-	// nextDueDate := trialEndsAt.Format("2006-01-02")
-	// asaasSubscription, err := uc.createAsaasSubscription(ctx, asaasCustomer.ID, nextDueDate, organizationID)
-	// if err != nil {
-	// 	uc.logger.Error(ctx, "Failed to create Asaas subscription", map[string]interface{}{
-	// 		"error":           err.Error(),
-	// 		"organization_id": organizationID,
-	// 	})
-	// 	// Non-fatal error, we can continue
-	// 	uc.logger.Error(ctx, "Subscription will need to be created manually", nil)
-	// } else {
-	// 	// Update company with subscription ID
-	// 	company.AsaasSubscriptionID = &asaasSubscription.ID
-	// 	err = uc.companyRepository.Update(ctx, company)
-	// 	if err != nil {
-	// 		uc.logger.Error(ctx, "Failed to update company with subscription ID", map[string]interface{}{
-	// 			"error":           err.Error(),
-	// 			"organization_id": organizationID,
-	// 		})
-	// 	}
-	// }
-
-	uc.logger.Info(ctx, "Asaas integration disabled for testing - trial mode only", nil)
+	// Note: For trial users, we don't create subscription in Asaas yet
+	// Subscriptions will be created when user upgrades to Starter+ plans
+	uc.logger.Info(ctx, "Trial user registered - Asaas subscription will be created on plan upgrade", map[string]interface{}{
+		"organization_id":   organizationID,
+		"asaas_customer_id": asaasCustomer.ID,
+		"trial_ends_at":     trialEndsAt.Format("2006-01-02"),
+	})
 
 	uc.logger.Info(ctx, "Registration completed successfully", map[string]interface{}{
 		"user_id":         user.ID.String(),
@@ -258,7 +266,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authEntities.RegisterRequest, organizationID string) (string, error) {
+func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authEntities.RegisterRequest, organizationID string, companyName string) (string, error) {
 	uc.logger.Info(ctx, "Creating Keycloak user", map[string]interface{}{
 		"email":           request.Email,
 		"organization_id": organizationID,
@@ -336,9 +344,10 @@ func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authE
 			"user_id": userID,
 		})
 	} else {
-		// Set organization_id attribute on group
+		// Set organization_id and company_name attributes on group
 		if err := uc.keycloakService.SetGroupAttributes(ctx, groupID, map[string][]string{
 			"organization_id": {organizationID},
+			"company_name":    {companyName},
 		}); err != nil {
 			uc.logger.Error(ctx, "Failed to set group attributes", map[string]interface{}{
 				"error":    err.Error(),
@@ -366,4 +375,80 @@ func (uc *RegisterUseCase) createKeycloakUser(ctx context.Context, request authE
 	})
 
 	return userID, nil
+}
+
+func (uc *RegisterUseCase) createAsaasCustomer(ctx context.Context, request authEntities.RegisterRequest, organizationID string) (*services.AsaasCustomerResponse, error) {
+	uc.logger.Info(ctx, "Creating Asaas customer", map[string]interface{}{
+		"organization_id": organizationID,
+		"company_name":    request.CompanyName,
+	})
+
+	// Prepare customer request
+	asaasRequest := services.AsaasCustomerRequest{
+		Name:              request.CompanyName,
+		Email:             request.Email,
+		CpfCnpj:           request.CompanyDocument,
+		Phone:             request.CompanyPhone,
+		Address:           request.Address,
+		AddressNumber:     "", // Not in RegisterRequest, could be extracted from address
+		Province:          request.City,
+		PostalCode:        request.ZipCode,
+		ExternalReference: organizationID,
+	}
+
+	// Create customer in Asaas
+	customer, err := uc.asaasService.CreateCustomer(ctx, asaasRequest)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
+			"error":           err.Error(),
+			"organization_id": organizationID,
+		})
+		return nil, fmt.Errorf("failed to create Asaas customer: %w", err)
+	}
+
+	uc.logger.Info(ctx, "Asaas customer created successfully", map[string]interface{}{
+		"customer_id":     customer.ID,
+		"organization_id": organizationID,
+	})
+
+	return customer, nil
+}
+
+func (uc *RegisterUseCase) createAsaasSubscription(ctx context.Context, customerID string, nextDueDate string, organizationID string) (*services.AsaasSubscriptionResponse, error) {
+	uc.logger.Info(ctx, "Creating Asaas subscription for trial", map[string]interface{}{
+		"customer_id":     customerID,
+		"organization_id": organizationID,
+		"next_due_date":   nextDueDate,
+	})
+
+	// Create subscription request for trial (free, billed after 14 days)
+	subscriptionRequest := services.AsaasSubscriptionRequest{
+		Customer:          customerID,
+		BillingType:       "BOLETO", // Default to boleto, user can change later
+		Value:             0.00,      // Trial is free
+		NextDueDate:       nextDueDate,
+		Cycle:             "MONTHLY",
+		Description:       "Trial de 14 dias - Spooliq",
+		ExternalReference: organizationID,
+	}
+
+	// Create subscription in Asaas
+	subscription, err := uc.asaasService.CreateSubscription(ctx, subscriptionRequest)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to create Asaas subscription", map[string]interface{}{
+			"error":           err.Error(),
+			"customer_id":     customerID,
+			"organization_id": organizationID,
+		})
+		return nil, fmt.Errorf("failed to create Asaas subscription: %w", err)
+	}
+
+	uc.logger.Info(ctx, "Asaas subscription created successfully", map[string]interface{}{
+		"subscription_id": subscription.ID,
+		"customer_id":     customerID,
+		"organization_id": organizationID,
+		"status":          subscription.Status,
+	})
+
+	return subscription, nil
 }

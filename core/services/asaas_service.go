@@ -49,6 +49,11 @@ func NewAsaasService(cfg *config.AppConfig, logger logger.Logger) IAsaasService 
 func (s *AsaasService) CreateCustomer(ctx context.Context, request AsaasCustomerRequest) (*AsaasCustomerResponse, error) {
 	url := fmt.Sprintf("%s/customers", s.baseURL)
 
+	s.logger.Info(ctx, "Calling Asaas CreateCustomer", map[string]interface{}{
+		"url":      url,
+		"base_url": s.baseURL,
+	})
+
 	body, err := json.Marshal(request)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to marshal Asaas customer request", map[string]interface{}{

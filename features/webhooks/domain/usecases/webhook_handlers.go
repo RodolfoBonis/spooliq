@@ -200,63 +200,120 @@ func (uc *AsaasWebhookUseCase) handlePaymentSplitUnblocked(ctx context.Context, 
 // SUBSCRIPTION EVENT HANDLERS (7 handlers)
 // ============================================================================
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionCreated(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionCreated(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Info(ctx, "Processing SUBSCRIPTION_CREATED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
-		"org_id":          payment.ExternalReference,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
+		"customer_id":     subscription.Customer,
+		"value":           subscription.Value,
+		"status":          subscription.Status,
 	})
-	return uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionCreated, "SUBSCRIPTION_CREATED")
+	
+	// SUBSCRIPTION_CREATED events are informational - we don't need to create payment records
+	// The actual payments will come through separate PAYMENT_* events
+	uc.logger.Info(ctx, "Subscription created successfully", map[string]interface{}{
+		"subscription_id": subscription.ID,
+		"organization_id": subscription.ExternalReference,
+	})
+	
+	return nil
 }
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionUpdated(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionUpdated(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Info(ctx, "Processing SUBSCRIPTION_UPDATED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
-		"org_id":          payment.ExternalReference,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
+		"customer_id":     subscription.Customer,
+		"value":           subscription.Value,
+		"status":          subscription.Status,
 	})
-	return uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionUpdated, "SUBSCRIPTION_UPDATED")
+	
+	// SUBSCRIPTION_UPDATED events are informational - actual payments come through PAYMENT_* events
+	uc.logger.Info(ctx, "Subscription updated successfully", map[string]interface{}{
+		"subscription_id": subscription.ID,
+		"organization_id": subscription.ExternalReference,
+	})
+	
+	return nil
 }
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionInactivated(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionInactivated(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Info(ctx, "Processing SUBSCRIPTION_INACTIVATED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
-		"org_id":          payment.ExternalReference,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
+		"customer_id":     subscription.Customer,
+		"status":          subscription.Status,
 	})
-	if err := uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionInactivated, "SUBSCRIPTION_INACTIVATED"); err != nil {
-		return err
+	
+	// When a subscription is inactivated, we should suspend the company
+	if subscription.ExternalReference != "" {
+		return uc.suspendCompanyIfNeeded(ctx, subscription.ExternalReference)
 	}
-	return uc.suspendCompanyIfNeeded(ctx, payment.ExternalReference)
+	
+	uc.logger.Warning(ctx, "SUBSCRIPTION_INACTIVATED without organization_id", map[string]interface{}{
+		"subscription_id": subscription.ID,
+	})
+	return nil
 }
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionDeleted(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionDeleted(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Info(ctx, "Processing SUBSCRIPTION_DELETED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
-		"org_id":          payment.ExternalReference,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
+		"customer_id":     subscription.Customer,
+		"status":          subscription.Status,
 	})
-	if err := uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionDeleted, "SUBSCRIPTION_DELETED"); err != nil {
-		return err
+	
+	// When a subscription is deleted, we should suspend the company
+	if subscription.ExternalReference != "" {
+		return uc.suspendCompanyIfNeeded(ctx, subscription.ExternalReference)
 	}
-	return uc.suspendCompanyIfNeeded(ctx, payment.ExternalReference)
+	
+	uc.logger.Warning(ctx, "SUBSCRIPTION_DELETED without organization_id", map[string]interface{}{
+		"subscription_id": subscription.ID,
+	})
+	return nil
 }
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionSplitDisabled(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionSplitDisabled(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Info(ctx, "Processing SUBSCRIPTION_SPLIT_DISABLED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
 	})
-	return uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionSplitDisabled, "SUBSCRIPTION_SPLIT_DISABLED")
+	
+	// SUBSCRIPTION_SPLIT_DISABLED is informational
+	uc.logger.Info(ctx, "Subscription split disabled", map[string]interface{}{
+		"subscription_id": subscription.ID,
+	})
+	return nil
 }
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionSplitBlocked(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionSplitBlocked(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Warning(ctx, "SUBSCRIPTION SPLIT BLOCKED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
 	})
-	return uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionSplitBlocked, "SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK")
+	
+	// This is a warning condition that may require attention
+	uc.logger.Warning(ctx, "Subscription split divergence block detected", map[string]interface{}{
+		"subscription_id": subscription.ID,
+		"organization_id": subscription.ExternalReference,
+	})
+	return nil
 }
 
-func (uc *AsaasWebhookUseCase) handleSubscriptionSplitUnblocked(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
+func (uc *AsaasWebhookUseCase) handleSubscriptionSplitUnblocked(ctx context.Context, subscription webhookEntities.AsaasSubscriptionWebhook) error {
 	uc.logger.Info(ctx, "Processing SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED", map[string]interface{}{
-		"subscription_id": payment.Subscription,
+		"subscription_id": subscription.ID,
+		"org_id":          subscription.ExternalReference,
 	})
-	return uc.recordPayment(ctx, payment, subscriptionEntities.SubscriptionSplitUnblocked, "SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED")
+	
+	// Split divergence block has been resolved
+	uc.logger.Info(ctx, "Subscription split divergence block finished", map[string]interface{}{
+		"subscription_id": subscription.ID,
+		"organization_id": subscription.ExternalReference,
+	})
+	return nil
 }
 
 // ============================================================================

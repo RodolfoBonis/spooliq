@@ -129,14 +129,34 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			}
 			
 			if !hasValidPayment {
+				// Check if this is a payment recovery endpoint
+				if isPaymentRecoveryEndpoint(c.Request.URL.Path) {
+					m.logger.Info(ctx, "Payment recovery access granted", map[string]interface{}{
+						"organization_id": organizationID,
+						"path":            c.Request.URL.Path,
+						"status":          company.SubscriptionStatus,
+						"reason":          "payment_pending_recovery_access",
+					})
+					c.Next()
+					return
+				}
+				
+				// Block access to non-payment-recovery endpoints with helpful guidance
 				m.logger.Error(ctx, "Access denied: active subscription but no valid payment", map[string]interface{}{
 					"organization_id": organizationID,
 					"status":          company.SubscriptionStatus,
+					"path":            c.Request.URL.Path,
 				})
 				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error":               "Payment required to activate subscription",
+					"error":               "Payment required to access this feature",
 					"subscription_status": "payment_pending",
-					"message":             "Your subscription is active but payment is still being processed. Please wait or contact support.",
+					"message":             "Your subscription is active but payment is still being processed. You can still access payment-related endpoints to resolve this issue.",
+					"payment_recovery_endpoints": []string{
+						"/v1/payment-methods",
+						"/v1/subscriptions/subscribe",
+						"/v1/subscriptions/status",
+					},
+					"help": "You can add payment methods, retry subscription, or check status while payment is being processed.",
 				})
 				c.Abort()
 				return
@@ -204,6 +224,24 @@ func isPublicEndpoint(path string) bool {
 	}
 
 	for _, endpoint := range publicEndpoints {
+		if len(path) >= len(endpoint) && path[:len(endpoint)] == endpoint {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isPaymentRecoveryEndpoint checks if the endpoint should remain accessible during payment recovery
+func isPaymentRecoveryEndpoint(path string) bool {
+	paymentRecoveryEndpoints := []string{
+		"/v1/payment-methods",        // All payment method operations
+		"/v1/subscriptions/subscribe", // Retry subscription
+		"/v1/subscriptions/status",    // Check subscription status
+		"/v1/subscriptions/plans",     // View available plans (already public but for consistency)
+	}
+
+	for _, endpoint := range paymentRecoveryEndpoints {
 		if len(path) >= len(endpoint) && path[:len(endpoint)] == endpoint {
 			return true
 		}

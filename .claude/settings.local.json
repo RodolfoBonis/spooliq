@@ -76,7 +76,11 @@
       "Bash(PGPASSWORD=password psql:*)",
       "Bash(docker exec:*)",
       "Bash(make:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(docker ps:*)",
+      "WebFetch(domain:docs.asaas.com)"
     ],
     "deny": [],
     "ask": []

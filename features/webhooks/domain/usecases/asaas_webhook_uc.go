@@ -75,10 +75,24 @@ func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	uc.logger.Info(ctx, "Processing webhook event", map[string]interface{}{
-		"event":      webhookEvent.Event,
-		"payment_id": webhookEvent.Payment.ID,
-	})
+	// Log different data based on event type
+	if isSubscriptionEvent(webhookEvent.Event) {
+		uc.logger.Info(ctx, "Processing webhook event", map[string]interface{}{
+			"event":              webhookEvent.Event,
+			"subscription_id":    webhookEvent.Subscription.ID,
+			"external_reference": webhookEvent.Subscription.ExternalReference,
+			"customer":           webhookEvent.Subscription.Customer,
+			"status":             webhookEvent.Subscription.Status,
+		})
+	} else {
+		uc.logger.Info(ctx, "Processing webhook event", map[string]interface{}{
+			"event":              webhookEvent.Event,
+			"payment_id":         webhookEvent.Payment.ID,
+			"external_reference": webhookEvent.Payment.ExternalReference,
+			"subscription":       webhookEvent.Payment.Subscription,
+			"customer":           webhookEvent.Payment.Customer,
+		})
+	}
 
 	if err := uc.processEvent(ctx, webhookEvent); err != nil {
 		uc.logger.Error(ctx, "Failed to process webhook event", map[string]interface{}{
@@ -103,6 +117,18 @@ func (uc *AsaasWebhookUseCase) validateSignature(ctx context.Context, body []byt
 }
 
 func (uc *AsaasWebhookUseCase) recordPayment(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook, status string, eventType string) error {
+	// Validate ExternalReference - it should contain the organization_id
+	if payment.ExternalReference == "" {
+		uc.logger.Warning(ctx, "Webhook payment missing ExternalReference", map[string]interface{}{
+			"payment_id":  payment.ID,
+			"customer":    payment.Customer,
+			"subscription": payment.Subscription,
+			"event_type":  eventType,
+		})
+		// Skip recording if no organization_id - cannot link to company
+		return nil
+	}
+
 	existing, _ := uc.subscriptionRepository.FindByAsaasPaymentID(ctx, payment.ID)
 
 	var paymentDate *time.Time
@@ -148,6 +174,27 @@ func (uc *AsaasWebhookUseCase) recordPayment(ctx context.Context, payment webhoo
 	}
 
 	return uc.subscriptionRepository.Create(ctx, subscriptionPayment)
+}
+
+// isSubscriptionEvent checks if the event is related to subscriptions
+func isSubscriptionEvent(event string) bool {
+	subscriptionEvents := []string{
+		"SUBSCRIPTION_CREATED",
+		"SUBSCRIPTION_UPDATED", 
+		"SUBSCRIPTION_INACTIVATED",
+		"SUBSCRIPTION_DELETED",
+		"SUBSCRIPTION_SPLIT_DISABLED",
+		"SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK",
+		"SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED",
+	}
+	
+	for _, subscriptionEvent := range subscriptionEvents {
+		if event == subscriptionEvent {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // processEvent routes webhook events to appropriate handlers
@@ -235,19 +282,19 @@ func (uc *AsaasWebhookUseCase) processEvent(ctx context.Context, event webhookEn
 
 	// Subscription Events (7)
 	case "SUBSCRIPTION_CREATED":
-		return uc.handleSubscriptionCreated(ctx, event.Payment)
+		return uc.handleSubscriptionCreated(ctx, event.Subscription)
 	case "SUBSCRIPTION_UPDATED":
-		return uc.handleSubscriptionUpdated(ctx, event.Payment)
+		return uc.handleSubscriptionUpdated(ctx, event.Subscription)
 	case "SUBSCRIPTION_INACTIVATED":
-		return uc.handleSubscriptionInactivated(ctx, event.Payment)
+		return uc.handleSubscriptionInactivated(ctx, event.Subscription)
 	case "SUBSCRIPTION_DELETED":
-		return uc.handleSubscriptionDeleted(ctx, event.Payment)
+		return uc.handleSubscriptionDeleted(ctx, event.Subscription)
 	case "SUBSCRIPTION_SPLIT_DISABLED":
-		return uc.handleSubscriptionSplitDisabled(ctx, event.Payment)
+		return uc.handleSubscriptionSplitDisabled(ctx, event.Subscription)
 	case "SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK":
-		return uc.handleSubscriptionSplitBlocked(ctx, event.Payment)
+		return uc.handleSubscriptionSplitBlocked(ctx, event.Subscription)
 	case "SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED":
-		return uc.handleSubscriptionSplitUnblocked(ctx, event.Payment)
+		return uc.handleSubscriptionSplitUnblocked(ctx, event.Subscription)
 
 	default:
 		uc.logger.Warning(ctx, "Unhandled webhook event type", map[string]interface{}{

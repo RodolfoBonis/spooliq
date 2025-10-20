@@ -1,16 +1,21 @@
 package entities
 
-import "time"
+import (
+	"time"
+
+	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
+)
 
 // CompanyListItem represents a company in the list response
 type CompanyListItem struct {
 	ID                 string     `json:"id"`
 	OrganizationID     string     `json:"organization_id"`
 	Name               string     `json:"name"`
-	Email              string     `json:"email"`
-	SubscriptionStatus string     `json:"subscription_status"`
-	SubscriptionPlanID *string    `json:"subscription_plan_id,omitempty"` // UUID as string
-	IsPlatformCompany  bool       `json:"is_platform_company"`
+	Email              string                                          `json:"email"`
+	SubscriptionStatus string                                          `json:"subscription_status"`
+	SubscriptionPlanID *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	CurrentPlan        *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
+	IsPlatformCompany  bool                                            `json:"is_platform_company"`
 	TrialEndsAt        *time.Time `json:"trial_ends_at,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 }
@@ -34,10 +39,11 @@ type CompanyDetailsResponse struct {
 	WhatsApp              string     `json:"whatsapp"`
 	Instagram             string     `json:"instagram"`
 	Website               string     `json:"website"`
-	LogoURL               string     `json:"logo_url"`
-	SubscriptionStatus    string     `json:"subscription_status"`
-	SubscriptionPlanID    *string    `json:"subscription_plan_id,omitempty"` // UUID as string, FK to subscription_plans
-	StatusUpdatedAt       *time.Time `json:"status_updated_at,omitempty"`
+	LogoURL               string                                          `json:"logo_url"`
+	SubscriptionStatus    string                                          `json:"subscription_status"`
+	SubscriptionPlanID    *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string, FK to subscription_plans
+	CurrentPlan           *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
+	StatusUpdatedAt       *time.Time                                      `json:"status_updated_at,omitempty"`
 	IsPlatformCompany     bool       `json:"is_platform_company"`
 	TrialEndsAt           *time.Time `json:"trial_ends_at,omitempty"`
 	SubscriptionStartedAt *time.Time `json:"subscription_started_at,omitempty"`
@@ -62,10 +68,11 @@ type UpdatePlanRequest struct {
 // SubscriptionListItem represents a subscription in the list
 type SubscriptionListItem struct {
 	OrganizationID     string     `json:"organization_id"`
-	CompanyName        string     `json:"company_name"`
-	SubscriptionStatus string     `json:"subscription_status"`
-	SubscriptionPlanID *string    `json:"subscription_plan_id,omitempty"` // UUID as string
-	TrialEndsAt        *time.Time `json:"trial_ends_at,omitempty"`
+	CompanyName        string                                          `json:"company_name"`
+	SubscriptionStatus string                                          `json:"subscription_status"`
+	SubscriptionPlanID *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	CurrentPlan        *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
+	TrialEndsAt        *time.Time                                      `json:"trial_ends_at,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 }
 
@@ -102,10 +109,11 @@ type PaymentHistoryResponse struct {
 // SubscriptionDetailsResponse represents detailed subscription info
 type SubscriptionDetailsResponse struct {
 	OrganizationID        string               `json:"organization_id"`
-	CompanyName           string               `json:"company_name"`
-	SubscriptionStatus    string               `json:"subscription_status"`
-	SubscriptionPlanID    *string              `json:"subscription_plan_id,omitempty"` // UUID as string
-	StatusUpdatedAt       *time.Time           `json:"status_updated_at,omitempty"`
+	CompanyName           string                                          `json:"company_name"`
+	SubscriptionStatus    string                                          `json:"subscription_status"`
+	SubscriptionPlanID    *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	CurrentPlan           *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
+	StatusUpdatedAt       *time.Time                                      `json:"status_updated_at,omitempty"`
 	TrialEndsAt           *time.Time           `json:"trial_ends_at,omitempty"`
 	SubscriptionStartedAt *time.Time           `json:"subscription_started_at,omitempty"`
 	// Note: Asaas info and payment timing moved to separate tables
@@ -116,4 +124,14 @@ type SubscriptionDetailsResponse struct {
 // CancelSubscriptionRequest represents request to cancel subscription
 type CancelSubscriptionRequest struct {
 	Reason string `json:"reason" validate:"required"`
+}
+
+// AdminStats represents platform analytics and metrics
+type AdminStats struct {
+	TotalCompanies      int     `json:"total_companies"`
+	ActiveSubscriptions int     `json:"active_subscriptions"`
+	TrialSubscriptions  int     `json:"trial_subscriptions"`
+	OverdueSubscriptions int    `json:"overdue_subscriptions"`
+	TotalMRR            float64 `json:"total_mrr"` // Monthly Recurring Revenue in cents
+	ChurnRate           float64 `json:"churn_rate"` // percentage
 }

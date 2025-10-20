@@ -17,6 +17,7 @@ var AdminModule = fx.Module("admin",
 		usecases.NewListSubscriptionsUseCase,
 		usecases.NewGetSubscriptionDetailsUseCase,
 		usecases.NewGetPaymentHistoryUseCase,
+		usecases.NewGetStatsUseCase,
 
 		// Handler
 		func(
@@ -26,6 +27,7 @@ var AdminModule = fx.Module("admin",
 			listSubscriptionsUC *usecases.ListSubscriptionsUseCase,
 			getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase,
 			getPaymentHistoryUC *usecases.GetPaymentHistoryUseCase,
+			getStatsUC *usecases.GetStatsUseCase,
 			subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
 		) *admin.Handler {
 			return admin.NewAdminHandler(
@@ -35,6 +37,7 @@ var AdminModule = fx.Module("admin",
 				listSubscriptionsUC,
 				getSubscriptionDetailsUC,
 				getPaymentHistoryUC,
+				getStatsUC,
 				subscriptionPlanUC,
 			)
 		},

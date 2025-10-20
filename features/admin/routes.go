@@ -22,6 +22,7 @@ type Handler struct {
 	listSubscriptionsUC      *usecases.ListSubscriptionsUseCase
 	getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase
 	getPaymentHistoryUC      *usecases.GetPaymentHistoryUseCase
+	getStatsUC               *usecases.GetStatsUseCase
 	subscriptionPlanUC       *subscriptionUsecases.SubscriptionPlanUseCase
 }
 
@@ -33,6 +34,7 @@ func NewAdminHandler(
 	listSubscriptionsUC *usecases.ListSubscriptionsUseCase,
 	getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase,
 	getPaymentHistoryUC *usecases.GetPaymentHistoryUseCase,
+	getStatsUC *usecases.GetStatsUseCase,
 	subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
 ) *Handler {
 	return &Handler{
@@ -42,6 +44,7 @@ func NewAdminHandler(
 		listSubscriptionsUC:      listSubscriptionsUC,
 		getSubscriptionDetailsUC: getSubscriptionDetailsUC,
 		getPaymentHistoryUC:      getPaymentHistoryUC,
+		getStatsUC:               getStatsUC,
 		subscriptionPlanUC:       subscriptionPlanUC,
 	}
 }
@@ -74,6 +77,9 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 			plansGroup.PUT("/:id", protectFactory(handler.subscriptionPlanUC.UpdatePlan, roles.PlatformAdminRole))
 			plansGroup.DELETE("/:id", protectFactory(handler.subscriptionPlanUC.DeletePlan, roles.PlatformAdminRole))
 		}
+
+		// Platform Stats (PlatformAdmin only)
+		admin.GET("/stats", protectFactory(handler.GetStats, roles.PlatformAdminRole))
 	}
 }
 

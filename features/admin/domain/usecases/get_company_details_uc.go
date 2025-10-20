@@ -8,6 +8,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/google/uuid"
 )
 
@@ -76,6 +77,22 @@ func (uc *GetCompanyDetailsUseCase) Execute(ctx context.Context, userRoles []str
 		return nil, errors.NotFound("Company not found")
 	}
 
+	// Convert plan entity to response
+	var currentPlan *subscriptionEntities.SubscriptionPlanResponse
+	if company.CurrentPlan != nil {
+		currentPlan = &subscriptionEntities.SubscriptionPlanResponse{
+			ID:          company.CurrentPlan.ID,
+			Name:        company.CurrentPlan.Name,
+			Description: company.CurrentPlan.Description,
+			Price:       company.CurrentPlan.Price,
+			Cycle:       company.CurrentPlan.Cycle,
+			Features:    company.CurrentPlan.Features,
+			IsActive:    company.CurrentPlan.IsActive,
+			CreatedAt:   company.CurrentPlan.CreatedAt,
+			UpdatedAt:   company.CurrentPlan.UpdatedAt,
+		}
+	}
+
 	// Map to response
 	response := &adminEntities.CompanyDetailsResponse{
 		ID:                    company.ID.String(),
@@ -89,6 +106,7 @@ func (uc *GetCompanyDetailsUseCase) Execute(ctx context.Context, userRoles []str
 		LogoURL:               ptrToStr(company.LogoURL),
 		SubscriptionStatus:    company.SubscriptionStatus,
 		SubscriptionPlanID:    uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
+		CurrentPlan:           currentPlan,
 		StatusUpdatedAt:       &company.StatusUpdatedAt,
 		IsPlatformCompany:     company.IsPlatformCompany,
 		TrialEndsAt:           company.TrialEndsAt,

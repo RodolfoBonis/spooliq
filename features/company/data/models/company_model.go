@@ -71,7 +71,7 @@ func (c *CompanyModel) BeforeCreate(tx *gorm.DB) error {
 
 // ToEntity converts the GORM model to domain entity
 func (c *CompanyModel) ToEntity() *entities.CompanyEntity {
-	return &entities.CompanyEntity{
+	entity := &entities.CompanyEntity{
 		ID:                    c.ID,
 		OrganizationID:        c.OrganizationID,
 		Name:                  c.Name,
@@ -97,6 +97,13 @@ func (c *CompanyModel) ToEntity() *entities.CompanyEntity {
 		UpdatedAt:             c.UpdatedAt,
 		DeletedAt:             getDeletedAt(c.DeletedAt),
 	}
+
+	// Convert CurrentPlan if available
+	if c.CurrentPlan != nil {
+		entity.CurrentPlan = c.CurrentPlan.ToEntity()
+	}
+
+	return entity
 }
 
 // FromEntity converts domain entity to GORM model

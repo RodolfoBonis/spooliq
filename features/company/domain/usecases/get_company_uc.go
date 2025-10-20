@@ -5,6 +5,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
+	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -61,6 +62,22 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 		"organization_id": company.OrganizationID,
 	})
 
+	// Convert plan entity to response
+	var currentPlan *subscriptionEntities.SubscriptionPlanResponse
+	if company.CurrentPlan != nil {
+		currentPlan = &subscriptionEntities.SubscriptionPlanResponse{
+			ID:          company.CurrentPlan.ID,
+			Name:        company.CurrentPlan.Name,
+			Description: company.CurrentPlan.Description,
+			Price:       company.CurrentPlan.Price,
+			Cycle:       company.CurrentPlan.Cycle,
+			Features:    company.CurrentPlan.Features,
+			IsActive:    company.CurrentPlan.IsActive,
+			CreatedAt:   company.CurrentPlan.CreatedAt,
+			UpdatedAt:   company.CurrentPlan.UpdatedAt,
+		}
+	}
+
 	c.JSON(http.StatusOK, entities.CompanyResponse{
 		ID:             company.ID.String(),
 		OrganizationID: company.OrganizationID,
@@ -80,6 +97,7 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 		// Subscription fields
 		SubscriptionStatus:    company.SubscriptionStatus,
 		SubscriptionPlanID:    uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
+		CurrentPlan:           currentPlan,
 		StatusUpdatedAt:       company.StatusUpdatedAt,
 		IsPlatformCompany:     company.IsPlatformCompany,
 		TrialEndsAt:           company.TrialEndsAt,

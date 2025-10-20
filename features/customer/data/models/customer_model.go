@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 // CustomerModel represents the customer data model for GORM
 type CustomerModel struct {
 	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_customer_org" json:"organization_id"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_customer_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Name           string         `gorm:"type:varchar(255);not null" json:"name"`
 	Email          *string        `gorm:"type:varchar(255);uniqueIndex:idx_customer_org_email" json:"email"`
 	Phone          *string        `gorm:"type:varchar(50)" json:"phone"`
@@ -26,6 +27,12 @@ type CustomerModel struct {
 	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	// User    *UserModel    `gorm:"foreignKey:OwnerUserID;references:KeycloakUserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"user,omitempty"`
+	// Budgets []BudgetModel `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"budgets,omitempty"`
+	// Commented out to avoid circular imports - relationships enforced by other models
 }
 
 // TableName specifies the table name for GORM

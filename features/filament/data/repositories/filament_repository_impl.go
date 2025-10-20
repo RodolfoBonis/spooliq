@@ -39,6 +39,9 @@ func (r *filamentRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, org
 	model := &models.FilamentModel{}
 
 	if err := r.db.WithContext(ctx).
+		Preload("Brand").
+		Preload("Material").
+		Preload("User").
 		Where("id = ? AND organization_id = ?", id, organizationID).
 		First(model).Error; err != nil {
 		return nil, fmt.Errorf("filament not found: %w", err)
@@ -87,8 +90,11 @@ func (r *filamentRepositoryImpl) FindAll(ctx context.Context, organizationID str
 		return nil, 0, fmt.Errorf("failed to count filaments: %w", err)
 	}
 
-	// Get paginated results
+	// Get paginated results with relationships
 	if err := query.
+		Preload("Brand").
+		Preload("Material").
+		Preload("User").
 		Limit(limit).
 		Offset(offset).
 		Order("created_at DESC").

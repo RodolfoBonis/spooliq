@@ -24,8 +24,9 @@ type CompanyResponse struct {
 
 	// Subscription fields
 	SubscriptionStatus    string     `json:"subscription_status"`
+	SubscriptionPlanID    *string    `json:"subscription_plan_id,omitempty"` // UUID as string
+	StatusUpdatedAt       time.Time  `json:"status_updated_at"`
 	IsPlatformCompany     bool       `json:"is_platform_company"`
-	SubscriptionPlan      string     `json:"subscription_plan"`
 	TrialEndsAt           *time.Time `json:"trial_ends_at,omitempty"`
 	SubscriptionStartedAt *time.Time `json:"subscription_started_at,omitempty"`
 

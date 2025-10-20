@@ -79,6 +79,7 @@ func (r *customerRepositoryImpl) FindAll(ctx context.Context, organizationID str
 
 	// Get paginated results
 	if err := query.
+		// For list views, we don't preload relationships to keep queries lightweight
 		Limit(limit).
 		Offset(offset).
 		Order("created_at DESC").
@@ -146,6 +147,7 @@ func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, organizati
 
 	// Get paginated results
 	if err := query.
+		// For search/list views, we don't preload relationships to keep queries lightweight
 		Limit(limit).
 		Offset(offset).
 		Order(fmt.Sprintf("%s %s", sortBy, sortDir)).

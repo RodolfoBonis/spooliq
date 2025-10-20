@@ -161,13 +161,14 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		State:          &request.State,
 		ZipCode:        &request.ZipCode,
 		// Subscription fields
-		SubscriptionStatus: "trial",
-		IsPlatformCompany:  false,
-		TrialEndsAt:        &trialEndsAt,
-		SubscriptionPlan:   "basic",
-		AsaasCustomerID:    &asaasCustomer.ID,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
+		SubscriptionStatus:    "trial",
+		SubscriptionPlanID:    nil,             // Trial users don't have a plan yet
+		StatusUpdatedAt:       time.Now(),
+		IsPlatformCompany:     false,
+		TrialEndsAt:           &trialEndsAt,
+		SubscriptionStartedAt: nil,
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
 	}
 
 	if request.CompanyTradeName != "" {
@@ -184,6 +185,14 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
+
+	// TODO: Create PaymentGatewayLink record to store Asaas customer ID
+	// This requires a PaymentGatewayLinkRepository which doesn't exist yet
+	// For now, we skip this step - the user won't be able to subscribe until this is implemented
+	uc.logger.Info(ctx, "Company created - PaymentGatewayLink creation pending implementation", map[string]interface{}{
+		"organization_id":   organizationID,
+		"asaas_customer_id": asaasCustomer.ID,
+	})
 
 	// Create user in database
 	user := &userEntities.UserEntity{

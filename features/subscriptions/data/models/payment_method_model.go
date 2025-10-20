@@ -9,19 +9,24 @@ import (
 )
 
 // PaymentMethodModel represents the payment method data model for GORM
+// FK: OrganizationID → companies(organization_id) RESTRICT (defined in CompanyModel side)
 type PaymentMethodModel struct {
 	ID                   uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID       string         `gorm:"type:varchar(255);not null;index" json:"organization_id"`
+	OrganizationID       string         `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK to companies
 	AsaasCreditCardToken string         `gorm:"type:varchar(255);not null" json:"asaas_credit_card_token"`
 	HolderName           string         `gorm:"type:varchar(255);not null" json:"holder_name"`
 	Last4Digits          string         `gorm:"type:varchar(4);not null" json:"last_4_digits"`
-	Brand                string         `gorm:"type:varchar(50);not null" json:"brand"`
+	CardNetwork          string         `gorm:"type:varchar(50);not null;column:brand" json:"brand"` // Visa, Mastercard, etc
 	ExpiryMonth          string         `gorm:"type:varchar(2);not null" json:"expiry_month"`
 	ExpiryYear           string         `gorm:"type:varchar(4);not null" json:"expiry_year"`
 	IsPrimary            bool           `gorm:"not null;default:false" json:"is_primary"`
 	CreatedAt            time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt            time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// GORM v2 Relationships
+	// Note: No reverse relationships to avoid circular import.
+	// FK constraint for OrganizationID is defined in CompanyModel side.
 }
 
 // TableName specifies the table name for GORM
@@ -45,7 +50,7 @@ func (p *PaymentMethodModel) ToEntity() *entities.PaymentMethodEntity {
 		AsaasCreditCardToken: p.AsaasCreditCardToken,
 		HolderName:           p.HolderName,
 		Last4Digits:          p.Last4Digits,
-		Brand:                p.Brand,
+		Brand:                p.CardNetwork,
 		ExpiryMonth:          p.ExpiryMonth,
 		ExpiryYear:           p.ExpiryYear,
 		IsPrimary:            p.IsPrimary,
@@ -62,7 +67,7 @@ func (p *PaymentMethodModel) FromEntity(entity *entities.PaymentMethodEntity) {
 	p.AsaasCreditCardToken = entity.AsaasCreditCardToken
 	p.HolderName = entity.HolderName
 	p.Last4Digits = entity.Last4Digits
-	p.Brand = entity.Brand
+	p.CardNetwork = entity.Brand
 	p.ExpiryMonth = entity.ExpiryMonth
 	p.ExpiryYear = entity.ExpiryYear
 	p.IsPrimary = entity.IsPrimary

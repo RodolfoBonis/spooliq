@@ -20,8 +20,10 @@ type SubscriptionPlanModel struct {
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 
-	// Relacionamento HasMany
-	Features []PlanFeatureModel `gorm:"foreignKey:SubscriptionPlanID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"features"`
+	// GORM v2 Relationships
+	Features []PlanFeatureModel  `gorm:"foreignKey:SubscriptionPlanID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"features"`
+	Payments []SubscriptionModel `gorm:"foreignKey:SubscriptionPlanID;references:ID" json:"payments,omitempty"`
+	// Note: No Companies relationship to avoid circular import. FK defined in CompanyModel.
 }
 
 // TableName specifies the table name for GORM
@@ -114,4 +116,16 @@ func getDeletedAtFromPlanFeature(deletedAt gorm.DeletedAt) *time.Time {
 		return &deletedAt.Time
 	}
 	return nil
+}
+
+// CycleDuration returns the duration of the subscription cycle
+func (s *SubscriptionPlanModel) CycleDuration() time.Duration {
+	switch s.Cycle {
+	case "MONTHLY":
+		return 30 * 24 * time.Hour
+	case "YEARLY":
+		return 365 * 24 * time.Hour
+	default:
+		return 30 * 24 * time.Hour
+	}
 }

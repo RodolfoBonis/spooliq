@@ -8,7 +8,7 @@ import (
 // MachinePresetModel represents a 3D printer machine preset in the database
 type MachinePresetModel struct {
 	ID                     uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	OrganizationID         string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
+	OrganizationID         string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Brand                  string    `gorm:"type:varchar(255)" json:"brand,omitempty"`
 	Model                  string    `gorm:"type:varchar(255)" json:"model,omitempty"`
 	BuildVolumeX           float32   `gorm:"type:float" json:"build_volume_x"`
@@ -23,6 +23,10 @@ type MachinePresetModel struct {
 	ExtruderTemperatureMax float32   `gorm:"type:float" json:"extruder_temperature_max"`
 	FilamentDiameter       float32   `gorm:"type:float" json:"filament_diameter"`
 	CostPerHour            float32   `gorm:"type:float" json:"cost_per_hour"`
+
+	// GORM v2 Relationships - BelongsTo Preset (1:1 relationship via same ID)
+	// Preset *PresetModel `gorm:"foreignKey:ID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"preset,omitempty"`
+	// Commented out to avoid circular import - relationship enforced by shared ID
 }
 
 // TableName returns the table name for the machine preset model

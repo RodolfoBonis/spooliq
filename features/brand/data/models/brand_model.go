@@ -4,18 +4,24 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/google/uuid"
 )
 
 // BrandModel represents the database model for brand entities.
 type BrandModel struct {
 	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_brand_org" json:"organization_id"`
+	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_brand_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
 	Description    string     `gorm:"type:text" json:"description,omitempty"`
 	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
 	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	// Filaments []FilamentModel `gorm:"foreignKey:BrandID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filaments,omitempty"`
+	// Commented out to avoid circular import - relationship enforced by FilamentModel side
 }
 
 // TableName returns the table name for the brand model.

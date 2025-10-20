@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
+	filamentModels "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	"github.com/google/uuid"
 )
 
@@ -12,7 +14,7 @@ type BudgetItemFilamentModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	BudgetItemID   uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_item_id"`
 	FilamentID     uuid.UUID `gorm:"type:uuid;not null;index" json:"filament_id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 
 	// Quantidade TOTAL de filamento para este item (não por unidade!)
 	// Exemplo: Para imprimir 100 chaveiros em lote, usar 2800g de PLA Rosa
@@ -24,6 +26,11 @@ type BudgetItemFilamentModel struct {
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel   `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	BudgetItem   *BudgetItemModel              `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"budget_item,omitempty"`
+	Filament     *filamentModels.FilamentModel `gorm:"foreignKey:FilamentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filament,omitempty"`
 }
 
 // TableName returns the database table name for budget item filaments

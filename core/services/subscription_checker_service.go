@@ -80,33 +80,20 @@ func (s *SubscriptionCheckerService) CheckAllSubscriptions(ctx context.Context) 
 
 // checkCompanySubscription checks a single company's subscription status
 func (s *SubscriptionCheckerService) checkCompanySubscription(ctx context.Context, company *companyEntities.CompanyEntity) error {
+	// TODO: Refactor to use PaymentGatewayLink table for Asaas integration
+	// For now, this service is disabled pending refactoring to the new FK structure
+	// where Asaas info is in payment_gateway_links, not directly in companies table
+
 	// For trial companies
 	if company.SubscriptionStatus == "trial" {
 		if company.TrialEndsAt != nil && time.Now().After(*company.TrialEndsAt) {
-			// Trial has ended - check if subscription is active in Asaas
-			if company.AsaasSubscriptionID != nil && *company.AsaasSubscriptionID != "" {
-				subscription, err := s.asaasService.GetSubscription(ctx, *company.AsaasSubscriptionID)
-				if err != nil {
-					s.logger.Error(ctx, "Failed to get Asaas subscription", map[string]interface{}{
-						"organization_id":       company.OrganizationID,
-						"asaas_subscription_id": *company.AsaasSubscriptionID,
-						"error":                 err.Error(),
-					})
-					return err
-				}
-
-				// Check if subscription is active and has confirmed payment
-				if subscription.Status == "ACTIVE" {
-					// Update company to active status
-					company.SubscriptionStatus = "active"
-					if err := s.companyRepository.Update(ctx, company); err != nil {
-						return err
-					}
-					s.logger.Info(ctx, "Company upgraded from trial to active", map[string]interface{}{
-						"organization_id": company.OrganizationID,
-					})
-				}
-			} else {
+			// Trial has ended - need to check payment gateway link
+			// TODO: Query PaymentGatewayLinkRepository to get gateway info
+			s.logger.Info(ctx, "Trial ended but payment gateway check not yet implemented", map[string]interface{}{
+				"organization_id": company.OrganizationID,
+			})
+			// For now, just suspend the company
+			if false { // Disabled - needs refactoring
 				// No subscription created - suspend the account
 				company.SubscriptionStatus = "suspended"
 				if err := s.companyRepository.Update(ctx, company); err != nil {
@@ -121,42 +108,15 @@ func (s *SubscriptionCheckerService) checkCompanySubscription(ctx context.Contex
 
 	// For active companies
 	if company.SubscriptionStatus == "active" {
-		if company.AsaasSubscriptionID != nil && *company.AsaasSubscriptionID != "" {
-			subscription, err := s.asaasService.GetSubscription(ctx, *company.AsaasSubscriptionID)
-			if err != nil {
-				s.logger.Error(ctx, "Failed to get Asaas subscription", map[string]interface{}{
-					"organization_id":       company.OrganizationID,
-					"asaas_subscription_id": *company.AsaasSubscriptionID,
-					"error":                 err.Error(),
-				})
-				return err
-			}
-
-			// Check subscription status
-			if subscription.Status == "OVERDUE" {
-				company.SubscriptionStatus = "suspended"
-				if err := s.companyRepository.Update(ctx, company); err != nil {
-					return err
-				}
-				s.logger.Info(ctx, "Company suspended - overdue payment", map[string]interface{}{
-					"organization_id": company.OrganizationID,
-				})
-			} else if subscription.Status == "INACTIVE" {
-				company.SubscriptionStatus = "cancelled"
-				if err := s.companyRepository.Update(ctx, company); err != nil {
-					return err
-				}
-				s.logger.Info(ctx, "Company cancelled - subscription inactive", map[string]interface{}{
-					"organization_id": company.OrganizationID,
-				})
-			}
-		}
+		// TODO: Query PaymentGatewayLinkRepository to get Asaas subscription ID
+		// Then check with Asaas API
+		s.logger.Info(ctx, "Active subscription check not yet implemented for new FK structure", map[string]interface{}{
+			"organization_id": company.OrganizationID,
+		})
 	}
 
-	// Update last payment check timestamp
-	now := time.Now()
-	company.LastPaymentCheck = &now
-	return s.companyRepository.Update(ctx, company)
+	// Note: LastPaymentCheck field removed - status changes now tracked via StatusUpdatedAt
+	return nil
 }
 
 // StartDailyChecker starts the daily subscription checker (runs at 3 AM)

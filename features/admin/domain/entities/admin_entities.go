@@ -4,18 +4,15 @@ import "time"
 
 // CompanyListItem represents a company in the list response
 type CompanyListItem struct {
-	ID                  string     `json:"id"`
-	OrganizationID      string     `json:"organization_id"`
-	Name                string     `json:"name"`
-	Email               string     `json:"email"`
-	SubscriptionStatus  string     `json:"subscription_status"`
-	SubscriptionPlan    string     `json:"subscription_plan"`
-	IsPlatformCompany   bool       `json:"is_platform_company"`
-	TrialEndsAt         *time.Time `json:"trial_ends_at,omitempty"`
-	NextPaymentDue      *time.Time `json:"next_payment_due,omitempty"`
-	AsaasCustomerID     string     `json:"asaas_customer_id"`
-	AsaasSubscriptionID string     `json:"asaas_subscription_id"`
-	CreatedAt           time.Time  `json:"created_at"`
+	ID                 string     `json:"id"`
+	OrganizationID     string     `json:"organization_id"`
+	Name               string     `json:"name"`
+	Email              string     `json:"email"`
+	SubscriptionStatus string     `json:"subscription_status"`
+	SubscriptionPlanID *string    `json:"subscription_plan_id,omitempty"` // UUID as string
+	IsPlatformCompany  bool       `json:"is_platform_company"`
+	TrialEndsAt        *time.Time `json:"trial_ends_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
 }
 
 // ListCompaniesResponse represents the paginated list response
@@ -39,16 +36,15 @@ type CompanyDetailsResponse struct {
 	Website               string     `json:"website"`
 	LogoURL               string     `json:"logo_url"`
 	SubscriptionStatus    string     `json:"subscription_status"`
-	SubscriptionPlan      string     `json:"subscription_plan"`
+	SubscriptionPlanID    *string    `json:"subscription_plan_id,omitempty"` // UUID as string, FK to subscription_plans
+	StatusUpdatedAt       *time.Time `json:"status_updated_at,omitempty"`
 	IsPlatformCompany     bool       `json:"is_platform_company"`
 	TrialEndsAt           *time.Time `json:"trial_ends_at,omitempty"`
 	SubscriptionStartedAt *time.Time `json:"subscription_started_at,omitempty"`
-	AsaasCustomerID       string     `json:"asaas_customer_id"`
-	AsaasSubscriptionID   string     `json:"asaas_subscription_id"`
-	LastPaymentCheck      *time.Time `json:"last_payment_check,omitempty"`
-	NextPaymentDue        *time.Time `json:"next_payment_due,omitempty"`
-	CreatedAt             time.Time  `json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
+	// Note: Asaas info moved to PaymentGatewayLink table
+	// AsaasCustomerID and AsaasSubscriptionID can be queried from payment_gateway_links if needed
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // UpdateStatusRequest represents request to update subscription status
@@ -65,14 +61,12 @@ type UpdatePlanRequest struct {
 
 // SubscriptionListItem represents a subscription in the list
 type SubscriptionListItem struct {
-	OrganizationID      string     `json:"organization_id"`
-	CompanyName         string     `json:"company_name"`
-	SubscriptionStatus  string     `json:"subscription_status"`
-	SubscriptionPlan    string     `json:"subscription_plan"`
-	AsaasSubscriptionID string     `json:"asaas_subscription_id"`
-	NextPaymentDue      *time.Time `json:"next_payment_due,omitempty"`
-	TrialEndsAt         *time.Time `json:"trial_ends_at,omitempty"`
-	CreatedAt           time.Time  `json:"created_at"`
+	OrganizationID     string     `json:"organization_id"`
+	CompanyName        string     `json:"company_name"`
+	SubscriptionStatus string     `json:"subscription_status"`
+	SubscriptionPlanID *string    `json:"subscription_plan_id,omitempty"` // UUID as string
+	TrialEndsAt        *time.Time `json:"trial_ends_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
 }
 
 // ListSubscriptionsResponse represents paginated subscriptions list
@@ -110,14 +104,13 @@ type SubscriptionDetailsResponse struct {
 	OrganizationID        string               `json:"organization_id"`
 	CompanyName           string               `json:"company_name"`
 	SubscriptionStatus    string               `json:"subscription_status"`
-	SubscriptionPlan      string               `json:"subscription_plan"`
-	AsaasCustomerID       string               `json:"asaas_customer_id"`
-	AsaasSubscriptionID   string               `json:"asaas_subscription_id"`
+	SubscriptionPlanID    *string              `json:"subscription_plan_id,omitempty"` // UUID as string
+	StatusUpdatedAt       *time.Time           `json:"status_updated_at,omitempty"`
 	TrialEndsAt           *time.Time           `json:"trial_ends_at,omitempty"`
 	SubscriptionStartedAt *time.Time           `json:"subscription_started_at,omitempty"`
-	NextPaymentDue        *time.Time           `json:"next_payment_due,omitempty"`
-	LastPaymentCheck      *time.Time           `json:"last_payment_check,omitempty"`
-	RecentPayments        []PaymentHistoryItem `json:"recent_payments"`
+	// Note: Asaas info and payment timing moved to separate tables
+	// Use PaymentGatewayLink and SubscriptionPayments for detailed info
+	RecentPayments []PaymentHistoryItem `json:"recent_payments"`
 }
 
 // CancelSubscriptionRequest represents request to cancel subscription

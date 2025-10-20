@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -12,12 +13,16 @@ import (
 type BudgetStatusHistoryModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	BudgetID       uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	PreviousStatus string    `gorm:"type:varchar(20);not null" json:"previous_status"`
 	NewStatus      string    `gorm:"type:varchar(20);not null" json:"new_status"`
 	ChangedBy      string    `gorm:"type:varchar(255);not null" json:"changed_by"`
 	Notes          string    `gorm:"type:text" json:"notes"`
 	CreatedAt      time.Time `gorm:"autoCreateTime" json:"created_at"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	Budget       *BudgetModel                `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"budget,omitempty"`
 }
 
 // TableName specifies the table name for GORM

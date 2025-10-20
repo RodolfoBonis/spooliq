@@ -9,9 +9,14 @@ import (
 )
 
 // SubscriptionModel represents the subscription payment history data model for GORM
+// FK: OrganizationID → companies(organization_id) RESTRICT (defined in CompanyModel side)
+// FK: SubscriptionPlanID → subscription_plans(id) SET NULL
+// FK: PaymentMethodID → payment_methods(id) SET NULL
 type SubscriptionModel struct {
 	ID                  uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	OrganizationID      string         `gorm:"type:varchar(255);not null;index"`
+	OrganizationID      string         `gorm:"type:varchar(255);not null;index"` // FK to companies
+	SubscriptionPlanID  *uuid.UUID     `gorm:"type:uuid;index"`                  // FK to subscription_plans - qual plano foi pago
+	PaymentMethodID     *uuid.UUID     `gorm:"type:uuid;index"`                  // FK to payment_methods - qual cartão foi usado
 	AsaasPaymentID      string         `gorm:"type:varchar(255);index"`
 	AsaasInvoiceID      string         `gorm:"type:varchar(255)"`
 	AsaasCustomerID     string         `gorm:"type:varchar(255)"`
@@ -28,6 +33,11 @@ type SubscriptionModel struct {
 	CreatedAt           time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt           time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// GORM v2 Relationships
+	// Note: No Organization relationship to avoid circular import. FK defined in CompanyModel.
+	Plan          *SubscriptionPlanModel `gorm:"foreignKey:SubscriptionPlanID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"plan,omitempty"`
+	PaymentMethod *PaymentMethodModel    `gorm:"foreignKey:PaymentMethodID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"payment_method,omitempty"`
 }
 
 // TableName specifies the table name for GORM
@@ -40,6 +50,8 @@ func (s *SubscriptionModel) ToEntity() *entities.SubscriptionEntity {
 	return &entities.SubscriptionEntity{
 		ID:                  s.ID,
 		OrganizationID:      s.OrganizationID,
+		SubscriptionPlanID:  s.SubscriptionPlanID,
+		PaymentMethodID:     s.PaymentMethodID,
 		AsaasPaymentID:      s.AsaasPaymentID,
 		AsaasInvoiceID:      s.AsaasInvoiceID,
 		AsaasCustomerID:     s.AsaasCustomerID,
@@ -63,6 +75,8 @@ func (s *SubscriptionModel) ToEntity() *entities.SubscriptionEntity {
 func (s *SubscriptionModel) FromEntity(entity *entities.SubscriptionEntity) {
 	s.ID = entity.ID
 	s.OrganizationID = entity.OrganizationID
+	s.SubscriptionPlanID = entity.SubscriptionPlanID
+	s.PaymentMethodID = entity.PaymentMethodID
 	s.AsaasPaymentID = entity.AsaasPaymentID
 	s.AsaasInvoiceID = entity.AsaasInvoiceID
 	s.AsaasCustomerID = entity.AsaasCustomerID

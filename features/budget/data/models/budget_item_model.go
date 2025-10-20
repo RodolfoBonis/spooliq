@@ -4,6 +4,9 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
+	filamentModels "github.com/RodolfoBonis/spooliq/features/filament/data/models"
+	presetModels "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -13,7 +16,7 @@ type BudgetItemModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	BudgetID       uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_id"`
 	FilamentID     uuid.UUID `gorm:"type:uuid;not null" json:"filament_id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 
 	// Filament quantity (internal - for cost calculation)
 	Quantity float64 `gorm:"type:numeric;not null" json:"quantity"` // grams
@@ -49,6 +52,13 @@ type BudgetItemModel struct {
 	// Timestamps
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel       `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	Budget       *BudgetModel                      `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"budget,omitempty"`
+	Filament     *filamentModels.FilamentModel     `gorm:"foreignKey:FilamentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filament,omitempty"`
+	CostPreset   *presetModels.CostPresetModel     `gorm:"foreignKey:CostPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"cost_preset,omitempty"`
+	Filaments    []BudgetItemFilamentModel         `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"filaments,omitempty"`
 }
 
 // TableName specifies the table name for GORM

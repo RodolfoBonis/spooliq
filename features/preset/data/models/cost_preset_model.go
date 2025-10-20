@@ -8,7 +8,7 @@ import (
 // CostPresetModel represents fixed costs preset in the database
 type CostPresetModel struct {
 	ID                        uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	OrganizationID            string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
+	OrganizationID            string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	LaborCostPerHour          float32   `gorm:"type:float" json:"labor_cost_per_hour"`
 	PackagingCostPerItem      float32   `gorm:"type:float" json:"packaging_cost_per_item"`
 	ShippingCostBase          float32   `gorm:"type:float" json:"shipping_cost_base"`
@@ -18,6 +18,10 @@ type CostPresetModel struct {
 	PostProcessingCostPerHour float32   `gorm:"type:float" json:"post_processing_cost_per_hour"`
 	SupportRemovalCostPerHour float32   `gorm:"type:float" json:"support_removal_cost_per_hour"`
 	QualityControlCostPerItem float32   `gorm:"type:float" json:"quality_control_cost_per_item"`
+
+	// GORM v2 Relationships - BelongsTo Preset (1:1 relationship via same ID)
+	// Preset *PresetModel `gorm:"foreignKey:ID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"preset,omitempty"`
+	// Commented out to avoid circular import - relationship enforced by shared ID
 }
 
 // TableName returns the table name for the cost preset model

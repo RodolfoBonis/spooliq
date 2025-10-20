@@ -88,14 +88,11 @@ func (uc *GetCompanyDetailsUseCase) Execute(ctx context.Context, userRoles []str
 		Website:               ptrToStr(company.Website),
 		LogoURL:               ptrToStr(company.LogoURL),
 		SubscriptionStatus:    company.SubscriptionStatus,
-		SubscriptionPlan:      company.SubscriptionPlan,
+		SubscriptionPlanID:    uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
+		StatusUpdatedAt:       &company.StatusUpdatedAt,
 		IsPlatformCompany:     company.IsPlatformCompany,
 		TrialEndsAt:           company.TrialEndsAt,
 		SubscriptionStartedAt: company.SubscriptionStartedAt,
-		AsaasCustomerID:       ptrToStr(company.AsaasCustomerID),
-		AsaasSubscriptionID:   ptrToStr(company.AsaasSubscriptionID),
-		LastPaymentCheck:      company.LastPaymentCheck,
-		NextPaymentDue:        company.NextPaymentDue,
 		CreatedAt:             company.CreatedAt,
 		UpdatedAt:             company.UpdatedAt,
 	}

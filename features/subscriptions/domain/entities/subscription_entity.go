@@ -8,24 +8,26 @@ import (
 
 // SubscriptionEntity represents a subscription payment history in the domain layer
 type SubscriptionEntity struct {
-	ID                  uuid.UUID  `json:"id"`
-	OrganizationID      string     `json:"organization_id"`
-	AsaasPaymentID      string     `json:"asaas_payment_id,omitempty"`
-	AsaasInvoiceID      string     `json:"asaas_invoice_id,omitempty"`
-	AsaasCustomerID     string     `json:"asaas_customer_id,omitempty"`
-	AsaasSubscriptionID string     `json:"asaas_subscription_id,omitempty"`
-	Amount              float64    `json:"amount"`
-	NetValue            float64    `json:"net_value"`
-	Status              string     `json:"status"`
-	BillingType         string     `json:"billing_type,omitempty"` // CREDIT_CARD, BOLETO, PIX
-	EventType           string     `json:"event_type,omitempty"`   // Last webhook event received
-	Description         string     `json:"description,omitempty"`
-	PaymentDate         *time.Time `json:"payment_date,omitempty"`
-	DueDate             time.Time  `json:"due_date"`
-	InvoiceURL          string     `json:"invoice_url,omitempty"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
-	DeletedAt           *time.Time `json:"deleted_at,omitempty"`
+	ID                  uuid.UUID   `json:"id"`
+	OrganizationID      string      `json:"organization_id"`
+	SubscriptionPlanID  *uuid.UUID  `json:"subscription_plan_id,omitempty"`  // FK to subscription_plans - which plan was paid
+	PaymentMethodID     *uuid.UUID  `json:"payment_method_id,omitempty"`     // FK to payment_methods - which card was used
+	AsaasPaymentID      string      `json:"asaas_payment_id,omitempty"`
+	AsaasInvoiceID      string      `json:"asaas_invoice_id,omitempty"`
+	AsaasCustomerID     string      `json:"asaas_customer_id,omitempty"`
+	AsaasSubscriptionID string      `json:"asaas_subscription_id,omitempty"`
+	Amount              float64     `json:"amount"`
+	NetValue            float64     `json:"net_value"`
+	Status              string      `json:"status"`
+	BillingType         string      `json:"billing_type,omitempty"` // CREDIT_CARD, BOLETO, PIX
+	EventType           string      `json:"event_type,omitempty"`   // Last webhook event received
+	Description         string      `json:"description,omitempty"`
+	PaymentDate         *time.Time  `json:"payment_date,omitempty"`
+	DueDate             time.Time   `json:"due_date"`
+	InvoiceURL          string      `json:"invoice_url,omitempty"`
+	CreatedAt           time.Time   `json:"created_at"`
+	UpdatedAt           time.Time   `json:"updated_at"`
+	DeletedAt           *time.Time  `json:"deleted_at,omitempty"`
 }
 
 // Payment status constants (28 Payment events)

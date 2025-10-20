@@ -35,7 +35,10 @@ func (r *companyRepositoryImpl) Create(ctx context.Context, company *entities.Co
 // FindByOrganizationID finds a company by organization ID
 func (r *companyRepositoryImpl) FindByOrganizationID(ctx context.Context, organizationID string) (*entities.CompanyEntity, error) {
 	var model models.CompanyModel
-	if err := r.db.WithContext(ctx).Where("organization_id = ?", organizationID).First(&model).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("Branding").
+		Where("organization_id = ?", organizationID).
+		First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, entities.ErrCompanyNotFound
 		}
@@ -48,7 +51,10 @@ func (r *companyRepositoryImpl) FindByOrganizationID(ctx context.Context, organi
 // FindByID finds a company by ID
 func (r *companyRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID) (*entities.CompanyEntity, error) {
 	var model models.CompanyModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("Branding").
+		Where("id = ?", id).
+		First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, entities.ErrCompanyNotFound
 		}
@@ -129,6 +135,7 @@ func (r *companyRepositoryImpl) FindAllPaginated(ctx context.Context, page, page
 
 	// Fetch paginated results
 	if err := query.
+		Preload("Branding").
 		Order("created_at DESC").
 		Limit(pageSize).
 		Offset(offset).
@@ -150,6 +157,7 @@ func (r *companyRepositoryImpl) FindAllActive(ctx context.Context) ([]*entities.
 	var companyModels []models.CompanyModel
 
 	if err := r.db.WithContext(ctx).
+		Preload("Branding").
 		Where("subscription_status NOT IN (?)", []string{"suspended", "cancelled"}).
 		Find(&companyModels).Error; err != nil {
 		return nil, err

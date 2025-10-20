@@ -84,12 +84,14 @@ func (uc *ListCompaniesUseCase) Execute(ctx context.Context, userRoles []string,
 		}
 
 		companyItems[i] = adminEntities.CompanyListItem{
+			ID:                 company.ID.String(),
 			OrganizationID:     company.OrganizationID,
 			Name:               company.Name,
 			Email:              email,
 			SubscriptionStatus: company.SubscriptionStatus,
+			SubscriptionPlanID: uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
 			IsPlatformCompany:  company.IsPlatformCompany,
-			SubscriptionPlan:   company.SubscriptionPlan,
+			TrialEndsAt:        company.TrialEndsAt,
 			CreatedAt:          company.CreatedAt,
 		}
 	}

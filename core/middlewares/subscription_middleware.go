@@ -119,8 +119,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			c.JSON(http.StatusPaymentRequired, gin.H{
 				"error":               "Subscription suspended due to payment issues",
 				"subscription_status": "suspended",
-				"next_payment_due":    formatTimePtr(company.NextPaymentDue),
-				"message":             "Please update your payment information to reactivate your subscription",
+				// Note: next_payment_due removed - calculate dynamically from SubscriptionPayments if needed
+				"message": "Please update your payment information to reactivate your subscription",
 			})
 			c.Abort()
 			return

@@ -6,6 +6,7 @@ import (
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Get retrieves the company for the current organization
@@ -78,11 +79,21 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 		ZipCode:        company.ZipCode,
 		// Subscription fields
 		SubscriptionStatus:    company.SubscriptionStatus,
+		SubscriptionPlanID:    uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
+		StatusUpdatedAt:       company.StatusUpdatedAt,
 		IsPlatformCompany:     company.IsPlatformCompany,
-		SubscriptionPlan:      company.SubscriptionPlan,
 		TrialEndsAt:           company.TrialEndsAt,
 		SubscriptionStartedAt: company.SubscriptionStartedAt,
 		CreatedAt:             company.CreatedAt,
 		UpdatedAt:             company.UpdatedAt,
 	})
+}
+
+// uuidPtrToStrPtr converts *uuid.UUID to *string, returning nil if input is nil
+func uuidPtrToStrPtr(u *uuid.UUID) *string {
+	if u == nil {
+		return nil
+	}
+	str := u.String()
+	return &str
 }

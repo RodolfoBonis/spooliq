@@ -87,13 +87,10 @@ func (uc *GetSubscriptionDetailsUseCase) Execute(ctx context.Context, userRoles 
 		OrganizationID:        company.OrganizationID,
 		CompanyName:           company.Name,
 		SubscriptionStatus:    company.SubscriptionStatus,
-		SubscriptionPlan:      company.SubscriptionPlan,
-		AsaasCustomerID:       ptrToStr(company.AsaasCustomerID),
-		AsaasSubscriptionID:   ptrToStr(company.AsaasSubscriptionID),
+		SubscriptionPlanID:    uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
+		StatusUpdatedAt:       &company.StatusUpdatedAt,
 		TrialEndsAt:           company.TrialEndsAt,
 		SubscriptionStartedAt: company.SubscriptionStartedAt,
-		NextPaymentDue:        company.NextPaymentDue,
-		LastPaymentCheck:      company.LastPaymentCheck,
 		RecentPayments:        recentPayments,
 	}
 

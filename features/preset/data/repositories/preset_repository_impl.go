@@ -30,7 +30,9 @@ func (r *PresetRepositoryImpl) Create(preset *entities.PresetEntity) error {
 func (r *PresetRepositoryImpl) GetByID(id uuid.UUID) (*entities.PresetEntity, error) {
 	var model models.PresetModel
 
-	err := r.db.Where("id = ?", id).First(&model).Error
+	err := r.db.
+		Where("id = ?", id).
+		First(&model).Error
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +45,10 @@ func (r *PresetRepositoryImpl) GetByID(id uuid.UUID) (*entities.PresetEntity, er
 func (r *PresetRepositoryImpl) GetByType(presetType entities.PresetType) ([]*entities.PresetEntity, error) {
 	var models []models.PresetModel
 
-	err := r.db.Where("type = ?", string(presetType)).Find(&models).Error
+	err := r.db.
+		// For list views, we don't preload relationships to keep queries lightweight
+		Where("type = ?", string(presetType)).
+		Find(&models).Error
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +66,10 @@ func (r *PresetRepositoryImpl) GetByType(presetType entities.PresetType) ([]*ent
 func (r *PresetRepositoryImpl) GetByUserID(userID uuid.UUID) ([]*entities.PresetEntity, error) {
 	var models []models.PresetModel
 
-	err := r.db.Where("user_id = ?", userID).Find(&models).Error
+	err := r.db.
+		// For list views, we don't preload relationships to keep queries lightweight
+		Where("user_id = ?", userID).
+		Find(&models).Error
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +173,9 @@ func (r *PresetRepositoryImpl) CreateMachine(preset *entities.PresetEntity, mach
 func (r *PresetRepositoryImpl) GetMachineByID(id uuid.UUID) (*entities.MachinePresetEntity, error) {
 	var model models.MachinePresetModel
 
-	err := r.db.Where("id = ?", id).First(&model).Error
+	err := r.db.
+		Where("id = ?", id).
+		First(&model).Error
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +233,9 @@ func (r *PresetRepositoryImpl) CreateEnergy(preset *entities.PresetEntity, energ
 func (r *PresetRepositoryImpl) GetEnergyByID(id uuid.UUID) (*entities.EnergyPresetEntity, error) {
 	var model models.EnergyPresetModel
 
-	err := r.db.Where("id = ?", id).First(&model).Error
+	err := r.db.
+		Where("id = ?", id).
+		First(&model).Error
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +322,9 @@ func (r *PresetRepositoryImpl) CreateCost(preset *entities.PresetEntity, cost *e
 func (r *PresetRepositoryImpl) GetCostByID(id uuid.UUID) (*entities.CostPresetEntity, error) {
 	var model models.CostPresetModel
 
-	err := r.db.Where("id = ?", id).First(&model).Error
+	err := r.db.
+		Where("id = ?", id).
+		First(&model).Error
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
 	"github.com/google/uuid"
 )
@@ -10,7 +11,7 @@ import (
 // MaterialModel represents a 3D printing material in the database
 type MaterialModel struct {
 	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_material_org" json:"organization_id"`
+	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_material_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
 	Description    string     `gorm:"type:text" json:"description,omitempty"`
 	TempTable      float32    `gorm:"type:float" json:"tempTable,omitempty"`
@@ -18,6 +19,11 @@ type MaterialModel struct {
 	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
 	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	// Filaments []FilamentModel `gorm:"foreignKey:MaterialID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filaments,omitempty"`
+	// Commented out to avoid circular import - relationship enforced by FilamentModel side
 }
 
 // TableName returns the database table name for MaterialModel

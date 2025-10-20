@@ -77,19 +77,13 @@ func (uc *ListSubscriptionsUseCase) Execute(ctx context.Context, userRoles []str
 	// Map entities to subscription list items
 	subscriptionItems := make([]adminEntities.SubscriptionListItem, len(companies))
 	for i, company := range companies {
-		asaasSubID := ""
-		if company.AsaasSubscriptionID != nil {
-			asaasSubID = *company.AsaasSubscriptionID
-		}
-
 		subscriptionItems[i] = adminEntities.SubscriptionListItem{
-			OrganizationID:      company.OrganizationID,
-			CompanyName:         company.Name,
-			SubscriptionStatus:  company.SubscriptionStatus,
-			SubscriptionPlan:    company.SubscriptionPlan,
-			AsaasSubscriptionID: asaasSubID,
-			TrialEndsAt:         company.TrialEndsAt,
-			NextPaymentDue:      company.NextPaymentDue,
+			OrganizationID:     company.OrganizationID,
+			CompanyName:        company.Name,
+			SubscriptionStatus: company.SubscriptionStatus,
+			SubscriptionPlanID: uuidPtrToStrPtr(company.SubscriptionPlanID), // Convert UUID* to string*
+			TrialEndsAt:        company.TrialEndsAt,
+			CreatedAt:          company.CreatedAt,
 		}
 	}
 

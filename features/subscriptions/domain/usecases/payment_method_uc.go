@@ -78,40 +78,24 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 		return
 	}
 
-	// If company doesn't have an Asaas customer ID, create one
-	asaasCustomerID := ""
-	if company.AsaasCustomerID == nil || *company.AsaasCustomerID == "" {
-		customerReq := services.AsaasCustomerRequest{
-			Name:              company.Name,
-			Email:             stringValue(company.Email),
-			CpfCnpj:           stringValue(company.Document),
-			Phone:             stringValue(company.Phone),
-			ExternalReference: orgID,
-		}
+	// TODO: Refactor to use PaymentGatewayLink
+	// Need to query PaymentGatewayLinkRepository to get/create Asaas customer ID
+	// For now, this endpoint is disabled until PaymentGatewayLinkRepository is implemented
+	uc.logger.Error(ctx, "Payment method creation not yet implemented for new FK structure", map[string]interface{}{
+		"organization_id": orgID,
+	})
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Payment method creation temporarily unavailable",
+		"message": "This feature is being updated to support the new payment gateway structure",
+	})
+	return
 
-		customerResp, err := uc.asaasService.CreateCustomer(ctx, customerReq)
-		if err != nil {
-			uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
-				"error":           err.Error(),
-				"organization_id": orgID,
-			})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment customer"})
-			return
-		}
-
-		asaasCustomerID = customerResp.ID
-		company.AsaasCustomerID = &asaasCustomerID
-
-		if err := uc.companyRepo.Update(ctx, company); err != nil {
-			uc.logger.Error(ctx, "Failed to update company with Asaas customer ID", map[string]interface{}{
-				"error":           err.Error(),
-				"organization_id": orgID,
-			})
-			// Continue anyway, we have the customer ID
-		}
-	} else {
-		asaasCustomerID = *company.AsaasCustomerID
-	}
+	// OLD CODE - needs refactoring:
+	// 1. Query PaymentGatewayLinkRepository by organization_id
+	// 2. If not exists, create Asaas customer and PaymentGatewayLink record
+	// 3. If exists, get customer_id from PaymentGatewayLink
+	// 4. Continue with tokenization below
+	asaasCustomerID := "" // This will come from PaymentGatewayLink
 
 	// Tokenize credit card in Asaas
 	tokenReq := services.AsaasTokenizeCreditCardRequest{

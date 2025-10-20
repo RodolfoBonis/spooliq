@@ -25,15 +25,12 @@ type CompanyEntity struct {
 	ZipCode        *string   `json:"zip_code,omitempty"`
 
 	// Subscription fields
-	SubscriptionStatus    string     `json:"subscription_status"`
-	IsPlatformCompany     bool       `json:"is_platform_company"`
-	TrialEndsAt           *time.Time `json:"trial_ends_at,omitempty"`
-	SubscriptionStartedAt *time.Time `json:"subscription_started_at,omitempty"`
-	SubscriptionPlan      string     `json:"subscription_plan"`
-	AsaasCustomerID       *string    `json:"asaas_customer_id,omitempty"`
-	AsaasSubscriptionID   *string    `json:"asaas_subscription_id,omitempty"`
-	LastPaymentCheck      *time.Time `json:"last_payment_check,omitempty"`
-	NextPaymentDue        *time.Time `json:"next_payment_due,omitempty"`
+	SubscriptionStatus    string      `json:"subscription_status"`
+	SubscriptionPlanID    *uuid.UUID  `json:"subscription_plan_id,omitempty"` // FK to subscription_plans
+	StatusUpdatedAt       time.Time   `json:"status_updated_at"`
+	IsPlatformCompany     bool        `json:"is_platform_company"`
+	TrialEndsAt           *time.Time  `json:"trial_ends_at,omitempty"`
+	SubscriptionStartedAt *time.Time  `json:"subscription_started_at,omitempty"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`

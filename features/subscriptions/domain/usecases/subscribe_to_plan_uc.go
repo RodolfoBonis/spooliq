@@ -1,15 +1,11 @@
 package usecases
 
 import (
-	"context"
-	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
-	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -78,151 +74,24 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
 
-	var req SubscribeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		uc.logger.Error(ctx, "Invalid subscribe request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
-		return
-	}
-
-	// 1. Validate plan exists and is active
-	plan, err := uc.planRepo.FindByID(ctx, req.PlanID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
-			"error":   err.Error(),
-			"plan_id": req.PlanID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
-		return
-	}
-
-	if plan == nil || !plan.IsActive {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found or inactive"})
-		return
-	}
-
-	// 2. Get company
-	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to find company", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
-		return
-	}
-
-	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-		return
-	}
-
-	// 3. Check if company already has an active subscription
-	if company.AsaasSubscriptionID != nil && *company.AsaasSubscriptionID != "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Company already has an active subscription. Cancel it first or use change-plan endpoint."})
-		return
-	}
-
-	// 4. Ensure company has Asaas customer ID
-	asaasCustomerID := ""
-	if company.AsaasCustomerID == nil || *company.AsaasCustomerID == "" {
-		asaasCustomerID, err = uc.createAsaasCustomer(ctx, company, orgID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment customer"})
-			return
-		}
-		company.AsaasCustomerID = &asaasCustomerID
-	} else {
-		asaasCustomerID = *company.AsaasCustomerID
-	}
-
-	// 5. Get payment method token (if using credit card)
-	var creditCardToken string
-	if req.BillingType == "CREDIT_CARD" {
-		if req.PaymentMethodID == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Payment method ID is required for credit card payments"})
-			return
-		}
-
-		paymentMethod, err := uc.paymentMethodRepo.FindByID(ctx, *req.PaymentMethodID)
-		if err != nil {
-			uc.logger.Error(ctx, "Failed to find payment method", map[string]interface{}{
-				"error": err.Error(),
-				"id":    req.PaymentMethodID,
-			})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find payment method"})
-			return
-		}
-
-		if paymentMethod == nil || paymentMethod.OrganizationID != orgID {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Payment method not found"})
-			return
-		}
-
-		creditCardToken = paymentMethod.AsaasCreditCardToken
-	}
-
-	// 6. Create subscription in Asaas
-	nextDueDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02") // Next month
-
-	subscriptionReq := services.AsaasSubscriptionRequest{
-		Customer:          asaasCustomerID,
-		BillingType:       req.BillingType,
-		Value:             plan.Price,
-		NextDueDate:       nextDueDate,
-		Cycle:             plan.Cycle,
-		Description:       fmt.Sprintf("Assinatura %s - %s", plan.Name, company.Name),
-		ExternalReference: orgID, // IMPORTANTE: organization_id para webhook
-		CreditCardToken:   creditCardToken,
-	}
-
-	subscriptionResp, err := uc.asaasService.CreateSubscription(ctx, subscriptionReq)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to create subscription in Asaas", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create subscription"})
-		return
-	}
-
-	// 7. Update company with subscription info
-	company.AsaasSubscriptionID = &subscriptionResp.ID
-	company.SubscriptionPlan = plan.Name
-	company.SubscriptionStatus = "active" // Will be updated by webhook
-	now := time.Now()
-	company.SubscriptionStartedAt = &now
-
-	// Parse next due date
-	nextDue, err := time.Parse("2006-01-02", subscriptionResp.NextDueDate)
-	if err == nil {
-		company.NextPaymentDue = &nextDue
-	}
-
-	if err := uc.companyRepo.Update(ctx, company); err != nil {
-		uc.logger.Error(ctx, "Failed to update company with subscription", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		// Continue anyway, subscription was created in Asaas
-	}
-
-	uc.logger.Info(ctx, "Subscription created successfully", map[string]interface{}{
-		"organization_id":   orgID,
-		"subscription_id":   subscriptionResp.ID,
-		"plan_name":         plan.Name,
+	// TODO: This endpoint needs complete refactoring for new PaymentGatewayLink structure
+	// Currently disabled until:
+	// 1. PaymentGatewayLinkRepository is implemented
+	// 2. Logic updated to use subscription_plan_id FK in companies table
+	// 3. Logic updated to store subscription_plan_id and payment_method_id in subscription_payments
+	uc.logger.Error(ctx, "Subscribe to plan not yet implemented for new FK structure", map[string]interface{}{
+		"organization_id": orgID,
 	})
-
-	c.JSON(http.StatusCreated, SubscribeResponse{
-		SubscriptionID: subscriptionResp.ID,
-		Status:         subscriptionResp.Status,
-		PlanName:       plan.Name,
-		Value:          plan.Price,
-		Cycle:          plan.Cycle,
-		NextDueDate:    subscriptionResp.NextDueDate,
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Subscription creation temporarily unavailable",
+		"message": "This feature is being updated to support the new payment gateway structure",
 	})
+	// TODO: When implementing, follow this flow:
+	// 1. Query PaymentGatewayLinkRepository by organization_id to get Asaas customer ID
+	// 2. If not exists, create Asaas customer + PaymentGatewayLink record
+	// 3. Create subscription in Asaas
+	// 4. Update company.subscription_plan_id with the plan UUID
+	// 5. Create SubscriptionPayment record with subscription_plan_id and payment_method_id FKs
 }
 
 // CancelSubscription cancels the current subscription
@@ -239,55 +108,14 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
 
-	// Get company
-	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to find company", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
-		return
-	}
-
-	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-		return
-	}
-
-	if company.AsaasSubscriptionID == nil || *company.AsaasSubscriptionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No active subscription to cancel"})
-		return
-	}
-
-	// Cancel in Asaas
-	if err := uc.asaasService.CancelSubscription(ctx, *company.AsaasSubscriptionID); err != nil {
-		uc.logger.Error(ctx, "Failed to cancel subscription in Asaas", map[string]interface{}{
-			"error":           err.Error(),
-			"subscription_id": *company.AsaasSubscriptionID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
-		return
-	}
-
-	// Update company
-	company.SubscriptionStatus = "cancelled"
-	emptyStr := ""
-	company.AsaasSubscriptionID = &emptyStr
-
-	if err := uc.companyRepo.Update(ctx, company); err != nil {
-		uc.logger.Error(ctx, "Failed to update company after cancellation", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		// Continue anyway
-	}
-
-	uc.logger.Info(ctx, "Subscription cancelled successfully", map[string]interface{}{
+	// TODO: Refactor for PaymentGatewayLink structure
+	uc.logger.Error(ctx, "Cancel subscription not yet implemented for new FK structure", map[string]interface{}{
 		"organization_id": orgID,
 	})
-
-	c.JSON(http.StatusOK, gin.H{"message": "Subscription cancelled successfully"})
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Subscription cancellation temporarily unavailable",
+		"message": "This feature is being updated to support the new payment gateway structure",
+	})
 }
 
 // GetSubscriptionStatus gets the current subscription status
@@ -304,70 +132,18 @@ func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
 
-	// Get company
-	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to find company", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
-		return
-	}
-
-	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-		return
-	}
-
-	if company.AsaasSubscriptionID == nil || *company.AsaasSubscriptionID == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No active subscription"})
-		return
-	}
-
-	// Get subscription from Asaas
-	subscription, err := uc.asaasService.GetSubscription(ctx, *company.AsaasSubscriptionID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to get subscription from Asaas", map[string]interface{}{
-			"error":           err.Error(),
-			"subscription_id": *company.AsaasSubscriptionID,
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get subscription status"})
-		return
-	}
-
-	c.JSON(http.StatusOK, SubscribeResponse{
-		SubscriptionID: subscription.ID,
-		Status:         subscription.Status,
-		PlanName:       company.SubscriptionPlan,
-		Value:          subscription.Value,
-		Cycle:          subscription.Cycle,
-		NextDueDate:    subscription.NextDueDate,
+	// TODO: Refactor for PaymentGatewayLink structure
+	// Query company.subscription_plan_id and PaymentGatewayLink to get status
+	uc.logger.Error(ctx, "Get subscription status not yet implemented for new FK structure", map[string]interface{}{
+		"organization_id": orgID,
+	})
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Subscription status check temporarily unavailable",
+		"message": "This feature is being updated to support the new payment gateway structure",
 	})
 }
 
 // Helper function
-func (uc *ManageSubscriptionUseCase) createAsaasCustomer(ctx context.Context, company *companyEntities.CompanyEntity, orgID string) (string, error) {
-	customerReq := services.AsaasCustomerRequest{
-		Name:              company.Name,
-		Email:             stringPtrValue(company.Email),
-		CpfCnpj:           stringPtrValue(company.Document),
-		Phone:             stringPtrValue(company.Phone),
-		ExternalReference: orgID,
-	}
-
-	customerResp, err := uc.asaasService.CreateCustomer(ctx, customerReq)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to create Asaas customer", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		return "", err
-	}
-
-	return customerResp.ID, nil
-}
-
 func stringPtrValue(s *string) string {
 	if s == nil {
 		return ""

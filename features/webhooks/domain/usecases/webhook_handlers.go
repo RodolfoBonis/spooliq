@@ -277,7 +277,7 @@ func (uc *AsaasWebhookUseCase) activateCompanyIfNeeded(ctx context.Context, orgI
 		company.SubscriptionStatus = "active"
 		now := time.Now()
 		company.SubscriptionStartedAt = &now
-		company.LastPaymentCheck = &now
+		company.StatusUpdatedAt = now // Track when status changed
 
 		if err := uc.companyRepository.Update(ctx, company); err != nil {
 			uc.logger.Error(ctx, "Failed to activate company", map[string]interface{}{
@@ -308,7 +308,7 @@ func (uc *AsaasWebhookUseCase) suspendCompanyIfNeeded(ctx context.Context, orgID
 	if company.SubscriptionStatus == "active" {
 		company.SubscriptionStatus = "suspended"
 		now := time.Now()
-		company.LastPaymentCheck = &now
+		company.StatusUpdatedAt = now // Track when status changed
 
 		if err := uc.companyRepository.Update(ctx, company); err != nil {
 			uc.logger.Error(ctx, "Failed to suspend company", map[string]interface{}{

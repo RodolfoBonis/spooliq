@@ -37,7 +37,24 @@ func (r *budgetRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, organ
 	query := r.db.WithContext(ctx)
 	query = query.Where("organization_id = ?", organizationID)
 
-	if err := query.First(model, "id = ?", id).Error; err != nil {
+	// Preload all relationships including nested ones
+	if err := query.
+		Preload("Customer").
+		Preload("User").
+		Preload("MachinePreset").
+		Preload("EnergyPreset").
+		Preload("CostPreset").
+		Preload("Items").
+		Preload("Items.Filament").
+		Preload("Items.Filament.Brand").
+		Preload("Items.Filament.Material").
+		Preload("Items.CostPreset").
+		Preload("Items.Filaments").
+		Preload("Items.Filaments.Filament").
+		Preload("Items.Filaments.Filament.Brand").
+		Preload("Items.Filaments.Filament.Material").
+		Preload("StatusHistory").
+		First(model, "id = ?", id).Error; err != nil {
 		return nil, fmt.Errorf("budget not found: %w", err)
 	}
 
@@ -80,8 +97,12 @@ func (r *budgetRepositoryImpl) FindAll(ctx context.Context, organizationID strin
 		return nil, 0, fmt.Errorf("failed to count budgets: %w", err)
 	}
 
-	// Get paginated results
+	// Get paginated results with relationships
+	// Note: For list views, we preload only essential relationships to avoid performance issues
+	// For detailed view, use FindByID which loads everything
 	if err := query.
+		Preload("Customer").
+		Preload("Items").
 		Limit(limit).
 		Offset(offset).
 		Order("created_at DESC").

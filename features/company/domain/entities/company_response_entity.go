@@ -25,13 +25,13 @@ type CompanyResponse struct {
 	ZipCode        *string `json:"zip_code,omitempty"`
 
 	// Subscription fields
-	SubscriptionStatus    string                                          `json:"subscription_status"`
-	SubscriptionPlanID    *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	SubscriptionStatus    string                                         `json:"subscription_status"`
+	SubscriptionPlanID    *string                                        `json:"subscription_plan_id,omitempty"` // UUID as string
 	CurrentPlan           *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
-	StatusUpdatedAt       time.Time                                       `json:"status_updated_at"`
-	IsPlatformCompany     bool                                            `json:"is_platform_company"`
-	TrialEndsAt           *time.Time                                      `json:"trial_ends_at,omitempty"`
-	SubscriptionStartedAt *time.Time                                      `json:"subscription_started_at,omitempty"`
+	StatusUpdatedAt       time.Time                                      `json:"status_updated_at"`
+	IsPlatformCompany     bool                                           `json:"is_platform_company"`
+	TrialEndsAt           *time.Time                                     `json:"trial_ends_at,omitempty"`
+	SubscriptionStartedAt *time.Time                                     `json:"subscription_started_at,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

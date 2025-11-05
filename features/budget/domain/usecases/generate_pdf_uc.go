@@ -76,13 +76,13 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"budget_id": budgetID,
 			"pdf_url":   *budget.PDFUrl,
 		})
-		
+
 		c.JSON(http.StatusOK, gin.H{
-			"pdf_url":    *budget.PDFUrl,
-			"budget_id":  budgetID.String(),
+			"pdf_url":     *budget.PDFUrl,
+			"budget_id":   budgetID.String(),
 			"budget_name": budget.Name,
-			"generated":  false,
-			"message":    "Existing PDF returned. Use ?force=true to regenerate.",
+			"generated":   false,
+			"message":     "Existing PDF returned. Use ?force=true to regenerate.",
 		})
 		return
 	}

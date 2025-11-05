@@ -18,9 +18,13 @@ func NewFindPresetUseCase(presetRepo repositories.PresetRepository) *FindPresetU
 	}
 }
 
-// Type aliases to use repository response types
+// MachinePresetResponse is a type alias for the repository response type
 type MachinePresetResponse = repositories.MachinePresetResponse
-type EnergyPresetResponse = repositories.EnergyPresetResponse  
+
+// EnergyPresetResponse is a type alias for the repository response type
+type EnergyPresetResponse = repositories.EnergyPresetResponse
+
+// CostPresetResponse is a type alias for the repository response type
 type CostPresetResponse = repositories.CostPresetResponse
 
 // FindByID finds a preset by its ID
@@ -96,7 +100,6 @@ func (uc *FindPresetUseCase) FindMachinePresetByID(id uuid.UUID) (*MachinePreset
 	}, nil
 }
 
-
 // FindEnergyPresetByID finds an energy preset with full details
 func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetResponse, error) {
 	// Get base preset
@@ -134,8 +137,6 @@ func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetRe
 		OffPeakHourMultiplier: energy.OffPeakHourMultiplier,
 	}, nil
 }
-
-
 
 // FindCostPresetByID finds a cost preset with full details
 func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID) (*CostPresetResponse, error) {

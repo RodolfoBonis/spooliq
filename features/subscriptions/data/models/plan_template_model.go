@@ -12,15 +12,15 @@ import (
 
 // PlanTemplateModel represents the plan template data model for GORM
 type PlanTemplateModel struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Name        string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"name"`
-	Description string    `gorm:"type:text" json:"description"`
-	Category    string    `gorm:"type:varchar(100);not null;index" json:"category"`
-	PlanData    string    `gorm:"type:jsonb;not null" json:"plan_data"` // JSON string
-	IsActive    bool      `gorm:"not null;default:true;index" json:"is_active"`
-	UsageCount  int       `gorm:"not null;default:0" json:"usage_count"`
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Name        string         `gorm:"type:varchar(255);not null;uniqueIndex" json:"name"`
+	Description string         `gorm:"type:text" json:"description"`
+	Category    string         `gorm:"type:varchar(100);not null;index" json:"category"`
+	PlanData    string         `gorm:"type:jsonb;not null" json:"plan_data"` // JSON string
+	IsActive    bool           `gorm:"not null;default:true;index" json:"is_active"`
+	UsageCount  int            `gorm:"not null;default:0" json:"usage_count"`
+	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
@@ -76,21 +76,21 @@ func (m *PlanTemplateModel) BeforeCreate(tx *gorm.DB) error {
 
 // PlanMigrationModel represents the plan migration data model for GORM
 type PlanMigrationModel struct {
-	ID              uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	FromPlanID      uuid.UUID `gorm:"type:uuid;not null;index" json:"from_plan_id"`
-	ToPlanID        uuid.UUID `gorm:"type:uuid;not null;index" json:"to_plan_id"`
-	Status          string    `gorm:"type:varchar(50);not null;index" json:"status"`
-	TotalCompanies  int       `gorm:"not null;default:0" json:"total_companies"`
-	Successful      int       `gorm:"not null;default:0" json:"successful"`
-	Failed          int       `gorm:"not null;default:0" json:"failed"`
-	Results         string    `gorm:"type:jsonb" json:"results"` // JSON string
-	Reason          string    `gorm:"type:text;not null" json:"reason"`
-	UserID          string    `gorm:"type:varchar(255);not null" json:"user_id"`
-	UserEmail       string    `gorm:"type:varchar(255);not null" json:"user_email"`
-	ScheduledFor    *time.Time `gorm:"type:timestamp" json:"scheduled_for"`
-	CompletedAt     *time.Time `gorm:"type:timestamp" json:"completed_at"`
-	CreatedAt       time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	FromPlanID     uuid.UUID  `gorm:"type:uuid;not null;index" json:"from_plan_id"`
+	ToPlanID       uuid.UUID  `gorm:"type:uuid;not null;index" json:"to_plan_id"`
+	Status         string     `gorm:"type:varchar(50);not null;index" json:"status"`
+	TotalCompanies int        `gorm:"not null;default:0" json:"total_companies"`
+	Successful     int        `gorm:"not null;default:0" json:"successful"`
+	Failed         int        `gorm:"not null;default:0" json:"failed"`
+	Results        string     `gorm:"type:jsonb" json:"results"` // JSON string
+	Reason         string     `gorm:"type:text;not null" json:"reason"`
+	UserID         string     `gorm:"type:varchar(255);not null" json:"user_id"`
+	UserEmail      string     `gorm:"type:varchar(255);not null" json:"user_email"`
+	ScheduledFor   *time.Time `gorm:"type:timestamp" json:"scheduled_for"`
+	CompletedAt    *time.Time `gorm:"type:timestamp" json:"completed_at"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 
 	// Relationships
 	FromPlan *SubscriptionPlanModel `gorm:"foreignKey:FromPlanID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"from_plan,omitempty"`
@@ -119,26 +119,26 @@ func (m *PlanMigrationModel) ToEntity() *adminEntities.PlanMigrationResult {
 	}
 
 	return &adminEntities.PlanMigrationResult{
-		MigrationID:     m.ID.String(),
-		FromPlanID:      m.FromPlanID.String(),
-		FromPlanName:    fromPlanName,
-		ToPlanID:        m.ToPlanID.String(),
-		ToPlanName:      toPlanName,
-		TotalCompanies:  m.TotalCompanies,
-		Successful:      m.Successful,
-		Failed:          m.Failed,
-		Results:         results,
-		Status:          m.Status,
-		ScheduledFor:    m.ScheduledFor,
-		CompletedAt:     m.CompletedAt,
-		Summary:         m.generateSummary(),
+		MigrationID:    m.ID.String(),
+		FromPlanID:     m.FromPlanID.String(),
+		FromPlanName:   fromPlanName,
+		ToPlanID:       m.ToPlanID.String(),
+		ToPlanName:     toPlanName,
+		TotalCompanies: m.TotalCompanies,
+		Successful:     m.Successful,
+		Failed:         m.Failed,
+		Results:        results,
+		Status:         m.Status,
+		ScheduledFor:   m.ScheduledFor,
+		CompletedAt:    m.CompletedAt,
+		Summary:        m.generateSummary(),
 	}
 }
 
 // generateSummary generates a human-readable summary
 func (m *PlanMigrationModel) generateSummary() string {
 	if m.Status == "completed" {
-		return fmt.Sprintf("Migration completed: %d/%d companies successfully migrated from %s to %s", 
+		return fmt.Sprintf("Migration completed: %d/%d companies successfully migrated from %s to %s",
 			m.Successful, m.TotalCompanies, m.FromPlan.Name, m.ToPlan.Name)
 	}
 	return fmt.Sprintf("Migration %s: %d companies to be migrated", m.Status, m.TotalCompanies)

@@ -346,25 +346,6 @@ func (s *PDFService) addAdditionalInfo(pdf *gofpdf.Fpdf, budget *budgetEntities.
 	}
 }
 
-// addFooter adds footer with company info (deprecated - use addFooterAtBottom)
-func (s *PDFService) addFooter(pdf *gofpdf.Fpdf, company *budgetEntities.CompanyInfo, branding *companyEntities.CompanyBrandingEntity) {
-	pdf.SetY(-20) // Reduzido de -25 para -20
-	pdf.SetFont("Arial", "I", 8)
-	r, g, b := s.hexToRGB(branding.BorderColor)
-	pdf.SetTextColor(r, g, b)
-
-	footerText := "Orçamento gerado em " + time.Now().Format("02/01/2006 às 15:04")
-	if company.Website != nil && *company.Website != "" {
-		footerText += " - " + *company.Website
-	}
-
-	pdf.Cell(0, 4, s.convertUTF8(footerText))
-	pdf.Ln(2) // Reduzido de 3 para 2
-
-	pdf.SetFont("Arial", "", 7)
-	pdf.Cell(0, 3, s.convertUTF8("Este orçamento é válido por 15 dias a partir da data de emissão."))
-}
-
 // addFooterAtBottom adds footer always at the bottom of the page
 func (s *PDFService) addFooterAtBottom(pdf *gofpdf.Fpdf, company *budgetEntities.CompanyInfo, branding *companyEntities.CompanyBrandingEntity) {
 	// A4 page height is 297mm, with 15mm margin = 267mm usable height

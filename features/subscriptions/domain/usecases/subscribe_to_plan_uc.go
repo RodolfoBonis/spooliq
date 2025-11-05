@@ -17,21 +17,21 @@ import (
 
 // SubscribeRequest represents the request to subscribe to a plan
 type SubscribeRequest struct {
-	PlanID          uuid.UUID `json:"plan_id" binding:"required"`
+	PlanID          uuid.UUID  `json:"plan_id" binding:"required"`
 	PaymentMethodID *uuid.UUID `json:"payment_method_id"` // Optional if using boleto/pix
-	BillingType     string    `json:"billing_type" binding:"required,oneof=CREDIT_CARD BOLETO PIX"`
+	BillingType     string     `json:"billing_type" binding:"required,oneof=CREDIT_CARD BOLETO PIX"`
 }
 
 // SubscribeResponse represents the response after subscribing
 type SubscribeResponse struct {
-	SubscriptionID      string    `json:"subscription_id"`       // Asaas subscription ID
-	Status              string    `json:"status"`                // ACTIVE, PENDING, etc
-	PlanName            string    `json:"plan_name"`
-	Value               float64   `json:"value"`
-	Cycle               string    `json:"cycle"`
-	NextDueDate         string    `json:"next_due_date"`
-	FirstPaymentID      *string   `json:"first_payment_id,omitempty"`
-	FirstPaymentInvoice *string   `json:"first_payment_invoice,omitempty"`
+	SubscriptionID      string  `json:"subscription_id"` // Asaas subscription ID
+	Status              string  `json:"status"`          // ACTIVE, PENDING, etc
+	PlanName            string  `json:"plan_name"`
+	Value               float64 `json:"value"`
+	Cycle               string  `json:"cycle"`
+	NextDueDate         string  `json:"next_due_date"`
+	FirstPaymentID      *string `json:"first_payment_id,omitempty"`
+	FirstPaymentInvoice *string `json:"first_payment_invoice,omitempty"`
 }
 
 // ManageSubscriptionUseCase handles subscription management operations
@@ -246,14 +246,14 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	}
 
 	subscriptionReq := services.AsaasSubscriptionRequest{
-		Customer:             asaasCustomerID,
-		BillingType:          req.BillingType,
-		Value:                plan.Price,
-		NextDueDate:          nextDueDate.Format("2006-01-02"),
-		Cycle:                plan.Cycle,
-		Description:          fmt.Sprintf("Assinatura %s - %s", plan.Name, company.Name),
-		ExternalReference:    orgID,
-		CreditCardToken:      asaasCreditCardToken,
+		Customer:          asaasCustomerID,
+		BillingType:       req.BillingType,
+		Value:             plan.Price,
+		NextDueDate:       nextDueDate.Format("2006-01-02"),
+		Cycle:             plan.Cycle,
+		Description:       fmt.Sprintf("Assinatura %s - %s", plan.Name, company.Name),
+		ExternalReference: orgID,
+		CreditCardToken:   asaasCreditCardToken,
 	}
 
 	asaasSubscription, err := uc.asaasService.CreateSubscription(ctx, subscriptionReq)
@@ -298,12 +298,12 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	}
 
 	uc.logger.Info(ctx, "Subscription created successfully", map[string]interface{}{
-		"organization_id":   orgID,
-		"subscription_id":   asaasSubscription.ID,
-		"plan_id":           plan.ID,
-		"plan_name":         plan.Name,
-		"status":            asaasSubscription.Status,
-		"billing_type":      req.BillingType,
+		"organization_id": orgID,
+		"subscription_id": asaasSubscription.ID,
+		"plan_id":         plan.ID,
+		"plan_name":       plan.Name,
+		"status":          asaasSubscription.Status,
+		"billing_type":    req.BillingType,
 	})
 
 	// 8. Build response
@@ -318,7 +318,6 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, response)
 }
-
 
 // CancelSubscription cancels the current subscription
 // @Summary Cancel subscription
@@ -407,7 +406,7 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	if paymentGatewayLink.SubscriptionID != nil {
 		subscriptionID = *paymentGatewayLink.SubscriptionID
 	}
-	
+
 	uc.logger.Info(ctx, "Subscription cancelled successfully", map[string]interface{}{
 		"organization_id": orgID,
 		"subscription_id": subscriptionID,
@@ -521,4 +520,3 @@ func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-

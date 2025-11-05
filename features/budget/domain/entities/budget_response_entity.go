@@ -94,7 +94,7 @@ type BudgetItemResponse struct {
 type BudgetResponse struct {
 	// Embed all BudgetEntity fields directly
 	*BudgetEntity
-	
+
 	Customer      *CustomerInfo               `json:"customer"`
 	Items         []BudgetItemResponse        `json:"items"`
 	MachinePreset *PresetInfo                 `json:"machine_preset,omitempty"`

@@ -8,16 +8,16 @@ import (
 
 // CompanyListItem represents a company in the list response
 type CompanyListItem struct {
-	ID                 string     `json:"id"`
-	OrganizationID     string     `json:"organization_id"`
-	Name               string     `json:"name"`
-	Email              string                                          `json:"email"`
-	SubscriptionStatus string                                          `json:"subscription_status"`
-	SubscriptionPlanID *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	ID                 string                                         `json:"id"`
+	OrganizationID     string                                         `json:"organization_id"`
+	Name               string                                         `json:"name"`
+	Email              string                                         `json:"email"`
+	SubscriptionStatus string                                         `json:"subscription_status"`
+	SubscriptionPlanID *string                                        `json:"subscription_plan_id,omitempty"` // UUID as string
 	CurrentPlan        *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
-	IsPlatformCompany  bool                                            `json:"is_platform_company"`
-	TrialEndsAt        *time.Time `json:"trial_ends_at,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
+	IsPlatformCompany  bool                                           `json:"is_platform_company"`
+	TrialEndsAt        *time.Time                                     `json:"trial_ends_at,omitempty"`
+	CreatedAt          time.Time                                      `json:"created_at"`
 }
 
 // ListCompaniesResponse represents the paginated list response
@@ -31,22 +31,22 @@ type ListCompaniesResponse struct {
 
 // CompanyDetailsResponse represents detailed company information
 type CompanyDetailsResponse struct {
-	ID                    string     `json:"id"`
-	OrganizationID        string     `json:"organization_id"`
-	Name                  string     `json:"name"`
-	Email                 string     `json:"email"`
-	Phone                 string     `json:"phone"`
-	WhatsApp              string     `json:"whatsapp"`
-	Instagram             string     `json:"instagram"`
-	Website               string     `json:"website"`
-	LogoURL               string                                          `json:"logo_url"`
-	SubscriptionStatus    string                                          `json:"subscription_status"`
-	SubscriptionPlanID    *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string, FK to subscription_plans
+	ID                    string                                         `json:"id"`
+	OrganizationID        string                                         `json:"organization_id"`
+	Name                  string                                         `json:"name"`
+	Email                 string                                         `json:"email"`
+	Phone                 string                                         `json:"phone"`
+	WhatsApp              string                                         `json:"whatsapp"`
+	Instagram             string                                         `json:"instagram"`
+	Website               string                                         `json:"website"`
+	LogoURL               string                                         `json:"logo_url"`
+	SubscriptionStatus    string                                         `json:"subscription_status"`
+	SubscriptionPlanID    *string                                        `json:"subscription_plan_id,omitempty"` // UUID as string, FK to subscription_plans
 	CurrentPlan           *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
-	StatusUpdatedAt       *time.Time                                      `json:"status_updated_at,omitempty"`
-	IsPlatformCompany     bool       `json:"is_platform_company"`
-	TrialEndsAt           *time.Time `json:"trial_ends_at,omitempty"`
-	SubscriptionStartedAt *time.Time `json:"subscription_started_at,omitempty"`
+	StatusUpdatedAt       *time.Time                                     `json:"status_updated_at,omitempty"`
+	IsPlatformCompany     bool                                           `json:"is_platform_company"`
+	TrialEndsAt           *time.Time                                     `json:"trial_ends_at,omitempty"`
+	SubscriptionStartedAt *time.Time                                     `json:"subscription_started_at,omitempty"`
 	// Note: Asaas info moved to PaymentGatewayLink table
 	// AsaasCustomerID and AsaasSubscriptionID can be queried from payment_gateway_links if needed
 	CreatedAt time.Time `json:"created_at"`
@@ -67,13 +67,13 @@ type UpdatePlanRequest struct {
 
 // SubscriptionListItem represents a subscription in the list
 type SubscriptionListItem struct {
-	OrganizationID     string     `json:"organization_id"`
-	CompanyName        string                                          `json:"company_name"`
-	SubscriptionStatus string                                          `json:"subscription_status"`
-	SubscriptionPlanID *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	OrganizationID     string                                         `json:"organization_id"`
+	CompanyName        string                                         `json:"company_name"`
+	SubscriptionStatus string                                         `json:"subscription_status"`
+	SubscriptionPlanID *string                                        `json:"subscription_plan_id,omitempty"` // UUID as string
 	CurrentPlan        *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
-	TrialEndsAt        *time.Time                                      `json:"trial_ends_at,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
+	TrialEndsAt        *time.Time                                     `json:"trial_ends_at,omitempty"`
+	CreatedAt          time.Time                                      `json:"created_at"`
 }
 
 // ListSubscriptionsResponse represents paginated subscriptions list
@@ -108,14 +108,14 @@ type PaymentHistoryResponse struct {
 
 // SubscriptionDetailsResponse represents detailed subscription info
 type SubscriptionDetailsResponse struct {
-	OrganizationID        string               `json:"organization_id"`
-	CompanyName           string                                          `json:"company_name"`
-	SubscriptionStatus    string                                          `json:"subscription_status"`
-	SubscriptionPlanID    *string                                         `json:"subscription_plan_id,omitempty"` // UUID as string
+	OrganizationID        string                                         `json:"organization_id"`
+	CompanyName           string                                         `json:"company_name"`
+	SubscriptionStatus    string                                         `json:"subscription_status"`
+	SubscriptionPlanID    *string                                        `json:"subscription_plan_id,omitempty"` // UUID as string
 	CurrentPlan           *subscriptionEntities.SubscriptionPlanResponse `json:"current_plan,omitempty"`
-	StatusUpdatedAt       *time.Time                                      `json:"status_updated_at,omitempty"`
-	TrialEndsAt           *time.Time           `json:"trial_ends_at,omitempty"`
-	SubscriptionStartedAt *time.Time           `json:"subscription_started_at,omitempty"`
+	StatusUpdatedAt       *time.Time                                     `json:"status_updated_at,omitempty"`
+	TrialEndsAt           *time.Time                                     `json:"trial_ends_at,omitempty"`
+	SubscriptionStartedAt *time.Time                                     `json:"subscription_started_at,omitempty"`
 	// Note: Asaas info and payment timing moved to separate tables
 	// Use PaymentGatewayLink and SubscriptionPayments for detailed info
 	RecentPayments []PaymentHistoryItem `json:"recent_payments"`
@@ -128,26 +128,26 @@ type CancelSubscriptionRequest struct {
 
 // AdminStats represents platform analytics and metrics
 type AdminStats struct {
-	TotalCompanies      int     `json:"total_companies"`
-	ActiveSubscriptions int     `json:"active_subscriptions"`
-	TrialSubscriptions  int     `json:"trial_subscriptions"`
-	OverdueSubscriptions int    `json:"overdue_subscriptions"`
-	TotalMRR            float64 `json:"total_mrr"` // Monthly Recurring Revenue in cents
-	ChurnRate           float64 `json:"churn_rate"` // percentage
+	TotalCompanies       int     `json:"total_companies"`
+	ActiveSubscriptions  int     `json:"active_subscriptions"`
+	TrialSubscriptions   int     `json:"trial_subscriptions"`
+	OverdueSubscriptions int     `json:"overdue_subscriptions"`
+	TotalMRR             float64 `json:"total_mrr"`  // Monthly Recurring Revenue in cents
+	ChurnRate            float64 `json:"churn_rate"` // percentage
 }
 
 // PlanStats represents statistics for a specific subscription plan
 type PlanStats struct {
-	PlanID              string  `json:"plan_id"`
-	PlanName            string  `json:"plan_name"`
-	TotalCompanies      int     `json:"total_companies"`
-	ActiveCompanies     int     `json:"active_companies"`
-	TrialCompanies      int     `json:"trial_companies"`
-	TotalActiveUsers    int     `json:"total_active_users"`
-	MonthlyRevenue      float64 `json:"monthly_revenue"`
-	AnnualRevenue       float64 `json:"annual_revenue"`
-	ChurnRate           float64 `json:"churn_rate"`
-	ConversionRate      float64 `json:"conversion_rate"` // trial to paid conversion
+	PlanID           string  `json:"plan_id"`
+	PlanName         string  `json:"plan_name"`
+	TotalCompanies   int     `json:"total_companies"`
+	ActiveCompanies  int     `json:"active_companies"`
+	TrialCompanies   int     `json:"trial_companies"`
+	TotalActiveUsers int     `json:"total_active_users"`
+	MonthlyRevenue   float64 `json:"monthly_revenue"`
+	AnnualRevenue    float64 `json:"annual_revenue"`
+	ChurnRate        float64 `json:"churn_rate"`
+	ConversionRate   float64 `json:"conversion_rate"` // trial to paid conversion
 }
 
 // PlanCompanyListItem represents a company using a specific plan
@@ -176,13 +176,13 @@ type ListPlanCompaniesResponse struct {
 
 // PlanFinancialReport represents financial metrics for a specific plan
 type PlanFinancialReport struct {
-	PlanID         string                     `json:"plan_id"`
-	PlanName       string                     `json:"plan_name"`
-	ReportPeriod   string                     `json:"report_period"` // "monthly", "quarterly", "yearly"
-	Revenue        PlanRevenueMetrics         `json:"revenue"`
-	Subscriptions  PlanSubscriptionMetrics    `json:"subscriptions"`
-	Projections    PlanRevenueProjections     `json:"projections"`
-	Trends         []PlanRevenueTrendPoint    `json:"trends"`
+	PlanID        string                  `json:"plan_id"`
+	PlanName      string                  `json:"plan_name"`
+	ReportPeriod  string                  `json:"report_period"` // "monthly", "quarterly", "yearly"
+	Revenue       PlanRevenueMetrics      `json:"revenue"`
+	Subscriptions PlanSubscriptionMetrics `json:"subscriptions"`
+	Projections   PlanRevenueProjections  `json:"projections"`
+	Trends        []PlanRevenueTrendPoint `json:"trends"`
 }
 
 // PlanRevenueMetrics represents revenue data for a plan
@@ -196,26 +196,26 @@ type PlanRevenueMetrics struct {
 
 // PlanSubscriptionMetrics represents subscription data for a plan
 type PlanSubscriptionMetrics struct {
-	NewSubscriptions      int     `json:"new_subscriptions"`
-	CancelledSubscriptions int    `json:"cancelled_subscriptions"`
-	ChurnRate            float64 `json:"churn_rate"`
-	RetentionRate        float64 `json:"retention_rate"`
-	ConversionRate       float64 `json:"conversion_rate"`
+	NewSubscriptions       int     `json:"new_subscriptions"`
+	CancelledSubscriptions int     `json:"cancelled_subscriptions"`
+	ChurnRate              float64 `json:"churn_rate"`
+	RetentionRate          float64 `json:"retention_rate"`
+	ConversionRate         float64 `json:"conversion_rate"`
 }
 
 // PlanRevenueProjections represents revenue projections for a plan
 type PlanRevenueProjections struct {
-	NextMonth    float64 `json:"next_month"`
-	NextQuarter  float64 `json:"next_quarter"`
-	NextYear     float64 `json:"next_year"`
-	Methodology  string  `json:"methodology"` // How the projection was calculated
+	NextMonth   float64 `json:"next_month"`
+	NextQuarter float64 `json:"next_quarter"`
+	NextYear    float64 `json:"next_year"`
+	Methodology string  `json:"methodology"` // How the projection was calculated
 }
 
 // PlanRevenueTrendPoint represents a point in revenue trend
 type PlanRevenueTrendPoint struct {
-	Period string  `json:"period"` // "2024-01", "2024-Q1", etc
-	Revenue float64 `json:"revenue"`
-	Subscriptions int `json:"subscriptions"`
+	Period        string  `json:"period"` // "2024-01", "2024-Q1", etc
+	Revenue       float64 `json:"revenue"`
+	Subscriptions int     `json:"subscriptions"`
 }
 
 // PlanDeletionCheck represents validation for plan deletion
@@ -236,18 +236,18 @@ type BulkOperationRequest struct {
 
 // BulkUpdateRequest represents a bulk update request
 type BulkUpdateRequest struct {
-	PlanIDs []string                   `json:"plan_ids" validate:"required,min=1"`
-	Updates map[string]interface{}     `json:"updates" validate:"required"`
-	Reason  string                     `json:"reason" validate:"required"`
+	PlanIDs []string               `json:"plan_ids" validate:"required,min=1"`
+	Updates map[string]interface{} `json:"updates" validate:"required"`
+	Reason  string                 `json:"reason" validate:"required"`
 }
 
 // BulkOperationResult represents the result of a bulk operation
 type BulkOperationResult struct {
-	TotalRequested int                    `json:"total_requested"`
-	Successful     int                    `json:"successful"`
-	Failed         int                    `json:"failed"`
-	Results        []BulkOperationItem    `json:"results"`
-	Summary        string                 `json:"summary"`
+	TotalRequested int                 `json:"total_requested"`
+	Successful     int                 `json:"successful"`
+	Failed         int                 `json:"failed"`
+	Results        []BulkOperationItem `json:"results"`
+	Summary        string              `json:"summary"`
 }
 
 // BulkOperationItem represents the result of an operation on a single plan
@@ -282,24 +282,24 @@ type PlanAuditResponse struct {
 
 // PlanTemplate represents a plan template
 type PlanTemplate struct {
-	ID          string                         `json:"id"`
-	Name        string                         `json:"name"`
-	Description string                         `json:"description"`
-	Category    string                         `json:"category"`
-	PlanData    PlanTemplateData               `json:"plan_data"`
-	IsActive    bool                           `json:"is_active"`
-	UsageCount  int                            `json:"usage_count"`
-	CreatedAt   time.Time                      `json:"created_at"`
-	UpdatedAt   time.Time                      `json:"updated_at"`
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Category    string           `json:"category"`
+	PlanData    PlanTemplateData `json:"plan_data"`
+	IsActive    bool             `json:"is_active"`
+	UsageCount  int              `json:"usage_count"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 // PlanTemplateData represents the data structure for a plan template
 type PlanTemplateData struct {
-	Name        string                     `json:"name"`
-	Description string                     `json:"description"`
-	Price       float64                    `json:"price"`
-	Cycle       string                     `json:"cycle"`
-	Features    []PlanTemplateFeature      `json:"features"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Price       float64               `json:"price"`
+	Cycle       string                `json:"cycle"`
+	Features    []PlanTemplateFeature `json:"features"`
 }
 
 // PlanTemplateFeature represents a feature in a plan template
@@ -311,9 +311,9 @@ type PlanTemplateFeature struct {
 
 // CreateFromTemplateRequest represents request to create plan from template
 type CreateFromTemplateRequest struct {
-	TemplateID   string                 `json:"template_id" validate:"required"`
+	TemplateID     string                 `json:"template_id" validate:"required"`
 	Customizations map[string]interface{} `json:"customizations,omitempty"`
-	Reason       string                 `json:"reason" validate:"required"`
+	Reason         string                 `json:"reason" validate:"required"`
 }
 
 // AvailableFeature represents a feature available for plans
@@ -331,10 +331,10 @@ type FeatureValidationRequest struct {
 
 // FeatureValidationResult represents result of feature validation
 type FeatureValidationResult struct {
-	IsValid        bool                      `json:"is_valid"`
-	ValidFeatures  []PlanTemplateFeature     `json:"valid_features"`
-	InvalidFeatures []InvalidFeatureError    `json:"invalid_features"`
-	Suggestions    []string                  `json:"suggestions,omitempty"`
+	IsValid         bool                  `json:"is_valid"`
+	ValidFeatures   []PlanTemplateFeature `json:"valid_features"`
+	InvalidFeatures []InvalidFeatureError `json:"invalid_features"`
+	Suggestions     []string              `json:"suggestions,omitempty"`
 }
 
 // InvalidFeatureError represents an invalid feature error
@@ -347,7 +347,7 @@ type InvalidFeatureError struct {
 type PlanMigrationRequest struct {
 	FromPlanID   string                 `json:"from_plan_id" validate:"required"`
 	ToPlanID     string                 `json:"to_plan_id" validate:"required"`
-	CompanyIDs   []string               `json:"company_ids,omitempty"` // If empty, migrates all companies
+	CompanyIDs   []string               `json:"company_ids,omitempty"`   // If empty, migrates all companies
 	ScheduledFor *time.Time             `json:"scheduled_for,omitempty"` // If empty, immediate
 	NotifyUsers  bool                   `json:"notify_users"`
 	Reason       string                 `json:"reason" validate:"required"`
@@ -356,19 +356,19 @@ type PlanMigrationRequest struct {
 
 // PlanMigrationResult represents result of plan migration
 type PlanMigrationResult struct {
-	MigrationID     string                  `json:"migration_id"`
-	FromPlanID      string                  `json:"from_plan_id"`
-	FromPlanName    string                  `json:"from_plan_name"`
-	ToPlanID        string                  `json:"to_plan_id"`
-	ToPlanName      string                  `json:"to_plan_name"`
-	TotalCompanies  int                     `json:"total_companies"`
-	Successful      int                     `json:"successful"`
-	Failed          int                     `json:"failed"`
-	Results         []MigrationCompanyItem  `json:"results"`
-	Status          string                  `json:"status"` // scheduled, in_progress, completed, failed
-	ScheduledFor    *time.Time              `json:"scheduled_for,omitempty"`
-	CompletedAt     *time.Time              `json:"completed_at,omitempty"`
-	Summary         string                  `json:"summary"`
+	MigrationID    string                 `json:"migration_id"`
+	FromPlanID     string                 `json:"from_plan_id"`
+	FromPlanName   string                 `json:"from_plan_name"`
+	ToPlanID       string                 `json:"to_plan_id"`
+	ToPlanName     string                 `json:"to_plan_name"`
+	TotalCompanies int                    `json:"total_companies"`
+	Successful     int                    `json:"successful"`
+	Failed         int                    `json:"failed"`
+	Results        []MigrationCompanyItem `json:"results"`
+	Status         string                 `json:"status"` // scheduled, in_progress, completed, failed
+	ScheduledFor   *time.Time             `json:"scheduled_for,omitempty"`
+	CompletedAt    *time.Time             `json:"completed_at,omitempty"`
+	Summary        string                 `json:"summary"`
 }
 
 // MigrationCompanyItem represents the result of migrating a single company

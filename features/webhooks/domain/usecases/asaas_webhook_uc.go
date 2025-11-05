@@ -120,10 +120,10 @@ func (uc *AsaasWebhookUseCase) recordPayment(ctx context.Context, payment webhoo
 	// Validate ExternalReference - it should contain the organization_id
 	if payment.ExternalReference == "" {
 		uc.logger.Warning(ctx, "Webhook payment missing ExternalReference", map[string]interface{}{
-			"payment_id":  payment.ID,
-			"customer":    payment.Customer,
+			"payment_id":   payment.ID,
+			"customer":     payment.Customer,
 			"subscription": payment.Subscription,
-			"event_type":  eventType,
+			"event_type":   eventType,
 		})
 		// Skip recording if no organization_id - cannot link to company
 		return nil
@@ -180,20 +180,20 @@ func (uc *AsaasWebhookUseCase) recordPayment(ctx context.Context, payment webhoo
 func isSubscriptionEvent(event string) bool {
 	subscriptionEvents := []string{
 		"SUBSCRIPTION_CREATED",
-		"SUBSCRIPTION_UPDATED", 
+		"SUBSCRIPTION_UPDATED",
 		"SUBSCRIPTION_INACTIVATED",
 		"SUBSCRIPTION_DELETED",
 		"SUBSCRIPTION_SPLIT_DISABLED",
 		"SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK",
 		"SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED",
 	}
-	
+
 	for _, subscriptionEvent := range subscriptionEvents {
 		if event == subscriptionEvent {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

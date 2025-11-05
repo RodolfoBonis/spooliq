@@ -127,7 +127,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			
+
 			if !hasValidPayment {
 				// Check if this is a payment recovery endpoint
 				if isPaymentRecoveryEndpoint(c.Request.URL.Path) {
@@ -140,7 +140,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 					c.Next()
 					return
 				}
-				
+
 				// Block access to non-payment-recovery endpoints with helpful guidance
 				m.logger.Error(ctx, "Access denied: active subscription but no valid payment", map[string]interface{}{
 					"organization_id": organizationID,
@@ -161,7 +161,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			
+
 			// Valid payment found, allow access
 			c.Next()
 			return
@@ -235,7 +235,7 @@ func isPublicEndpoint(path string) bool {
 // isPaymentRecoveryEndpoint checks if the endpoint should remain accessible during payment recovery
 func isPaymentRecoveryEndpoint(path string) bool {
 	paymentRecoveryEndpoints := []string{
-		"/v1/payment-methods",        // All payment method operations
+		"/v1/payment-methods",         // All payment method operations
 		"/v1/subscriptions/subscribe", // Retry subscription
 		"/v1/subscriptions/status",    // Check subscription status
 		"/v1/subscriptions/plans",     // View available plans (already public but for consistency)
@@ -250,34 +250,26 @@ func isPaymentRecoveryEndpoint(path string) bool {
 	return false
 }
 
-// formatTimePtr safely formats a time pointer, returns empty string if nil
-func formatTimePtr(t *time.Time) string {
-	if t == nil {
-		return ""
-	}
-	return t.Format("2006-01-02T15:04:05Z07:00")
-}
-
-// hasValidPayment checks if the organization has at least one confirmed/received payment  
+// hasValidPayment checks if the organization has at least one confirmed/received payment
 func (m *SubscriptionMiddleware) hasValidPayment(ctx context.Context, organizationID string) (bool, error) {
 	// Convert string organizationID to UUID
 	orgUUID, err := uuid.Parse(organizationID)
 	if err != nil {
 		return false, err
 	}
-	
+
 	// Get latest subscription payments for the organization (limit 10 to check recent payments)
 	payments, err := m.subscriptionRepository.FindAll(ctx, orgUUID, 10, 0)
 	if err != nil {
 		return false, err
 	}
-	
+
 	// Check if there's at least one confirmed or received payment
 	for _, payment := range payments {
 		if payment.Status == "confirmed" || payment.Status == "received" || payment.Status == "anticipated" {
 			return true, nil
 		}
 	}
-	
+
 	return false, nil
 }

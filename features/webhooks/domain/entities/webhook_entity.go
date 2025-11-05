@@ -8,9 +8,9 @@ type AsaasWebhookEvent struct {
 
 // AsaasWebhookRequest represents the full webhook request from Asaas
 type AsaasWebhookRequest struct {
-	Event        string                     `json:"event"`
-	Payment      AsaasPaymentWebhook        `json:"payment,omitempty"`
-	Subscription AsaasSubscriptionWebhook   `json:"subscription,omitempty"`
+	Event        string                   `json:"event"`
+	Payment      AsaasPaymentWebhook      `json:"payment,omitempty"`
+	Subscription AsaasSubscriptionWebhook `json:"subscription,omitempty"`
 }
 
 // AsaasPaymentWebhook represents payment data from webhook

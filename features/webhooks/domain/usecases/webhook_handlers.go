@@ -208,14 +208,14 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionCreated(ctx context.Context, su
 		"value":           subscription.Value,
 		"status":          subscription.Status,
 	})
-	
+
 	// SUBSCRIPTION_CREATED events are informational - we don't need to create payment records
 	// The actual payments will come through separate PAYMENT_* events
 	uc.logger.Info(ctx, "Subscription created successfully", map[string]interface{}{
 		"subscription_id": subscription.ID,
 		"organization_id": subscription.ExternalReference,
 	})
-	
+
 	return nil
 }
 
@@ -227,13 +227,13 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionUpdated(ctx context.Context, su
 		"value":           subscription.Value,
 		"status":          subscription.Status,
 	})
-	
+
 	// SUBSCRIPTION_UPDATED events are informational - actual payments come through PAYMENT_* events
 	uc.logger.Info(ctx, "Subscription updated successfully", map[string]interface{}{
 		"subscription_id": subscription.ID,
 		"organization_id": subscription.ExternalReference,
 	})
-	
+
 	return nil
 }
 
@@ -244,12 +244,12 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionInactivated(ctx context.Context
 		"customer_id":     subscription.Customer,
 		"status":          subscription.Status,
 	})
-	
+
 	// When a subscription is inactivated, we should suspend the company
 	if subscription.ExternalReference != "" {
 		return uc.suspendCompanyIfNeeded(ctx, subscription.ExternalReference)
 	}
-	
+
 	uc.logger.Warning(ctx, "SUBSCRIPTION_INACTIVATED without organization_id", map[string]interface{}{
 		"subscription_id": subscription.ID,
 	})
@@ -263,12 +263,12 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionDeleted(ctx context.Context, su
 		"customer_id":     subscription.Customer,
 		"status":          subscription.Status,
 	})
-	
+
 	// When a subscription is deleted, we should suspend the company
 	if subscription.ExternalReference != "" {
 		return uc.suspendCompanyIfNeeded(ctx, subscription.ExternalReference)
 	}
-	
+
 	uc.logger.Warning(ctx, "SUBSCRIPTION_DELETED without organization_id", map[string]interface{}{
 		"subscription_id": subscription.ID,
 	})
@@ -280,7 +280,7 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionSplitDisabled(ctx context.Conte
 		"subscription_id": subscription.ID,
 		"org_id":          subscription.ExternalReference,
 	})
-	
+
 	// SUBSCRIPTION_SPLIT_DISABLED is informational
 	uc.logger.Info(ctx, "Subscription split disabled", map[string]interface{}{
 		"subscription_id": subscription.ID,
@@ -293,7 +293,7 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionSplitBlocked(ctx context.Contex
 		"subscription_id": subscription.ID,
 		"org_id":          subscription.ExternalReference,
 	})
-	
+
 	// This is a warning condition that may require attention
 	uc.logger.Warning(ctx, "Subscription split divergence block detected", map[string]interface{}{
 		"subscription_id": subscription.ID,
@@ -307,7 +307,7 @@ func (uc *AsaasWebhookUseCase) handleSubscriptionSplitUnblocked(ctx context.Cont
 		"subscription_id": subscription.ID,
 		"org_id":          subscription.ExternalReference,
 	})
-	
+
 	// Split divergence block has been resolved
 	uc.logger.Info(ctx, "Subscription split divergence block finished", map[string]interface{}{
 		"subscription_id": subscription.ID,

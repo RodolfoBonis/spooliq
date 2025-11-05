@@ -9,10 +9,10 @@ import (
 	"time"
 
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
-	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -156,7 +156,7 @@ func (r *subscriptionPlanRepositoryImpl) GetPlanStats(ctx context.Context, planI
 		Status string
 		Count  int
 	}
-	
+
 	var companyCounts []companyCount
 	if err := r.db.WithContext(ctx).
 		Table("companies").
@@ -269,7 +269,7 @@ func (r *subscriptionPlanRepositoryImpl) GetPlanFinancialReport(ctx context.Cont
 	}
 
 	currentRevenue := float64(activeCount) * plan.Price
-	
+
 	// Simplified report - in real implementation would query payment history
 	report := &adminEntities.PlanFinancialReport{
 		PlanID:       planID.String(),
@@ -285,9 +285,9 @@ func (r *subscriptionPlanRepositoryImpl) GetPlanFinancialReport(ctx context.Cont
 		Subscriptions: adminEntities.PlanSubscriptionMetrics{
 			NewSubscriptions:       5, // Simplified
 			CancelledSubscriptions: 1, // Simplified
-			ChurnRate:             2.5,
-			RetentionRate:         97.5,
-			ConversionRate:        85.0,
+			ChurnRate:              2.5,
+			RetentionRate:          97.5,
+			ConversionRate:         85.0,
 		},
 		Projections: adminEntities.PlanRevenueProjections{
 			NextMonth:   currentRevenue * 1.05,
@@ -333,13 +333,13 @@ func (r *subscriptionPlanRepositoryImpl) CanDeletePlan(ctx context.Context, plan
 	if activeCount > 0 || trialCount > 0 {
 		check.CanDelete = false
 		check.Reason = fmt.Sprintf("Plan has %d active and %d trial companies", activeCount, trialCount)
-		
+
 		if activeCount > 0 {
-			check.BlockingIssues = append(check.BlockingIssues, 
+			check.BlockingIssues = append(check.BlockingIssues,
 				fmt.Sprintf("%d companies with active subscriptions", activeCount))
 		}
 		if trialCount > 0 {
-			check.BlockingIssues = append(check.BlockingIssues, 
+			check.BlockingIssues = append(check.BlockingIssues,
 				fmt.Sprintf("%d companies in trial period", trialCount))
 		}
 
@@ -519,11 +519,11 @@ func (r *subscriptionPlanRepositoryImpl) CreateTemplate(ctx context.Context, tem
 func (r *subscriptionPlanRepositoryImpl) GetTemplates(ctx context.Context, category string) ([]*adminEntities.PlanTemplate, error) {
 	var models []models.PlanTemplateModel
 	query := r.db.WithContext(ctx).Where("is_active = ?", true)
-	
+
 	if category != "" {
 		query = query.Where("category = ?", category)
 	}
-	
+
 	if err := query.Order("usage_count DESC, name ASC").Find(&models).Error; err != nil {
 		return nil, err
 	}
@@ -564,7 +564,7 @@ func (r *subscriptionPlanRepositoryImpl) CreatePlanFromTemplate(ctx context.Cont
 	txErr := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Create plan from template data
 		planData := template.PlanData
-		
+
 		// Apply customizations
 		if customizations["name"] != nil {
 			planData.Name = customizations["name"].(string)
@@ -619,13 +619,13 @@ func (r *subscriptionPlanRepositoryImpl) CreatePlanFromTemplate(ctx context.Cont
 			UserID:    userID,
 			UserEmail: userEmail,
 			Changes: map[string]interface{}{
-				"template_id":     template.ID,
-				"template_name":   template.Name,
-				"customizations":  customizations,
+				"template_id":    template.ID,
+				"template_name":  template.Name,
+				"customizations": customizations,
 			},
 			Reason: reason,
 		}
-		
+
 		auditModel := &models.PlanAuditModel{}
 		auditModel.FromEntity(auditEntry)
 		if err := tx.Create(auditModel).Error; err != nil {
@@ -724,7 +724,7 @@ func (r *subscriptionPlanRepositoryImpl) CreateMigration(ctx context.Context, re
 	// Count companies to migrate
 	var totalCompanies int64
 	query := r.db.WithContext(ctx).Model(&companyModels.CompanyModel{}).Where("subscription_plan_id = ? AND deleted_at IS NULL", request.FromPlanID)
-	
+
 	if len(request.CompanyIDs) > 0 {
 		// Convert string IDs to UUIDs
 		companyUUIDs := make([]uuid.UUID, len(request.CompanyIDs))
@@ -733,7 +733,7 @@ func (r *subscriptionPlanRepositoryImpl) CreateMigration(ctx context.Context, re
 		}
 		query = query.Where("id IN ?", companyUUIDs)
 	}
-	
+
 	if err := query.Count(&totalCompanies).Error; err != nil {
 		return nil, err
 	}
@@ -813,11 +813,11 @@ func (r *subscriptionPlanRepositoryImpl) ExecutePlanMigration(ctx context.Contex
 				UserID:    migration.UserID,
 				UserEmail: migration.UserEmail,
 				Changes: map[string]interface{}{
-					"migration_id":     migrationID.String(),
-					"from_plan_id":     migration.FromPlanID.String(),
-					"from_plan_name":   migration.FromPlan.Name,
-					"company_id":       company.ID.String(),
-					"organization_id":  company.OrganizationID,
+					"migration_id":    migrationID.String(),
+					"from_plan_id":    migration.FromPlanID.String(),
+					"from_plan_name":  migration.FromPlan.Name,
+					"company_id":      company.ID.String(),
+					"organization_id": company.OrganizationID,
 				},
 				Reason: migration.Reason,
 			}

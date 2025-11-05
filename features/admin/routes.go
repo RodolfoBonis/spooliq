@@ -392,4 +392,3 @@ func (h *Handler) GetPaymentHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-

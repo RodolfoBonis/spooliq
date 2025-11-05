@@ -37,17 +37,17 @@ type AsaasCustomerResponse struct {
 
 // AsaasSubscriptionRequest represents a request to create a subscription in Asaas
 type AsaasSubscriptionRequest struct {
-	Customer          string                     `json:"customer"`    // Customer ID
-	BillingType       string                     `json:"billingType"` // CREDIT_CARD, BOLETO, PIX
-	Value             float64                    `json:"value"`
-	NextDueDate       string                     `json:"nextDueDate"` // YYYY-MM-DD
-	Cycle             string                     `json:"cycle"`       // MONTHLY, WEEKLY, YEARLY
-	Description       string                     `json:"description,omitempty"`
-	EndDate           string                     `json:"endDate,omitempty"` // YYYY-MM-DD
-	MaxPayments       int                        `json:"maxPayments,omitempty"`
-	ExternalReference string                     `json:"externalReference,omitempty"` // organization_id
-	CreditCard        *AsaasCreditCardInfo       `json:"creditCard,omitempty"`        // Credit card info
-	CreditCardToken   string                     `json:"creditCardToken,omitempty"`   // Tokenized credit card
+	Customer          string               `json:"customer"`    // Customer ID
+	BillingType       string               `json:"billingType"` // CREDIT_CARD, BOLETO, PIX
+	Value             float64              `json:"value"`
+	NextDueDate       string               `json:"nextDueDate"` // YYYY-MM-DD
+	Cycle             string               `json:"cycle"`       // MONTHLY, WEEKLY, YEARLY
+	Description       string               `json:"description,omitempty"`
+	EndDate           string               `json:"endDate,omitempty"` // YYYY-MM-DD
+	MaxPayments       int                  `json:"maxPayments,omitempty"`
+	ExternalReference string               `json:"externalReference,omitempty"` // organization_id
+	CreditCard        *AsaasCreditCardInfo `json:"creditCard,omitempty"`        // Credit card info
+	CreditCardToken   string               `json:"creditCardToken,omitempty"`   // Tokenized credit card
 }
 
 // AsaasSubscriptionResponse represents the response from Asaas when creating a subscription
@@ -67,14 +67,14 @@ type AsaasSubscriptionResponse struct {
 
 // AsaasSubscriptionUpdateRequest represents a request to update a subscription in Asaas
 type AsaasSubscriptionUpdateRequest struct {
-	BillingType       string  `json:"billingType,omitempty"` // CREDIT_CARD, BOLETO, PIX
-	Value             float64 `json:"value,omitempty"`
-	NextDueDate       string  `json:"nextDueDate,omitempty"` // YYYY-MM-DD
-	Cycle             string  `json:"cycle,omitempty"`       // MONTHLY, WEEKLY, YEARLY
-	Description       string  `json:"description,omitempty"`
-	EndDate           string  `json:"endDate,omitempty"` // YYYY-MM-DD
-	ExternalReference string  `json:"externalReference,omitempty"`
-	UpdatePendingPayments bool `json:"updatePendingPayments,omitempty"` // Update pending payments with new value
+	BillingType           string  `json:"billingType,omitempty"` // CREDIT_CARD, BOLETO, PIX
+	Value                 float64 `json:"value,omitempty"`
+	NextDueDate           string  `json:"nextDueDate,omitempty"` // YYYY-MM-DD
+	Cycle                 string  `json:"cycle,omitempty"`       // MONTHLY, WEEKLY, YEARLY
+	Description           string  `json:"description,omitempty"`
+	EndDate               string  `json:"endDate,omitempty"` // YYYY-MM-DD
+	ExternalReference     string  `json:"externalReference,omitempty"`
+	UpdatePendingPayments bool    `json:"updatePendingPayments,omitempty"` // Update pending payments with new value
 }
 
 // AsaasPaymentResponse represents a payment from Asaas
@@ -123,17 +123,17 @@ type AsaasWebhookEvent struct {
 
 // AsaasCreditCardInfo represents credit card information for payment
 type AsaasCreditCardInfo struct {
-	HolderName      string `json:"holderName"`
-	Number          string `json:"number"`
-	ExpiryMonth     string `json:"expiryMonth"` // MM
-	ExpiryYear      string `json:"expiryYear"`  // YYYY
-	Ccv             string `json:"ccv"`
+	HolderName  string `json:"holderName"`
+	Number      string `json:"number"`
+	ExpiryMonth string `json:"expiryMonth"` // MM
+	ExpiryYear  string `json:"expiryYear"`  // YYYY
+	Ccv         string `json:"ccv"`
 }
 
 // AsaasTokenizeCreditCardRequest represents a request to tokenize a credit card
 type AsaasTokenizeCreditCardRequest struct {
-	Customer    string              `json:"customer"`    // Customer ID
-	CreditCard  AsaasCreditCardInfo `json:"creditCard"`
+	Customer   string              `json:"customer"` // Customer ID
+	CreditCard AsaasCreditCardInfo `json:"creditCard"`
 }
 
 // AsaasTokenizeCreditCardResponse represents the response when tokenizing a credit card
@@ -145,31 +145,31 @@ type AsaasTokenizeCreditCardResponse struct {
 
 // AsaasPaymentRequest represents a request to create a single payment
 type AsaasPaymentRequest struct {
-	Customer          string                     `json:"customer"`    // Customer ID
-	BillingType       string                     `json:"billingType"` // CREDIT_CARD, BOLETO, PIX
-	Value             float64                    `json:"value"`
-	DueDate           string                     `json:"dueDate"` // YYYY-MM-DD
-	Description       string                     `json:"description,omitempty"`
-	ExternalReference string                     `json:"externalReference,omitempty"` // organization_id
-	CreditCard        *AsaasCreditCardInfo       `json:"creditCard,omitempty"`        // Credit card info
-	CreditCardToken   string                     `json:"creditCardToken,omitempty"`   // Tokenized credit card
-	InstallmentCount  int                        `json:"installmentCount,omitempty"`
-	InstallmentValue  float64                    `json:"installmentValue,omitempty"`
+	Customer          string               `json:"customer"`    // Customer ID
+	BillingType       string               `json:"billingType"` // CREDIT_CARD, BOLETO, PIX
+	Value             float64              `json:"value"`
+	DueDate           string               `json:"dueDate"` // YYYY-MM-DD
+	Description       string               `json:"description,omitempty"`
+	ExternalReference string               `json:"externalReference,omitempty"` // organization_id
+	CreditCard        *AsaasCreditCardInfo `json:"creditCard,omitempty"`        // Credit card info
+	CreditCardToken   string               `json:"creditCardToken,omitempty"`   // Tokenized credit card
+	InstallmentCount  int                  `json:"installmentCount,omitempty"`
+	InstallmentValue  float64              `json:"installmentValue,omitempty"`
 }
 
 // AsaasPaymentCreateResponse represents the response when creating a payment
 type AsaasPaymentCreateResponse struct {
-	Object                string  `json:"object"`
-	ID                    string  `json:"id"`
-	DateCreated           string  `json:"dateCreated"`
-	Customer              string  `json:"customer"`
-	Value                 float64 `json:"value"`
-	NetValue              float64 `json:"netValue"`
-	BillingType           string  `json:"billingType"`
-	Status                string  `json:"status"`
-	DueDate               string  `json:"dueDate"`
-	InvoiceURL            string  `json:"invoiceUrl"`
-	BankSlipURL           string  `json:"bankSlipUrl"`
-	ExternalReference     string  `json:"externalReference"`
-	Description           string  `json:"description"`
+	Object            string  `json:"object"`
+	ID                string  `json:"id"`
+	DateCreated       string  `json:"dateCreated"`
+	Customer          string  `json:"customer"`
+	Value             float64 `json:"value"`
+	NetValue          float64 `json:"netValue"`
+	BillingType       string  `json:"billingType"`
+	Status            string  `json:"status"`
+	DueDate           string  `json:"dueDate"`
+	InvoiceURL        string  `json:"invoiceUrl"`
+	BankSlipURL       string  `json:"bankSlipUrl"`
+	ExternalReference string  `json:"externalReference"`
+	Description       string  `json:"description"`
 }

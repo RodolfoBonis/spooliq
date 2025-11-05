@@ -14,9 +14,9 @@ import (
 type PaymentGatewayLinkModel struct {
 	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	OrganizationID string         `gorm:"type:varchar(255);not null;uniqueIndex" json:"organization_id"` // 1:1 - UNIQUE FK to companies
-	Gateway        string         `gorm:"type:varchar(50);not null" json:"gateway"`                       // "asaas", "stripe", "paypal"
-	CustomerID     string         `gorm:"type:varchar(255);not null;index" json:"customer_id"`            // ID do cliente no gateway
-	SubscriptionID *string        `gorm:"type:varchar(255);index" json:"subscription_id"`                 // ID da subscription no gateway (nullable)
+	Gateway        string         `gorm:"type:varchar(50);not null" json:"gateway"`                      // "asaas", "stripe", "paypal"
+	CustomerID     string         `gorm:"type:varchar(255);not null;index" json:"customer_id"`           // ID do cliente no gateway
+	SubscriptionID *string        `gorm:"type:varchar(255);index" json:"subscription_id"`                // ID da subscription no gateway (nullable)
 	IsActive       bool           `gorm:"not null;default:true" json:"is_active"`
 	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time      `gorm:"autoUpdateTime" json:"updated_at"`

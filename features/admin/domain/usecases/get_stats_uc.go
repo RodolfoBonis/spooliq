@@ -65,8 +65,8 @@ func (uc *GetStatsUseCase) Execute(ctx context.Context, userRoles []string) (*ad
 		ActiveSubscriptions:  0,
 		TrialSubscriptions:   0,
 		OverdueSubscriptions: 0,
-		TotalMRR:            0.0,
-		ChurnRate:           0.0,
+		TotalMRR:             0.0,
+		ChurnRate:            0.0,
 	}
 
 	// Count subscriptions by status
@@ -102,8 +102,8 @@ func (uc *GetStatsUseCase) Execute(ctx context.Context, userRoles []string) (*ad
 		"active_subscriptions":  stats.ActiveSubscriptions,
 		"trial_subscriptions":   stats.TrialSubscriptions,
 		"overdue_subscriptions": stats.OverdueSubscriptions,
-		"total_mrr":            stats.TotalMRR,
-		"churn_rate":           stats.ChurnRate,
+		"total_mrr":             stats.TotalMRR,
+		"churn_rate":            stats.ChurnRate,
 	})
 
 	return stats, nil

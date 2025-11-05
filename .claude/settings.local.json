@@ -106,7 +106,8 @@
       "Read(/Users/rodolfodebonis/Documents/projects/rb-cdn/**)",
       "Read(/Users/rodolfodebonis/Documents/projects/rb-cdn/**)",
       "Read(/Users/rodolfodebonis/Documents/projects/rb-cdn/**)",
-      "Read(/Users/rodolfodebonis/Documents/projects/rb-cdn/features/upload/domain/usecases/**)"
+      "Read(/Users/rodolfodebonis/Documents/projects/rb-cdn/features/upload/domain/usecases/**)",
+      "Bash(goimports:*)"
     ],
     "deny": [],
     "ask": []

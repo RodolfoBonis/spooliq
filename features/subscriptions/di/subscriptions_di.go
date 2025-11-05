@@ -43,6 +43,7 @@ var Module = fx.Module("subscriptions",
 			fx.ParamTags(``, ``, ``, ``, ``), // PaymentMethodRepo, PaymentGatewayLinkRepo, CompanyRepo, AsaasService, Logger
 		),
 		usecases.NewSubscriptionPlanUseCase,
+		usecases.NewPlanAdvancedUseCase,
 		fx.Annotate(
 			usecases.NewManageSubscriptionUseCase,
 			fx.ParamTags(``, ``, ``, ``, ``, ``), // PlanRepo, PaymentMethodRepo, PaymentGatewayLinkRepo, CompanyRepo, AsaasService, Logger

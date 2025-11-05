@@ -56,6 +56,7 @@ func (m *MachinePresetModel) FromEntity(entity *entities.MachinePresetEntity) {
 func (m *MachinePresetModel) ToEntity() entities.MachinePresetEntity {
 	return entities.MachinePresetEntity{
 		ID:                     m.ID,
+		OrganizationID:         m.OrganizationID,
 		Brand:                  m.Brand,
 		Model:                  m.Model,
 		BuildVolumeX:           m.BuildVolumeX,

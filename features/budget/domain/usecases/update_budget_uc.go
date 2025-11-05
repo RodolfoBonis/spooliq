@@ -297,7 +297,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 
 	response := entities.BudgetResponse{
-		Budget:                budget,
+		BudgetEntity:          budget,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		TotalPrintTimeHours:   totalHours,

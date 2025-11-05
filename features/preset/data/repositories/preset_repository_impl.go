@@ -340,3 +340,199 @@ func (r *PresetRepositoryImpl) UpdateCost(cost *entities.CostPresetEntity) error
 
 	return r.db.Save(model).Error
 }
+
+// OPTIMIZED METHODS WITH ORGANIZATION FILTERING AND JOINS
+
+// GetMachinePresets retrieves all machine presets with base data in a single query
+func (r *PresetRepositoryImpl) GetMachinePresets(organizationID string) ([]*repositories.MachinePresetResponse, error) {
+	var results []*repositories.MachinePresetResponse
+
+	err := r.db.Table("machine_presets").
+		Select(`
+			presets.id,
+			presets.name,
+			presets.description,
+			presets.type,
+			presets.is_active,
+			presets.is_default,
+			machine_presets.brand,
+			machine_presets.model,
+			machine_presets.build_volume_x,
+			machine_presets.build_volume_y,
+			machine_presets.build_volume_z,
+			machine_presets.nozzle_diameter,
+			machine_presets.layer_height_min,
+			machine_presets.layer_height_max,
+			machine_presets.print_speed_max,
+			machine_presets.power_consumption,
+			machine_presets.bed_temperature_max,
+			machine_presets.extruder_temperature_max,
+			machine_presets.filament_diameter,
+			machine_presets.cost_per_hour
+		`).
+		Joins("INNER JOIN presets ON machine_presets.id = presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true).
+		Scan(&results).Error
+
+	return results, err
+}
+
+// GetMachinePresetsByBrand retrieves machine presets by brand with base data
+func (r *PresetRepositoryImpl) GetMachinePresetsByBrand(brand, organizationID string) ([]*repositories.MachinePresetResponse, error) {
+	var results []*repositories.MachinePresetResponse
+
+	err := r.db.Table("machine_presets").
+		Select(`
+			presets.id,
+			presets.name,
+			presets.description,
+			presets.type,
+			presets.is_active,
+			presets.is_default,
+			machine_presets.brand,
+			machine_presets.model,
+			machine_presets.build_volume_x,
+			machine_presets.build_volume_y,
+			machine_presets.build_volume_z,
+			machine_presets.nozzle_diameter,
+			machine_presets.layer_height_min,
+			machine_presets.layer_height_max,
+			machine_presets.print_speed_max,
+			machine_presets.power_consumption,
+			machine_presets.bed_temperature_max,
+			machine_presets.extruder_temperature_max,
+			machine_presets.filament_diameter,
+			machine_presets.cost_per_hour
+		`).
+		Joins("INNER JOIN presets ON machine_presets.id = presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ? AND machine_presets.brand = ?", organizationID, true, brand).
+		Scan(&results).Error
+
+	return results, err
+}
+
+// GetEnergyPresets retrieves all energy presets with base data in a single query
+func (r *PresetRepositoryImpl) GetEnergyPresets(organizationID string) ([]*repositories.EnergyPresetResponse, error) {
+	var results []*repositories.EnergyPresetResponse
+
+	err := r.db.Table("energy_presets").
+		Select(`
+			presets.id,
+			presets.name,
+			presets.description,
+			presets.type,
+			presets.is_active,
+			presets.is_default,
+			energy_presets.country,
+			energy_presets.state,
+			energy_presets.city,
+			energy_presets.energy_cost_per_kwh,
+			energy_presets.currency,
+			energy_presets.provider,
+			energy_presets.tariff_type,
+			energy_presets.peak_hour_multiplier,
+			energy_presets.off_peak_hour_multiplier
+		`).
+		Joins("INNER JOIN presets ON energy_presets.id = presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true).
+		Scan(&results).Error
+
+	return results, err
+}
+
+// GetEnergyPresetsByLocation retrieves energy presets by location with base data
+func (r *PresetRepositoryImpl) GetEnergyPresetsByLocation(country, state, city, organizationID string) ([]*repositories.EnergyPresetResponse, error) {
+	var results []*repositories.EnergyPresetResponse
+
+	query := r.db.Table("energy_presets").
+		Select(`
+			presets.id,
+			presets.name,
+			presets.description,
+			presets.type,
+			presets.is_active,
+			presets.is_default,
+			energy_presets.country,
+			energy_presets.state,
+			energy_presets.city,
+			energy_presets.energy_cost_per_kwh,
+			energy_presets.currency,
+			energy_presets.provider,
+			energy_presets.tariff_type,
+			energy_presets.peak_hour_multiplier,
+			energy_presets.off_peak_hour_multiplier
+		`).
+		Joins("INNER JOIN presets ON energy_presets.id = presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true)
+
+	if country != "" {
+		query = query.Where("energy_presets.country = ?", country)
+	}
+	if state != "" {
+		query = query.Where("energy_presets.state = ?", state)
+	}
+	if city != "" {
+		query = query.Where("energy_presets.city = ?", city)
+	}
+
+	err := query.Scan(&results).Error
+	return results, err
+}
+
+// GetEnergyPresetsByCurrency retrieves energy presets by currency with base data
+func (r *PresetRepositoryImpl) GetEnergyPresetsByCurrency(currency, organizationID string) ([]*repositories.EnergyPresetResponse, error) {
+	var results []*repositories.EnergyPresetResponse
+
+	err := r.db.Table("energy_presets").
+		Select(`
+			presets.id,
+			presets.name,
+			presets.description,
+			presets.type,
+			presets.is_active,
+			presets.is_default,
+			energy_presets.country,
+			energy_presets.state,
+			energy_presets.city,
+			energy_presets.energy_cost_per_kwh,
+			energy_presets.currency,
+			energy_presets.provider,
+			energy_presets.tariff_type,
+			energy_presets.peak_hour_multiplier,
+			energy_presets.off_peak_hour_multiplier
+		`).
+		Joins("INNER JOIN presets ON energy_presets.id = presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ? AND energy_presets.currency = ?", organizationID, true, currency).
+		Scan(&results).Error
+
+	return results, err
+}
+
+// GetCostPresets retrieves all cost presets with base data in a single query
+func (r *PresetRepositoryImpl) GetCostPresets(organizationID string) ([]*repositories.CostPresetResponse, error) {
+	var results []*repositories.CostPresetResponse
+
+	err := r.db.Table("cost_presets").
+		Select(`
+			presets.id,
+			presets.name,
+			presets.description,
+			presets.type,
+			presets.is_active,
+			presets.is_default,
+			cost_presets.labor_cost_per_hour,
+			cost_presets.packaging_cost_per_item,
+			cost_presets.shipping_cost_base,
+			cost_presets.shipping_cost_per_gram,
+			cost_presets.overhead_percentage,
+			cost_presets.profit_margin_percentage,
+			cost_presets.post_processing_cost_per_hour,
+			cost_presets.support_removal_cost_per_hour,
+			cost_presets.quality_control_cost_per_item
+		`).
+		Joins("INNER JOIN presets ON cost_presets.id = presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true).
+		Scan(&results).Error
+
+	return results, err
+}

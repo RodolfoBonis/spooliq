@@ -133,7 +133,7 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 		}
 
 		budgetResponses[i] = entities.BudgetResponse{
-			Budget:                budget,
+			BudgetEntity:          budget,
 			Customer:              customerInfo,
 			Items:                 itemResponses,
 			TotalPrintTimeHours:   totalHours,

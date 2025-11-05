@@ -16,12 +16,13 @@ import (
 
 // GeneratePDF generates a PDF for a budget
 // @Summary Generate budget PDF
-// @Description Generate and download PDF for a specific budget
+// @Description Generate PDF for a specific budget and return CDN URL. Use ?force=true to regenerate existing PDF.
 // @Tags budgets
 // @Accept json
-// @Produce application/pdf
+// @Produce json
 // @Param id path string true "Budget ID"
-// @Success 200 {file} application/pdf
+// @Param force query bool false "Force regenerate PDF even if exists"
+// @Success 200 {object} map[string]interface{} "PDF URL and metadata"
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
@@ -54,6 +55,9 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		return
 	}
 
+	// Check if force regeneration is requested
+	forceRegenerate := c.Query("force") == "true"
+
 	// Get budget
 	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
@@ -63,6 +67,23 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		})
 		appError := coreErrors.UsecaseError("Budget not found")
 		c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+		return
+	}
+
+	// Check if PDF already exists and force regeneration is not requested
+	if budget.PDFUrl != nil && *budget.PDFUrl != "" && !forceRegenerate {
+		uc.logger.Info(ctx, "Returning existing PDF URL", map[string]interface{}{
+			"budget_id": budgetID,
+			"pdf_url":   *budget.PDFUrl,
+		})
+		
+		c.JSON(http.StatusOK, gin.H{
+			"pdf_url":    *budget.PDFUrl,
+			"budget_id":  budgetID.String(),
+			"budget_name": budget.Name,
+			"generated":  false,
+			"message":    "Existing PDF returned. Use ?force=true to regenerate.",
+		})
 		return
 	}
 
@@ -233,8 +254,28 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		}
 	}
 
-	// Return PDF
-	c.Header("Content-Type", "application/pdf")
-	c.Header("Content-Disposition", "attachment; filename="+filename)
-	c.Data(http.StatusOK, "application/pdf", pdfBytes)
+	// Return PDF URL and metadata
+	response := gin.H{
+		"budget_id":   budgetID.String(),
+		"budget_name": budget.Name,
+		"generated":   true,
+		"message":     "PDF generated successfully",
+		"file_size":   len(pdfBytes),
+	}
+
+	// Add PDF URL if uploaded to CDN successfully
+	if budget.PDFUrl != nil && *budget.PDFUrl != "" {
+		response["pdf_url"] = *budget.PDFUrl
+		response["cdn_uploaded"] = true
+	} else {
+		response["cdn_uploaded"] = false
+		response["message"] = "PDF generated but CDN upload failed. PDF available for download only."
+		// Fallback: still provide the PDF as download if CDN failed
+		c.Header("Content-Type", "application/pdf")
+		c.Header("Content-Disposition", "attachment; filename="+filename)
+		c.Data(http.StatusOK, "application/pdf", pdfBytes)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }

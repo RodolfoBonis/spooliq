@@ -41,13 +41,14 @@ func (BudgetItemFilamentModel) TableName() string {
 // ToEntity converts model to entity
 func (m *BudgetItemFilamentModel) ToEntity() *entities.BudgetItemFilamentEntity {
 	return &entities.BudgetItemFilamentEntity{
-		ID:           m.ID,
-		BudgetItemID: m.BudgetItemID,
-		FilamentID:   m.FilamentID,
-		Quantity:     m.Quantity,
-		Order:        m.Order,
-		CreatedAt:    m.CreatedAt,
-		UpdatedAt:    m.UpdatedAt,
+		ID:             m.ID,
+		BudgetItemID:   m.BudgetItemID,
+		FilamentID:     m.FilamentID,
+		OrganizationID: m.OrganizationID,
+		Quantity:       m.Quantity,
+		Order:          m.Order,
+		CreatedAt:      m.CreatedAt,
+		UpdatedAt:      m.UpdatedAt,
 	}
 }
 
@@ -56,6 +57,7 @@ func (m *BudgetItemFilamentModel) FromEntity(e *entities.BudgetItemFilamentEntit
 	m.ID = e.ID
 	m.BudgetItemID = e.BudgetItemID
 	m.FilamentID = e.FilamentID
+	m.OrganizationID = e.OrganizationID
 	m.Quantity = e.Quantity
 	m.Order = e.Order
 	m.CreatedAt = e.CreatedAt

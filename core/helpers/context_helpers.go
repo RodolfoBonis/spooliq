@@ -31,6 +31,17 @@ func GetUserID(c *gin.Context) string {
 	return ""
 }
 
+// GetUserEmail extracts user email from Gin context
+// Returns empty string if not found
+func GetUserEmail(c *gin.Context) string {
+	if email, exists := c.Get("user_email"); exists {
+		if emailStr, ok := email.(string); ok {
+			return emailStr
+		}
+	}
+	return ""
+}
+
 // IsAdmin checks if the user has admin role
 func IsAdmin(c *gin.Context) bool {
 	if role, exists := c.Get("user_role"); exists {

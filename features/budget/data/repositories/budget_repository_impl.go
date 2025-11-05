@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -301,6 +302,10 @@ func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID 
 		BrandName    string
 		MaterialName string
 		Color        string
+		ColorType    string
+		ColorData    []byte // Changed to []byte to handle JSON properly
+		ColorHex     string
+		ColorPreview string
 		PricePerKg   float64
 	}
 
@@ -314,6 +319,10 @@ func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID 
 			b.name as brand_name,
 			m.name as material_name,
 			f.color,
+			f.color_type,
+			f.color_data,
+			f.color_hex,
+			f.color_preview,
 			f.price_per_kg
 		`).
 		Joins("JOIN filaments f ON f.id = bif.filament_id").
@@ -330,7 +339,8 @@ func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID 
 	infos := make([]entities.FilamentUsageInfo, len(results))
 	for i, r := range results {
 		// Quantity já é o total, não precisa multiplicar!
-		cost := int64((r.Quantity / 1000.0) * r.PricePerKg * 100) // to cents
+		// PricePerKg is already in cents, so no need to multiply by 100
+		cost := int64((r.Quantity / 1000.0) * r.PricePerKg)
 
 		infos[i] = entities.FilamentUsageInfo{
 			FilamentID:   r.FilamentID.String(),
@@ -338,6 +348,10 @@ func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID 
 			BrandName:    r.BrandName,
 			MaterialName: r.MaterialName,
 			Color:        r.Color,
+			ColorType:    r.ColorType,
+			ColorData:    json.RawMessage(r.ColorData), // Convert []byte to json.RawMessage
+			ColorHex:     r.ColorHex,
+			ColorPreview: r.ColorPreview,
 			Quantity:     r.Quantity,
 			Cost:         cost,
 			Order:        r.Order,
@@ -428,7 +442,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 
 			// Quantity já é o total (não precisa multiplicar por ProductQuantity!)
 			gramsTotal := itemFil.Quantity
-			cost := (gramsTotal / 1000.0) * filament.PricePerKg * 100 // to cents
+			cost := (gramsTotal / 1000.0) * filament.PricePerKg // PricePerKg already in cents
 			itemFilamentCost += int64(cost)
 			totalGrams += gramsTotal
 			totalPrice += filament.PricePerKg
@@ -443,29 +457,32 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			wastePerChange := 15.0 // grams
 			numChanges := len(itemFilaments) - 1
 			totalWaste := wastePerChange * float64(numChanges)
-			itemWasteCost = int64((totalWaste / 1000.0) * avgPrice * 100)
+			itemWasteCost = int64((totalWaste / 1000.0) * avgPrice) // avgPrice already in cents
 		}
 
 		// 4. Calculate energy cost (proportional to this item's print time)
 		if budget.IncludeEnergyCost && machinePreset != nil && energyPreset != nil {
-			// Get power consumption and energy price from presets
-			var powerConsumption, energyPrice float64
-
+			// Get power consumption from machine preset
+			var powerConsumption float64
 			r.db.WithContext(ctx).
-				Table("presets").
-				Select("CAST(value AS FLOAT) as price").
-				Where("id = ? AND key = 'price_per_kwh'", energyPreset.ID).
-				Scan(&energyPrice)
-
-			r.db.WithContext(ctx).
-				Table("presets").
-				Select("CAST(value AS FLOAT) as power").
-				Where("id = ? AND key = 'power_consumption'", machinePreset.ID).
+				Table("machine_presets").
+				Select("power_consumption").
+				Where("id = ?", machinePreset.ID).
 				Scan(&powerConsumption)
 
-			itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
-			kwh := powerConsumption * itemHours / 1000.0
-			itemEnergyCost = int64(kwh * energyPrice * 100)
+			// Get energy price from energy preset
+			var energyPrice float64
+			r.db.WithContext(ctx).
+				Table("energy_presets").
+				Select("energy_cost_per_kwh").
+				Where("id = ?", energyPreset.ID).
+				Scan(&energyPrice)
+
+			if powerConsumption > 0 && energyPrice > 0 {
+				itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
+				kwh := powerConsumption * itemHours / 1000.0    // Convert watts to kilowatts
+				itemEnergyCost = int64(kwh * energyPrice * 100) // Convert to cents
+			}
 		}
 
 		// 5. Calculate labor cost (base + additional)
@@ -474,17 +491,16 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		// Base labor cost from preset
 		var laborRate float64
 		if item.CostPresetID != nil {
-			costPreset, err := r.GetPresetInfo(ctx, *item.CostPresetID, "cost")
-			if err == nil {
-				r.db.WithContext(ctx).
-					Table("presets").
-					Select("CAST(value AS FLOAT) as rate").
-					Where("id = ? AND key = 'labor_cost_per_hour'", costPreset.ID).
-					Scan(&laborRate)
-			}
+			r.db.WithContext(ctx).
+				Table("cost_presets").
+				Select("labor_cost_per_hour").
+				Where("id = ?", *item.CostPresetID).
+				Scan(&laborRate)
 		}
 
-		itemLaborCost = int64(itemHours * laborRate * 100)
+		if laborRate > 0 {
+			itemLaborCost = int64(itemHours * laborRate * 100) // Convert to cents
+		}
 
 		// Add additional labor cost (pintura, acabamento, etc)
 		if item.AdditionalLaborCost != nil {
@@ -612,32 +628,24 @@ func (r *budgetRepositoryImpl) GetFilamentInfo(ctx context.Context, filamentID u
 
 // GetPresetInfo fetches preset information by ID
 func (r *budgetRepositoryImpl) GetPresetInfo(ctx context.Context, presetID uuid.UUID, presetType string) (*entities.PresetInfo, error) {
-	var preset struct {
+	// First get the basic preset info from the main presets table
+	var basePreset struct {
 		ID   uuid.UUID `gorm:"column:id"`
 		Name string    `gorm:"column:name"`
 		Type string    `gorm:"column:type"`
 	}
 
-	table := "presets"
-	if presetType == "machine" {
-		table = "machine_presets"
-	} else if presetType == "energy" {
-		table = "energy_presets"
-	} else if presetType == "cost" {
-		table = "cost_presets"
-	}
-
 	if err := r.db.WithContext(ctx).
-		Table(table).
+		Table("presets").
 		Select("id, name, type").
 		Where("id = ?", presetID).
-		First(&preset).Error; err != nil {
+		First(&basePreset).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch preset: %w", err)
 	}
 
 	return &entities.PresetInfo{
-		ID:   preset.ID.String(),
-		Name: preset.Name,
+		ID:   basePreset.ID.String(),
+		Name: basePreset.Name,
 		Type: presetType,
 	}, nil
 }

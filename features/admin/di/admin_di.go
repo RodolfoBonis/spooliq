@@ -29,6 +29,7 @@ var AdminModule = fx.Module("admin",
 			getPaymentHistoryUC *usecases.GetPaymentHistoryUseCase,
 			getStatsUC *usecases.GetStatsUseCase,
 			subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
+			planAdvancedUC *subscriptionUsecases.PlanAdvancedUseCase,
 		) *admin.Handler {
 			return admin.NewAdminHandler(
 				listCompaniesUC,
@@ -39,6 +40,7 @@ var AdminModule = fx.Module("admin",
 				getPaymentHistoryUC,
 				getStatsUC,
 				subscriptionPlanUC,
+				planAdvancedUC,
 			)
 		},
 	),

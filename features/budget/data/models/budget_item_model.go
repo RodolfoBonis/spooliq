@@ -80,6 +80,7 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		ID:                  bi.ID,
 		BudgetID:            bi.BudgetID,
 		FilamentID:          bi.FilamentID,
+		OrganizationID:      bi.OrganizationID,
 		Quantity:            bi.Quantity,
 		Order:               bi.Order,
 		ProductName:         bi.ProductName,
@@ -109,6 +110,7 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ID = entity.ID
 	bi.BudgetID = entity.BudgetID
 	bi.FilamentID = entity.FilamentID
+	bi.OrganizationID = entity.OrganizationID
 	bi.Quantity = entity.Quantity
 	bi.Order = entity.Order
 	bi.ProductName = entity.ProductName

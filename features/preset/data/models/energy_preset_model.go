@@ -46,6 +46,7 @@ func (e *EnergyPresetModel) FromEntity(entity *entities.EnergyPresetEntity) {
 func (e *EnergyPresetModel) ToEntity() entities.EnergyPresetEntity {
 	return entities.EnergyPresetEntity{
 		ID:                    e.ID,
+		OrganizationID:        e.OrganizationID,
 		Country:               e.Country,
 		State:                 e.State,
 		City:                  e.City,

@@ -270,6 +270,21 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION_PLAN MIGRATION: %s", err.Error()))
 	}
 
+	// 1.1. Plan Templates (no FKs to other app tables)
+	if err := Connector.AutoMigrate(&subscriptions.PlanTemplateModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PLAN_TEMPLATE MIGRATION: %s", err.Error()))
+	}
+
+	// 1.2. Plan Audit Logs (FK: PlanID → SubscriptionPlans)
+	if err := Connector.AutoMigrate(&subscriptions.PlanAuditModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PLAN_AUDIT MIGRATION: %s", err.Error()))
+	}
+
+	// 1.3. Plan Migrations (FK: FromPlanID/ToPlanID → SubscriptionPlans)
+	if err := Connector.AutoMigrate(&subscriptions.PlanMigrationModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PLAN_MIGRATION MIGRATION: %s", err.Error()))
+	}
+
 	// ========================================
 	// LEVEL 1: Companies (now depends on SubscriptionPlan for subscription_plan_id FK)
 	// ========================================

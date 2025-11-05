@@ -218,7 +218,7 @@ func buildBudgetResponse(ctx context.Context, repo repositories.BudgetRepository
 	}
 
 	return &entities.BudgetResponse{
-		Budget:                budget,
+		BudgetEntity:          budget,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		TotalPrintTimeHours:   totalHours,

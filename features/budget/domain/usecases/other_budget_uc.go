@@ -360,7 +360,7 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 	}
 
 	return &entities.BudgetResponse{
-		Budget:                budget,
+		BudgetEntity:          budget,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		TotalPrintTimeHours:   totalHours,

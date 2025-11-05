@@ -1,6 +1,9 @@
 package entities
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // CustomerInfo represents simplified customer information for budget responses
 type CustomerInfo struct {
@@ -23,14 +26,23 @@ type FilamentInfo struct {
 
 // FilamentUsageInfo represents detailed filament usage for a budget item
 type FilamentUsageInfo struct {
-	FilamentID   string  `json:"filament_id"`
-	FilamentName string  `json:"filament_name"`
-	BrandName    string  `json:"brand_name"`
-	MaterialName string  `json:"material_name"`
-	Color        string  `json:"color"`
-	Quantity     float64 `json:"quantity"` // gramas TOTAL para este item
-	Cost         int64   `json:"cost"`     // centavos
-	Order        int     `json:"order"`
+	FilamentID   string `json:"filament_id"`
+	FilamentName string `json:"filament_name"`
+	BrandName    string `json:"brand_name"`
+	MaterialName string `json:"material_name"`
+
+	// Legacy color field (maintained for backward compatibility)
+	Color string `json:"color"`
+
+	// Advanced color system
+	ColorType    string          `json:"color_type"`
+	ColorData    json.RawMessage `json:"color_data,omitempty"`
+	ColorHex     string          `json:"color_hex,omitempty"`
+	ColorPreview string          `json:"color_preview,omitempty"`
+
+	Quantity float64 `json:"quantity"` // gramas TOTAL para este item
+	Cost     int64   `json:"cost"`     // centavos
+	Order    int     `json:"order"`
 }
 
 // PresetInfo represents simplified preset information
@@ -80,7 +92,9 @@ type BudgetItemResponse struct {
 
 // BudgetResponse represents the response for a single budget
 type BudgetResponse struct {
-	Budget        *BudgetEntity               `json:"budget"`
+	// Embed all BudgetEntity fields directly
+	*BudgetEntity
+	
 	Customer      *CustomerInfo               `json:"customer"`
 	Items         []BudgetItemResponse        `json:"items"`
 	MachinePreset *PresetInfo                 `json:"machine_preset,omitempty"`

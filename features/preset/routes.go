@@ -3,6 +3,7 @@ package preset
 import (
 	"net/http"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
@@ -204,14 +205,14 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 		return
 	}
 
-	// Extract organization_id from context
-	organizationID, exists := c.Get("organization_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization_id not found in context"})
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
 
-	preset, err := h.createUC.CreateMachinePreset(&req, organizationID.(string))
+	preset, err := h.createUC.CreateMachinePreset(&req, organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -226,12 +227,19 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 // @Tags Machine Presets
 // @Accept json
 // @Produce json
-// @Success 200 {array} entities.PresetEntity "Successfully retrieved machine presets"
+// @Success 200 {array} usecases.MachinePresetResponse "Successfully retrieved machine presets"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/machines [get]
 func (h *Handler) GetMachinePresets(c *gin.Context) {
-	presets, err := h.findUC.FindByType(entities.PresetTypeMachine)
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+	presets, err := h.findUC.FindAllMachinePresets(organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -320,7 +328,14 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 func (h *Handler) GetMachinePresetsByBrand(c *gin.Context) {
 	brand := c.Param("brand")
 
-	presets, err := h.findUC.FindMachinePresetsByBrand(brand)
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+	presets, err := h.findUC.FindMachinePresetsByBrand(brand, organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -348,14 +363,14 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 		return
 	}
 
-	// Extract organization_id from context
-	organizationID, exists := c.Get("organization_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization_id not found in context"})
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
 
-	preset, err := h.createUC.CreateEnergyPreset(&req, organizationID.(string))
+	preset, err := h.createUC.CreateEnergyPreset(&req, organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -375,7 +390,14 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/energy [get]
 func (h *Handler) GetEnergyPresets(c *gin.Context) {
-	presets, err := h.findUC.FindByType(entities.PresetTypeEnergy)
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+	presets, err := h.findUC.FindAllEnergyPresets(organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -468,7 +490,14 @@ func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 	state := c.Query("state")
 	city := c.Query("city")
 
-	presets, err := h.findUC.FindEnergyPresetsByLocation(country, state, city)
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+	presets, err := h.findUC.FindEnergyPresetsByLocation(country, state, city, organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -491,7 +520,14 @@ func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 func (h *Handler) GetEnergyPresetsByCurrency(c *gin.Context) {
 	currency := c.Param("currency")
 
-	presets, err := h.findUC.FindEnergyPresetsByCurrency(currency)
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+	presets, err := h.findUC.FindEnergyPresetsByCurrency(currency, organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -519,14 +555,14 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 		return
 	}
 
-	// Extract organization_id from context
-	organizationID, exists := c.Get("organization_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization_id not found in context"})
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
 		return
 	}
 
-	preset, err := h.createUC.CreateCostPreset(&req, organizationID.(string))
+	preset, err := h.createUC.CreateCostPreset(&req, organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -546,7 +582,14 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/costs [get]
 func (h *Handler) GetCostPresets(c *gin.Context) {
-	presets, err := h.findUC.FindByType(entities.PresetTypeCost)
+	// Extract organization_id from context using helper
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return
+	}
+
+	presets, err := h.findUC.FindAllCostPresets(organizationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

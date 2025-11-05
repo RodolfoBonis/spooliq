@@ -46,6 +46,7 @@ func (c *CostPresetModel) FromEntity(entity *entities.CostPresetEntity) {
 func (c *CostPresetModel) ToEntity() entities.CostPresetEntity {
 	return entities.CostPresetEntity{
 		ID:                        c.ID,
+		OrganizationID:            c.OrganizationID,
 		LaborCostPerHour:          c.LaborCostPerHour,
 		PackagingCostPerItem:      c.PackagingCostPerItem,
 		ShippingCostBase:          c.ShippingCostBase,

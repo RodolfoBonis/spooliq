@@ -66,6 +66,7 @@ func InitAndRun() fx.Option {
 				docs.SwaggerInfo.Version = "1.0"
 
 				runPort := fmt.Sprintf(":%s", cfg.Port)
+
 				go func() {
 					err := app.Run(runPort)
 					if err != nil && !errors.Is(err, http.ErrServerClosed) {

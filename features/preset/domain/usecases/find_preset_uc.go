@@ -18,23 +18,10 @@ func NewFindPresetUseCase(presetRepo repositories.PresetRepository) *FindPresetU
 	}
 }
 
-// MachinePresetResponse represents a machine preset with base info
-type MachinePresetResponse struct {
-	*entities.PresetEntity
-	*entities.MachinePresetEntity
-}
-
-// EnergyPresetResponse represents an energy preset with base info
-type EnergyPresetResponse struct {
-	*entities.PresetEntity
-	*entities.EnergyPresetEntity
-}
-
-// CostPresetResponse represents a cost preset with base info
-type CostPresetResponse struct {
-	*entities.PresetEntity
-	*entities.CostPresetEntity
-}
+// Type aliases to use repository response types
+type MachinePresetResponse = repositories.MachinePresetResponse
+type EnergyPresetResponse = repositories.EnergyPresetResponse  
+type CostPresetResponse = repositories.CostPresetResponse
 
 // FindByID finds a preset by its ID
 func (uc *FindPresetUseCase) FindByID(id uuid.UUID) (*entities.PresetEntity, error) {
@@ -86,34 +73,29 @@ func (uc *FindPresetUseCase) FindMachinePresetByID(id uuid.UUID) (*MachinePreset
 	}
 
 	return &MachinePresetResponse{
-		PresetEntity:        preset,
-		MachinePresetEntity: machine,
+		ID:                     preset.ID.String(),
+		Name:                   preset.Name,
+		Description:            preset.Description,
+		Type:                   string(preset.Type),
+		IsActive:               preset.IsActive,
+		IsDefault:              preset.IsDefault,
+		Brand:                  machine.Brand,
+		Model:                  machine.Model,
+		BuildVolumeX:           machine.BuildVolumeX,
+		BuildVolumeY:           machine.BuildVolumeY,
+		BuildVolumeZ:           machine.BuildVolumeZ,
+		NozzleDiameter:         machine.NozzleDiameter,
+		LayerHeightMin:         machine.LayerHeightMin,
+		LayerHeightMax:         machine.LayerHeightMax,
+		PrintSpeedMax:          machine.PrintSpeedMax,
+		PowerConsumption:       machine.PowerConsumption,
+		BedTemperatureMax:      machine.BedTemperatureMax,
+		ExtruderTemperatureMax: machine.ExtruderTemperatureMax,
+		FilamentDiameter:       machine.FilamentDiameter,
+		CostPerHour:            machine.CostPerHour,
 	}, nil
 }
 
-// FindMachinePresetsByBrand finds machine presets by brand
-func (uc *FindPresetUseCase) FindMachinePresetsByBrand(brand string) ([]*MachinePresetResponse, error) {
-	machines, err := uc.presetRepo.GetMachinesByBrand(brand)
-	if err != nil {
-		return nil, err
-	}
-
-	var responses []*MachinePresetResponse
-	for _, machine := range machines {
-		// Get base preset for each machine
-		preset, err := uc.presetRepo.GetByID(machine.ID)
-		if err != nil {
-			continue // Skip if base preset not found
-		}
-
-		responses = append(responses, &MachinePresetResponse{
-			PresetEntity:        preset,
-			MachinePresetEntity: machine,
-		})
-	}
-
-	return responses, nil
-}
 
 // FindEnergyPresetByID finds an energy preset with full details
 func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetResponse, error) {
@@ -135,58 +117,25 @@ func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetRe
 	}
 
 	return &EnergyPresetResponse{
-		PresetEntity:       preset,
-		EnergyPresetEntity: energy,
+		ID:                    preset.ID.String(),
+		Name:                  preset.Name,
+		Description:           preset.Description,
+		Type:                  string(preset.Type),
+		IsActive:              preset.IsActive,
+		IsDefault:             preset.IsDefault,
+		Country:               energy.Country,
+		State:                 energy.State,
+		City:                  energy.City,
+		EnergyCostPerKwh:      energy.EnergyCostPerKwh,
+		Currency:              energy.Currency,
+		Provider:              energy.Provider,
+		TariffType:            energy.TariffType,
+		PeakHourMultiplier:    energy.PeakHourMultiplier,
+		OffPeakHourMultiplier: energy.OffPeakHourMultiplier,
 	}, nil
 }
 
-// FindEnergyPresetsByLocation finds energy presets by location
-func (uc *FindPresetUseCase) FindEnergyPresetsByLocation(country, state, city string) ([]*EnergyPresetResponse, error) {
-	energies, err := uc.presetRepo.GetEnergyByLocation(country, state, city)
-	if err != nil {
-		return nil, err
-	}
 
-	var responses []*EnergyPresetResponse
-	for _, energy := range energies {
-		// Get base preset for each energy
-		preset, err := uc.presetRepo.GetByID(energy.ID)
-		if err != nil {
-			continue // Skip if base preset not found
-		}
-
-		responses = append(responses, &EnergyPresetResponse{
-			PresetEntity:       preset,
-			EnergyPresetEntity: energy,
-		})
-	}
-
-	return responses, nil
-}
-
-// FindEnergyPresetsByCurrency finds energy presets by currency
-func (uc *FindPresetUseCase) FindEnergyPresetsByCurrency(currency string) ([]*EnergyPresetResponse, error) {
-	energies, err := uc.presetRepo.GetEnergyByCurrency(currency)
-	if err != nil {
-		return nil, err
-	}
-
-	var responses []*EnergyPresetResponse
-	for _, energy := range energies {
-		// Get base preset for each energy
-		preset, err := uc.presetRepo.GetByID(energy.ID)
-		if err != nil {
-			continue // Skip if base preset not found
-		}
-
-		responses = append(responses, &EnergyPresetResponse{
-			PresetEntity:       preset,
-			EnergyPresetEntity: energy,
-		})
-	}
-
-	return responses, nil
-}
 
 // FindCostPresetByID finds a cost preset with full details
 func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID) (*CostPresetResponse, error) {
@@ -208,7 +157,50 @@ func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID) (*CostPresetRespon
 	}
 
 	return &CostPresetResponse{
-		PresetEntity:     preset,
-		CostPresetEntity: cost,
+		ID:                        preset.ID.String(),
+		Name:                      preset.Name,
+		Description:               preset.Description,
+		Type:                      string(preset.Type),
+		IsActive:                  preset.IsActive,
+		IsDefault:                 preset.IsDefault,
+		LaborCostPerHour:          cost.LaborCostPerHour,
+		PackagingCostPerItem:      cost.PackagingCostPerItem,
+		ShippingCostBase:          cost.ShippingCostBase,
+		ShippingCostPerGram:       cost.ShippingCostPerGram,
+		OverheadPercentage:        cost.OverheadPercentage,
+		ProfitMarginPercentage:    cost.ProfitMarginPercentage,
+		PostProcessingCostPerHour: cost.PostProcessingCostPerHour,
+		SupportRemovalCostPerHour: cost.SupportRemovalCostPerHour,
+		QualityControlCostPerItem: cost.QualityControlCostPerItem,
 	}, nil
+}
+
+// FindAllMachinePresets finds all machine presets with full details for a specific organization
+func (uc *FindPresetUseCase) FindAllMachinePresets(organizationID string) ([]*MachinePresetResponse, error) {
+	return uc.presetRepo.GetMachinePresets(organizationID)
+}
+
+// FindAllEnergyPresets finds all energy presets with full details for a specific organization
+func (uc *FindPresetUseCase) FindAllEnergyPresets(organizationID string) ([]*EnergyPresetResponse, error) {
+	return uc.presetRepo.GetEnergyPresets(organizationID)
+}
+
+// FindAllCostPresets finds all cost presets with full details for a specific organization
+func (uc *FindPresetUseCase) FindAllCostPresets(organizationID string) ([]*CostPresetResponse, error) {
+	return uc.presetRepo.GetCostPresets(organizationID)
+}
+
+// FindMachinePresetsByBrand finds machine presets by brand for a specific organization
+func (uc *FindPresetUseCase) FindMachinePresetsByBrand(brand, organizationID string) ([]*MachinePresetResponse, error) {
+	return uc.presetRepo.GetMachinePresetsByBrand(brand, organizationID)
+}
+
+// FindEnergyPresetsByLocation finds energy presets by location for a specific organization
+func (uc *FindPresetUseCase) FindEnergyPresetsByLocation(country, state, city, organizationID string) ([]*EnergyPresetResponse, error) {
+	return uc.presetRepo.GetEnergyPresetsByLocation(country, state, city, organizationID)
+}
+
+// FindEnergyPresetsByCurrency finds energy presets by currency for a specific organization
+func (uc *FindPresetUseCase) FindEnergyPresetsByCurrency(currency, organizationID string) ([]*EnergyPresetResponse, error) {
+	return uc.presetRepo.GetEnergyPresetsByCurrency(currency, organizationID)
 }

@@ -2,7 +2,10 @@ package usecases
 
 import (
 	"net/http"
+	"strconv"
 
+	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
@@ -254,6 +257,46 @@ func (uc *SubscriptionPlanUseCase) ListActivePlans(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetPlanByID gets a specific subscription plan by ID (admin only)
+// @Summary Get subscription plan by ID
+// @Description Get a specific subscription plan by ID (admin only)
+// @Tags admin-plans
+// @Produce json
+// @Param id path string true "Plan ID"
+// @Success 200 {object} entities.SubscriptionPlanResponse "Plan details"
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Plan not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/{id} [get]
+func (uc *SubscriptionPlanUseCase) GetPlanByID(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	plan, err := uc.planRepo.FindByID(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		return
+	}
+
+	if plan == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, toPlanResponse(plan))
+}
+
 // DeletePlan soft deletes a subscription plan (admin only)
 // @Summary Delete subscription plan
 // @Description Soft delete a subscription plan (admin only)
@@ -306,6 +349,449 @@ func (uc *SubscriptionPlanUseCase) DeletePlan(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Plan deleted successfully"})
+}
+
+// GetPlanStats gets statistics for a specific subscription plan (admin only)
+// @Summary Get subscription plan statistics
+// @Description Get detailed statistics for a specific subscription plan (admin only)
+// @Tags admin-plans
+// @Produce json
+// @Param id path string true "Plan ID"
+// @Success 200 {object} entities.PlanStats "Plan statistics"
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Plan not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/{id}/stats [get]
+func (uc *SubscriptionPlanUseCase) GetPlanStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	// Verify plan exists first
+	plan, err := uc.planRepo.FindByID(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		return
+	}
+
+	if plan == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		return
+	}
+
+	stats, err := uc.planRepo.GetPlanStats(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to get plan stats", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get plan statistics"})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
+}
+
+// GetPlanCompanies gets companies using a specific subscription plan (admin only)
+// @Summary Get companies using a subscription plan
+// @Description Get paginated list of companies using a specific subscription plan (admin only)
+// @Tags admin-plans
+// @Produce json
+// @Param id path string true "Plan ID"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Items per page" default(20)
+// @Param status query string false "Filter by subscription status"
+// @Success 200 {object} entities.ListPlanCompaniesResponse "Companies using the plan"
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Plan not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/{id}/companies [get]
+func (uc *SubscriptionPlanUseCase) GetPlanCompanies(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	// Parse query parameters
+	page := 1
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	pageSize := 20
+	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	statusFilter := c.Query("status")
+
+	// Verify plan exists first
+	plan, err := uc.planRepo.FindByID(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		return
+	}
+
+	if plan == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		return
+	}
+
+	companies, err := uc.planRepo.GetPlanCompanies(ctx, id, page, pageSize, statusFilter)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to get plan companies", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get companies"})
+		return
+	}
+
+	c.JSON(http.StatusOK, companies)
+}
+
+// GetPlanFinancialReport gets financial report for a specific subscription plan (admin only)
+// @Summary Get subscription plan financial report
+// @Description Get detailed financial report for a specific subscription plan (admin only)
+// @Tags admin-plans
+// @Produce json
+// @Param id path string true "Plan ID"
+// @Param period query string false "Report period" default("monthly") Enums(monthly, quarterly, yearly)
+// @Success 200 {object} entities.PlanFinancialReport "Plan financial report"
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Plan not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/{id}/financial-report [get]
+func (uc *SubscriptionPlanUseCase) GetPlanFinancialReport(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	period := c.DefaultQuery("period", "monthly")
+	if period != "monthly" && period != "quarterly" && period != "yearly" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid period. Must be 'monthly', 'quarterly', or 'yearly'"})
+		return
+	}
+
+	// Verify plan exists first
+	plan, err := uc.planRepo.FindByID(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		return
+	}
+
+	if plan == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		return
+	}
+
+	report, err := uc.planRepo.GetPlanFinancialReport(ctx, id, period)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to get plan financial report", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get financial report"})
+		return
+	}
+
+	c.JSON(http.StatusOK, report)
+}
+
+// CanDeletePlan checks if a subscription plan can be safely deleted (admin only)
+// @Summary Check if subscription plan can be deleted
+// @Description Check if a subscription plan can be safely deleted without affecting active subscriptions (admin only)
+// @Tags admin-plans
+// @Produce json
+// @Param id path string true "Plan ID"
+// @Success 200 {object} entities.PlanDeletionCheck "Deletion validation result"
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Plan not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/{id}/can-delete [get]
+func (uc *SubscriptionPlanUseCase) CanDeletePlan(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	// Verify plan exists first
+	plan, err := uc.planRepo.FindByID(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		return
+	}
+
+	if plan == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		return
+	}
+
+	check, err := uc.planRepo.CanDeletePlan(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to check plan deletion", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check deletion eligibility"})
+		return
+	}
+
+	c.JSON(http.StatusOK, check)
+}
+
+// BulkUpdatePlans handles bulk update of subscription plans (admin only)
+// @Summary Bulk update subscription plans
+// @Description Update multiple subscription plans at once (admin only)
+// @Tags admin-plans
+// @Accept json
+// @Produce json
+// @Param request body adminEntities.BulkUpdateRequest true "Bulk update request"
+// @Success 200 {object} adminEntities.BulkOperationResult "Bulk operation result"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/bulk-update [post]
+func (uc *SubscriptionPlanUseCase) BulkUpdatePlans(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req adminEntities.BulkUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Get user info
+	userID := helpers.GetUserID(c)
+	userEmail := helpers.GetUserEmail(c)
+
+	// Convert string IDs to UUIDs
+	planIDs := make([]uuid.UUID, len(req.PlanIDs))
+	for i, id := range req.PlanIDs {
+		planID, err := uuid.Parse(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID: " + id})
+			return
+		}
+		planIDs[i] = planID
+	}
+
+	result, err := uc.planRepo.BulkUpdate(ctx, planIDs, req.Updates, userID, userEmail, req.Reason)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to bulk update plans", map[string]interface{}{
+			"error": err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to bulk update plans"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// BulkActivatePlans handles bulk activation of subscription plans (admin only)
+// @Summary Bulk activate subscription plans
+// @Description Activate multiple subscription plans at once (admin only)
+// @Tags admin-plans
+// @Accept json
+// @Produce json
+// @Param request body adminEntities.BulkOperationRequest true "Bulk operation request"
+// @Success 200 {object} adminEntities.BulkOperationResult "Bulk operation result"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/bulk-activate [put]
+func (uc *SubscriptionPlanUseCase) BulkActivatePlans(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req adminEntities.BulkOperationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Get user info
+	userID := helpers.GetUserID(c)
+	userEmail := helpers.GetUserEmail(c)
+
+	// Convert string IDs to UUIDs
+	planIDs := make([]uuid.UUID, len(req.PlanIDs))
+	for i, id := range req.PlanIDs {
+		planID, err := uuid.Parse(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID: " + id})
+			return
+		}
+		planIDs[i] = planID
+	}
+
+	result, err := uc.planRepo.BulkActivate(ctx, planIDs, userID, userEmail, req.Reason)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to bulk activate plans", map[string]interface{}{
+			"error": err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to bulk activate plans"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// BulkDeactivatePlans handles bulk deactivation of subscription plans (admin only)
+// @Summary Bulk deactivate subscription plans
+// @Description Deactivate multiple subscription plans at once (admin only)
+// @Tags admin-plans
+// @Accept json
+// @Produce json
+// @Param request body adminEntities.BulkOperationRequest true "Bulk operation request"
+// @Success 200 {object} adminEntities.BulkOperationResult "Bulk operation result"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/bulk-deactivate [put]
+func (uc *SubscriptionPlanUseCase) BulkDeactivatePlans(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req adminEntities.BulkOperationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Get user info
+	userID := helpers.GetUserID(c)
+	userEmail := helpers.GetUserEmail(c)
+
+	// Convert string IDs to UUIDs
+	planIDs := make([]uuid.UUID, len(req.PlanIDs))
+	for i, id := range req.PlanIDs {
+		planID, err := uuid.Parse(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID: " + id})
+			return
+		}
+		planIDs[i] = planID
+	}
+
+	result, err := uc.planRepo.BulkDeactivate(ctx, planIDs, userID, userEmail, req.Reason)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to bulk deactivate plans", map[string]interface{}{
+			"error": err.Error(),
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to bulk deactivate plans"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// GetPlanHistory gets audit history for a subscription plan (admin only)
+// @Summary Get subscription plan audit history
+// @Description Get detailed audit history for a specific subscription plan (admin only)
+// @Tags admin-plans
+// @Produce json
+// @Param id path string true "Plan ID"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Items per page" default(20)
+// @Success 200 {object} adminEntities.PlanAuditResponse "Plan audit history"
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Plan not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /v1/admin/subscription-plans/{id}/history [get]
+func (uc *SubscriptionPlanUseCase) GetPlanHistory(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	// Parse query parameters
+	page := 1
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	pageSize := 20
+	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	// Verify plan exists first
+	plan, err := uc.planRepo.FindByID(ctx, id)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to find plan", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		return
+	}
+
+	if plan == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		return
+	}
+
+	history, err := uc.planRepo.GetPlanHistory(ctx, id, page, pageSize)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to get plan history", map[string]interface{}{
+			"error": err.Error(),
+			"id":    id,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get plan history"})
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
 }
 
 // Helper function

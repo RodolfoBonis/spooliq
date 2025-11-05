@@ -102,6 +102,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		MachinePresetID:   request.MachinePresetID,
 		EnergyPresetID:    request.EnergyPresetID,
 		IncludeEnergyCost: request.IncludeEnergyCost,
+		IncludeLaborCost:  true, // Enabled by default when items have cost presets
 		IncludeWasteCost:  request.IncludeWasteCost,
 		DeliveryDays:      request.DeliveryDays,
 		PaymentTerms:      request.PaymentTerms,
@@ -123,9 +124,17 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 
 	// Create budget items (products) with their filaments
 	for _, itemReq := range request.Items {
+		// Use the first filament as the primary filament (for backward compatibility)
+		var primaryFilamentID uuid.UUID
+		if len(itemReq.Filaments) > 0 {
+			primaryFilamentID = itemReq.Filaments[0].FilamentID
+		}
+
 		item := &entities.BudgetItemEntity{
 			ID:                  uuid.New(),
 			BudgetID:            budget.ID,
+			FilamentID:          primaryFilamentID,
+			OrganizationID:      organizationID,
 			ProductName:         itemReq.ProductName,
 			ProductDescription:  itemReq.ProductDescription,
 			ProductQuantity:     itemReq.ProductQuantity,
@@ -155,13 +164,14 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		// Create filaments for this item
 		for _, filReq := range itemReq.Filaments {
 			filament := &entities.BudgetItemFilamentEntity{
-				ID:           uuid.New(),
-				BudgetItemID: item.ID,
-				FilamentID:   filReq.FilamentID,
-				Quantity:     filReq.Quantity,
-				Order:        filReq.Order,
-				CreatedAt:    time.Now(),
-				UpdatedAt:    time.Now(),
+				ID:             uuid.New(),
+				BudgetItemID:   item.ID,
+				FilamentID:     filReq.FilamentID,
+				OrganizationID: organizationID,
+				Quantity:       filReq.Quantity,
+				Order:          filReq.Order,
+				CreatedAt:      time.Now(),
+				UpdatedAt:      time.Now(),
 			}
 
 			if err := uc.budgetRepository.AddItemFilament(ctx, filament); err != nil {
@@ -260,7 +270,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	}
 
 	response := entities.BudgetResponse{
-		Budget:                budget,
+		BudgetEntity:          budget,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		TotalPrintTimeHours:   totalHours,

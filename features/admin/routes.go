@@ -9,6 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/admin/domain/usecases"
+	subscriptionUsecases "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -21,6 +22,9 @@ type Handler struct {
 	listSubscriptionsUC      *usecases.ListSubscriptionsUseCase
 	getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase
 	getPaymentHistoryUC      *usecases.GetPaymentHistoryUseCase
+	getStatsUC               *usecases.GetStatsUseCase
+	subscriptionPlanUC       *subscriptionUsecases.SubscriptionPlanUseCase
+	planAdvancedUC           *subscriptionUsecases.PlanAdvancedUseCase
 }
 
 // NewAdminHandler creates a new admin handler
@@ -31,6 +35,9 @@ func NewAdminHandler(
 	listSubscriptionsUC *usecases.ListSubscriptionsUseCase,
 	getSubscriptionDetailsUC *usecases.GetSubscriptionDetailsUseCase,
 	getPaymentHistoryUC *usecases.GetPaymentHistoryUseCase,
+	getStatsUC *usecases.GetStatsUseCase,
+	subscriptionPlanUC *subscriptionUsecases.SubscriptionPlanUseCase,
+	planAdvancedUC *subscriptionUsecases.PlanAdvancedUseCase,
 ) *Handler {
 	return &Handler{
 		listCompaniesUC:          listCompaniesUC,
@@ -39,6 +46,9 @@ func NewAdminHandler(
 		listSubscriptionsUC:      listSubscriptionsUC,
 		getSubscriptionDetailsUC: getSubscriptionDetailsUC,
 		getPaymentHistoryUC:      getPaymentHistoryUC,
+		getStatsUC:               getStatsUC,
+		subscriptionPlanUC:       subscriptionPlanUC,
+		planAdvancedUC:           planAdvancedUC,
 	}
 }
 
@@ -61,6 +71,48 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 			subscriptions.GET("/:organization_id", protectFactory(handler.GetSubscriptionDetails, roles.PlatformAdminRole))
 			subscriptions.GET("/:organization_id/payments", protectFactory(handler.GetPaymentHistory, roles.PlatformAdminRole))
 		}
+
+		// Subscription Plan Management (PlatformAdmin only)
+		plansGroup := admin.Group("/subscription-plans")
+		{
+			// Basic CRUD
+			plansGroup.POST("", protectFactory(handler.subscriptionPlanUC.CreatePlan, roles.PlatformAdminRole))
+			plansGroup.GET("", protectFactory(handler.subscriptionPlanUC.ListAllPlans, roles.PlatformAdminRole))
+			plansGroup.GET("/:id", protectFactory(handler.subscriptionPlanUC.GetPlanByID, roles.PlatformAdminRole))
+			plansGroup.PUT("/:id", protectFactory(handler.subscriptionPlanUC.UpdatePlan, roles.PlatformAdminRole))
+			plansGroup.DELETE("/:id", protectFactory(handler.subscriptionPlanUC.DeletePlan, roles.PlatformAdminRole))
+
+			// Analytics & Reporting
+			plansGroup.GET("/:id/stats", protectFactory(handler.subscriptionPlanUC.GetPlanStats, roles.PlatformAdminRole))
+			plansGroup.GET("/:id/companies", protectFactory(handler.subscriptionPlanUC.GetPlanCompanies, roles.PlatformAdminRole))
+			plansGroup.GET("/:id/financial-report", protectFactory(handler.subscriptionPlanUC.GetPlanFinancialReport, roles.PlatformAdminRole))
+			plansGroup.GET("/:id/can-delete", protectFactory(handler.subscriptionPlanUC.CanDeletePlan, roles.PlatformAdminRole))
+			plansGroup.GET("/:id/history", protectFactory(handler.subscriptionPlanUC.GetPlanHistory, roles.PlatformAdminRole))
+
+			// Bulk Operations
+			plansGroup.POST("/bulk-update", protectFactory(handler.subscriptionPlanUC.BulkUpdatePlans, roles.PlatformAdminRole))
+			plansGroup.PUT("/bulk-activate", protectFactory(handler.subscriptionPlanUC.BulkActivatePlans, roles.PlatformAdminRole))
+			plansGroup.PUT("/bulk-deactivate", protectFactory(handler.subscriptionPlanUC.BulkDeactivatePlans, roles.PlatformAdminRole))
+
+			// Templates
+			plansGroup.GET("/templates", protectFactory(handler.planAdvancedUC.GetPlanTemplates, roles.PlatformAdminRole))
+			plansGroup.POST("/from-template", protectFactory(handler.planAdvancedUC.CreatePlanFromTemplate, roles.PlatformAdminRole))
+
+			// Migrations
+			plansGroup.POST("/migrate", protectFactory(handler.planAdvancedUC.CreatePlanMigration, roles.PlatformAdminRole))
+			plansGroup.GET("/migrations/:migration_id", protectFactory(handler.planAdvancedUC.GetMigrationStatus, roles.PlatformAdminRole))
+			plansGroup.POST("/migrations/:migration_id/execute", protectFactory(handler.planAdvancedUC.ExecutePlanMigration, roles.PlatformAdminRole))
+		}
+
+		// Feature Management (PlatformAdmin only)
+		featuresGroup := admin.Group("/features")
+		{
+			featuresGroup.GET("/available", protectFactory(handler.planAdvancedUC.GetAvailableFeatures, roles.PlatformAdminRole))
+			featuresGroup.POST("/validate", protectFactory(handler.planAdvancedUC.ValidateFeatures, roles.PlatformAdminRole))
+		}
+
+		// Platform Stats (PlatformAdmin only)
+		admin.GET("/stats", protectFactory(handler.GetStats, roles.PlatformAdminRole))
 	}
 }
 

@@ -102,11 +102,12 @@ func (uc *MaterialUseCase) Create(c *gin.Context) {
 
 	// Create new material entity
 	material := entities.MaterialEntity{
-		ID:           uuid.New(),
-		Name:         request.Name,
-		Description:  request.Description,
-		TempTable:    request.TempTable,
-		TempExtruder: request.TempExtruder,
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		Name:           request.Name,
+		Description:    request.Description,
+		TempTable:      request.TempTable,
+		TempExtruder:   request.TempExtruder,
 	}
 
 	// Save material

@@ -3,8 +3,6 @@ package usecases
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -13,42 +11,36 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
+	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	webhookEntities "github.com/RodolfoBonis/spooliq/features/webhooks/domain/entities"
 	"github.com/gin-gonic/gin"
 )
 
 // AsaasWebhookUseCase handles Asaas webhook events
 type AsaasWebhookUseCase struct {
-	companyRepository companyRepositories.CompanyRepository
-	logger            logger.Logger
-	webhookSecret     string
+	companyRepository      companyRepositories.CompanyRepository
+	subscriptionRepository subscriptionRepositories.SubscriptionRepository
+	logger                 logger.Logger
+	webhookSecret          string
 }
 
 // NewAsaasWebhookUseCase creates a new webhook use case
 func NewAsaasWebhookUseCase(
 	companyRepository companyRepositories.CompanyRepository,
+	subscriptionRepository subscriptionRepositories.SubscriptionRepository,
 	cfg *config.AppConfig,
 	logger logger.Logger,
 ) *AsaasWebhookUseCase {
 	return &AsaasWebhookUseCase{
-		companyRepository: companyRepository,
-		logger:            logger,
-		webhookSecret:     cfg.AsaasWebhookSecret,
+		companyRepository:      companyRepository,
+		subscriptionRepository: subscriptionRepository,
+		logger:                 logger,
+		webhookSecret:          cfg.AsaasWebhookSecret,
 	}
 }
 
 // HandleWebhook processes incoming Asaas webhook events
-// @Summary Handle Asaas webhook
-// @Description Receives and processes payment events from Asaas
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Param event body webhookEntities.AsaasWebhookRequest true "Webhook event"
-// @Success 200 {object} map[string]string "Event processed"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Invalid signature"
-// @Failure 500 {object} map[string]string "Processing error"
-// @Router /v1/webhooks/asaas [post]
 func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -57,48 +49,51 @@ func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 		"user_agent": c.Request.UserAgent(),
 	})
 
-	// 1. Read raw body for signature validation
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to read webhook body", map[string]interface{}{
-			"error": err.Error(),
-		})
+		uc.logger.Error(ctx, "Failed to read webhook body", map[string]interface{}{"error": err.Error()})
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	// 2. Validate webhook signature
-	signature := c.GetHeader("Asaas-Signature")
-	if signature == "" {
-		uc.logger.Error(ctx, "Missing Asaas-Signature header", nil)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing signature"})
-		return
+	if uc.webhookSecret != "" {
+		signature := c.GetHeader("asaas-access-token")
+		if signature == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing signature"})
+			return
+		}
+
+		if !uc.validateSignature(ctx, bodyBytes, signature) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+			return
+		}
 	}
 
-	if !uc.validateSignature(ctx, bodyBytes, signature) {
-		uc.logger.Error(ctx, "Invalid webhook signature", map[string]interface{}{
-			"signature": signature,
-		})
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
-		return
-	}
-
-	// 3. Parse webhook event
 	var webhookEvent webhookEntities.AsaasWebhookRequest
 	if err := json.Unmarshal(bodyBytes, &webhookEvent); err != nil {
-		uc.logger.Error(ctx, "Failed to parse webhook event", map[string]interface{}{
-			"error": err.Error(),
-		})
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
 		return
 	}
 
-	uc.logger.Info(ctx, "Processing webhook event", map[string]interface{}{
-		"event":      webhookEvent.Event,
-		"payment_id": webhookEvent.Payment.ID,
-	})
+	// Log different data based on event type
+	if isSubscriptionEvent(webhookEvent.Event) {
+		uc.logger.Info(ctx, "Processing webhook event", map[string]interface{}{
+			"event":              webhookEvent.Event,
+			"subscription_id":    webhookEvent.Subscription.ID,
+			"external_reference": webhookEvent.Subscription.ExternalReference,
+			"customer":           webhookEvent.Subscription.Customer,
+			"status":             webhookEvent.Subscription.Status,
+		})
+	} else {
+		uc.logger.Info(ctx, "Processing webhook event", map[string]interface{}{
+			"event":              webhookEvent.Event,
+			"payment_id":         webhookEvent.Payment.ID,
+			"external_reference": webhookEvent.Payment.ExternalReference,
+			"subscription":       webhookEvent.Payment.Subscription,
+			"customer":           webhookEvent.Payment.Customer,
+		})
+	}
 
-	// 4. Process event based on type
 	if err := uc.processEvent(ctx, webhookEvent); err != nil {
 		uc.logger.Error(ctx, "Failed to process webhook event", map[string]interface{}{
 			"error": err.Error(),
@@ -114,144 +109,197 @@ func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 	})
 }
 
-// validateSignature validates the Asaas webhook signature
 func (uc *AsaasWebhookUseCase) validateSignature(ctx context.Context, body []byte, signature string) bool {
-	// IMPORTANT: In production, Asaas provides a webhook secret separate from API key
-	// Use environment variable ASAAS_WEBHOOK_SECRET
-	// This is a simplified implementation for demonstration
-
-	mac := hmac.New(sha256.New, []byte(uc.webhookSecret))
-	mac.Write(body)
-	expectedSignature := hex.EncodeToString(mac.Sum(nil))
-
-	valid := hmac.Equal([]byte(signature), []byte(expectedSignature))
-
-	uc.logger.Info(ctx, "Signature validation", map[string]interface{}{
-		"valid": valid,
-	})
-
+	webhookSecret := config.EnvAsaasWebhookSecret()
+	valid := hmac.Equal([]byte(signature), []byte(webhookSecret))
+	uc.logger.Info(ctx, "Signature validation", map[string]interface{}{"valid": valid})
 	return valid
 }
 
-// processEvent processes different webhook event types
+func (uc *AsaasWebhookUseCase) recordPayment(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook, status string, eventType string) error {
+	// Validate ExternalReference - it should contain the organization_id
+	if payment.ExternalReference == "" {
+		uc.logger.Warning(ctx, "Webhook payment missing ExternalReference", map[string]interface{}{
+			"payment_id":   payment.ID,
+			"customer":     payment.Customer,
+			"subscription": payment.Subscription,
+			"event_type":   eventType,
+		})
+		// Skip recording if no organization_id - cannot link to company
+		return nil
+	}
+
+	existing, _ := uc.subscriptionRepository.FindByAsaasPaymentID(ctx, payment.ID)
+
+	var paymentDate *time.Time
+	if payment.PaymentDate != "" {
+		parsed, err := time.Parse("2006-01-02", payment.PaymentDate)
+		if err == nil {
+			paymentDate = &parsed
+		}
+	}
+
+	dueDate, err := time.Parse("2006-01-02", payment.DueDate)
+	if err != nil {
+		dueDate = time.Now()
+	}
+
+	if existing != nil {
+		existing.Status = status
+		existing.EventType = eventType
+		existing.PaymentDate = paymentDate
+		existing.InvoiceURL = payment.InvoiceURL
+		existing.NetValue = payment.NetValue
+		existing.BillingType = payment.BillingType
+		existing.Description = payment.Description
+		existing.AsaasCustomerID = payment.Customer
+		existing.AsaasSubscriptionID = payment.Subscription
+		return uc.subscriptionRepository.UpdateByEntity(ctx, existing)
+	}
+
+	subscriptionPayment := &subscriptionEntities.SubscriptionEntity{
+		OrganizationID:      payment.ExternalReference,
+		AsaasPaymentID:      payment.ID,
+		AsaasCustomerID:     payment.Customer,
+		AsaasSubscriptionID: payment.Subscription,
+		Amount:              payment.Value,
+		NetValue:            payment.NetValue,
+		Status:              status,
+		EventType:           eventType,
+		BillingType:         payment.BillingType,
+		Description:         payment.Description,
+		PaymentDate:         paymentDate,
+		DueDate:             dueDate,
+		InvoiceURL:          payment.InvoiceURL,
+	}
+
+	return uc.subscriptionRepository.Create(ctx, subscriptionPayment)
+}
+
+// isSubscriptionEvent checks if the event is related to subscriptions
+func isSubscriptionEvent(event string) bool {
+	subscriptionEvents := []string{
+		"SUBSCRIPTION_CREATED",
+		"SUBSCRIPTION_UPDATED",
+		"SUBSCRIPTION_INACTIVATED",
+		"SUBSCRIPTION_DELETED",
+		"SUBSCRIPTION_SPLIT_DISABLED",
+		"SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK",
+		"SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED",
+	}
+
+	for _, subscriptionEvent := range subscriptionEvents {
+		if event == subscriptionEvent {
+			return true
+		}
+	}
+
+	return false
+}
+
+// processEvent routes webhook events to appropriate handlers
 func (uc *AsaasWebhookUseCase) processEvent(ctx context.Context, event webhookEntities.AsaasWebhookRequest) error {
 	switch event.Event {
+	// Payment Creation and Authorization (2)
+	case "PAYMENT_CREATED":
+		return uc.handlePaymentCreated(ctx, event.Payment)
+	case "PAYMENT_AUTHORIZED":
+		return uc.handlePaymentAuthorized(ctx, event.Payment)
+
+	// Risk Analysis (3)
+	case "PAYMENT_AWAITING_RISK_ANALYSIS":
+		return uc.handlePaymentAwaitingRiskAnalysis(ctx, event.Payment)
+	case "PAYMENT_APPROVED_BY_RISK_ANALYSIS":
+		return uc.handlePaymentApprovedByRisk(ctx, event.Payment)
+	case "PAYMENT_REPROVED_BY_RISK_ANALYSIS":
+		return uc.handlePaymentReprovedByRisk(ctx, event.Payment)
+
+	// Confirmation and Receipt (2)
 	case "PAYMENT_RECEIVED":
 		return uc.handlePaymentReceived(ctx, event.Payment)
 	case "PAYMENT_CONFIRMED":
 		return uc.handlePaymentConfirmed(ctx, event.Payment)
+	case "PAYMENT_ANTICIPATED":
+		return uc.handlePaymentAnticipated(ctx, event.Payment)
+
+	// Overdue (1)
 	case "PAYMENT_OVERDUE":
 		return uc.handlePaymentOverdue(ctx, event.Payment)
+
+	// Updates (1)
+	case "PAYMENT_UPDATED":
+		return uc.handlePaymentUpdated(ctx, event.Payment)
+
+	// Deletion and Restoration (2)
+	case "PAYMENT_DELETED":
+		return uc.handlePaymentDeleted(ctx, event.Payment)
+	case "PAYMENT_RESTORED":
+		return uc.handlePaymentRestored(ctx, event.Payment)
+
+	// Refunds (4)
 	case "PAYMENT_REFUNDED":
 		return uc.handlePaymentRefunded(ctx, event.Payment)
+	case "PAYMENT_PARTIALLY_REFUNDED":
+		return uc.handlePaymentPartiallyRefunded(ctx, event.Payment)
+	case "PAYMENT_REFUND_IN_PROGRESS":
+		return uc.handlePaymentRefundInProgress(ctx, event.Payment)
+	case "PAYMENT_REFUND_DENIED":
+		return uc.handlePaymentRefundDenied(ctx, event.Payment)
+
+	// Chargebacks (3)
+	case "PAYMENT_CHARGEBACK_REQUESTED":
+		return uc.handlePaymentChargebackRequested(ctx, event.Payment)
+	case "PAYMENT_CHARGEBACK_DISPUTE":
+		return uc.handlePaymentChargebackDispute(ctx, event.Payment)
+	case "PAYMENT_AWAITING_CHARGEBACK_REVERSAL":
+		return uc.handlePaymentAwaitingChargebackReversal(ctx, event.Payment)
+
+	// Dunning (2)
+	case "PAYMENT_DUNNING_REQUESTED":
+		return uc.handlePaymentDunningRequested(ctx, event.Payment)
+	case "PAYMENT_DUNNING_RECEIVED":
+		return uc.handlePaymentDunningReceived(ctx, event.Payment)
+
+	// Views - Analytics (2)
+	case "PAYMENT_CHECKOUT_VIEWED":
+		return uc.handlePaymentCheckoutViewed(ctx, event.Payment)
+	case "PAYMENT_BANK_SLIP_VIEWED":
+		return uc.handlePaymentBankSlipViewed(ctx, event.Payment)
+
+	// Special Operations (2)
+	case "PAYMENT_RECEIVED_IN_CASH_UNDONE":
+		return uc.handlePaymentReceivedInCashUndone(ctx, event.Payment)
+	case "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED":
+		return uc.handlePaymentCaptureRefused(ctx, event.Payment)
+
+	// Split Operations (3)
+	case "PAYMENT_SPLIT_CANCELLED":
+		return uc.handlePaymentSplitCancelled(ctx, event.Payment)
+	case "PAYMENT_SPLIT_DIVERGENCE_BLOCK":
+		return uc.handlePaymentSplitBlocked(ctx, event.Payment)
+	case "PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED":
+		return uc.handlePaymentSplitUnblocked(ctx, event.Payment)
+
+	// Subscription Events (7)
+	case "SUBSCRIPTION_CREATED":
+		return uc.handleSubscriptionCreated(ctx, event.Subscription)
+	case "SUBSCRIPTION_UPDATED":
+		return uc.handleSubscriptionUpdated(ctx, event.Subscription)
+	case "SUBSCRIPTION_INACTIVATED":
+		return uc.handleSubscriptionInactivated(ctx, event.Subscription)
+	case "SUBSCRIPTION_DELETED":
+		return uc.handleSubscriptionDeleted(ctx, event.Subscription)
+	case "SUBSCRIPTION_SPLIT_DISABLED":
+		return uc.handleSubscriptionSplitDisabled(ctx, event.Subscription)
+	case "SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK":
+		return uc.handleSubscriptionSplitBlocked(ctx, event.Subscription)
+	case "SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED":
+		return uc.handleSubscriptionSplitUnblocked(ctx, event.Subscription)
+
 	default:
-		uc.logger.Info(ctx, "Unhandled webhook event type", map[string]interface{}{
+		uc.logger.Warning(ctx, "Unhandled webhook event type", map[string]interface{}{
 			"event": event.Event,
 		})
 		return nil
 	}
-}
-
-// handlePaymentReceived handles PAYMENT_RECEIVED event
-func (uc *AsaasWebhookUseCase) handlePaymentReceived(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
-	uc.logger.Info(ctx, "Processing PAYMENT_RECEIVED", map[string]interface{}{
-		"payment_id":         payment.ID,
-		"external_reference": payment.ExternalReference,
-	})
-
-	// Get organization ID from external reference (should be organization_id)
-	orgID := payment.ExternalReference
-	if orgID == "" {
-		uc.logger.Error(ctx, "Missing external_reference (organization_id)", nil)
-		return nil // Don't fail, just log
-	}
-
-	// Fetch company
-	company, err := uc.companyRepository.FindByOrganizationID(ctx, orgID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to find company", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		return err
-	}
-
-	// Update company status to active if payment confirmed
-	if company.SubscriptionStatus == "trial" || company.SubscriptionStatus == "suspended" {
-		now := time.Now()
-		company.SubscriptionStatus = "active"
-		company.SubscriptionStartedAt = &now
-		company.LastPaymentCheck = &now
-
-		if err := uc.companyRepository.Update(ctx, company); err != nil {
-			uc.logger.Error(ctx, "Failed to update company status", map[string]interface{}{
-				"error":           err.Error(),
-				"organization_id": orgID,
-			})
-			return err
-		}
-
-		uc.logger.Info(ctx, "Company subscription activated", map[string]interface{}{
-			"organization_id": orgID,
-			"status":          "active",
-		})
-	}
-
-	return nil
-}
-
-// handlePaymentConfirmed handles PAYMENT_CONFIRMED event
-func (uc *AsaasWebhookUseCase) handlePaymentConfirmed(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
-	uc.logger.Info(ctx, "Processing PAYMENT_CONFIRMED", map[string]interface{}{
-		"payment_id": payment.ID,
-	})
-	// Similar to PAYMENT_RECEIVED
-	return uc.handlePaymentReceived(ctx, payment)
-}
-
-// handlePaymentOverdue handles PAYMENT_OVERDUE event
-func (uc *AsaasWebhookUseCase) handlePaymentOverdue(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
-	uc.logger.Info(ctx, "Processing PAYMENT_OVERDUE", map[string]interface{}{
-		"payment_id":         payment.ID,
-		"external_reference": payment.ExternalReference,
-	})
-
-	orgID := payment.ExternalReference
-	if orgID == "" {
-		return nil
-	}
-
-	// Fetch company
-	company, err := uc.companyRepository.FindByOrganizationID(ctx, orgID)
-	if err != nil {
-		return err
-	}
-
-	// Update company status to suspended
-	company.SubscriptionStatus = "suspended"
-	now := time.Now()
-	company.LastPaymentCheck = &now
-
-	if err := uc.companyRepository.Update(ctx, company); err != nil {
-		uc.logger.Error(ctx, "Failed to suspend company", map[string]interface{}{
-			"error":           err.Error(),
-			"organization_id": orgID,
-		})
-		return err
-	}
-
-	uc.logger.Info(ctx, "Company suspended due to overdue payment", map[string]interface{}{
-		"organization_id": orgID,
-	})
-
-	return nil
-}
-
-// handlePaymentRefunded handles PAYMENT_REFUNDED event
-func (uc *AsaasWebhookUseCase) handlePaymentRefunded(ctx context.Context, payment webhookEntities.AsaasPaymentWebhook) error {
-	uc.logger.Info(ctx, "Processing PAYMENT_REFUNDED", map[string]interface{}{
-		"payment_id": payment.ID,
-	})
-	// Log refund, potentially notify admin
-	return nil
 }

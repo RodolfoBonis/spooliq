@@ -98,8 +98,9 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 	}
 
 	brand := &entities.BrandEntity{
-		Name:        request.Name,
-		Description: request.Description,
+		Name:           request.Name,
+		Description:    request.Description,
+		OrganizationID: organizationID,
 	}
 
 	if err := uc.repository.Create(brand); err != nil {

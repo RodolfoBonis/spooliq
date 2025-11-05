@@ -24,7 +24,7 @@ import (
 // @Failure 403 {object} errors.HTTPError
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Router /auth/login [post]
+// @Router /login [post]
 // @Example request {"email": "user@example.com", "password": "string"}
 // @Example response {"accessToken": "jwt-token", "refreshToken": "refresh-token", "expiresIn": 3600}
 func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {

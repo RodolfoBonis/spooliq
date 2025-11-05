@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
+	subscriptionModels "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -27,19 +28,32 @@ type CompanyModel struct {
 	ZipCode        *string   `gorm:"type:varchar(20)" json:"zip_code"`
 
 	// Subscription fields
-	SubscriptionStatus    string     `gorm:"type:varchar(20);not null;default:'trial'" json:"subscription_status"`
+	SubscriptionStatus    string     `gorm:"type:varchar(20);not null;default:'trial';index" json:"subscription_status"`
+	SubscriptionPlanID    *uuid.UUID `gorm:"type:uuid;index" json:"subscription_plan_id"` // FK to subscription_plans(id) - Nullable for trial
+	StatusUpdatedAt       time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP" json:"status_updated_at"`
 	IsPlatformCompany     bool       `gorm:"not null;default:false" json:"is_platform_company"`
 	TrialEndsAt           *time.Time `gorm:"type:timestamp" json:"trial_ends_at"`
 	SubscriptionStartedAt *time.Time `gorm:"type:timestamp" json:"subscription_started_at"`
-	SubscriptionPlan      string     `gorm:"type:varchar(50);not null;default:'basic'" json:"subscription_plan"`
-	AsaasCustomerID       *string    `gorm:"type:varchar(255)" json:"asaas_customer_id"`
-	AsaasSubscriptionID   *string    `gorm:"type:varchar(255)" json:"asaas_subscription_id"`
-	LastPaymentCheck      *time.Time `gorm:"type:timestamp" json:"last_payment_check"`
-	NextPaymentDue        *time.Time `gorm:"type:timestamp" json:"next_payment_due"`
 
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// GORM v2 Relationships
+	// 1:1 - Company has one Branding
+	Branding *CompanyBrandingModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"branding,omitempty"`
+
+	// N:1 - Company belongs to one Subscription Plan
+	CurrentPlan *subscriptionModels.SubscriptionPlanModel `gorm:"foreignKey:SubscriptionPlanID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"current_plan,omitempty"`
+
+	// 1:1 - Company has one Payment Gateway Link
+	PaymentGateway *subscriptionModels.PaymentGatewayLinkModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;-:migration" json:"payment_gateway,omitempty"`
+
+	// 1:N - Company has many Payment Methods
+	PaymentMethods []subscriptionModels.PaymentMethodModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;-:migration" json:"payment_methods,omitempty"`
+
+	// 1:N - Company has many Subscription Payments
+	Payments []subscriptionModels.SubscriptionModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;-:migration" json:"payments,omitempty"`
 }
 
 // TableName specifies the table name for GORM
@@ -57,7 +71,7 @@ func (c *CompanyModel) BeforeCreate(tx *gorm.DB) error {
 
 // ToEntity converts the GORM model to domain entity
 func (c *CompanyModel) ToEntity() *entities.CompanyEntity {
-	return &entities.CompanyEntity{
+	entity := &entities.CompanyEntity{
 		ID:                    c.ID,
 		OrganizationID:        c.OrganizationID,
 		Name:                  c.Name,
@@ -74,18 +88,22 @@ func (c *CompanyModel) ToEntity() *entities.CompanyEntity {
 		State:                 c.State,
 		ZipCode:               c.ZipCode,
 		SubscriptionStatus:    c.SubscriptionStatus,
+		SubscriptionPlanID:    c.SubscriptionPlanID,
+		StatusUpdatedAt:       c.StatusUpdatedAt,
 		IsPlatformCompany:     c.IsPlatformCompany,
 		TrialEndsAt:           c.TrialEndsAt,
 		SubscriptionStartedAt: c.SubscriptionStartedAt,
-		SubscriptionPlan:      c.SubscriptionPlan,
-		AsaasCustomerID:       c.AsaasCustomerID,
-		AsaasSubscriptionID:   c.AsaasSubscriptionID,
-		LastPaymentCheck:      c.LastPaymentCheck,
-		NextPaymentDue:        c.NextPaymentDue,
 		CreatedAt:             c.CreatedAt,
 		UpdatedAt:             c.UpdatedAt,
 		DeletedAt:             getDeletedAt(c.DeletedAt),
 	}
+
+	// Convert CurrentPlan if available
+	if c.CurrentPlan != nil {
+		entity.CurrentPlan = c.CurrentPlan.ToEntity()
+	}
+
+	return entity
 }
 
 // FromEntity converts domain entity to GORM model
@@ -106,14 +124,11 @@ func (c *CompanyModel) FromEntity(entity *entities.CompanyEntity) {
 	c.State = entity.State
 	c.ZipCode = entity.ZipCode
 	c.SubscriptionStatus = entity.SubscriptionStatus
+	c.SubscriptionPlanID = entity.SubscriptionPlanID
+	c.StatusUpdatedAt = entity.StatusUpdatedAt
 	c.IsPlatformCompany = entity.IsPlatformCompany
 	c.TrialEndsAt = entity.TrialEndsAt
 	c.SubscriptionStartedAt = entity.SubscriptionStartedAt
-	c.SubscriptionPlan = entity.SubscriptionPlan
-	c.AsaasCustomerID = entity.AsaasCustomerID
-	c.AsaasSubscriptionID = entity.AsaasSubscriptionID
-	c.LastPaymentCheck = entity.LastPaymentCheck
-	c.NextPaymentDue = entity.NextPaymentDue
 	c.CreatedAt = entity.CreatedAt
 	c.UpdatedAt = entity.UpdatedAt
 	if entity.DeletedAt != nil {

@@ -9,8 +9,8 @@ import (
 // CompanyBrandingModel represents the database model for company branding configuration
 type CompanyBrandingModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;unique;index" json:"organization_id"`
-	TemplateName   string    `gorm:"type:varchar(50)" json:"template_name"` // "modern_pink", "corporate_blue", etc.
+	OrganizationID string    `gorm:"type:varchar(255);not null;unique;index" json:"organization_id"` // FK to companies(organization_id) - 1:1 relationship
+	TemplateName   string    `gorm:"type:varchar(50)" json:"template_name"`                          // "modern_pink", "corporate_blue", etc.
 
 	// Header colors
 	HeaderBgColor   string `gorm:"type:varchar(7);not null" json:"header_bg_color"`   // #HEX

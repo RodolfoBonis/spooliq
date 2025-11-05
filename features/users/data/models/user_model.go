@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 // UserModel represents the user data model for GORM
 type UserModel struct {
 	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	OrganizationID string         `gorm:"type:varchar(255);not null;index"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	KeycloakUserID string         `gorm:"type:varchar(255);unique;not null;index"`
 	Email          string         `gorm:"type:varchar(255);unique;not null"`
 	Name           string         `gorm:"type:varchar(255);not null"`
@@ -20,6 +21,9 @@ type UserModel struct {
 	CreatedAt      time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt      time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt      gorm.DeletedAt `gorm:"index"`
+
+	// GORM v2 Relationships
+	Organization *companyModels.CompanyModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
 }
 
 // TableName specifies the table name for GORM

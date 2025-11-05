@@ -8,8 +8,9 @@ type AsaasWebhookEvent struct {
 
 // AsaasWebhookRequest represents the full webhook request from Asaas
 type AsaasWebhookRequest struct {
-	Event   string              `json:"event"`
-	Payment AsaasPaymentWebhook `json:"payment,omitempty"`
+	Event        string                   `json:"event"`
+	Payment      AsaasPaymentWebhook      `json:"payment,omitempty"`
+	Subscription AsaasSubscriptionWebhook `json:"subscription,omitempty"`
 }
 
 // AsaasPaymentWebhook represents payment data from webhook
@@ -27,4 +28,16 @@ type AsaasPaymentWebhook struct {
 	Description       string  `json:"description"`
 	ExternalReference string  `json:"externalReference"`
 	InvoiceURL        string  `json:"invoiceUrl"`
+}
+
+// AsaasSubscriptionWebhook represents subscription data from webhook
+type AsaasSubscriptionWebhook struct {
+	ID                string  `json:"id"`
+	Customer          string  `json:"customer"`
+	Value             float64 `json:"value"`
+	Status            string  `json:"status"`
+	BillingType       string  `json:"billingType"`
+	Cycle             string  `json:"cycle"`
+	Description       string  `json:"description"`
+	ExternalReference string  `json:"externalReference"`
 }

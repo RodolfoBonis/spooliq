@@ -100,6 +100,7 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 	// Create machine-specific entity
 	machine := &entities.MachinePresetEntity{
 		ID:                     preset.ID,
+		OrganizationID:         organizationID,
 		Brand:                  req.Brand,
 		Model:                  req.Model,
 		BuildVolumeX:           req.BuildVolumeX,
@@ -153,6 +154,7 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 	// Create energy-specific entity
 	energy := &entities.EnergyPresetEntity{
 		ID:                    preset.ID,
+		OrganizationID:        organizationID,
 		Country:               req.Country,
 		State:                 req.State,
 		City:                  req.City,
@@ -201,6 +203,7 @@ func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, or
 	// Create cost-specific entity
 	cost := &entities.CostPresetEntity{
 		ID:                        preset.ID,
+		OrganizationID:            organizationID,
 		LaborCostPerHour:          req.LaborCostPerHour,
 		PackagingCostPerItem:      req.PackagingCostPerItem,
 		ShippingCostBase:          req.ShippingCostBase,

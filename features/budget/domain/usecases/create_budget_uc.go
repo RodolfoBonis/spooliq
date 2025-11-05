@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -52,12 +53,16 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Validate print time
-	if request.PrintTimeHours == 0 && request.PrintTimeMinutes == 0 {
-		uc.logger.Error(ctx, "Invalid print time", nil)
-		appError := coreErrors.UsecaseError("Print time must be greater than zero")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
+	// Validate that each item has at least one filament
+	for i, item := range request.Items {
+		if len(item.Filaments) == 0 {
+			uc.logger.Error(ctx, "Item has no filaments", map[string]interface{}{
+				"item_index": i,
+			})
+			appError := coreErrors.UsecaseError("Each item must have at least one filament")
+			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			return
+		}
 	}
 
 	organizationID := helpers.GetOrganizationID(c)
@@ -86,7 +91,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Create budget entity
+	// Create budget entity (without global print time - now calculated from items)
 	budget := &entities.BudgetEntity{
 		ID:                uuid.New(),
 		OrganizationID:    organizationID,
@@ -94,15 +99,11 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		Description:       request.Description,
 		CustomerID:        request.CustomerID,
 		Status:            entities.StatusDraft,
-		PrintTimeHours:    request.PrintTimeHours,
-		PrintTimeMinutes:  request.PrintTimeMinutes,
 		MachinePresetID:   request.MachinePresetID,
 		EnergyPresetID:    request.EnergyPresetID,
-		CostPresetID:      request.CostPresetID,
 		IncludeEnergyCost: request.IncludeEnergyCost,
-		IncludeLaborCost:  request.IncludeLaborCost,
+		IncludeLaborCost:  true, // Enabled by default when items have cost presets
 		IncludeWasteCost:  request.IncludeWasteCost,
-		LaborCostPerHour:  request.LaborCostPerHour,
 		DeliveryDays:      request.DeliveryDays,
 		PaymentTerms:      request.PaymentTerms,
 		Notes:             request.Notes,
@@ -121,23 +122,34 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Create budget items
+	// Create budget items (products) with their filaments
 	for _, itemReq := range request.Items {
-		item := &entities.BudgetItemEntity{
-			ID:                 uuid.New(),
-			BudgetID:           budget.ID,
-			FilamentID:         itemReq.FilamentID,
-			Quantity:           itemReq.Quantity,
-			Order:              itemReq.Order,
-			ProductName:        itemReq.ProductName,
-			ProductDescription: itemReq.ProductDescription,
-			ProductQuantity:    itemReq.ProductQuantity,
-			UnitPrice:          itemReq.UnitPrice,
-			ProductDimensions:  itemReq.ProductDimensions,
-			CreatedAt:          time.Now(),
-			UpdatedAt:          time.Now(),
+		// Use the first filament as the primary filament (for backward compatibility)
+		var primaryFilamentID uuid.UUID
+		if len(itemReq.Filaments) > 0 {
+			primaryFilamentID = itemReq.Filaments[0].FilamentID
 		}
 
+		item := &entities.BudgetItemEntity{
+			ID:                  uuid.New(),
+			BudgetID:            budget.ID,
+			FilamentID:          primaryFilamentID,
+			OrganizationID:      organizationID,
+			ProductName:         itemReq.ProductName,
+			ProductDescription:  itemReq.ProductDescription,
+			ProductQuantity:     itemReq.ProductQuantity,
+			ProductDimensions:   itemReq.ProductDimensions,
+			PrintTimeHours:      itemReq.PrintTimeHours,
+			PrintTimeMinutes:    itemReq.PrintTimeMinutes,
+			CostPresetID:        itemReq.CostPresetID,
+			AdditionalLaborCost: itemReq.AdditionalLaborCost,
+			AdditionalNotes:     itemReq.AdditionalNotes,
+			Order:               itemReq.Order,
+			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
+		}
+
+		// Save item
 		if err := uc.budgetRepository.AddItem(ctx, item); err != nil {
 			uc.logger.Error(ctx, "Failed to create budget item", map[string]interface{}{
 				"error": err.Error(),
@@ -147,6 +159,33 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 			appError := coreErrors.RepositoryError(err.Error())
 			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 			return
+		}
+
+		// Create filaments for this item
+		for _, filReq := range itemReq.Filaments {
+			filament := &entities.BudgetItemFilamentEntity{
+				ID:             uuid.New(),
+				BudgetItemID:   item.ID,
+				FilamentID:     filReq.FilamentID,
+				OrganizationID: organizationID,
+				Quantity:       filReq.Quantity,
+				Order:          filReq.Order,
+				CreatedAt:      time.Now(),
+				UpdatedAt:      time.Now(),
+			}
+
+			if err := uc.budgetRepository.AddItemFilament(ctx, filament); err != nil {
+				uc.logger.Error(ctx, "Failed to add filament to item", map[string]interface{}{
+					"error":       err.Error(),
+					"item_id":     item.ID,
+					"filament_id": filReq.FilamentID,
+				})
+				// Rollback: delete the budget
+				uc.budgetRepository.Delete(ctx, budget.ID)
+				appError := coreErrors.RepositoryError("Failed to add filament: " + err.Error())
+				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+				return
+			}
 		}
 	}
 
@@ -170,31 +209,73 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
 	itemResponses := make([]entities.BudgetItemResponse, len(items))
+	var totalPrintMinutes int
+
 	for i, item := range items {
-		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
+		// Get filament usage info for this item
+		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+
+		// Calculate print time display
+		printTimeDisplay := ""
+		if item.PrintTimeHours > 0 {
+			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
+		} else {
+			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
+		}
+
+		// Sum total print time
+		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
+
+		// Convert CostPresetID to string pointer
+		var costPresetIDStr *string
+		if item.CostPresetID != nil {
+			s := item.CostPresetID.String()
+			costPresetIDStr = &s
+		}
+
 		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                 item.ID.String(),
-			BudgetID:           item.BudgetID.String(),
-			FilamentID:         item.FilamentID.String(),
-			Filament:           filamentInfo,
-			Quantity:           item.Quantity,
-			Order:              item.Order,
-			WasteAmount:        item.WasteAmount,
-			ItemCost:           item.ItemCost,
-			ProductName:        item.ProductName,
-			ProductDescription: item.ProductDescription,
-			ProductQuantity:    item.ProductQuantity,
-			UnitPrice:          item.UnitPrice,
-			ProductDimensions:  item.ProductDimensions,
-			CreatedAt:          item.CreatedAt,
-			UpdatedAt:          item.UpdatedAt,
+			ID:                  item.ID.String(),
+			BudgetID:            item.BudgetID.String(),
+			ProductName:         item.ProductName,
+			ProductDescription:  item.ProductDescription,
+			ProductQuantity:     item.ProductQuantity,
+			ProductDimensions:   item.ProductDimensions,
+			PrintTimeHours:      item.PrintTimeHours,
+			PrintTimeMinutes:    item.PrintTimeMinutes,
+			PrintTimeDisplay:    printTimeDisplay,
+			CostPresetID:        costPresetIDStr,
+			AdditionalLaborCost: item.AdditionalLaborCost,
+			AdditionalNotes:     item.AdditionalNotes,
+			FilamentCost:        item.FilamentCost,
+			WasteCost:           item.WasteCost,
+			EnergyCost:          item.EnergyCost,
+			LaborCost:           item.LaborCost,
+			ItemTotalCost:       item.ItemTotalCost,
+			UnitPrice:           item.UnitPrice,
+			Filaments:           filaments,
+			Order:               item.Order,
+			CreatedAt:           item.CreatedAt,
+			UpdatedAt:           item.UpdatedAt,
 		}
 	}
 
+	// Calculate total print time
+	totalHours := totalPrintMinutes / 60
+	totalMins := totalPrintMinutes % 60
+	totalPrintTimeDisplay := ""
+	if totalHours > 0 {
+		totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
+	} else {
+		totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
+	}
+
 	response := entities.BudgetResponse{
-		Budget:   budget,
-		Customer: customerInfo,
-		Items:    itemResponses,
+		BudgetEntity:          budget,
+		Customer:              customerInfo,
+		Items:                 itemResponses,
+		TotalPrintTimeHours:   totalHours,
+		TotalPrintTimeMinutes: totalMins,
+		TotalPrintTimeDisplay: totalPrintTimeDisplay,
 	}
 
 	uc.logger.Info(ctx, "Budget created successfully", map[string]interface{}{

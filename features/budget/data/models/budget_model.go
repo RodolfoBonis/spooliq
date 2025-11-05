@@ -4,6 +4,10 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
+	customerModels "github.com/RodolfoBonis/spooliq/features/customer/data/models"
+	presetModels "github.com/RodolfoBonis/spooliq/features/preset/data/models"
+	userModels "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -11,7 +15,7 @@ import (
 // BudgetModel represents the budget data model for GORM
 type BudgetModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_budget_org" json:"organization_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_budget_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Name           string    `gorm:"type:varchar(255);not null" json:"name"`
 	Description    string    `gorm:"type:text" json:"description"`
 
@@ -21,20 +25,28 @@ type BudgetModel struct {
 	// Status
 	Status string `gorm:"type:varchar(20);not null" json:"status"`
 
-	// Print time
+	// DEPRECATED: Print time moved to budget_items (per-item, not global)
+	// Will be calculated as sum of all items print times
 	PrintTimeHours   int `gorm:"type:integer;not null" json:"print_time_hours"`
 	PrintTimeMinutes int `gorm:"type:integer;not null" json:"print_time_minutes"`
 
-	// Presets (foreign keys)
+	// Presets (global - apply to all items unless overridden at item level)
 	MachinePresetID *uuid.UUID `gorm:"type:uuid" json:"machine_preset_id"`
 	EnergyPresetID  *uuid.UUID `gorm:"type:uuid" json:"energy_preset_id"`
-	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"`
+
+	// DEPRECATED: CostPresetID moved to budget_items (per-item, not global)
+	CostPresetID *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"`
 
 	// Configuration flags
-	IncludeEnergyCost bool     `gorm:"default:false" json:"include_energy_cost"`
-	IncludeLaborCost  bool     `gorm:"default:false" json:"include_labor_cost"`
-	IncludeWasteCost  bool     `gorm:"default:false" json:"include_waste_cost"`
-	LaborCostPerHour  *float64 `gorm:"type:numeric" json:"labor_cost_per_hour"`
+	IncludeEnergyCost bool `gorm:"default:false" json:"include_energy_cost"`
+
+	// DEPRECATED: IncludeLaborCost moved to item level (via CostPreset or AdditionalLaborCost)
+	IncludeLaborCost bool `gorm:"default:false" json:"include_labor_cost"`
+
+	IncludeWasteCost bool `gorm:"default:false" json:"include_waste_cost"`
+
+	// DEPRECATED: LaborCostPerHour moved to item level (via CostPreset)
+	LaborCostPerHour *float64 `gorm:"type:numeric" json:"labor_cost_per_hour"`
 
 	// Calculated costs (in cents)
 	FilamentCost int64 `gorm:"type:bigint;default:0" json:"filament_cost"`
@@ -56,6 +68,16 @@ type BudgetModel struct {
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
+	// GORM v2 Relationships
+	Organization  *companyModels.CompanyModel      `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
+	Customer      *customerModels.CustomerModel    `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"customer,omitempty"`
+	User          *userModels.UserModel            `gorm:"foreignKey:OwnerUserID;references:KeycloakUserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"user,omitempty"`
+	MachinePreset *presetModels.MachinePresetModel `gorm:"foreignKey:MachinePresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"machine_preset,omitempty"`
+	EnergyPreset  *presetModels.EnergyPresetModel  `gorm:"foreignKey:EnergyPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"energy_preset,omitempty"`
+	CostPreset    *presetModels.CostPresetModel    `gorm:"foreignKey:CostPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"cost_preset,omitempty"`
+	Items         []BudgetItemModel                `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"items,omitempty"`
+	StatusHistory []BudgetStatusHistoryModel       `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"status_history,omitempty"`
 }
 
 // TableName specifies the table name for GORM

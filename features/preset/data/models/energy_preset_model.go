@@ -8,7 +8,7 @@ import (
 // EnergyPresetModel represents an energy cost preset by location in the database
 type EnergyPresetModel struct {
 	ID                    uuid.UUID `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	OrganizationID        string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"`
+	OrganizationID        string    `gorm:"type:varchar(255);not null;index:idx_preset_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Country               string    `gorm:"type:varchar(100)" json:"country,omitempty"`
 	State                 string    `gorm:"type:varchar(100)" json:"state,omitempty"`
 	City                  string    `gorm:"type:varchar(100)" json:"city,omitempty"`
@@ -18,6 +18,10 @@ type EnergyPresetModel struct {
 	TariffType            string    `gorm:"type:varchar(50)" json:"tariff_type,omitempty"`
 	PeakHourMultiplier    float32   `gorm:"type:float;default:1.0" json:"peak_hour_multiplier"`
 	OffPeakHourMultiplier float32   `gorm:"type:float;default:1.0" json:"off_peak_hour_multiplier"`
+
+	// GORM v2 Relationships - BelongsTo Preset (1:1 relationship via same ID)
+	// Preset *PresetModel `gorm:"foreignKey:ID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"preset,omitempty"`
+	// Commented out to avoid circular import - relationship enforced by shared ID
 }
 
 // TableName returns the table name for the energy preset model
@@ -42,6 +46,7 @@ func (e *EnergyPresetModel) FromEntity(entity *entities.EnergyPresetEntity) {
 func (e *EnergyPresetModel) ToEntity() entities.EnergyPresetEntity {
 	return entities.EnergyPresetEntity{
 		ID:                    e.ID,
+		OrganizationID:        e.OrganizationID,
 		Country:               e.Country,
 		State:                 e.State,
 		City:                  e.City,

@@ -1,12 +1,15 @@
 package usecases
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -133,36 +136,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	}
 
 	// Build response
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
-	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
-
-	itemResponses := make([]entities.BudgetItemResponse, len(items))
-	for i, item := range items {
-		filamentInfo, _ := uc.budgetRepository.GetFilamentInfo(ctx, item.FilamentID)
-		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                 item.ID.String(),
-			BudgetID:           item.BudgetID.String(),
-			FilamentID:         item.FilamentID.String(),
-			Filament:           filamentInfo,
-			Quantity:           item.Quantity,
-			Order:              item.Order,
-			WasteAmount:        item.WasteAmount,
-			ItemCost:           item.ItemCost,
-			ProductName:        item.ProductName,
-			ProductDescription: item.ProductDescription,
-			ProductQuantity:    item.ProductQuantity,
-			UnitPrice:          item.UnitPrice,
-			ProductDimensions:  item.ProductDimensions,
-			CreatedAt:          item.CreatedAt,
-			UpdatedAt:          item.UpdatedAt,
-		}
-	}
-
-	response := entities.BudgetResponse{
-		Budget:   budget,
-		Customer: customerInfo,
-		Items:    itemResponses,
-	}
+	response, _ := buildBudgetResponse(ctx, uc.budgetRepository, budgetID, organizationID)
 
 	uc.logger.Info(ctx, "Budget status updated successfully", map[string]interface{}{
 		"budget_id":  budget.ID,
@@ -170,4 +144,85 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, response)
+}
+
+// buildBudgetResponse builds a complete budget response with items and filaments (helper function)
+func buildBudgetResponse(ctx context.Context, repo repositories.BudgetRepository, budgetID uuid.UUID, organizationID string) (*entities.BudgetResponse, error) {
+	budget, err := repo.FindByID(ctx, budgetID, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
+	customerInfo, _ := repo.GetCustomerInfo(ctx, budget.CustomerID)
+	items, _ := repo.GetItems(ctx, budget.ID)
+
+	itemResponses := make([]entities.BudgetItemResponse, len(items))
+	var totalPrintMinutes int
+
+	for i, item := range items {
+		// Get filament usage info for this item
+		filaments, _ := repo.GetFilamentUsageInfo(ctx, item.ID)
+
+		// Calculate print time display
+		printTimeDisplay := ""
+		if item.PrintTimeHours > 0 {
+			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
+		} else {
+			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
+		}
+
+		// Sum total print time
+		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
+
+		// Convert CostPresetID to string pointer
+		var costPresetIDStr *string
+		if item.CostPresetID != nil {
+			s := item.CostPresetID.String()
+			costPresetIDStr = &s
+		}
+
+		itemResponses[i] = entities.BudgetItemResponse{
+			ID:                  item.ID.String(),
+			BudgetID:            item.BudgetID.String(),
+			ProductName:         item.ProductName,
+			ProductDescription:  item.ProductDescription,
+			ProductQuantity:     item.ProductQuantity,
+			ProductDimensions:   item.ProductDimensions,
+			PrintTimeHours:      item.PrintTimeHours,
+			PrintTimeMinutes:    item.PrintTimeMinutes,
+			PrintTimeDisplay:    printTimeDisplay,
+			CostPresetID:        costPresetIDStr,
+			AdditionalLaborCost: item.AdditionalLaborCost,
+			AdditionalNotes:     item.AdditionalNotes,
+			FilamentCost:        item.FilamentCost,
+			WasteCost:           item.WasteCost,
+			EnergyCost:          item.EnergyCost,
+			LaborCost:           item.LaborCost,
+			ItemTotalCost:       item.ItemTotalCost,
+			UnitPrice:           item.UnitPrice,
+			Filaments:           filaments,
+			Order:               item.Order,
+			CreatedAt:           item.CreatedAt,
+			UpdatedAt:           item.UpdatedAt,
+		}
+	}
+
+	// Calculate total print time
+	totalHours := totalPrintMinutes / 60
+	totalMins := totalPrintMinutes % 60
+	totalPrintTimeDisplay := ""
+	if totalHours > 0 {
+		totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
+	} else {
+		totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
+	}
+
+	return &entities.BudgetResponse{
+		BudgetEntity:          budget,
+		Customer:              customerInfo,
+		Items:                 itemResponses,
+		TotalPrintTimeHours:   totalHours,
+		TotalPrintTimeMinutes: totalMins,
+		TotalPrintTimeDisplay: totalPrintTimeDisplay,
+	}, nil
 }

@@ -33,7 +33,18 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 				return
 			}
 
-			accessToken := strings.Split(authHeader, " ")[1]
+			// Verificar se o header contém "Bearer " e extrair o token
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				err := errors.NewAppError(entities.ErrInvalidToken, "Formato de token inválido", nil, nil)
+				httpError := err.ToHTTPError()
+				logger.LogError(ctx, "Auth failed: invalid token format", err)
+				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+				c.Abort()
+				return
+			}
+
+			accessToken := parts[1]
 
 			rptResult, err := authService.GetClient().RetrospectToken(
 				c,

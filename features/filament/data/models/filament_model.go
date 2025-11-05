@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"time"
 
+	brandModels "github.com/RodolfoBonis/spooliq/features/brand/data/models"
+	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
+	materialModels "github.com/RodolfoBonis/spooliq/features/material/data/models"
+	userModels "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -12,13 +16,13 @@ import (
 // FilamentModel represents the filament data model for GORM
 type FilamentModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_filament_org" json:"organization_id"`
+	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_filament_org;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization_id"`
 	Name           string    `gorm:"type:varchar(255);not null" json:"name"`
 	Description    string    `gorm:"type:text" json:"description"`
 
-	// Foreign keys - relationships ignored by GORM during migration
-	BrandID    uuid.UUID `gorm:"type:uuid;not null" json:"brand_id"`
-	MaterialID uuid.UUID `gorm:"type:uuid;not null" json:"material_id"`
+	// Foreign keys with relationships
+	BrandID    uuid.UUID `gorm:"type:uuid;not null;index" json:"brand_id"`
+	MaterialID uuid.UUID `gorm:"type:uuid;not null;index" json:"material_id"`
 
 	// Legacy color fields
 	Color    string `gorm:"type:varchar(100);not null" json:"color"`
@@ -38,8 +42,14 @@ type FilamentModel struct {
 	URL string `gorm:"type:text" json:"url"`
 
 	// Ownership and access control
-	OwnerUserID *string `gorm:"type:varchar(255)" json:"owner_user_id"`
+	OwnerUserID *string `gorm:"type:varchar(255);index" json:"owner_user_id"`
 	IsActive    bool    `gorm:"" json:"is_active"`
+
+	// GORM v2 Relationships - BelongsTo
+	Brand        *brandModels.BrandModel       `gorm:"foreignKey:BrandID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"brand,omitempty"`
+	Material     *materialModels.MaterialModel `gorm:"foreignKey:MaterialID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"material,omitempty"`
+	User         *userModels.UserModel         `gorm:"foreignKey:OwnerUserID;references:KeycloakUserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"user,omitempty"`
+	Organization *companyModels.CompanyModel   `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
 
 	// Technical specifications
 	PrintTemperature *int `gorm:"type:integer" json:"print_temperature"`

@@ -104,8 +104,8 @@ func OpenConnection(logger logger.Logger) *errors.AppError {
 				Colorful:                  false,             // Disable color for structured logging
 			},
 		),
-		// Disable foreign key constraints during migration to avoid conflicts
-		DisableForeignKeyConstraintWhenMigrating: true,
+		// Enable foreign key constraints for referential integrity
+		DisableForeignKeyConstraintWhenMigrating: false,
 		// Skip default transaction for better performance during migrations
 		SkipDefaultTransaction: true,
 	}
@@ -254,147 +254,207 @@ func RetryHandler(n int, f func() (bool, error)) error {
 }
 
 // RunMigrations runs the database migrations using GORM AutoMigrate.
+// Order is critical to respect foreign key dependencies.
 func RunMigrations() {
-	// Strategy: Always run AutoMigrate - GORM is intelligent enough to:
-	// 1. Create new tables with all defaults
-	// 2. Add new columns to existing tables
-	// 3. Update column types and constraints when needed
-	//
-	// Note: GORM may try to apply defaults to existing columns which can cause
-	// "got 2 parameters but the statement requires 1" error in PostgreSQL.
-	// This is a known GORM+PostgreSQL issue with default values.
-	// Solution: AutoMigrate will create/update schema correctly on first run.
-	// Subsequent runs skip columns that already exist with correct types.
+	// MIGRATION STRATEGY:
+	// Tables are migrated in dependency order (parents before children).
+	// GORM v2 with gorm.io/driver/postgres@v1.4.0 handles foreign keys correctly.
+	// Foreign key constraints enforce referential integrity and CASCADE behaviors.
 
-	// Brand migrations
-	if !Connector.Migrator().HasTable(&brands.BrandModel{}) {
-		// Table doesn't exist - create it with all defaults
-		if err := Connector.AutoMigrate(&brands.BrandModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
-		}
-	} else {
-		// Table exists - add any new columns manually to avoid default conflicts
-		_ = Connector.Migrator().AutoMigrate(&brands.BrandModel{})
+	// ========================================
+	// LEVEL 0: Subscription Plans (no dependencies)
+	// ========================================
+
+	// 1. Subscription Plans and Features (catalog tables with no FKs to other app tables)
+	if err := Connector.AutoMigrate(&subscriptions.SubscriptionPlanModel{}, &subscriptions.PlanFeatureModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION_PLAN MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&materials.MaterialModel{}) {
-		if err := Connector.AutoMigrate(&materials.MaterialModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&materials.MaterialModel{})
+	// 1.1. Plan Templates (no FKs to other app tables)
+	if err := Connector.AutoMigrate(&subscriptions.PlanTemplateModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PLAN_TEMPLATE MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&customers.CustomerModel{}) {
-		if err := Connector.AutoMigrate(&customers.CustomerModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&customers.CustomerModel{})
+	// 1.2. Plan Audit Logs (FK: PlanID → SubscriptionPlans)
+	if err := Connector.AutoMigrate(&subscriptions.PlanAuditModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PLAN_AUDIT MIGRATION: %s", err.Error()))
 	}
 
-	// Company migration
-	if !Connector.Migrator().HasTable(&companies.CompanyModel{}) {
-		if err := Connector.AutoMigrate(&companies.CompanyModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING COMPANY MIGRATION: %s", err.Error()))
-		}
-	} else {
-		// Table exists - silently add new columns (errors are expected and ignored)
-		_ = Connector.Migrator().AutoMigrate(&companies.CompanyModel{})
+	// 1.3. Plan Migrations (FK: FromPlanID/ToPlanID → SubscriptionPlans)
+	if err := Connector.AutoMigrate(&subscriptions.PlanMigrationModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PLAN_MIGRATION MIGRATION: %s", err.Error()))
 	}
 
-	// Company Branding migration
-	if !Connector.Migrator().HasTable(&companies.CompanyBrandingModel{}) {
-		if err := Connector.AutoMigrate(&companies.CompanyBrandingModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING COMPANY_BRANDING MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&companies.CompanyBrandingModel{})
+	// ========================================
+	// LEVEL 1: Companies (now depends on SubscriptionPlan for subscription_plan_id FK)
+	// ========================================
+
+	// 2. Companies (referenced by ALL tables via OrganizationID, has FK to SubscriptionPlan)
+	if err := Connector.Migrator().AutoMigrate(&companies.CompanyModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING COMPANY MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&filaments.FilamentModel{}) {
-		if err := Connector.AutoMigrate(&filaments.FilamentModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING FILAMENT MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&filaments.FilamentModel{})
+	// 3. CompanyBranding (1:1 with Company via organization_id)
+	if err := Connector.Migrator().AutoMigrate(&companies.CompanyBrandingModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING COMPANY_BRANDING MIGRATION: %s", err.Error()))
 	}
 
-	// Budget migrations
-	if !Connector.Migrator().HasTable(&budgets.BudgetModel{}) {
-		if err := Connector.AutoMigrate(&budgets.BudgetModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING BUDGET MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetModel{})
+	// 4. Payment Gateway Links (1:1 with Company via organization_id)
+	if err := Connector.AutoMigrate(&subscriptions.PaymentGatewayLinkModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PAYMENT_GATEWAY_LINK MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&budgets.BudgetItemModel{}) {
-		if err := Connector.AutoMigrate(&budgets.BudgetItemModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetItemModel{})
+	// ========================================
+	// LEVEL 2: Tables with FK to Companies only
+	// ========================================
+
+	// 5. Users (FK: OrganizationID → Companies, referenced by many tables via OwnerUserID/KeycloakUserID)
+	if err := Connector.AutoMigrate(&users.UserModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING USER MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&budgets.BudgetStatusHistoryModel{}) {
-		if err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING BUDGET_STATUS_HISTORY MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&budgets.BudgetStatusHistoryModel{})
+	// 6. Brands (FK: OrganizationID → Companies, referenced by FilamentModel)
+	if err := Connector.AutoMigrate(&brands.BrandModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
 	}
 
-	// Preset migrations
-	if !Connector.Migrator().HasTable(&presets.PresetModel{}) {
-		if err := Connector.AutoMigrate(&presets.PresetModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING PRESET MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&presets.PresetModel{})
+	// 7. Materials (FK: OrganizationID → Companies, referenced by FilamentModel)
+	if err := Connector.AutoMigrate(&materials.MaterialModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&presets.MachinePresetModel{}) {
-		if err := Connector.AutoMigrate(&presets.MachinePresetModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING MACHINE_PRESET MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&presets.MachinePresetModel{})
+	// ========================================
+	// LEVEL 3: Tables with FK to Companies AND Users/Brands/Materials
+	// ========================================
+
+	// 8. Filaments (FK: OrganizationID → Companies, BrandID → Brands, MaterialID → Materials, OwnerUserID → Users)
+	if err := Connector.AutoMigrate(&filaments.FilamentModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING FILAMENT MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&presets.EnergyPresetModel{}) {
-		if err := Connector.AutoMigrate(&presets.EnergyPresetModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING ENERGY_PRESET MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&presets.EnergyPresetModel{})
+	// 9. Customers (FK: OrganizationID → Companies, OwnerUserID → Users)
+	if err := Connector.AutoMigrate(&customers.CustomerModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
 	}
 
-	if !Connector.Migrator().HasTable(&presets.CostPresetModel{}) {
-		if err := Connector.AutoMigrate(&presets.CostPresetModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&presets.CostPresetModel{})
+	// ========================================
+	// LEVEL 3 (continued): Presets
+	// ========================================
+
+	// 10. Presets (FK: OrganizationID → Companies, UserID → Users)
+	if err := Connector.AutoMigrate(&presets.PresetModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRESET MIGRATION: %s", err.Error()))
 	}
 
-	// User management migrations
-	if !Connector.Migrator().HasTable(&users.UserModel{}) {
-		if err := Connector.AutoMigrate(&users.UserModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING USER MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&users.UserModel{})
+	// 11-13. Specific Preset Types (1:1 with Preset via shared ID)
+	if err := Connector.AutoMigrate(&presets.MachinePresetModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING MACHINE_PRESET MIGRATION: %s", err.Error()))
 	}
 
-	// Subscription payment history migrations
-	if !Connector.Migrator().HasTable(&subscriptions.SubscriptionModel{}) {
-		if err := Connector.AutoMigrate(&subscriptions.SubscriptionModel{}); err != nil {
-			panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION MIGRATION: %s", err.Error()))
-		}
-	} else {
-		_ = Connector.Migrator().AutoMigrate(&subscriptions.SubscriptionModel{})
+	if err := Connector.AutoMigrate(&presets.EnergyPresetModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING ENERGY_PRESET MIGRATION: %s", err.Error()))
 	}
+
+	if err := Connector.AutoMigrate(&presets.CostPresetModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
+	}
+
+	// ========================================
+	// LEVEL 3 (continued): Payment Methods (depends on Companies only)
+	// ========================================
+
+	// 14. Payment Methods (FK: OrganizationID → Companies)
+	if err := Connector.AutoMigrate(&subscriptions.PaymentMethodModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PAYMENT_METHOD MIGRATION: %s", err.Error()))
+	}
+
+	// ========================================
+	// LEVEL 4: Budget System (complex hierarchy)
+	// ========================================
+
+	// 15. Budgets (FK: OrganizationID → Companies, CustomerID → Customers, OwnerUserID → Users, Preset FKs)
+	if err := Connector.AutoMigrate(&budgets.BudgetModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING BUDGET MIGRATION: %s", err.Error()))
+	}
+
+	// 16. BudgetStatusHistory (FK: OrganizationID → Companies, BudgetID → Budgets) CASCADE
+	if err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING BUDGET_STATUS_HISTORY MIGRATION: %s", err.Error()))
+	}
+
+	// 17. BudgetItems (FK: OrganizationID → Companies, BudgetID → Budgets CASCADE, FilamentID, CostPresetID)
+	if err := Connector.AutoMigrate(&budgets.BudgetItemModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM MIGRATION: %s", err.Error()))
+	}
+
+	// 18. BudgetItemFilaments (FK: OrganizationID → Companies, BudgetItemID → BudgetItems CASCADE, FilamentID)
+	if err := Connector.AutoMigrate(&budgets.BudgetItemFilamentModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_FILAMENT MIGRATION: %s", err.Error()))
+	}
+
+	// ========================================
+	// LEVEL 5: Subscription Payments (depends on Companies, SubscriptionPlan, PaymentMethod)
+	// ========================================
+
+	// 19. Subscription Payment History (FK: OrganizationID → Companies, SubscriptionPlanID → SubscriptionPlans, PaymentMethodID → PaymentMethods)
+	if err := Connector.AutoMigrate(&subscriptions.SubscriptionModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING SUBSCRIPTION MIGRATION: %s", err.Error()))
+	}
+
+	// ========================================
+	// FOREIGN KEY CONSTRAINTS FOR ORGANIZATION_ID
+	// ========================================
+	// GORM AutoMigrate creates most FK constraints based on relationship fields,
+	// but for organization_id we add them manually to ensure consistency
+	// across all tables since some models can't have the relationship field
+	// (e.g., CompanyBrandingModel has circular dependency issues).
+
+	fmt.Println("Adding organization_id foreign key constraints...")
+
+	orgFKTables := map[string]bool{
+		"users": true, "brands": true, "materials": true, "filaments": true,
+		"customers": true, "presets": true, "budgets": true, "budget_items": true,
+		"budget_item_filaments": true, "budget_status_history": true,
+		"payment_methods": true, "subscription_payments": true, "company_branding": true,
+	}
+
+	for table := range orgFKTables {
+		// Check if table exists first
+		var exists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = ?)", table).Scan(&exists)
+
+		if !exists {
+			continue // Skip if table doesn't exist yet
+		}
+
+		// Check if FK already exists
+		var fkExists bool
+		Connector.Raw(`
+			SELECT EXISTS(
+				SELECT 1 FROM information_schema.table_constraints
+				WHERE table_name = ? AND constraint_name LIKE '%organization%'
+			)
+		`, table).Scan(&fkExists)
+
+		if !fkExists {
+			sql := fmt.Sprintf(`
+				ALTER TABLE %s
+				ADD CONSTRAINT fk_%s_organization
+				FOREIGN KEY (organization_id)
+				REFERENCES companies(organization_id)
+				ON UPDATE CASCADE
+				ON DELETE RESTRICT
+			`, table, table)
+
+			if err := Connector.Exec(sql).Error; err != nil {
+				fmt.Printf("Warning: FK constraint for %s.organization_id failed: %v\n", table, err)
+			} else {
+				fmt.Printf("✓ Added FK constraint for %s.organization_id\n", table)
+			}
+		}
+	}
+
+	fmt.Println("✓ Organization FK constraints setup completed")
 }
 
 // addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM using the official plugin

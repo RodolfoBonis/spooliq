@@ -5,7 +5,9 @@ permissions:
 
 on:
   push:
-    branches: [develop]
+    branches: 
+      - develop
+      - 'release/**'
     paths-ignore:
       - 'version.txt'
   workflow_dispatch:
@@ -44,12 +46,20 @@ jobs:
       - name: Generate Staging Version
         id: version
         run: |
-          # Use short commit hash for staging versions
-          SHORT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          VERSION="stg-${TIMESTAMP}-${SHORT_SHA}"
+          # Check if this is a release branch
+          if [[ "${GITHUB_REF}" == refs/heads/release/* ]]; then
+            # Extract version from release branch name
+            RELEASE_VERSION=$(echo ${GITHUB_REF} | sed 's/refs\/heads\/release\/v//')
+            VERSION="${RELEASE_VERSION}-rc.$(date +%Y%m%d%H%M%S)"
+            echo "Release candidate version: $VERSION"
+          else
+            # Use short commit hash for regular staging versions
+            SHORT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
+            TIMESTAMP=$(date +%Y%m%d%H%M%S)
+            VERSION="stg-${TIMESTAMP}-${SHORT_SHA}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Set lowercase repository owner
         id: repo-owner

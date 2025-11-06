@@ -1,26 +1,21 @@
-name: Release with GoReleaser
+name: Release Staging - spooliq
 
 permissions:
   contents: write
 
 on:
-  workflow_run:
-    workflows: ["CI - spooliq"]
-    types:
-      - completed
-    branches: [main]
   push:
-    tags:
-      - 'v*'
+    branches: [develop]
+    paths-ignore:
+      - 'version.txt'
   workflow_dispatch:
 
 env:
   GO_VERSION: '1.23'
 
 jobs:
-  release:
+  release-staging:
     runs-on: [ubuntu-latest]
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,51 +41,15 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Determine Version Strategy
-        id: version-strategy
+      - name: Generate Staging Version
+        id: version
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "strategy=tag" >> $GITHUB_OUTPUT
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "strategy=auto" >> $GITHUB_OUTPUT
-            # Only auto-increment for workflow_run events (after CI success)
-            if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-              chmod +x ./.config/scripts/increment_version.sh
-              ./.config/scripts/increment_version.sh
-              VERSION=$(cat version.txt)
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-              echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-            else
-              # For direct tag pushes, use the tag version
-              echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-              echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Add, commit and push version increment
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: "GitHub Actions"
-          author_email: "actions@github.com"
-          message: "Increment version"
-          add: "version.txt"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Create Tag (if auto-increment)
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        run: |
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
-          git tag ${{ steps.version-strategy.outputs.tag }}
-          git push origin ${{ steps.version-strategy.outputs.tag }}
-
-      - name: Reset git state before GoReleaser
-        run: |
-          git reset --hard HEAD
-          git clean -fd
+          # Use short commit hash for staging versions
+          SHORT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          VERSION="stg-${TIMESTAMP}-${SHORT_SHA}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Set lowercase repository owner
         id: repo-owner
@@ -98,15 +57,19 @@ jobs:
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
+      - name: Build and Push Docker Image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }} \
+            -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest \
+            --build-arg VERSION=${{ steps.version.outputs.version }} \
+            --build-arg COMMIT=${{ github.sha }} \
+            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            .
+          
+          docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }}
+          docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest
 
       - name: Checkout k3s manifest repository
         uses: actions/checkout@master
@@ -116,33 +79,39 @@ jobs:
           path: k3s-manifest
           token: ${{ secrets.GH_TOKEN }}
 
-      - name: Update K3s Manifests
+      - name: Update K3s Staging Manifests
         env:
-          VERSION: ${{ steps.version-strategy.outputs.version }}
-          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           cd k3s-manifest
           
-          # Update Helm values for production
+          # Update Helm values for staging
           yq e -i ".image.tag = \"${VERSION}\"" \
-            ./apps/spooliq/app/chart/values-prod.yaml
+            ./apps/spooliq/app/chart/values-stg.yaml
           
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add ./apps/spooliq/app/chart/values-prod.yaml
-          git commit -m "feat: update spooliq production to v${VERSION}"
+          git add ./apps/spooliq/app/chart/values-stg.yaml
+          git commit -m "feat: update spooliq staging to ${VERSION}"
           git push
 
       - name: Setup ArgoCD CLI
         uses: imajeetyadav/argocd-cli@v1
 
-      - name: Sync ArgoCD
+      - name: Sync ArgoCD Staging
         run: |
-          argocd app sync spooliq-app-prod \
+          argocd app sync spooliq-app-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}
+
+      - name: Wait for Deployment
+        run: |
+          argocd app wait spooliq-app-stg \
+            --grpc-web \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }} \
+            --timeout 300
 
       - name: Calculate Build Duration
         id: build-duration
@@ -179,49 +148,52 @@ jobs:
           
           echo "duration=$DURATION" >> $GITHUB_OUTPUT
 
-      - name: Notify n8n Success
+      - name: Notify n8n Staging Success
         if: success()
         run: |
-          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version-strategy.outputs.version }}"
+          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }}"
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "event_type": "deploy_success",
+              "event_type": "staging_deploy_success",
               "repository": "${{ github.repository }}",
               "workflow": "${{ github.workflow }}",
               "commit_sha": "${{ github.sha }}",
-              "tag": "${{ steps.version-strategy.outputs.tag }}",
+              "version": "${{ steps.version.outputs.version }}",
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
               "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "environment": "staging",
               "details": {
                 "docker_image": "'$DOCKER_IMAGE'",
                 "argocd_sync": "success",
                 "build_time": "${{ steps.build-duration.outputs.duration }}",
-                "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}"
+                "staging_url": "https://api.spooliq.stg.rodolfodebonis.com.br",
+                "commit_url": "https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
               },
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
               "telegram_thread_id": "${{ secrets.THREAD_ID }}"
             }'
 
-      - name: Notify n8n Failure  
+      - name: Notify n8n Staging Failure  
         if: failure()
         run: |
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "event_type": "deploy_failure",
+              "event_type": "staging_deploy_failure",
               "repository": "${{ github.repository }}",
               "workflow": "${{ github.workflow }}",
               "commit_sha": "${{ github.sha }}",
-              "tag": "${{ steps.version-strategy.outputs.tag }}",
+              "version": "${{ steps.version.outputs.version }}",
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
               "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "environment": "staging",
               "details": {
-                "error_message": "GoReleaser deployment failed - check GitHub Actions logs",
+                "error_message": "Staging deployment failed - check GitHub Actions logs",
                 "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
                 "job_status": "${{ job.status }}"
               },

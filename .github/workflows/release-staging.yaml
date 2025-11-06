@@ -1,0 +1,212 @@
+name: Release Staging - spooliq
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: 
+      - develop
+      - 'release/**'
+    paths-ignore:
+      - 'version.txt'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  release-staging:
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate Staging Version
+        id: version
+        run: |
+          # Check if this is a release branch
+          if [[ "${GITHUB_REF}" == refs/heads/release/* ]]; then
+            # Extract version from release branch name
+            RELEASE_VERSION=$(echo ${GITHUB_REF} | sed 's/refs\/heads\/release\/v//')
+            VERSION="${RELEASE_VERSION}-rc.$(date +%Y%m%d%H%M%S)"
+            echo "Release candidate version: $VERSION"
+          else
+            # Use short commit hash for regular staging versions
+            SHORT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
+            TIMESTAMP=$(date +%Y%m%d%H%M%S)
+            VERSION="stg-${TIMESTAMP}-${SHORT_SHA}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Set lowercase repository owner
+        id: repo-owner
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }} \
+            -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest \
+            --build-arg VERSION=${{ steps.version.outputs.version }} \
+            --build-arg COMMIT=${{ github.sha }} \
+            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            .
+          
+          docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }}
+          docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest
+
+      - name: Checkout k3s manifest repository
+        uses: actions/checkout@master
+        with:
+          repository: RodolfoBonis/k3s-apps
+          ref: main
+          path: k3s-manifest
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Update K3s Staging Manifests
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cd k3s-manifest
+          
+          # Update Helm values for staging
+          yq e -i ".image.tag = \"${VERSION}\"" \
+            ./apps/spooliq/app/chart/values-stg.yaml
+          
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add ./apps/spooliq/app/chart/values-stg.yaml
+          git commit -m "feat: update spooliq staging to ${VERSION}"
+          git push
+
+      - name: Setup ArgoCD CLI
+        uses: imajeetyadav/argocd-cli@v1
+
+      - name: Sync ArgoCD Staging
+        run: |
+          argocd app sync spooliq-app-stg \
+            --grpc-web \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }}
+
+      - name: Wait for Deployment
+        run: |
+          argocd app wait spooliq-app-stg \
+            --grpc-web \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }} \
+            --timeout 300
+
+      - name: Calculate Build Duration
+        id: build-duration
+        run: |
+          START_TIME="${{ github.event.head_commit.timestamp }}"
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            START_TIME="${{ github.event.repository.pushed_at }}"
+          fi
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            # Fallback: use workflow start time (approximate)
+            START_TIME=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+          fi
+          
+          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          # Calculate duration in seconds using date command
+          START_EPOCH=$(date -d "$START_TIME" +%s)
+          END_EPOCH=$(date -d "$END_TIME" +%s)
+          DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
+          
+          # Convert to human readable format
+          if [ $DURATION_SECONDS -lt 60 ]; then
+            DURATION="${DURATION_SECONDS}s"
+          elif [ $DURATION_SECONDS -lt 3600 ]; then
+            MINUTES=$((DURATION_SECONDS / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${MINUTES}m ${SECONDS}s"
+          else
+            HOURS=$((DURATION_SECONDS / 3600))
+            MINUTES=$(((DURATION_SECONDS % 3600) / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
+          fi
+          
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: Notify n8n Staging Success
+        if: success()
+        run: |
+          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }}"
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "staging_deploy_success",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "version": "${{ steps.version.outputs.version }}",
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "environment": "staging",
+              "details": {
+                "docker_image": "'$DOCKER_IMAGE'",
+                "argocd_sync": "success",
+                "build_time": "${{ steps.build-duration.outputs.duration }}",
+                "staging_url": "https://api.spooliq.stg.rodolfodebonis.com.br",
+                "commit_url": "https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'
+
+      - name: Notify n8n Staging Failure  
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "staging_deploy_failure",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "version": "${{ steps.version.outputs.version }}",
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "environment": "staging",
+              "details": {
+                "error_message": "Staging deployment failed - check GitHub Actions logs",
+                "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "job_status": "${{ job.status }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'

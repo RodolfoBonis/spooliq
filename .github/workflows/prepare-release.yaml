@@ -1,0 +1,228 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (leave empty for auto-increment)'
+        required: false
+        type: string
+      increment_type:
+        description: 'Auto-increment type (used if version is empty)'
+        required: false
+        default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      from_branch:
+        description: 'Source branch'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
+          - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.from_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Determine version
+        id: determine-version
+        run: |
+          if [ -z "${{ inputs.version }}" ]; then
+            echo "No version provided, auto-incrementing..."
+            
+            # Get current version from version.txt or last tag
+            if [ -f version.txt ]; then
+              CURRENT_VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
+            else
+              # Try to get from last tag
+              LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+              CURRENT_VERSION=${LAST_TAG#v}
+            fi
+            
+            echo "Current version: $CURRENT_VERSION"
+            
+            # Parse version components
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            
+            # Increment based on type
+            case "${{ inputs.increment_type }}" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+            
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            echo "Auto-incremented to: $NEW_VERSION"
+          else
+            NEW_VERSION="${{ inputs.version }}"
+            echo "Using provided version: $NEW_VERSION"
+          fi
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create release branch
+        run: |
+          RELEASE_BRANCH="release/v${{ steps.determine-version.outputs.version }}"
+          git checkout -b $RELEASE_BRANCH
+          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
+
+      - name: Update version file
+        run: |
+          echo "${{ steps.determine-version.outputs.version }}" > version.txt
+          git add version.txt
+          git commit -m "chore: bump version to ${{ steps.determine-version.outputs.version }}"
+
+      - name: Generate CHANGELOG
+        id: changelog
+        run: |
+          # Get the last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, generating full changelog"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "Generating changelog since $LAST_TAG"
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # Create or update CHANGELOG.md
+          {
+            echo "# Changelog"
+            echo ""
+            echo "## v${{ steps.determine-version.outputs.version }} - $(date +%Y-%m-%d)"
+            echo ""
+            echo "### Changes"
+            echo "$COMMITS"
+            echo ""
+            if [ -f CHANGELOG.md ]; then
+              # Append existing changelog content (skip the first line)
+              tail -n +2 CHANGELOG.md 2>/dev/null || true
+            fi
+          } > CHANGELOG_NEW.md
+          
+          mv CHANGELOG_NEW.md CHANGELOG.md
+          
+          # Store for PR body
+          {
+            echo "CHANGELOG<<EOF"
+            echo "### 📋 Changes in v${{ steps.determine-version.outputs.version }}"
+            echo ""
+            echo "$COMMITS"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+      - name: Commit CHANGELOG
+        run: |
+          git add CHANGELOG.md
+          git diff --staged --quiet || git commit -m "docs: update CHANGELOG for v${{ steps.determine-version.outputs.version }}"
+
+      - name: Push release branch
+        run: |
+          git push origin ${{ env.RELEASE_BRANCH }}
+
+      - name: Create Pull Request to main
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head ${{ env.RELEASE_BRANCH }} \
+            --title "🚀 Release v${{ steps.determine-version.outputs.version }}" \
+            --body "$(cat <<'EOF'
+          ## 🎯 Release v${{ steps.determine-version.outputs.version }}
+          
+          This PR prepares the release of version **v${{ steps.determine-version.outputs.version }}**.
+          
+          ${{ env.CHANGELOG }}
+          
+          ### 📝 Release Checklist
+          - [ ] Version bumped to v${{ steps.determine-version.outputs.version }}
+          - [ ] CHANGELOG.md updated
+          - [ ] All tests passing
+          - [ ] Staging deployment tested
+          - [ ] Breaking changes documented (if any)
+          
+          ### 🔄 Post-merge actions
+          After merging this PR:
+          1. Production deployment will be triggered automatically
+          2. Git tag `v${{ steps.determine-version.outputs.version }}` will be created
+          3. Changes will be backported to `develop` branch
+          4. GitHub Release will be created with artifacts
+          
+          ### ⚠️ Important
+          - Review all changes carefully
+          - Ensure staging tests have passed
+          - Confirm no sensitive data is included
+          
+          ---
+          *This PR was automatically created by the release preparation workflow.*
+          EOF
+          )" \
+            --label "release" \
+            --label "automated"
+
+      - name: Create Draft Pull Request to develop (for backport preview)
+        if: ${{ inputs.from_branch == 'develop' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr create \
+            --base develop \
+            --head ${{ env.RELEASE_BRANCH }} \
+            --title "🔄 Backport: Release v${{ steps.determine-version.outputs.version }}" \
+            --body "This PR will be used for backporting changes after release is merged to main." \
+            --label "backport" \
+            --label "automated" \
+            --draft || echo "Draft PR for backport already exists or cannot be created"
+
+      - name: Notify n8n
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "release_prepared",
+              "repository": "${{ github.repository }}",
+              "version": "v${{ steps.determine-version.outputs.version }}",
+              "branch": "${{ env.RELEASE_BRANCH }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "pr_url": "Check GitHub for PR link",
+                "from_branch": "${{ inputs.from_branch }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }' || echo "Notification failed"

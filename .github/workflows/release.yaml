@@ -12,6 +12,11 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -20,7 +25,10 @@ env:
 jobs:
   release:
     runs-on: [ubuntu-latest]
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    if: |
+      github.event_name == 'push' || 
+      github.event.workflow_run.conclusion == 'success' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -124,15 +132,14 @@ jobs:
         run: |
           cd k3s-manifest
           
-          # Update deployment (já em minúscula)
-          IMAGE="${ECR_REGISTRY}/${REPOSITORY_OWNER}/spooliq:${VERSION}"
-          yq e -i ".spec.template.spec.containers[0].image = \"${IMAGE}\"" \
-            ./applications/spooliq/service/spooliq-deployment.yaml
+          # Update Helm values for production
+          yq e -i ".image.tag = \"${VERSION}\"" \
+            ./apps/spooliq/app/chart/values-prod.yaml
           
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add ./applications/spooliq/service/spooliq-deployment.yaml
-          git commit -m "feat: update spooliq to v${VERSION}"
+          git add ./apps/spooliq/app/chart/values-prod.yaml
+          git commit -m "feat: update spooliq production to v${VERSION}"
           git push
 
       - name: Setup ArgoCD CLI
@@ -140,7 +147,7 @@ jobs:
 
       - name: Sync ArgoCD
         run: |
-          argocd app sync spooliq \
+          argocd app sync spooliq-app-prod \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}
@@ -229,3 +236,41 @@ jobs:
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
               "telegram_thread_id": "${{ secrets.THREAD_ID }}"
             }'
+
+      - name: Backport to develop
+        if: success() && (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/'))
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Setup git
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Fetch all branches
+          git fetch origin develop:develop
+          
+          # Get the release version from the merged PR
+          VERSION="${{ steps.version-strategy.outputs.version }}"
+          
+          # Create backport branch
+          BACKPORT_BRANCH="backport/v${VERSION}-to-develop"
+          git checkout -b $BACKPORT_BRANCH develop
+          
+          # Cherry-pick the merge commit
+          git cherry-pick -m 1 ${{ github.sha }} || {
+            echo "Cherry-pick failed, trying merge strategy"
+            git checkout develop
+            git merge --no-ff ${{ github.sha }} -m "chore: backport v${VERSION} to develop"
+          }
+          
+          # Push the backport branch
+          git push origin $BACKPORT_BRANCH
+          
+          # Create PR
+          gh pr create \
+            --base develop \
+            --head $BACKPORT_BRANCH \
+            --title "🔄 Backport v${VERSION} to develop" \
+            --body "Automated backport of release v${VERSION} changes to develop branch" \
+            --label "backport" \
+            --label "automated" || echo "PR creation failed or already exists"

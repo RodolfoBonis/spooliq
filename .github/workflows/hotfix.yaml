@@ -1,0 +1,192 @@
+name: Hotfix Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Hotfix version (leave empty for auto-patch)'
+        required: false
+        type: string
+      description:
+        description: 'Brief description of the hotfix'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Determine hotfix version
+        id: determine-version
+        run: |
+          if [ -z "${{ inputs.version }}" ]; then
+            echo "No version provided, auto-incrementing patch..."
+            
+            # Get current version from main branch
+            if [ -f version.txt ]; then
+              CURRENT_VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
+            else
+              # Try to get from last tag
+              LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+              CURRENT_VERSION=${LAST_TAG#v}
+            fi
+            
+            echo "Current version: $CURRENT_VERSION"
+            
+            # Parse version and increment patch
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            PATCH=$((PATCH + 1))
+            
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            echo "Auto-incremented patch to: $NEW_VERSION"
+          else
+            NEW_VERSION="${{ inputs.version }}"
+            echo "Using provided version: $NEW_VERSION"
+          fi
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create hotfix branch
+        run: |
+          HOTFIX_BRANCH="hotfix/v${{ steps.determine-version.outputs.version }}"
+          git checkout -b $HOTFIX_BRANCH
+          echo "HOTFIX_BRANCH=$HOTFIX_BRANCH" >> $GITHUB_ENV
+
+      - name: Update version file
+        run: |
+          echo "${{ steps.determine-version.outputs.version }}" > version.txt
+          git add version.txt
+          git commit -m "chore: bump version to ${{ steps.determine-version.outputs.version }} for hotfix"
+
+      - name: Push hotfix branch
+        run: |
+          git push origin ${{ env.HOTFIX_BRANCH }}
+
+      - name: Create Pull Request to main
+        id: pr-main
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base main \
+            --head ${{ env.HOTFIX_BRANCH }} \
+            --title "🚨 Hotfix v${{ steps.determine-version.outputs.version }}: ${{ inputs.description }}" \
+            --body "$(cat <<'EOF'
+          ## 🚨 Critical Hotfix v${{ steps.determine-version.outputs.version }}
+          
+          ### Description
+          ${{ inputs.description }}
+          
+          ### Type
+          **HOTFIX** - This is a critical fix that needs to be deployed to production immediately.
+          
+          ### Deployment Process
+          1. ✅ Review and approve this PR
+          2. 🚀 Merge to main (will trigger production deployment)
+          3. 🔄 Automatic backport to develop will be created
+          4. 📦 Tag v${{ steps.determine-version.outputs.version }} will be created
+          
+          ### Checklist
+          - [ ] Fix has been tested locally
+          - [ ] No breaking changes introduced
+          - [ ] Critical issue is resolved
+          
+          ### Post-merge
+          - Production deployment will happen automatically
+          - Backport PR to develop will be created automatically
+          - Please review and merge the backport PR promptly
+          
+          ---
+          ⚠️ **This is a hotfix and should be reviewed and deployed with priority.**
+          EOF
+          )" \
+            --label "hotfix" \
+            --label "priority:critical" \
+            --label "automated")
+          
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "PR created: $PR_URL"
+
+      - name: Create Draft PR to develop
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr create \
+            --base develop \
+            --head ${{ env.HOTFIX_BRANCH }} \
+            --title "🔄 Backport Hotfix v${{ steps.determine-version.outputs.version }} to develop" \
+            --body "This PR will backport hotfix v${{ steps.determine-version.outputs.version }} to develop branch after it's merged to main." \
+            --label "backport" \
+            --label "hotfix" \
+            --label "automated" \
+            --draft || echo "Draft PR to develop already exists or cannot be created"
+
+      - name: Notify n8n
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "hotfix_created",
+              "repository": "${{ github.repository }}",
+              "version": "v${{ steps.determine-version.outputs.version }}",
+              "branch": "${{ env.HOTFIX_BRANCH }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "description": "${{ inputs.description }}",
+                "pr_url": "${{ steps.pr-main.outputs.pr_url }}",
+                "priority": "critical"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }' || echo "Notification failed"
+
+  deploy-hotfix:
+    needs: create-hotfix
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'hotfix/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger production deployment
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # The release.yaml workflow will handle the actual deployment
+          # This is just a placeholder to show the flow
+          echo "Production deployment will be triggered by release.yaml workflow"
+
+      - name: Notify n8n deployment started
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "hotfix_deployment_started",
+              "repository": "${{ github.repository }}",
+              "version": "v${{ steps.determine-version.outputs.version }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "environment": "production",
+                "description": "${{ inputs.description }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }' || echo "Notification failed"

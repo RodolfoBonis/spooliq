@@ -85,6 +85,6 @@ type UpdateBudgetRequest struct {
 
 // UpdateStatusRequest represents the request to update budget status
 type UpdateStatusRequest struct {
-	NewStatus BudgetStatus `json:"new_status" validate:"required,oneof=draft sent approved rejected printing completed"`
-	Notes     string       `json:"notes,omitempty" validate:"omitempty,max=500"`
+	Status BudgetStatus `json:"status" validate:"required,oneof=draft sent approved rejected printing completed"`
+	Notes  string       `json:"notes,omitempty" validate:"omitempty,max=500"`
 }

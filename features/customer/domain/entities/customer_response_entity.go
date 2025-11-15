@@ -5,6 +5,7 @@ type CustomerResponse struct {
 	Customer     *CustomerEntity `json:"customer"`
 	BudgetCount  int             `json:"budget_count,omitempty"`
 	TotalBudgets *int64          `json:"total_budgets,omitempty"` // Total em centavos
+	Budgets      []BudgetSummary `json:"budgets,omitempty"`       // Últimos 10 budgets
 }
 
 // ListCustomersResponse represents the response for listing customers

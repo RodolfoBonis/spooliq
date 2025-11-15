@@ -94,11 +94,11 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	}
 
 	// Check if transition is valid
-	if !budget.IsValidTransition(request.NewStatus) {
+	if !budget.IsValidTransition(request.Status) {
 		uc.logger.Error(ctx, "Invalid status transition", map[string]interface{}{
 			"budget_id":        budgetID,
 			"current_status":   budget.Status,
-			"requested_status": request.NewStatus,
+			"requested_status": request.Status,
 		})
 		appError := coreErrors.UsecaseError("Invalid status transition")
 		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
@@ -110,7 +110,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		ID:             uuid.New(),
 		BudgetID:       budget.ID,
 		PreviousStatus: budget.Status,
-		NewStatus:      request.NewStatus,
+		NewStatus:      request.Status,
 		ChangedBy:      userID,
 		Notes:          request.Notes,
 		CreatedAt:      time.Now(),
@@ -123,7 +123,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	}
 
 	// Update budget status
-	budget.Status = request.NewStatus
+	budget.Status = request.Status
 	budget.UpdatedAt = time.Now()
 
 	if err := uc.budgetRepository.Update(ctx, budget); err != nil {

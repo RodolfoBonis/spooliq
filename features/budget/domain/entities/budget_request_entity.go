@@ -21,14 +21,15 @@ type BudgetItemRequest struct {
 	PrintTimeHours   int `json:"print_time_hours" validate:"gte=0"`
 	PrintTimeMinutes int `json:"print_time_minutes" validate:"gte=0,lt=60"`
 
+	// Labor breakdown for this item
+	SetupTimeMinutes        int `json:"setup_time_minutes" validate:"gte=0"`           // Setup time for this product (minutes)
+	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total" validate:"gte=0"` // Total manual labor time for ALL units (minutes)
+
 	// Filaments used in this item (1:N relationship)
 	Filaments []BudgetItemFilamentRequest `json:"filaments" validate:"required,min=1,dive"`
 
 	// Optional: specific cost preset for this item
 	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
-
-	// Optional: additional labor cost for this item (pintura, acabamento, etc)
-	AdditionalLaborCost *int64 `json:"additional_labor_cost,omitempty" validate:"omitempty,gte=0"` // cents
 
 	// Optional: notes specific to this item
 	AdditionalNotes *string `json:"additional_notes,omitempty" validate:"omitempty,max=500"`

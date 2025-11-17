@@ -68,18 +68,22 @@ type BudgetItemResponse struct {
 	PrintTimeMinutes int    `json:"print_time_minutes"`
 	PrintTimeDisplay string `json:"print_time_display"` // "5h30m"
 
-	// Cost preset and additional costs
-	CostPresetID        *string `json:"cost_preset_id,omitempty"`
-	AdditionalLaborCost *int64  `json:"additional_labor_cost,omitempty"` // cents
-	AdditionalNotes     *string `json:"additional_notes,omitempty"`
+	// Labor breakdown for this item
+	SetupTimeMinutes        int `json:"setup_time_minutes"`           // Setup time for this product (minutes)
+	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
+
+	// Cost preset and additional notes
+	CostPresetID    *string `json:"cost_preset_id,omitempty"`
+	AdditionalNotes *string `json:"additional_notes,omitempty"`
 
 	// Calculated costs for this item
-	FilamentCost  int64 `json:"filament_cost"`   // cents
-	WasteCost     int64 `json:"waste_cost"`      // cents
-	EnergyCost    int64 `json:"energy_cost"`     // cents
-	LaborCost     int64 `json:"labor_cost"`      // cents
-	ItemTotalCost int64 `json:"item_total_cost"` // cents (sum of all)
-	UnitPrice     int64 `json:"unit_price"`      // cents per unit
+	FilamentCost    int64 `json:"filament_cost"`      // cents
+	WasteCost       int64 `json:"waste_cost"`         // cents
+	EnergyCost      int64 `json:"energy_cost"`        // cents
+	SetupCost       int64 `json:"setup_cost"`         // cents
+	ManualLaborCost int64 `json:"manual_labor_cost"`  // cents
+	ItemTotalCost   int64 `json:"item_total_cost"`    // cents (sum of all)
+	UnitPrice       int64 `json:"unit_price"`         // cents per unit
 
 	// Filaments used in this item
 	Filaments []FilamentUsageInfo `json:"filaments"`

@@ -417,11 +417,11 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		energyPreset, _ = r.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy")
 	}
 
-	var totalFilamentCost, totalWasteCost, totalEnergyCost, totalLaborCost int64
+	var totalFilamentCost, totalWasteCost, totalEnergyCost, totalSetupCost, totalManualLaborCost int64
 
 	// Process each item (product)
 	for _, item := range items {
-		var itemFilamentCost, itemWasteCost, itemEnergyCost, itemLaborCost int64
+		var itemFilamentCost, itemWasteCost, itemEnergyCost, itemSetupCost, itemManualLaborCost int64
 
 		// 1. Get filaments for this item
 		itemFilaments, err := r.GetItemFilaments(ctx, item.ID)
@@ -440,9 +440,8 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 				continue
 			}
 
-			// Quantity já é o total (não precisa multiplicar por ProductQuantity!)
 			gramsTotal := itemFil.Quantity
-			cost := (gramsTotal / 1000.0) * filament.PricePerKg // PricePerKg already in cents
+			cost := (gramsTotal / 1000.0) * filament.PricePerKg
 			itemFilamentCost += int64(cost)
 			totalGrams += gramsTotal
 			totalPrice += filament.PricePerKg
@@ -457,7 +456,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			wastePerChange := 15.0 // grams
 			numChanges := len(itemFilaments) - 1
 			totalWaste := wastePerChange * float64(numChanges)
-			itemWasteCost = int64((totalWaste / 1000.0) * avgPrice) // avgPrice already in cents
+			itemWasteCost = int64((totalWaste / 1000.0) * avgPrice)
 		}
 
 		// 4. Calculate energy cost (proportional to this item's print time)
@@ -485,10 +484,8 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			}
 		}
 
-		// 5. Calculate labor cost (base + additional)
-		itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
-
-		// Base labor cost from preset
+		// 5. Calculate setup cost (NEW)
+		// 6. Calculate manual labor cost (NEW)
 		var laborRate float64
 		if item.CostPresetID != nil {
 			r.db.WithContext(ctx).
@@ -499,44 +496,93 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		}
 
 		if laborRate > 0 {
-			itemLaborCost = int64(itemHours * laborRate * 100) // Convert to cents
+			// Setup cost: (SetupTimeMinutes / 60) * LaborCostPerHour * 100
+			if item.SetupTimeMinutes > 0 {
+				setupHours := float64(item.SetupTimeMinutes) / 60.0
+				itemSetupCost = int64(setupHours * laborRate * 100) // Convert to cents
+			}
+
+			// Manual labor cost: (ManualLaborMinutesTotal / 60) * LaborCostPerHour * 100
+			if item.ManualLaborMinutesTotal > 0 {
+				manualLaborHours := float64(item.ManualLaborMinutesTotal) / 60.0
+				itemManualLaborCost = int64(manualLaborHours * laborRate * 100) // Convert to cents
+			}
 		}
 
-		// Add additional labor cost (pintura, acabamento, etc)
-		if item.AdditionalLaborCost != nil {
-			itemLaborCost += *item.AdditionalLaborCost
-		}
-
-		// 6. Calculate item total cost
+		// 7. Calculate item total cost
 		item.FilamentCost = itemFilamentCost
 		item.WasteCost = itemWasteCost
 		item.EnergyCost = itemEnergyCost
-		item.LaborCost = itemLaborCost
-		item.ItemTotalCost = itemFilamentCost + itemWasteCost + itemEnergyCost + itemLaborCost
+		item.SetupCost = itemSetupCost
+		item.ManualLaborCost = itemManualLaborCost
+		item.ItemTotalCost = itemFilamentCost + itemWasteCost + itemEnergyCost + itemSetupCost + itemManualLaborCost
 
-		// 7. Calculate unit price
+		// 8. Calculate unit price
 		if item.ProductQuantity > 0 {
 			item.UnitPrice = item.ItemTotalCost / int64(item.ProductQuantity)
 		}
 
-		// 8. Update item in database
+		// 9. Update item in database
 		if err := r.UpdateItem(ctx, item); err != nil {
 			return fmt.Errorf("failed to update item costs: %w", err)
 		}
 
-		// 9. Sum to budget totals
+		// 10. Sum to budget totals
 		totalFilamentCost += itemFilamentCost
 		totalWasteCost += itemWasteCost
 		totalEnergyCost += itemEnergyCost
-		totalLaborCost += itemLaborCost
+		totalSetupCost += itemSetupCost
+		totalManualLaborCost += itemManualLaborCost
+	}
+
+	// Calculate budget subtotal (before overhead and profit)
+	budgetSubtotal := totalFilamentCost + totalWasteCost + totalEnergyCost + totalSetupCost + totalManualLaborCost
+
+	// Calculate overhead and profit (NEW)
+	var overheadCost, profitAmount int64
+
+	// Get overhead and profit percentages from the first item's CostPreset (or budget's CostPreset if available)
+	var costPreset struct {
+		OverheadPercentage      float64
+		ProfitMarginPercentage float64
+	}
+
+	// Try to get from budget-level CostPreset first
+	if budget.CostPresetID != nil {
+		r.db.WithContext(ctx).
+			Table("cost_presets").
+			Select("overhead_percentage, profit_margin_percentage").
+			Where("id = ?", *budget.CostPresetID).
+			Scan(&costPreset)
+	} else if len(items) > 0 && items[0].CostPresetID != nil {
+		// Fallback to first item's CostPreset
+		r.db.WithContext(ctx).
+			Table("cost_presets").
+			Select("overhead_percentage, profit_margin_percentage").
+			Where("id = ?", *items[0].CostPresetID).
+			Scan(&costPreset)
+	}
+
+	// Calculate overhead: Subtotal * (OverheadPercentage / 100)
+	if costPreset.OverheadPercentage > 0 {
+		overheadCost = int64(float64(budgetSubtotal) * (costPreset.OverheadPercentage / 100.0))
+	}
+
+	// Calculate profit: (Subtotal + Overhead) * (ProfitMarginPercentage / 100)
+	if costPreset.ProfitMarginPercentage > 0 {
+		baseForProfit := budgetSubtotal + overheadCost
+		profitAmount = int64(float64(baseForProfit) * (costPreset.ProfitMarginPercentage / 100.0))
 	}
 
 	// Update budget totals
 	budget.FilamentCost = totalFilamentCost
 	budget.WasteCost = totalWasteCost
 	budget.EnergyCost = totalEnergyCost
-	budget.LaborCost = totalLaborCost
-	budget.TotalCost = totalFilamentCost + totalWasteCost + totalEnergyCost + totalLaborCost
+	budget.SetupCost = totalSetupCost
+	budget.LaborCost = totalManualLaborCost
+	budget.OverheadCost = overheadCost
+	budget.ProfitAmount = profitAmount
+	budget.TotalCost = budgetSubtotal + overheadCost + profitAmount
 
 	if err := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).
@@ -545,7 +591,10 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			"filament_cost": budget.FilamentCost,
 			"waste_cost":    budget.WasteCost,
 			"energy_cost":   budget.EnergyCost,
+			"setup_cost":    budget.SetupCost,
 			"labor_cost":    budget.LaborCost,
+			"overhead_cost": budget.OverheadCost,
+			"profit_amount": budget.ProfitAmount,
 			"total_cost":    budget.TotalCost,
 		}).Error; err != nil {
 		return fmt.Errorf("failed to update budget costs: %w", err)

@@ -43,7 +43,8 @@ jobs:
           URGENCY="${{ steps.extract-version.outputs.urgency }}"
 
           if [ "$URGENCY" == "critical" ]; then
-            MESSAGE="HOTFIX $VERSION created!
+            read -r -d '' MESSAGE << EOM || true
+HOTFIX $VERSION created!
 
 CRITICAL: Production issue detected
 FEATURE CUTOFF ACTIVE
@@ -53,9 +54,11 @@ This hotfix takes priority.
 
 Priority: CRITICAL
 Timeline: 1-2 hours
-PR will be created shortly"
+PR will be created shortly
+EOM
           else
-            MESSAGE="Release $VERSION created!
+            read -r -d '' MESSAGE << EOM || true
+Release $VERSION created!
 
 Snapshot of develop taken
 FEATURE CUTOFF ACTIVE
@@ -69,10 +72,10 @@ Quick Release Timeline: 2-8 hours
 Staging deployment: Will trigger automatically
 PR to main: Will be created shortly
 
-Tip: Check the release PR for full changelog"
+Tip: Check the release PR for full changelog
+EOM
           fi
 
-          # Escape message for JSON
           MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)
 
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \

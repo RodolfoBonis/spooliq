@@ -335,7 +335,7 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 			CostPresetID:            costPresetIDStr,
 			SetupTimeMinutes:        item.SetupTimeMinutes,
 			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-			AdditionalNotes:     item.AdditionalNotes,
+			AdditionalNotes:         item.AdditionalNotes,
 			FilamentCost:            item.FilamentCost,
 			WasteCost:               item.WasteCost,
 			EnergyCost:              item.EnergyCost,
@@ -343,10 +343,10 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 			ManualLaborCost:         item.ManualLaborCost,
 			ItemTotalCost:           item.ItemTotalCost,
 			UnitPrice:               item.UnitPrice,
-			Filaments:           filaments,
-			Order:               item.Order,
-			CreatedAt:           item.CreatedAt,
-			UpdatedAt:           item.UpdatedAt,
+			Filaments:               filaments,
+			Order:                   item.Order,
+			CreatedAt:               item.CreatedAt,
+			UpdatedAt:               item.UpdatedAt,
 		}
 	}
 

@@ -34,7 +34,7 @@ type BudgetItemModel struct {
 	PrintTimeMinutes int `gorm:"type:integer;default:0" json:"print_time_minutes"`
 
 	// Labor breakdown fields
-	SetupTimeMinutes        int `gorm:"type:integer;default:0" json:"setup_time_minutes"`           // Setup time for this product (minutes)
+	SetupTimeMinutes        int `gorm:"type:integer;default:0" json:"setup_time_minutes"`         // Setup time for this product (minutes)
 	ManualLaborMinutesTotal int `gorm:"type:integer;default:0" json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
 
 	// Additional costs specific to this item
@@ -42,12 +42,12 @@ type BudgetItemModel struct {
 	AdditionalNotes *string    `gorm:"type:text" json:"additional_notes,omitempty"`
 
 	// Calculated costs per item
-	FilamentCost    int64 `gorm:"type:bigint;default:0" json:"filament_cost"`      // cents
-	WasteCost       int64 `gorm:"type:bigint;default:0" json:"waste_cost"`         // cents
-	EnergyCost      int64 `gorm:"type:bigint;default:0" json:"energy_cost"`        // cents
-	SetupCost       int64 `gorm:"type:bigint;default:0" json:"setup_cost"`         // cents
-	ManualLaborCost int64 `gorm:"type:bigint;default:0" json:"manual_labor_cost"`  // cents
-	ItemTotalCost   int64 `gorm:"type:bigint;default:0" json:"item_total_cost"`    // cents (sum of all costs)
+	FilamentCost    int64 `gorm:"type:bigint;default:0" json:"filament_cost"`     // cents
+	WasteCost       int64 `gorm:"type:bigint;default:0" json:"waste_cost"`        // cents
+	EnergyCost      int64 `gorm:"type:bigint;default:0" json:"energy_cost"`       // cents
+	SetupCost       int64 `gorm:"type:bigint;default:0" json:"setup_cost"`        // cents
+	ManualLaborCost int64 `gorm:"type:bigint;default:0" json:"manual_labor_cost"` // cents
+	ItemTotalCost   int64 `gorm:"type:bigint;default:0" json:"item_total_cost"`   // cents (sum of all costs)
 
 	// Timestamps
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`

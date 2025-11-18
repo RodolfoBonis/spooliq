@@ -22,7 +22,7 @@ type BudgetItemRequest struct {
 	PrintTimeMinutes int `json:"print_time_minutes" validate:"gte=0,lt=60"`
 
 	// Labor breakdown for this item
-	SetupTimeMinutes        int `json:"setup_time_minutes" validate:"gte=0"`           // Setup time for this product (minutes)
+	SetupTimeMinutes        int `json:"setup_time_minutes" validate:"gte=0"`         // Setup time for this product (minutes)
 	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total" validate:"gte=0"` // Total manual labor time for ALL units (minutes)
 
 	// Filaments used in this item (1:N relationship)

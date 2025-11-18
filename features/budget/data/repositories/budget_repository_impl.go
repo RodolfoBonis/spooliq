@@ -543,7 +543,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 
 	// Get overhead and profit percentages from the first item's CostPreset (or budget's CostPreset if available)
 	var costPreset struct {
-		OverheadPercentage      float64
+		OverheadPercentage     float64
 		ProfitMarginPercentage float64
 	}
 

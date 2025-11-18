@@ -29,7 +29,7 @@ type BudgetItemEntity struct {
 	PrintTimeMinutes int `json:"print_time_minutes"`
 
 	// Labor breakdown fields
-	SetupTimeMinutes        int `json:"setup_time_minutes"`           // Setup time for this product (minutes)
+	SetupTimeMinutes        int `json:"setup_time_minutes"`         // Setup time for this product (minutes)
 	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
 
 	// Additional costs specific to this item
@@ -37,12 +37,12 @@ type BudgetItemEntity struct {
 	AdditionalNotes *string    `json:"additional_notes,omitempty"`
 
 	// Calculated costs per item
-	FilamentCost    int64 `json:"filament_cost"`      // cents
-	WasteCost       int64 `json:"waste_cost"`         // cents
-	EnergyCost      int64 `json:"energy_cost"`        // cents
-	SetupCost       int64 `json:"setup_cost"`         // cents
-	ManualLaborCost int64 `json:"manual_labor_cost"`  // cents
-	ItemTotalCost   int64 `json:"item_total_cost"`    // cents (sum of all costs)
+	FilamentCost    int64 `json:"filament_cost"`     // cents
+	WasteCost       int64 `json:"waste_cost"`        // cents
+	EnergyCost      int64 `json:"energy_cost"`       // cents
+	SetupCost       int64 `json:"setup_cost"`        // cents
+	ManualLaborCost int64 `json:"manual_labor_cost"` // cents
+	ItemTotalCost   int64 `json:"item_total_cost"`   // cents (sum of all costs)
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at"`

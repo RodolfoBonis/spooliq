@@ -164,21 +164,21 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		// Create new items with filaments
 		for _, itemReq := range *request.Items {
 			item := &entities.BudgetItemEntity{
-				ID:                  uuid.New(),
-				BudgetID:            budget.ID,
-				ProductName:         itemReq.ProductName,
-				ProductDescription:  itemReq.ProductDescription,
-				ProductQuantity:     itemReq.ProductQuantity,
-				ProductDimensions:   itemReq.ProductDimensions,
-				PrintTimeHours:      itemReq.PrintTimeHours,
-				PrintTimeMinutes:    itemReq.PrintTimeMinutes,
-				CostPresetID:        itemReq.CostPresetID,
+				ID:                      uuid.New(),
+				BudgetID:                budget.ID,
+				ProductName:             itemReq.ProductName,
+				ProductDescription:      itemReq.ProductDescription,
+				ProductQuantity:         itemReq.ProductQuantity,
+				ProductDimensions:       itemReq.ProductDimensions,
+				PrintTimeHours:          itemReq.PrintTimeHours,
+				PrintTimeMinutes:        itemReq.PrintTimeMinutes,
+				CostPresetID:            itemReq.CostPresetID,
 				SetupTimeMinutes:        itemReq.SetupTimeMinutes,
-			ManualLaborMinutesTotal: itemReq.ManualLaborMinutesTotal,
-				AdditionalNotes:     itemReq.AdditionalNotes,
-				Order:               itemReq.Order,
-				CreatedAt:           time.Now(),
-				UpdatedAt:           time.Now(),
+				ManualLaborMinutesTotal: itemReq.ManualLaborMinutesTotal,
+				AdditionalNotes:         itemReq.AdditionalNotes,
+				Order:                   itemReq.Order,
+				CreatedAt:               time.Now(),
+				UpdatedAt:               time.Now(),
 			}
 
 			// Save item
@@ -274,7 +274,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			CostPresetID:            costPresetIDStr,
 			SetupTimeMinutes:        item.SetupTimeMinutes,
 			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-			AdditionalNotes:     item.AdditionalNotes,
+			AdditionalNotes:         item.AdditionalNotes,
 			FilamentCost:            item.FilamentCost,
 			WasteCost:               item.WasteCost,
 			EnergyCost:              item.EnergyCost,
@@ -282,10 +282,10 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			ManualLaborCost:         item.ManualLaborCost,
 			ItemTotalCost:           item.ItemTotalCost,
 			UnitPrice:               item.UnitPrice,
-			Filaments:           filaments,
-			Order:               item.Order,
-			CreatedAt:           item.CreatedAt,
-			UpdatedAt:           item.UpdatedAt,
+			Filaments:               filaments,
+			Order:                   item.Order,
+			CreatedAt:               item.CreatedAt,
+			UpdatedAt:               item.UpdatedAt,
 		}
 	}
 

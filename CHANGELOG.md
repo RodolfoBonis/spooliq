@@ -1,9 +1,10 @@
 # Changelog
 
-## v2.2.0 - 2025-11-18
+## v2.2.1 - 2025-11-18
 
 ### Changes
-- chore: bump version to 2.2.0 (33704a0)
+- chore: bump version to 2.2.1 (0205b62)
+- fix: especifica versão do GoReleaser como '~> v2' (85bd9d2)
 - fix: usa printf para strings multi-linha (YAML-safe) (1a31994)
 - fix: usa heredoc correto para strings multi-linha em bash (9d25504)
 - fix: simplifica mensagens em notify-release-cutoff.yaml (6321711)

@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3.1 - 2025-11-18
+
+### Changes
+- chore: bump version to 2.3.1 (ad53e8a)
+- fix: pin GoReleaser to specific stable version v2.3.2 (42a090f)
+
+
 ## v2.3.0 - 2025-11-18
 
 ### Changes

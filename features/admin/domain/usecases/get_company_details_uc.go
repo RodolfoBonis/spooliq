@@ -30,20 +30,6 @@ func NewGetCompanyDetailsUseCase(
 }
 
 // Execute gets detailed company information (PlatformAdmin only)
-// @Summary Get company details
-// @Description Gets detailed information about a specific company (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param organization_id path string true "Organization ID (UUID)"
-// @Success 200 {object} adminEntities.CompanyDetailsResponse "Company details"
-// @Failure 400 {object} map[string]string "Invalid organization ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Company not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies/{organization_id} [get]
 func (uc *GetCompanyDetailsUseCase) Execute(ctx context.Context, userRoles []string, organizationID uuid.UUID) (*adminEntities.CompanyDetailsResponse, error) {
 	uc.logger.Info(ctx, "Admin getting company details", map[string]interface{}{
 		"organization_id": organizationID,

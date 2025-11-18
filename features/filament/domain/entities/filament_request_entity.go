@@ -17,7 +17,7 @@ type CreateFilamentRequest struct {
 	Color     string          `json:"color" validate:"required,min=1,max=100"`
 	ColorHex  string          `json:"color_hex,omitempty" validate:"omitempty,hexcolor"`
 	ColorType ColorType       `json:"color_type,omitempty"`
-	ColorData json.RawMessage `json:"color_data,omitempty"`
+	ColorData json.RawMessage `json:"color_data,omitempty" swaggertype:"object"`
 
 	// Physical properties
 	Diameter   float64  `json:"diameter" validate:"required,gt=0,lte=10"`
@@ -46,7 +46,7 @@ type UpdateFilamentRequest struct {
 	Color     *string          `json:"color,omitempty" validate:"omitempty,min=1,max=100"`
 	ColorHex  *string          `json:"color_hex,omitempty" validate:"omitempty,hexcolor"`
 	ColorType *ColorType       `json:"color_type,omitempty"`
-	ColorData *json.RawMessage `json:"color_data,omitempty"`
+	ColorData *json.RawMessage `json:"color_data,omitempty" swaggertype:"object"`
 
 	// Physical properties
 	Diameter   *float64 `json:"diameter,omitempty" validate:"omitempty,gt=0,lte=10"`

@@ -33,20 +33,6 @@ func NewGetSubscriptionDetailsUseCase(
 }
 
 // Execute gets detailed subscription information (PlatformAdmin only)
-// @Summary Get subscription details
-// @Description Gets detailed information about a company's subscription (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param organization_id path string true "Organization ID (UUID)"
-// @Success 200 {object} adminEntities.SubscriptionDetailsResponse "Subscription details"
-// @Failure 400 {object} map[string]string "Invalid organization ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Company not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions/{organization_id} [get]
 func (uc *GetSubscriptionDetailsUseCase) Execute(ctx context.Context, userRoles []string, organizationID uuid.UUID) (*adminEntities.SubscriptionDetailsResponse, error) {
 	uc.logger.Info(ctx, "Admin getting subscription details", map[string]interface{}{
 		"organization_id": organizationID,

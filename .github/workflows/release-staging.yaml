@@ -5,11 +5,12 @@ permissions:
 
 on:
   push:
-    branches: 
+    branches:
       - develop
       - 'release/**'
     paths-ignore:
       - 'version.txt'
+      - 'CHANGELOG.md'
   workflow_dispatch:
 
 env:
@@ -18,6 +19,11 @@ env:
 jobs:
   release-staging:
     runs-on: [ubuntu-latest]
+    # Block backport deployments to avoid duplicate staging deploys
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (!contains(github.event.head_commit.message, 'backport') &&
+       !contains(github.event.head_commit.message, 'Backport'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4

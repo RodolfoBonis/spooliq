@@ -15,256 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/login": {
-            "post": {
-                "description": "Authenticate user and return JWT tokens",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User Login",
-                "parameters": [
-                    {
-                        "description": "Login credentials",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.RequestLoginEntity"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful login",
-                        "schema": {
-                            "$ref": "#/definitions/entities.LoginResponseEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/logout": {
-            "post": {
-                "description": "Invalidate the refresh token and logout the user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User Logout",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer refresh token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Logout successful",
-                        "schema": {
-                            "type": "boolean"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/refresh": {
-            "post": {
-                "description": "Refresh the user's access and refresh tokens",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Refresh Login Access Token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer refresh token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Tokens refreshed",
-                        "schema": {
-                            "$ref": "#/definitions/entities.LoginResponseEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/validate": {
-            "post": {
-                "description": "Validate the current access token",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Validate Auth Token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer access token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Token is valid",
-                        "schema": {
-                            "type": "boolean"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
         "/brands": {
             "get": {
                 "security": [
@@ -567,6 +317,159 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/company/branding": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the current branding configuration for the company, or returns the default template if not configured",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company Branding"
+                ],
+                "summary": "Get company branding configuration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyBrandingEntity"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates or creates the branding configuration for the company with custom colors",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company Branding"
+                ],
+                "summary": "Update company branding configuration",
+                "parameters": [
+                    {
+                        "description": "Branding configuration",
+                        "name": "branding",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateBrandingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyBrandingEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/company/branding/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all pre-defined branding templates that users can choose from",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company Branding"
+                ],
+                "summary": "List available branding templates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/entities.BrandingTemplate"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -1008,6 +911,132 @@ const docTemplate = `{
                 }
             }
         },
+        "/login": {
+            "post": {
+                "description": "Authenticate user and return JWT tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User Login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.RequestLoginEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful login",
+                        "schema": {
+                            "$ref": "#/definitions/entities.LoginResponseEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "post": {
+                "description": "Invalidate the refresh token and logout the user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User Logout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer refresh token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logout successful",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/materials": {
             "get": {
                 "security": [
@@ -1317,6 +1346,11 @@ const docTemplate = `{
         },
         "/presets": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve presets with optional filters including type, active status, default status, global status, and user ID",
                 "consumes": [
                     "application/json"
@@ -1382,6 +1416,11 @@ const docTemplate = `{
         },
         "/presets/costs": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve all available cost presets with pricing and margin configurations",
                 "consumes": [
                     "application/json"
@@ -1414,7 +1453,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Create a new cost preset with labor costs, packaging, shipping, overhead, and profit margins",
@@ -1463,6 +1502,11 @@ const docTemplate = `{
         },
         "/presets/costs/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a specific cost preset with complete pricing and margin details by its ID",
                 "consumes": [
                     "application/json"
@@ -1507,7 +1551,7 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update an existing cost preset with new pricing and margin configurations",
@@ -1563,6 +1607,11 @@ const docTemplate = `{
         },
         "/presets/energy": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve all available energy presets with pricing and location data",
                 "consumes": [
                     "application/json"
@@ -1595,7 +1644,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Create a new energy preset with cost per kWh, currency, and location information",
@@ -1644,6 +1693,11 @@ const docTemplate = `{
         },
         "/presets/energy/currency/{currency}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve energy presets that use a specific currency (3-letter currency code)",
                 "consumes": [
                     "application/json"
@@ -1685,6 +1739,11 @@ const docTemplate = `{
         },
         "/presets/energy/location": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve energy presets filtered by country, state, and/or city",
                 "consumes": [
                     "application/json"
@@ -1737,6 +1796,11 @@ const docTemplate = `{
         },
         "/presets/energy/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a specific energy preset with complete pricing and location details by its ID",
                 "consumes": [
                     "application/json"
@@ -1781,7 +1845,7 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update an existing energy preset with new pricing and location information",
@@ -1837,6 +1901,11 @@ const docTemplate = `{
         },
         "/presets/machines": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve all available machine presets with their specifications",
                 "consumes": [
                     "application/json"
@@ -1854,7 +1923,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/entities.PresetEntity"
+                                "$ref": "#/definitions/usecases.MachinePresetResponse"
                             }
                         }
                     },
@@ -1869,7 +1938,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Create a new machine preset with specifications like build volume, nozzle diameter, and power consumption",
@@ -1918,6 +1987,11 @@ const docTemplate = `{
         },
         "/presets/machines/brand/{brand}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve all machine presets from a specific brand",
                 "consumes": [
                     "application/json"
@@ -1959,6 +2033,11 @@ const docTemplate = `{
         },
         "/presets/machines/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a specific machine preset with complete specifications by its ID",
                 "consumes": [
                     "application/json"
@@ -2003,7 +2082,7 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update an existing machine preset with new specifications",
@@ -2059,6 +2138,11 @@ const docTemplate = `{
         },
         "/presets/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve a specific preset by its unique identifier",
                 "consumes": [
                     "application/json"
@@ -2101,6 +2185,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a preset by its unique identifier",
                 "consumes": [
                     "application/json"
@@ -2139,9 +2228,4245 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/refresh": {
+            "post": {
+                "description": "Refresh the user's access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refresh Login Access Token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer refresh token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tokens refreshed",
+                        "schema": {
+                            "$ref": "#/definitions/entities.LoginResponseEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Register a new company with owner user, starts 14-day trial",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new company",
+                "parameters": [
+                    {
+                        "description": "Registration data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.RegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/companies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists all companies in the system with pagination (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all companies",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by subscription status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of companies",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListCompaniesResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/companies/{organization_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gets detailed information about a specific company (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get company details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID (UUID)",
+                        "name": "organization_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Company details",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Company not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/companies/{organization_id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Manually updates a company's subscription status (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update company subscription status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID (UUID)",
+                        "name": "organization_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_RodolfoBonis_spooliq_features_admin_domain_entities.UpdateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated company details",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Company not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/features/available": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of available features that can be added to plans (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-features"
+                ],
+                "summary": "Get available features",
+                "responses": {
+                    "200": {
+                        "description": "Available features",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.AvailableFeature"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/features/validate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validate if the provided features are available and compatible (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-features"
+                ],
+                "summary": "Validate features",
+                "parameters": [
+                    {
+                        "description": "Feature validation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureValidationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Validation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureValidationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/plans": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all subscription plans including inactive (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "List all subscription plans",
+                "responses": {
+                    "200": {
+                        "description": "Plans list",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new subscription plan (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Create subscription plan",
+                "parameters": [
+                    {
+                        "description": "Plan data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Plan created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Plan with this name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/plans/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a subscription plan (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Update subscription plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Plan data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan updated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a subscription plan (admin only)",
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Delete subscription plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gets platform analytics including MRR, subscription counts, and churn rate (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get platform stats",
+                "responses": {
+                    "200": {
+                        "description": "Platform statistics",
+                        "schema": {
+                            "$ref": "#/definitions/entities.AdminStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/bulk-activate": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Activate multiple subscription plans at once (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Bulk activate subscription plans",
+                "parameters": [
+                    {
+                        "description": "Bulk operation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bulk operation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/bulk-deactivate": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deactivate multiple subscription plans at once (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Bulk deactivate subscription plans",
+                "parameters": [
+                    {
+                        "description": "Bulk operation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bulk operation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/bulk-update": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update multiple subscription plans at once (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Bulk update subscription plans",
+                "parameters": [
+                    {
+                        "description": "Bulk update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bulk operation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/from-template": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new subscription plan from an existing template (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Create plan from template",
+                "parameters": [
+                    {
+                        "description": "Create from template request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateFromTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created plan",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/migrate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a migration to move companies from one plan to another (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Create plan migration",
+                "parameters": [
+                    {
+                        "description": "Plan migration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Migration result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/migrations/{migration_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the status of a plan migration (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get migration status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration ID",
+                        "name": "migration_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Migration status",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Migration not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/migrations/{migration_id}/execute": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Execute a scheduled plan migration immediately (admin only)",
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Execute plan migration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration ID",
+                        "name": "migration_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Migration result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Migration not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of available plan templates (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get plan templates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by category",
+                        "name": "category",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan templates",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.PlanTemplate"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific subscription plan by ID (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get subscription plan by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan details",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/{id}/can-delete": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Check if a subscription plan can be safely deleted without affecting active subscriptions (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Check if subscription plan can be deleted",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deletion validation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanDeletionCheck"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/{id}/companies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of companies using a specific subscription plan (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get companies using a subscription plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by subscription status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Companies using the plan",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListPlanCompaniesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/{id}/financial-report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed financial report for a specific subscription plan (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get subscription plan financial report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "monthly",
+                            "quarterly",
+                            "yearly"
+                        ],
+                        "type": "string",
+                        "default": "\"monthly\"",
+                        "description": "Report period",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan financial report",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanFinancialReport"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/{id}/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed audit history for a specific subscription plan (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get subscription plan audit history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan audit history",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanAuditResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscription-plans/{id}/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed statistics for a specific subscription plan (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get subscription plan statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan statistics",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanStats"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscriptions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists all subscriptions in the system with pagination (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all subscriptions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by subscription status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of subscriptions",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListSubscriptionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscriptions/{organization_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gets detailed information about a company's subscription (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get subscription details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID (UUID)",
+                        "name": "organization_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subscription details",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Company not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/subscriptions/{organization_id}/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gets payment history for a specific company (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get payment history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID (UUID)",
+                        "name": "organization_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment history",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PaymentHistoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid organization ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Company not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all budgets with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "List budgets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListBudgetsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new budget with items",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Create budget",
+                "parameters": [
+                    {
+                        "description": "Create budget request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/by-customer/{customer_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all budgets for a specific customer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "List budgets by customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListBudgetsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific budget by ID with all details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Get budget by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing budget (only drafts)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Update budget",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update budget request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a budget (soft delete)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Delete budget",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}/calculate": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Recalculate all costs for a budget",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Recalculate budget costs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Duplicate a budget as a new draft",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Duplicate budget",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the status change history for a budget",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Get budget status history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}/pdf": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generate PDF for a specific budget and return CDN URL. Use ?force=true to regenerate existing PDF.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Generate budget PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Force regenerate PDF even if exists",
+                        "name": "force",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF URL and metadata",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the status of a budget with validation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Update budget status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update status request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_RodolfoBonis_spooliq_features_budget_domain_entities.UpdateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/company": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get company information for the current organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "company"
+                ],
+                "summary": "Get company",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update company information for the current organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "company"
+                ],
+                "summary": "Update company",
+                "parameters": [
+                    {
+                        "description": "Update company request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateCompanyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new company for the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "company"
+                ],
+                "summary": "Create company",
+                "parameters": [
+                    {
+                        "description": "Create company request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateCompanyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/company/logo": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload logo image for the company",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "company"
+                ],
+                "summary": "Upload company logo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Logo image file (png, jpg, jpeg)",
+                        "name": "logo",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/customers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all customers with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "List customers",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListCustomersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new customer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Create customer",
+                "parameters": [
+                    {
+                        "description": "Create customer request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateCustomerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CustomerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/customers/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search customers with various filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Search customers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Customer name",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer email",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer phone",
+                        "name": "phone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer document (CPF/CNPJ)",
+                        "name": "document",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer city",
+                        "name": "city",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer state",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "email",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListCustomersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/customers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific customer by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Get customer by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Customer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CustomerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing customer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Update customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Customer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update customer request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateCustomerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CustomerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a customer (soft delete)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Delete customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Customer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payment-methods": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all payment methods for the organization",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "List payment methods",
+                "responses": {
+                    "200": {
+                        "description": "Payment methods list",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.PaymentMethodResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tokenize and save a credit card for the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Add payment method",
+                "parameters": [
+                    {
+                        "description": "Payment method data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.PaymentMethodCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Payment method created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PaymentMethodResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Company not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payment-methods/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a payment method",
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Delete payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment method deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID or cannot delete primary",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment method not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payment-methods/{id}/set-primary": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Set a payment method as primary (and unset others)",
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Set primary payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment method set as primary",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment method not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/plans": {
+            "get": {
+                "description": "List all active subscription plans available for subscription",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "List active subscription plans",
+                "responses": {
+                    "200": {
+                        "description": "Plans list",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/subscriptions/cancel": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cancel the current active subscription",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Cancel subscription",
+                "responses": {
+                    "200": {
+                        "description": "Subscription cancelled",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "No active subscription",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/subscriptions/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed status of the current subscription",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Get subscription status",
+                "responses": {
+                    "200": {
+                        "description": "Subscription status",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.SubscribeResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No active subscription",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/subscriptions/subscribe": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Subscribe to a subscription plan with chosen payment method",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Subscribe to a plan",
+                "parameters": [
+                    {
+                        "description": "Subscription data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.SubscribeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Subscription created",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.SubscribeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan or payment method not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/uploads/file": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a generic file (PDF, 3MF, images, etc.)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "uploads"
+                ],
+                "summary": "Upload file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional folder path",
+                        "name": "folder",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/uploads/logo": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a logo image for the company",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "uploads"
+                ],
+                "summary": "Upload company logo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Logo file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists all users within the organization (Owner and OrgAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List all users",
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.UserEntity"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new user within the organization (Owner and OrgAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "description": "User creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.UserEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "User already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gets a user by ID (Owner, OrgAdmin, or self)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details",
+                        "schema": {
+                            "$ref": "#/definitions/entities.UserEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates a user (Owner can update anyone, OrgAdmin can update users only, not self)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.UserEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a user (Owner can delete anyone except self, OrgAdmin can delete users only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User deleted successfully"
+                    },
+                    "400": {
+                        "description": "Invalid user ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/validate_token": {
+            "post": {
+                "description": "Validate the current access token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Validate Auth Token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token is valid",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "entities.AdminStats": {
+            "type": "object",
+            "properties": {
+                "active_subscriptions": {
+                    "type": "integer"
+                },
+                "churn_rate": {
+                    "description": "percentage",
+                    "type": "number"
+                },
+                "overdue_subscriptions": {
+                    "type": "integer"
+                },
+                "total_companies": {
+                    "type": "integer"
+                },
+                "total_mrr": {
+                    "description": "Monthly Recurring Revenue in cents",
+                    "type": "number"
+                },
+                "trial_subscriptions": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.AvailableFeature": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.BrandEntity": {
             "type": "object",
             "properties": {
@@ -2160,6 +6485,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -2176,6 +6505,514 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.BrandingTemplate": {
+            "type": "object",
+            "properties": {
+                "colors": {
+                    "$ref": "#/definitions/entities.CompanyBrandingEntity"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.BudgetItemFilamentRequest": {
+            "type": "object",
+            "required": [
+                "filament_id",
+                "quantity"
+            ],
+            "properties": {
+                "filament_id": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "quantity": {
+                    "description": "gramas TOTAL",
+                    "type": "number"
+                }
+            }
+        },
+        "entities.BudgetItemRequest": {
+            "type": "object",
+            "required": [
+                "filaments",
+                "product_name",
+                "product_quantity"
+            ],
+            "properties": {
+                "additional_notes": {
+                    "description": "Optional: notes specific to this item",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "cost_preset_id": {
+                    "description": "Optional: specific cost preset for this item",
+                    "type": "string"
+                },
+                "filaments": {
+                    "description": "Filaments used in this item (1:N relationship)",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemFilamentRequest"
+                    }
+                },
+                "manual_labor_minutes_total": {
+                    "description": "Total manual labor time for ALL units (minutes)",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "order": {
+                    "description": "Order in the budget",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "print_time_hours": {
+                    "description": "Print time for THIS item",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "print_time_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "product_description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "product_dimensions": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "product_name": {
+                    "description": "Product information (customer-facing)",
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "product_quantity": {
+                    "description": "number of units",
+                    "type": "integer"
+                },
+                "setup_time_minutes": {
+                    "description": "Labor breakdown for this item",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "entities.BudgetItemResponse": {
+            "type": "object",
+            "properties": {
+                "additional_notes": {
+                    "type": "string"
+                },
+                "budget_id": {
+                    "type": "string"
+                },
+                "cost_preset_id": {
+                    "description": "Cost preset and additional notes",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "energy_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "filament_cost": {
+                    "description": "Calculated costs for this item",
+                    "type": "integer"
+                },
+                "filaments": {
+                    "description": "Filaments used in this item",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.FilamentUsageInfo"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "item_total_cost": {
+                    "description": "cents (sum of all)",
+                    "type": "integer"
+                },
+                "manual_labor_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "manual_labor_minutes_total": {
+                    "description": "Total manual labor time for ALL units (minutes)",
+                    "type": "integer"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "print_time_display": {
+                    "description": "\"5h30m\"",
+                    "type": "string"
+                },
+                "print_time_hours": {
+                    "description": "Print time for this item",
+                    "type": "integer"
+                },
+                "print_time_minutes": {
+                    "type": "integer"
+                },
+                "product_description": {
+                    "type": "string"
+                },
+                "product_dimensions": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "description": "Product information (customer-facing)",
+                    "type": "string"
+                },
+                "product_quantity": {
+                    "type": "integer"
+                },
+                "setup_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "setup_time_minutes": {
+                    "description": "Labor breakdown for this item",
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "description": "cents per unit",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "waste_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.BudgetResponse": {
+            "type": "object",
+            "properties": {
+                "cost_preset_id": {
+                    "description": "For overhead/profit percentages",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "Timestamps",
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/entities.CustomerInfo"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "description": "Additional fields for PDF generation",
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_cost": {
+                    "description": "cents - Sum of all items energy costs",
+                    "type": "integer"
+                },
+                "energy_preset": {
+                    "$ref": "#/definitions/entities.PresetInfo"
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "filament_cost": {
+                    "description": "Calculated costs (in cents for precision)",
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "include_energy_cost": {
+                    "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_waste_cost": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemResponse"
+                    }
+                },
+                "labor_cost": {
+                    "description": "cents - Sum of all items manual labor costs",
+                    "type": "integer"
+                },
+                "machine_preset": {
+                    "$ref": "#/definitions/entities.PresetInfo"
+                },
+                "machine_preset_id": {
+                    "description": "Presets used for calculations",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "description": "observações adicionais",
+                    "type": "string"
+                },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
+                "overhead_cost": {
+                    "description": "cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)",
+                    "type": "integer"
+                },
+                "owner_user_id": {
+                    "description": "Ownership",
+                    "type": "string"
+                },
+                "payment_terms": {
+                    "description": "condições de pagamento",
+                    "type": "string"
+                },
+                "pdf_url": {
+                    "description": "URL do PDF gerado",
+                    "type": "string"
+                },
+                "print_time_hours": {
+                    "description": "Print time (manual input for now)",
+                    "type": "integer"
+                },
+                "print_time_minutes": {
+                    "type": "integer"
+                },
+                "profit_amount": {
+                    "description": "cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)",
+                    "type": "integer"
+                },
+                "setup_cost": {
+                    "description": "cents - Sum of all items setup costs",
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/entities.BudgetStatus"
+                },
+                "status_history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
+                    }
+                },
+                "total_cost": {
+                    "description": "cents - Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit",
+                    "type": "integer"
+                },
+                "total_print_time_display": {
+                    "description": "\"14h15m\"",
+                    "type": "string"
+                },
+                "total_print_time_hours": {
+                    "description": "Total print time (sum of all items)",
+                    "type": "integer"
+                },
+                "total_print_time_minutes": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "waste_cost": {
+                    "description": "cents - Sum of all items waste costs",
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.BudgetStatus": {
+            "type": "string",
+            "enum": [
+                "draft",
+                "sent",
+                "approved",
+                "rejected",
+                "printing",
+                "completed"
+            ],
+            "x-enum-comments": {
+                "StatusApproved": "StatusApproved represents an approved budget",
+                "StatusCompleted": "StatusCompleted represents a completed budget",
+                "StatusDraft": "StatusDraft represents a budget in draft state",
+                "StatusPrinting": "StatusPrinting represents a budget currently being printed",
+                "StatusRejected": "StatusRejected represents a rejected budget",
+                "StatusSent": "StatusSent represents a budget sent to customer"
+            },
+            "x-enum-descriptions": [
+                "StatusDraft represents a budget in draft state",
+                "StatusSent represents a budget sent to customer",
+                "StatusApproved represents an approved budget",
+                "StatusRejected represents a rejected budget",
+                "StatusPrinting represents a budget currently being printed",
+                "StatusCompleted represents a completed budget"
+            ],
+            "x-enum-varnames": [
+                "StatusDraft",
+                "StatusSent",
+                "StatusApproved",
+                "StatusRejected",
+                "StatusPrinting",
+                "StatusCompleted"
+            ]
+        },
+        "entities.BudgetStatusHistoryEntity": {
+            "type": "object",
+            "properties": {
+                "budget_id": {
+                    "type": "string"
+                },
+                "changed_by": {
+                    "description": "user_id",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "new_status": {
+                    "$ref": "#/definitions/entities.BudgetStatus"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "previous_status": {
+                    "$ref": "#/definitions/entities.BudgetStatus"
+                }
+            }
+        },
+        "entities.BudgetSummary": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_cost": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.BulkOperationItem": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "plan_name": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "entities.BulkOperationRequest": {
+            "type": "object",
+            "required": [
+                "plan_ids",
+                "reason"
+            ],
+            "properties": {
+                "plan_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.BulkOperationResult": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BulkOperationItem"
+                    }
+                },
+                "successful": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "total_requested": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.BulkUpdateRequest": {
+            "type": "object",
+            "required": [
+                "plan_ids",
+                "reason",
+                "updates"
+            ],
+            "properties": {
+                "plan_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "updates": {
+                    "type": "object",
+                    "additionalProperties": true
                 }
             }
         },
@@ -2202,6 +7039,247 @@ const docTemplate = `{
                 "ColorTypeCarbonFiber"
             ]
         },
+        "entities.CompanyBrandingEntity": {
+            "type": "object",
+            "properties": {
+                "accent_color": {
+                    "description": "Accent colors",
+                    "type": "string"
+                },
+                "background_color": {
+                    "description": "Background colors",
+                    "type": "string"
+                },
+                "body_text_color": {
+                    "type": "string"
+                },
+                "border_color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "header_bg_color": {
+                    "description": "Header colors",
+                    "type": "string"
+                },
+                "header_text_color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "primary_color": {
+                    "description": "Primary colors",
+                    "type": "string"
+                },
+                "primary_text_color": {
+                    "type": "string"
+                },
+                "secondary_color": {
+                    "description": "Secondary colors",
+                    "type": "string"
+                },
+                "secondary_text_color": {
+                    "type": "string"
+                },
+                "table_header_bg_color": {
+                    "type": "string"
+                },
+                "table_row_alt_bg_color": {
+                    "type": "string"
+                },
+                "template_name": {
+                    "type": "string"
+                },
+                "title_color": {
+                    "description": "Text colors",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CompanyDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Note: Asaas info moved to PaymentGatewayLink table\nAsaasCustomerID and AsaasSubscriptionID can be queried from payment_gateway_links if needed",
+                    "type": "string"
+                },
+                "current_plan": {
+                    "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "is_platform_company": {
+                    "type": "boolean"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "status_updated_at": {
+                    "type": "string"
+                },
+                "subscription_plan_id": {
+                    "description": "UUID as string, FK to subscription_plans",
+                    "type": "string"
+                },
+                "subscription_started_at": {
+                    "type": "string"
+                },
+                "subscription_status": {
+                    "type": "string"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CompanyListItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current_plan": {
+                    "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_platform_company": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "subscription_plan_id": {
+                    "description": "UUID as string",
+                    "type": "string"
+                },
+                "subscription_status": {
+                    "type": "string"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CompanyResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "current_plan": {
+                    "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                },
+                "document": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "is_platform_company": {
+                    "type": "boolean"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "status_updated_at": {
+                    "type": "string"
+                },
+                "subscription_plan_id": {
+                    "description": "UUID as string",
+                    "type": "string"
+                },
+                "subscription_started_at": {
+                    "type": "string"
+                },
+                "subscription_status": {
+                    "description": "Subscription fields",
+                    "type": "string"
+                },
+                "trade_name": {
+                    "type": "string"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.CostPresetEntity": {
             "type": "object",
             "properties": {
@@ -2210,6 +7288,10 @@ const docTemplate = `{
                 },
                 "labor_cost_per_hour": {
                     "type": "number"
+                },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
                 },
                 "overhead_percentage": {
                     "type": "number"
@@ -2234,6 +7316,170 @@ const docTemplate = `{
                 },
                 "support_removal_cost_per_hour": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.CreateBudgetRequest": {
+            "type": "object",
+            "required": [
+                "customer_id",
+                "items",
+                "name"
+            ],
+            "properties": {
+                "customer_id": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "description": "Additional fields for PDF",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "include_energy_cost": {
+                    "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_waste_cost": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "Items (products)",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemRequest"
+                    }
+                },
+                "machine_preset_id": {
+                    "description": "Global presets (apply to all items unless overridden)",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "payment_terms": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
+        },
+        "entities.CreateCompanyRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "document": {
+                    "description": "CNPJ",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "instagram": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "logo_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "state": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "trade_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "website": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "whatsapp": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "zip_code": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "entities.CreateCustomerRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "document": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "state": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "zip_code": {
+                    "type": "string",
+                    "maxLength": 20
                 }
             }
         },
@@ -2263,17 +7509,13 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "color_data": {
-                    "type": "string"
+                    "type": "object"
                 },
                 "color_hex": {
                     "type": "string"
                 },
                 "color_type": {
                     "$ref": "#/definitions/entities.ColorType"
-                },
-                "density": {
-                    "description": "Technical specifications",
-                    "type": "number"
                 },
                 "description": {
                     "type": "string",
@@ -2283,9 +7525,6 @@ const docTemplate = `{
                     "description": "Physical properties",
                     "type": "number",
                     "maximum": 10
-                },
-                "hardness": {
-                    "type": "string"
                 },
                 "material_id": {
                     "type": "string"
@@ -2303,11 +7542,8 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
-                "price_per_meter": {
-                    "type": "number",
-                    "minimum": 0
-                },
                 "print_temperature": {
+                    "description": "Technical specifications",
                     "type": "integer",
                     "maximum": 500,
                     "minimum": 0
@@ -2316,11 +7552,152 @@ const docTemplate = `{
                     "description": "Additional properties",
                     "type": "string"
                 },
-                "uv_resistance": {
-                    "type": "boolean"
-                },
                 "weight": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.CreateFromTemplateRequest": {
+            "type": "object",
+            "required": [
+                "reason",
+                "template_id"
+            ],
+            "properties": {
+                "customizations": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password",
+                "user_type"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "user_type": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "user"
+                    ]
+                }
+            }
+        },
+        "entities.CustomerEntity": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "document": {
+                    "description": "CPF/CNPJ",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
+                "owner_user_id": {
+                    "description": "For audit trail",
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CustomerInfo": {
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CustomerResponse": {
+            "type": "object",
+            "properties": {
+                "budget_count": {
+                    "type": "integer"
+                },
+                "budgets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetSummary"
+                    }
+                },
+                "customer": {
+                    "$ref": "#/definitions/entities.CustomerEntity"
+                },
+                "total_budgets": {
+                    "description": "Total em centavos",
+                    "type": "integer"
                 }
             }
         },
@@ -2345,6 +7722,10 @@ const docTemplate = `{
                 "off_peak_hour_multiplier": {
                     "type": "number"
                 },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
                 "peak_hour_multiplier": {
                     "type": "number"
                 },
@@ -2359,98 +7740,44 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.FilamentEntity": {
+        "entities.FeatureValidationRequest": {
+            "type": "object",
+            "required": [
+                "features"
+            ],
+            "properties": {
+                "features": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanTemplateFeature"
+                    }
+                }
+            }
+        },
+        "entities.FeatureValidationResult": {
             "type": "object",
             "properties": {
-                "bed_temperature": {
-                    "description": "°C",
-                    "type": "integer"
+                "invalid_features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.InvalidFeatureError"
+                    }
                 },
-                "brand_id": {
-                    "description": "Foreign keys for metadata",
-                    "type": "string"
-                },
-                "color": {
-                    "description": "Legacy color fields (maintained for backward compatibility)",
-                    "type": "string"
-                },
-                "color_data": {
-                    "type": "string"
-                },
-                "color_hex": {
-                    "type": "string"
-                },
-                "color_preview": {
-                    "type": "string"
-                },
-                "color_type": {
-                    "description": "Advanced color system",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/entities.ColorType"
-                        }
-                    ]
-                },
-                "created_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "density": {
-                    "description": "Technical specifications",
-                    "type": "number"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "diameter": {
-                    "description": "Physical properties",
-                    "type": "number"
-                },
-                "hardness": {
-                    "description": "Shore hardness",
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_active": {
+                "is_valid": {
                     "type": "boolean"
                 },
-                "material_id": {
-                    "type": "string"
+                "suggestions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
-                "name": {
-                    "type": "string"
-                },
-                "owner_user_id": {
-                    "description": "Ownership and access control",
-                    "type": "string"
-                },
-                "price_per_kg": {
-                    "type": "number"
-                },
-                "price_per_meter": {
-                    "type": "number"
-                },
-                "print_temperature": {
-                    "description": "°C",
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "url": {
-                    "description": "Additional properties",
-                    "type": "string"
-                },
-                "uv_resistance": {
-                    "type": "boolean"
-                },
-                "weight": {
-                    "type": "number"
+                "valid_features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanTemplateFeature"
+                    }
                 }
             }
         },
@@ -2473,7 +7800,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "color_data": {
-                    "type": "string"
+                    "type": "object"
                 },
                 "color_hex": {
                     "type": "string"
@@ -2496,20 +7823,12 @@ const docTemplate = `{
                 "deleted_at": {
                     "type": "string"
                 },
-                "density": {
-                    "description": "Technical specifications",
-                    "type": "number"
-                },
                 "description": {
                     "type": "string"
                 },
                 "diameter": {
                     "description": "Physical properties",
                     "type": "number"
-                },
-                "hardness": {
-                    "description": "Shore hardness",
-                    "type": "string"
                 },
                 "id": {
                     "type": "string"
@@ -2526,6 +7845,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
                 "owner_user_id": {
                     "description": "Ownership and access control",
                     "type": "string"
@@ -2533,11 +7856,8 @@ const docTemplate = `{
                 "price_per_kg": {
                     "type": "number"
                 },
-                "price_per_meter": {
-                    "type": "number"
-                },
                 "print_temperature": {
-                    "description": "°C",
+                    "description": "Technical specifications",
                     "type": "integer"
                 },
                 "updated_at": {
@@ -2547,10 +7867,52 @@ const docTemplate = `{
                     "description": "Additional properties",
                     "type": "string"
                 },
-                "uv_resistance": {
-                    "type": "boolean"
-                },
                 "weight": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.FilamentUsageInfo": {
+            "type": "object",
+            "properties": {
+                "brand_name": {
+                    "type": "string"
+                },
+                "color": {
+                    "description": "Legacy color field (maintained for backward compatibility)",
+                    "type": "string"
+                },
+                "color_data": {
+                    "type": "object"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "color_preview": {
+                    "type": "string"
+                },
+                "color_type": {
+                    "description": "Advanced color system",
+                    "type": "string"
+                },
+                "cost": {
+                    "description": "centavos",
+                    "type": "integer"
+                },
+                "filament_id": {
+                    "type": "string"
+                },
+                "filament_name": {
+                    "type": "string"
+                },
+                "material_name": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "description": "gramas TOTAL para este item",
                     "type": "number"
                 }
             }
@@ -2572,7 +7934,7 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entities.FilamentEntity"
+                        "$ref": "#/definitions/entities.FilamentResponse"
                     }
                 },
                 "limit": {
@@ -2613,6 +7975,132 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/entities.MaterialEntity"
+                }
+            }
+        },
+        "entities.InvalidFeatureError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "feature": {
+                    "$ref": "#/definitions/entities.PlanTemplateFeature"
+                }
+            }
+        },
+        "entities.ListBudgetsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.ListCompaniesResponse": {
+            "type": "object",
+            "properties": {
+                "companies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.CompanyListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.ListCustomersResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.CustomerResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.ListPlanCompaniesResponse": {
+            "type": "object",
+            "properties": {
+                "companies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanCompanyListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.ListSubscriptionsResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "subscriptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SubscriptionListItem"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -2676,6 +8164,10 @@ const docTemplate = `{
                 "nozzle_diameter": {
                     "type": "number"
                 },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
                 "power_consumption": {
                     "type": "number"
                 },
@@ -2700,6 +8192,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "description": "Multi-tenancy",
                     "type": "string"
                 },
                 "tempExtruder": {
@@ -2733,6 +8229,599 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.MigrationCompanyItem": {
+            "type": "object",
+            "properties": {
+                "company_id": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "entities.PaymentHistoryItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "asaas_payment_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_url": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PaymentHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentHistoryItem"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PaymentMethodCreateRequest": {
+            "type": "object",
+            "required": [
+                "ccv",
+                "expiry_month",
+                "expiry_year",
+                "holder_name",
+                "number"
+            ],
+            "properties": {
+                "ccv": {
+                    "description": "Will be sent to Asaas, not stored",
+                    "type": "string"
+                },
+                "expiry_month": {
+                    "type": "string"
+                },
+                "expiry_year": {
+                    "type": "string"
+                },
+                "holder_name": {
+                    "type": "string"
+                },
+                "number": {
+                    "description": "Will be tokenized, not stored",
+                    "type": "string"
+                },
+                "set_as_primary": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "entities.PaymentMethodResponse": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "expiry_month": {
+                    "type": "string"
+                },
+                "expiry_year": {
+                    "type": "string"
+                },
+                "holder_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "last_4_digits": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PlanAuditEntry": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "created, updated, deleted, activated, deactivated",
+                    "type": "string"
+                },
+                "changes": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "plan_name": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "user_email": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PlanAuditResponse": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanAuditEntry"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PlanCompanyListItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_payment_date": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "next_payment_date": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "subscription_started_at": {
+                    "type": "string"
+                },
+                "subscription_status": {
+                    "type": "string"
+                },
+                "total_users": {
+                    "type": "integer"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PlanDeletionCheck": {
+            "type": "object",
+            "properties": {
+                "active_companies": {
+                    "type": "integer"
+                },
+                "blocking_issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "can_delete": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "recommendations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "trial_companies": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PlanFeatureCreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PlanFeatureEntity": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PlanFinancialReport": {
+            "type": "object",
+            "properties": {
+                "plan_id": {
+                    "type": "string"
+                },
+                "plan_name": {
+                    "type": "string"
+                },
+                "projections": {
+                    "$ref": "#/definitions/entities.PlanRevenueProjections"
+                },
+                "report_period": {
+                    "description": "\"monthly\", \"quarterly\", \"yearly\"",
+                    "type": "string"
+                },
+                "revenue": {
+                    "$ref": "#/definitions/entities.PlanRevenueMetrics"
+                },
+                "subscriptions": {
+                    "$ref": "#/definitions/entities.PlanSubscriptionMetrics"
+                },
+                "trends": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanRevenueTrendPoint"
+                    }
+                }
+            }
+        },
+        "entities.PlanMigrationRequest": {
+            "type": "object",
+            "required": [
+                "from_plan_id",
+                "reason",
+                "to_plan_id"
+            ],
+            "properties": {
+                "company_ids": {
+                    "description": "If empty, migrates all companies",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "from_plan_id": {
+                    "type": "string"
+                },
+                "notify_users": {
+                    "type": "boolean"
+                },
+                "options": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "scheduled_for": {
+                    "description": "If empty, immediate",
+                    "type": "string"
+                },
+                "to_plan_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PlanMigrationResult": {
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "type": "string"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "from_plan_id": {
+                    "type": "string"
+                },
+                "from_plan_name": {
+                    "type": "string"
+                },
+                "migration_id": {
+                    "type": "string"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.MigrationCompanyItem"
+                    }
+                },
+                "scheduled_for": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "scheduled, in_progress, completed, failed",
+                    "type": "string"
+                },
+                "successful": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "to_plan_id": {
+                    "type": "string"
+                },
+                "to_plan_name": {
+                    "type": "string"
+                },
+                "total_companies": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PlanRevenueMetrics": {
+            "type": "object",
+            "properties": {
+                "average_per_user": {
+                    "type": "number"
+                },
+                "current_period": {
+                    "type": "number"
+                },
+                "growth_percentage": {
+                    "type": "number"
+                },
+                "previous_period": {
+                    "type": "number"
+                },
+                "total_lifetime": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.PlanRevenueProjections": {
+            "type": "object",
+            "properties": {
+                "methodology": {
+                    "description": "How the projection was calculated",
+                    "type": "string"
+                },
+                "next_month": {
+                    "type": "number"
+                },
+                "next_quarter": {
+                    "type": "number"
+                },
+                "next_year": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.PlanRevenueTrendPoint": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "description": "\"2024-01\", \"2024-Q1\", etc",
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "subscriptions": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PlanStats": {
+            "type": "object",
+            "properties": {
+                "active_companies": {
+                    "type": "integer"
+                },
+                "annual_revenue": {
+                    "type": "number"
+                },
+                "churn_rate": {
+                    "type": "number"
+                },
+                "conversion_rate": {
+                    "description": "trial to paid conversion",
+                    "type": "number"
+                },
+                "monthly_revenue": {
+                    "type": "number"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "plan_name": {
+                    "type": "string"
+                },
+                "total_active_users": {
+                    "type": "integer"
+                },
+                "total_companies": {
+                    "type": "integer"
+                },
+                "trial_companies": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PlanSubscriptionMetrics": {
+            "type": "object",
+            "properties": {
+                "cancelled_subscriptions": {
+                    "type": "integer"
+                },
+                "churn_rate": {
+                    "type": "number"
+                },
+                "conversion_rate": {
+                    "type": "number"
+                },
+                "new_subscriptions": {
+                    "type": "integer"
+                },
+                "retention_rate": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.PlanTemplate": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "plan_data": {
+                    "$ref": "#/definitions/entities.PlanTemplateData"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PlanTemplateData": {
+            "type": "object",
+            "properties": {
+                "cycle": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanTemplateFeature"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.PlanTemplateFeature": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.PresetEntity": {
             "type": "object",
             "properties": {
@@ -2757,6 +8846,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "organization_id": {
+                    "type": "string"
+                },
                 "type": {
                     "$ref": "#/definitions/entities.PresetType"
                 },
@@ -2764,6 +8856,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PresetInfo": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"machine\", \"energy\", \"cost\"",
                     "type": "string"
                 }
             }
@@ -2781,6 +8888,90 @@ const docTemplate = `{
                 "PresetTypeCost"
             ]
         },
+        "entities.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "address",
+                "address_number",
+                "city",
+                "company_document",
+                "company_name",
+                "company_phone",
+                "email",
+                "name",
+                "neighborhood",
+                "password",
+                "state",
+                "zip_code"
+            ],
+            "properties": {
+                "address": {
+                    "description": "Address",
+                    "type": "string"
+                },
+                "address_number": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "company_document": {
+                    "description": "CNPJ",
+                    "type": "string"
+                },
+                "company_name": {
+                    "description": "Company data",
+                    "type": "string"
+                },
+                "company_phone": {
+                    "type": "string"
+                },
+                "company_trade_name": {
+                    "type": "string"
+                },
+                "complement": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "User data",
+                    "type": "string",
+                    "minLength": 3
+                },
+                "neighborhood": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "state": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.RequestLoginEntity": {
             "description": "RequestLoginEntity model data",
             "type": "object",
@@ -2795,11 +8986,325 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.UpdateFilamentRequest": {
+        "entities.SubscriptionDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "type": "string"
+                },
+                "current_plan": {
+                    "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "recent_payments": {
+                    "description": "Note: Asaas info and payment timing moved to separate tables\nUse PaymentGatewayLink and SubscriptionPayments for detailed info",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentHistoryItem"
+                    }
+                },
+                "status_updated_at": {
+                    "type": "string"
+                },
+                "subscription_plan_id": {
+                    "description": "UUID as string",
+                    "type": "string"
+                },
+                "subscription_started_at": {
+                    "type": "string"
+                },
+                "subscription_status": {
+                    "type": "string"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.SubscriptionListItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "current_plan": {
+                    "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "subscription_plan_id": {
+                    "description": "UUID as string",
+                    "type": "string"
+                },
+                "subscription_status": {
+                    "type": "string"
+                },
+                "trial_ends_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.SubscriptionPlanCreateRequest": {
             "type": "object",
             "required": [
-                "id"
+                "cycle",
+                "name",
+                "price"
             ],
+            "properties": {
+                "cycle": {
+                    "type": "string",
+                    "enum": [
+                        "MONTHLY",
+                        "YEARLY"
+                    ]
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanFeatureCreateRequest"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.SubscriptionPlanResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "cycle": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanFeatureEntity"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.SubscriptionPlanUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "cycle": {
+                    "type": "string",
+                    "enum": [
+                        "MONTHLY",
+                        "YEARLY"
+                    ]
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "description": "Replace all features",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanFeatureCreateRequest"
+                    }
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.UpdateBudgetRequest": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "description": "Additional fields for PDF",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "include_energy_cost": {
+                    "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_waste_cost": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "Items (optional - if provided, replaces all items)",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemRequest"
+                    }
+                },
+                "machine_preset_id": {
+                    "description": "Global presets",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "payment_terms": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
+        },
+        "entities.UpdateCompanyRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "document": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "instagram": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "logo_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "state": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "trade_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "website": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "whatsapp": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "zip_code": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "entities.UpdateCustomerRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "document": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "state": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "zip_code": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "entities.UpdateFilamentRequest": {
+            "type": "object",
             "properties": {
                 "bed_temperature": {
                     "type": "integer",
@@ -2816,17 +9321,13 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "color_data": {
-                    "type": "string"
+                    "type": "object"
                 },
                 "color_hex": {
                     "type": "string"
                 },
                 "color_type": {
                     "$ref": "#/definitions/entities.ColorType"
-                },
-                "density": {
-                    "description": "Technical specifications",
-                    "type": "number"
                 },
                 "description": {
                     "type": "string",
@@ -2836,12 +9337,6 @@ const docTemplate = `{
                     "description": "Physical properties",
                     "type": "number",
                     "maximum": 10
-                },
-                "hardness": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
                 },
                 "is_active": {
                     "description": "Status",
@@ -2859,11 +9354,8 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
-                "price_per_meter": {
-                    "type": "number",
-                    "minimum": 0
-                },
                 "print_temperature": {
+                    "description": "Technical specifications",
                     "type": "integer",
                     "maximum": 500,
                     "minimum": 0
@@ -2872,11 +9364,19 @@ const docTemplate = `{
                     "description": "Additional properties",
                     "type": "string"
                 },
-                "uv_resistance": {
-                    "type": "boolean"
-                },
                 "weight": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -2922,6 +9422,42 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.UserEntity": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "keycloak_user_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_type": {
+                    "description": "'owner', 'admin', 'user'",
+                    "type": "string"
+                }
+            }
+        },
         "errors.HTTPError": {
             "type": "object",
             "properties": {
@@ -2940,6 +9476,55 @@ const docTemplate = `{
                 },
                 "stack_trace": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_RodolfoBonis_spooliq_features_admin_domain_entities.UpdateStatusRequest": {
+            "type": "object",
+            "required": [
+                "reason",
+                "status"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "trial",
+                        "active",
+                        "suspended",
+                        "cancelled",
+                        "permanent"
+                    ]
+                }
+            }
+        },
+        "github_com_RodolfoBonis_spooliq_features_budget_domain_entities.UpdateStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "notes": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "status": {
+                    "enum": [
+                        "draft",
+                        "sent",
+                        "approved",
+                        "rejected",
+                        "printing",
+                        "completed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.BudgetStatus"
+                        }
+                    ]
                 }
             }
         },
@@ -3119,6 +9704,188 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.MachinePresetResponse": {
+            "type": "object",
+            "properties": {
+                "bed_temperature_max": {
+                    "type": "number"
+                },
+                "brand": {
+                    "type": "string"
+                },
+                "build_volume_x": {
+                    "type": "number"
+                },
+                "build_volume_y": {
+                    "type": "number"
+                },
+                "build_volume_z": {
+                    "type": "number"
+                },
+                "cost_per_hour": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "extruder_temperature_max": {
+                    "type": "number"
+                },
+                "filament_diameter": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "layer_height_max": {
+                    "type": "number"
+                },
+                "layer_height_min": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "power_consumption": {
+                    "type": "number"
+                },
+                "print_speed_max": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.SubscribeRequest": {
+            "type": "object",
+            "required": [
+                "billing_type",
+                "plan_id"
+            ],
+            "properties": {
+                "billing_type": {
+                    "type": "string",
+                    "enum": [
+                        "CREDIT_CARD",
+                        "BOLETO",
+                        "PIX"
+                    ]
+                },
+                "payment_method_id": {
+                    "description": "Optional if using boleto/pix",
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.SubscribeResponse": {
+            "type": "object",
+            "properties": {
+                "cycle": {
+                    "type": "string"
+                },
+                "first_payment_id": {
+                    "type": "string"
+                },
+                "first_payment_invoice": {
+                    "type": "string"
+                },
+                "next_due_date": {
+                    "type": "string"
+                },
+                "plan_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "ACTIVE, PENDING, etc",
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "description": "Asaas subscription ID",
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "usecases.UpdateBrandingRequest": {
+            "type": "object",
+            "required": [
+                "accent_color",
+                "background_color",
+                "body_text_color",
+                "border_color",
+                "header_bg_color",
+                "header_text_color",
+                "primary_color",
+                "primary_text_color",
+                "secondary_color",
+                "secondary_text_color",
+                "table_header_bg_color",
+                "table_row_alt_bg_color",
+                "title_color"
+            ],
+            "properties": {
+                "accent_color": {
+                    "type": "string"
+                },
+                "background_color": {
+                    "type": "string"
+                },
+                "body_text_color": {
+                    "type": "string"
+                },
+                "border_color": {
+                    "type": "string"
+                },
+                "header_bg_color": {
+                    "type": "string"
+                },
+                "header_text_color": {
+                    "type": "string"
+                },
+                "primary_color": {
+                    "type": "string"
+                },
+                "primary_text_color": {
+                    "type": "string"
+                },
+                "secondary_color": {
+                    "type": "string"
+                },
+                "secondary_text_color": {
+                    "type": "string"
+                },
+                "table_header_bg_color": {
+                    "type": "string"
+                },
+                "table_row_alt_bg_color": {
+                    "type": "string"
+                },
+                "template_name": {
+                    "type": "string"
+                },
+                "title_color": {
                     "type": "string"
                 }
             }

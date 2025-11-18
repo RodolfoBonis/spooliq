@@ -1,4 +1,32 @@
 definitions:
+  entities.AdminStats:
+    properties:
+      active_subscriptions:
+        type: integer
+      churn_rate:
+        description: percentage
+        type: number
+      overdue_subscriptions:
+        type: integer
+      total_companies:
+        type: integer
+      total_mrr:
+        description: Monthly Recurring Revenue in cents
+        type: number
+      trial_subscriptions:
+        type: integer
+    type: object
+  entities.AvailableFeature:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
   entities.BrandEntity:
     properties:
       created_at:
@@ -11,7 +39,569 @@ definitions:
         type: string
       name:
         type: string
+      organization_id:
+        description: Multi-tenancy
+        type: string
       updated_at:
+        type: string
+    type: object
+  entities.BrandInfo:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  entities.BrandingTemplate:
+    properties:
+      colors:
+        $ref: '#/definitions/entities.CompanyBrandingEntity'
+      description:
+        type: string
+      display_name:
+        type: string
+      name:
+        type: string
+    type: object
+  entities.BudgetItemFilamentRequest:
+    properties:
+      filament_id:
+        type: string
+      order:
+        minimum: 1
+        type: integer
+      quantity:
+        description: gramas TOTAL
+        type: number
+    required:
+    - filament_id
+    - quantity
+    type: object
+  entities.BudgetItemRequest:
+    properties:
+      additional_notes:
+        description: 'Optional: notes specific to this item'
+        maxLength: 500
+        type: string
+      cost_preset_id:
+        description: 'Optional: specific cost preset for this item'
+        type: string
+      filaments:
+        description: Filaments used in this item (1:N relationship)
+        items:
+          $ref: '#/definitions/entities.BudgetItemFilamentRequest'
+        minItems: 1
+        type: array
+      manual_labor_minutes_total:
+        description: Total manual labor time for ALL units (minutes)
+        minimum: 0
+        type: integer
+      order:
+        description: Order in the budget
+        minimum: 0
+        type: integer
+      print_time_hours:
+        description: Print time for THIS item
+        minimum: 0
+        type: integer
+      print_time_minutes:
+        minimum: 0
+        type: integer
+      product_description:
+        maxLength: 1000
+        type: string
+      product_dimensions:
+        maxLength: 100
+        type: string
+      product_name:
+        description: Product information (customer-facing)
+        maxLength: 255
+        minLength: 1
+        type: string
+      product_quantity:
+        description: number of units
+        type: integer
+      setup_time_minutes:
+        description: Labor breakdown for this item
+        minimum: 0
+        type: integer
+    required:
+    - filaments
+    - product_name
+    - product_quantity
+    type: object
+  entities.BudgetItemResponse:
+    properties:
+      additional_notes:
+        type: string
+      budget_id:
+        type: string
+      cost_preset_id:
+        description: Cost preset and additional notes
+        type: string
+      created_at:
+        type: string
+      energy_cost:
+        description: cents
+        type: integer
+      filament_cost:
+        description: Calculated costs for this item
+        type: integer
+      filaments:
+        description: Filaments used in this item
+        items:
+          $ref: '#/definitions/entities.FilamentUsageInfo'
+        type: array
+      id:
+        type: string
+      item_total_cost:
+        description: cents (sum of all)
+        type: integer
+      manual_labor_cost:
+        description: cents
+        type: integer
+      manual_labor_minutes_total:
+        description: Total manual labor time for ALL units (minutes)
+        type: integer
+      order:
+        type: integer
+      print_time_display:
+        description: '"5h30m"'
+        type: string
+      print_time_hours:
+        description: Print time for this item
+        type: integer
+      print_time_minutes:
+        type: integer
+      product_description:
+        type: string
+      product_dimensions:
+        type: string
+      product_name:
+        description: Product information (customer-facing)
+        type: string
+      product_quantity:
+        type: integer
+      setup_cost:
+        description: cents
+        type: integer
+      setup_time_minutes:
+        description: Labor breakdown for this item
+        type: integer
+      unit_price:
+        description: cents per unit
+        type: integer
+      updated_at:
+        type: string
+      waste_cost:
+        description: cents
+        type: integer
+    type: object
+  entities.BudgetResponse:
+    properties:
+      cost_preset_id:
+        description: For overhead/profit percentages
+        type: string
+      created_at:
+        description: Timestamps
+        type: string
+      customer:
+        $ref: '#/definitions/entities.CustomerInfo'
+      customer_id:
+        type: string
+      deleted_at:
+        type: string
+      delivery_days:
+        description: Additional fields for PDF generation
+        type: integer
+      description:
+        type: string
+      energy_cost:
+        description: cents - Sum of all items energy costs
+        type: integer
+      energy_preset:
+        $ref: '#/definitions/entities.PresetInfo'
+      energy_preset_id:
+        type: string
+      filament_cost:
+        description: Calculated costs (in cents for precision)
+        type: integer
+      id:
+        type: string
+      include_energy_cost:
+        description: Configuration flags
+        type: boolean
+      include_waste_cost:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/entities.BudgetItemResponse'
+        type: array
+      labor_cost:
+        description: cents - Sum of all items manual labor costs
+        type: integer
+      machine_preset:
+        $ref: '#/definitions/entities.PresetInfo'
+      machine_preset_id:
+        description: Presets used for calculations
+        type: string
+      name:
+        type: string
+      notes:
+        description: observações adicionais
+        type: string
+      organization_id:
+        description: Multi-tenancy
+        type: string
+      overhead_cost:
+        description: cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)
+        type: integer
+      owner_user_id:
+        description: Ownership
+        type: string
+      payment_terms:
+        description: condições de pagamento
+        type: string
+      pdf_url:
+        description: URL do PDF gerado
+        type: string
+      print_time_hours:
+        description: Print time (manual input for now)
+        type: integer
+      print_time_minutes:
+        type: integer
+      profit_amount:
+        description: cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)
+        type: integer
+      setup_cost:
+        description: cents - Sum of all items setup costs
+        type: integer
+      status:
+        $ref: '#/definitions/entities.BudgetStatus'
+      status_history:
+        items:
+          $ref: '#/definitions/entities.BudgetStatusHistoryEntity'
+        type: array
+      total_cost:
+        description: 'cents - Final total: Filament + Waste + Energy + Setup + Labor
+          + Overhead + Profit'
+        type: integer
+      total_print_time_display:
+        description: '"14h15m"'
+        type: string
+      total_print_time_hours:
+        description: Total print time (sum of all items)
+        type: integer
+      total_print_time_minutes:
+        type: integer
+      updated_at:
+        type: string
+      waste_cost:
+        description: cents - Sum of all items waste costs
+        type: integer
+    type: object
+  entities.BudgetStatus:
+    enum:
+    - draft
+    - sent
+    - approved
+    - rejected
+    - printing
+    - completed
+    type: string
+    x-enum-comments:
+      StatusApproved: StatusApproved represents an approved budget
+      StatusCompleted: StatusCompleted represents a completed budget
+      StatusDraft: StatusDraft represents a budget in draft state
+      StatusPrinting: StatusPrinting represents a budget currently being printed
+      StatusRejected: StatusRejected represents a rejected budget
+      StatusSent: StatusSent represents a budget sent to customer
+    x-enum-descriptions:
+    - StatusDraft represents a budget in draft state
+    - StatusSent represents a budget sent to customer
+    - StatusApproved represents an approved budget
+    - StatusRejected represents a rejected budget
+    - StatusPrinting represents a budget currently being printed
+    - StatusCompleted represents a completed budget
+    x-enum-varnames:
+    - StatusDraft
+    - StatusSent
+    - StatusApproved
+    - StatusRejected
+    - StatusPrinting
+    - StatusCompleted
+  entities.BudgetStatusHistoryEntity:
+    properties:
+      budget_id:
+        type: string
+      changed_by:
+        description: user_id
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      new_status:
+        $ref: '#/definitions/entities.BudgetStatus'
+      notes:
+        type: string
+      previous_status:
+        $ref: '#/definitions/entities.BudgetStatus'
+    type: object
+  entities.BudgetSummary:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      total_cost:
+        type: integer
+    type: object
+  entities.BulkOperationItem:
+    properties:
+      error:
+        type: string
+      plan_id:
+        type: string
+      plan_name:
+        type: string
+      success:
+        type: boolean
+    type: object
+  entities.BulkOperationRequest:
+    properties:
+      plan_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      reason:
+        type: string
+    required:
+    - plan_ids
+    - reason
+    type: object
+  entities.BulkOperationResult:
+    properties:
+      failed:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/entities.BulkOperationItem'
+        type: array
+      successful:
+        type: integer
+      summary:
+        type: string
+      total_requested:
+        type: integer
+    type: object
+  entities.BulkUpdateRequest:
+    properties:
+      plan_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      reason:
+        type: string
+      updates:
+        additionalProperties: true
+        type: object
+    required:
+    - plan_ids
+    - reason
+    - updates
+    type: object
+  entities.ColorType:
+    enum:
+    - solid
+    - gradient
+    - duo
+    - rainbow
+    - metallic
+    - transparent
+    - wood-fill
+    - carbon-fiber
+    type: string
+    x-enum-varnames:
+    - ColorTypeSolid
+    - ColorTypeGradient
+    - ColorTypeDuo
+    - ColorTypeRainbow
+    - ColorTypeMetallic
+    - ColorTypeTransparent
+    - ColorTypeWoodFill
+    - ColorTypeCarbonFiber
+  entities.CompanyBrandingEntity:
+    properties:
+      accent_color:
+        description: Accent colors
+        type: string
+      background_color:
+        description: Background colors
+        type: string
+      body_text_color:
+        type: string
+      border_color:
+        type: string
+      created_at:
+        type: string
+      header_bg_color:
+        description: Header colors
+        type: string
+      header_text_color:
+        type: string
+      id:
+        type: string
+      organization_id:
+        type: string
+      primary_color:
+        description: Primary colors
+        type: string
+      primary_text_color:
+        type: string
+      secondary_color:
+        description: Secondary colors
+        type: string
+      secondary_text_color:
+        type: string
+      table_header_bg_color:
+        type: string
+      table_row_alt_bg_color:
+        type: string
+      template_name:
+        type: string
+      title_color:
+        description: Text colors
+        type: string
+      updated_at:
+        type: string
+    type: object
+  entities.CompanyDetailsResponse:
+    properties:
+      created_at:
+        description: |-
+          Note: Asaas info moved to PaymentGatewayLink table
+          AsaasCustomerID and AsaasSubscriptionID can be queried from payment_gateway_links if needed
+        type: string
+      current_plan:
+        $ref: '#/definitions/entities.SubscriptionPlanResponse'
+      email:
+        type: string
+      id:
+        type: string
+      instagram:
+        type: string
+      is_platform_company:
+        type: boolean
+      logo_url:
+        type: string
+      name:
+        type: string
+      organization_id:
+        type: string
+      phone:
+        type: string
+      status_updated_at:
+        type: string
+      subscription_plan_id:
+        description: UUID as string, FK to subscription_plans
+        type: string
+      subscription_started_at:
+        type: string
+      subscription_status:
+        type: string
+      trial_ends_at:
+        type: string
+      updated_at:
+        type: string
+      website:
+        type: string
+      whatsapp:
+        type: string
+    type: object
+  entities.CompanyListItem:
+    properties:
+      created_at:
+        type: string
+      current_plan:
+        $ref: '#/definitions/entities.SubscriptionPlanResponse'
+      email:
+        type: string
+      id:
+        type: string
+      is_platform_company:
+        type: boolean
+      name:
+        type: string
+      organization_id:
+        type: string
+      subscription_plan_id:
+        description: UUID as string
+        type: string
+      subscription_status:
+        type: string
+      trial_ends_at:
+        type: string
+    type: object
+  entities.CompanyResponse:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      created_at:
+        type: string
+      current_plan:
+        $ref: '#/definitions/entities.SubscriptionPlanResponse'
+      document:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      instagram:
+        type: string
+      is_platform_company:
+        type: boolean
+      logo_url:
+        type: string
+      name:
+        type: string
+      organization_id:
+        type: string
+      phone:
+        type: string
+      state:
+        type: string
+      status_updated_at:
+        type: string
+      subscription_plan_id:
+        description: UUID as string
+        type: string
+      subscription_started_at:
+        type: string
+      subscription_status:
+        description: Subscription fields
+        type: string
+      trade_name:
+        type: string
+      trial_ends_at:
+        type: string
+      updated_at:
+        type: string
+      website:
+        type: string
+      whatsapp:
+        type: string
+      zip_code:
         type: string
     type: object
   entities.CostPresetEntity:
@@ -20,6 +610,9 @@ definitions:
         type: string
       labor_cost_per_hour:
         type: number
+      organization_id:
+        description: Multi-tenancy
+        type: string
       overhead_percentage:
         type: number
       packaging_cost_per_item:
@@ -37,6 +630,281 @@ definitions:
       support_removal_cost_per_hour:
         type: number
     type: object
+  entities.CreateBudgetRequest:
+    properties:
+      customer_id:
+        type: string
+      delivery_days:
+        description: Additional fields for PDF
+        minimum: 0
+        type: integer
+      description:
+        maxLength: 1000
+        type: string
+      energy_preset_id:
+        type: string
+      include_energy_cost:
+        description: Configuration flags
+        type: boolean
+      include_waste_cost:
+        type: boolean
+      items:
+        description: Items (products)
+        items:
+          $ref: '#/definitions/entities.BudgetItemRequest'
+        minItems: 1
+        type: array
+      machine_preset_id:
+        description: Global presets (apply to all items unless overridden)
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      notes:
+        maxLength: 2000
+        type: string
+      payment_terms:
+        maxLength: 1000
+        type: string
+    required:
+    - customer_id
+    - items
+    - name
+    type: object
+  entities.CreateCompanyRequest:
+    properties:
+      address:
+        maxLength: 500
+        type: string
+      city:
+        maxLength: 100
+        type: string
+      document:
+        description: CNPJ
+        maxLength: 20
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      instagram:
+        maxLength: 255
+        type: string
+      logo_url:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      phone:
+        maxLength: 50
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      trade_name:
+        maxLength: 255
+        type: string
+      website:
+        maxLength: 255
+        type: string
+      whatsapp:
+        maxLength: 50
+        type: string
+      zip_code:
+        maxLength: 20
+        type: string
+    required:
+    - name
+    type: object
+  entities.CreateCustomerRequest:
+    properties:
+      address:
+        maxLength: 500
+        type: string
+      city:
+        maxLength: 255
+        type: string
+      document:
+        maxLength: 50
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      notes:
+        maxLength: 1000
+        type: string
+      phone:
+        maxLength: 50
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      zip_code:
+        maxLength: 20
+        type: string
+    required:
+    - name
+    type: object
+  entities.CreateFilamentRequest:
+    properties:
+      bed_temperature:
+        maximum: 300
+        minimum: 0
+        type: integer
+      brand_id:
+        type: string
+      color:
+        description: Color configuration
+        maxLength: 100
+        minLength: 1
+        type: string
+      color_data:
+        type: object
+      color_hex:
+        type: string
+      color_type:
+        $ref: '#/definitions/entities.ColorType'
+      description:
+        maxLength: 1000
+        type: string
+      diameter:
+        description: Physical properties
+        maximum: 10
+        type: number
+      material_id:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      owner_user_id:
+        description: Ownership
+        type: string
+      price_per_kg:
+        minimum: 0
+        type: number
+      print_temperature:
+        description: Technical specifications
+        maximum: 500
+        minimum: 0
+        type: integer
+      url:
+        description: Additional properties
+        type: string
+      weight:
+        type: number
+    required:
+    - brand_id
+    - color
+    - diameter
+    - material_id
+    - name
+    - price_per_kg
+    type: object
+  entities.CreateFromTemplateRequest:
+    properties:
+      customizations:
+        additionalProperties: true
+        type: object
+      reason:
+        type: string
+      template_id:
+        type: string
+    required:
+    - reason
+    - template_id
+    type: object
+  entities.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      user_type:
+        enum:
+        - admin
+        - user
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - user_type
+    type: object
+  entities.CustomerEntity:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      document:
+        description: CPF/CNPJ
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      notes:
+        type: string
+      organization_id:
+        description: Multi-tenancy
+        type: string
+      owner_user_id:
+        description: For audit trail
+        type: string
+      phone:
+        type: string
+      state:
+        type: string
+      updated_at:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  entities.CustomerInfo:
+    properties:
+      document:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  entities.CustomerResponse:
+    properties:
+      budget_count:
+        type: integer
+      budgets:
+        items:
+          $ref: '#/definitions/entities.BudgetSummary'
+        type: array
+      customer:
+        $ref: '#/definitions/entities.CustomerEntity'
+      total_budgets:
+        description: Total em centavos
+        type: integer
+    type: object
   entities.EnergyPresetEntity:
     properties:
       city:
@@ -51,6 +919,9 @@ definitions:
         type: string
       off_peak_hour_multiplier:
         type: number
+      organization_id:
+        description: Multi-tenancy
+        type: string
       peak_hour_multiplier:
         type: number
       provider:
@@ -60,12 +931,147 @@ definitions:
       tariff_type:
         type: string
     type: object
+  entities.FeatureValidationRequest:
+    properties:
+      features:
+        items:
+          $ref: '#/definitions/entities.PlanTemplateFeature'
+        minItems: 1
+        type: array
+    required:
+    - features
+    type: object
+  entities.FeatureValidationResult:
+    properties:
+      invalid_features:
+        items:
+          $ref: '#/definitions/entities.InvalidFeatureError'
+        type: array
+      is_valid:
+        type: boolean
+      suggestions:
+        items:
+          type: string
+        type: array
+      valid_features:
+        items:
+          $ref: '#/definitions/entities.PlanTemplateFeature'
+        type: array
+    type: object
+  entities.FilamentResponse:
+    properties:
+      bed_temperature:
+        description: °C
+        type: integer
+      brand:
+        $ref: '#/definitions/entities.BrandInfo'
+      brand_id:
+        description: Foreign keys for metadata
+        type: string
+      color:
+        description: Legacy color fields (maintained for backward compatibility)
+        type: string
+      color_data:
+        type: object
+      color_hex:
+        type: string
+      color_preview:
+        type: string
+      color_type:
+        allOf:
+        - $ref: '#/definitions/entities.ColorType'
+        description: Advanced color system
+      created_at:
+        description: Timestamps
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      diameter:
+        description: Physical properties
+        type: number
+      id:
+        type: string
+      is_active:
+        type: boolean
+      material:
+        $ref: '#/definitions/entities.MaterialInfo'
+      material_id:
+        type: string
+      name:
+        type: string
+      organization_id:
+        description: Multi-tenancy
+        type: string
+      owner_user_id:
+        description: Ownership and access control
+        type: string
+      price_per_kg:
+        type: number
+      print_temperature:
+        description: Technical specifications
+        type: integer
+      updated_at:
+        type: string
+      url:
+        description: Additional properties
+        type: string
+      weight:
+        type: number
+    type: object
+  entities.FilamentUsageInfo:
+    properties:
+      brand_name:
+        type: string
+      color:
+        description: Legacy color field (maintained for backward compatibility)
+        type: string
+      color_data:
+        type: object
+      color_hex:
+        type: string
+      color_preview:
+        type: string
+      color_type:
+        description: Advanced color system
+        type: string
+      cost:
+        description: centavos
+        type: integer
+      filament_id:
+        type: string
+      filament_name:
+        type: string
+      material_name:
+        type: string
+      order:
+        type: integer
+      quantity:
+        description: gramas TOTAL para este item
+        type: number
+    type: object
   entities.FindAllBrandsResponse:
     properties:
       data:
         items:
           $ref: '#/definitions/entities.BrandEntity'
         type: array
+    type: object
+  entities.FindAllFilamentsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/entities.FilamentResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   entities.FindAllMaterialsResponse:
     properties:
@@ -83,6 +1089,88 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/entities.MaterialEntity'
+    type: object
+  entities.InvalidFeatureError:
+    properties:
+      error:
+        type: string
+      feature:
+        $ref: '#/definitions/entities.PlanTemplateFeature'
+    type: object
+  entities.ListBudgetsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/entities.BudgetResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  entities.ListCompaniesResponse:
+    properties:
+      companies:
+        items:
+          $ref: '#/definitions/entities.CompanyListItem'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  entities.ListCustomersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/entities.CustomerResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  entities.ListPlanCompaniesResponse:
+    properties:
+      companies:
+        items:
+          $ref: '#/definitions/entities.PlanCompanyListItem'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  entities.ListSubscriptionsResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      subscriptions:
+        items:
+          $ref: '#/definitions/entities.SubscriptionListItem'
+        type: array
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   entities.LoginResponseEntity:
     description: LoginResponseEntity model data
@@ -125,6 +1213,9 @@ definitions:
         type: string
       nozzle_diameter:
         type: number
+      organization_id:
+        description: Multi-tenancy
+        type: string
       power_consumption:
         type: number
       print_speed_max:
@@ -142,11 +1233,421 @@ definitions:
         type: string
       name:
         type: string
+      organization_id:
+        description: Multi-tenancy
+        type: string
       tempExtruder:
         type: number
       tempTable:
         type: number
       updated_at:
+        type: string
+    type: object
+  entities.MaterialInfo:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      temp_extruder:
+        type: number
+      temp_table:
+        type: number
+    type: object
+  entities.MigrationCompanyItem:
+    properties:
+      company_id:
+        type: string
+      company_name:
+        type: string
+      error:
+        type: string
+      organization_id:
+        type: string
+      success:
+        type: boolean
+    type: object
+  entities.PaymentHistoryItem:
+    properties:
+      amount:
+        type: number
+      asaas_payment_id:
+        type: string
+      created_at:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      invoice_url:
+        type: string
+      payment_date:
+        type: string
+      status:
+        type: string
+    type: object
+  entities.PaymentHistoryResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      payments:
+        items:
+          $ref: '#/definitions/entities.PaymentHistoryItem'
+        type: array
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  entities.PaymentMethodCreateRequest:
+    properties:
+      ccv:
+        description: Will be sent to Asaas, not stored
+        type: string
+      expiry_month:
+        type: string
+      expiry_year:
+        type: string
+      holder_name:
+        type: string
+      number:
+        description: Will be tokenized, not stored
+        type: string
+      set_as_primary:
+        type: boolean
+    required:
+    - ccv
+    - expiry_month
+    - expiry_year
+    - holder_name
+    - number
+    type: object
+  entities.PaymentMethodResponse:
+    properties:
+      brand:
+        type: string
+      created_at:
+        type: string
+      expiry_month:
+        type: string
+      expiry_year:
+        type: string
+      holder_name:
+        type: string
+      id:
+        type: string
+      is_primary:
+        type: boolean
+      last_4_digits:
+        type: string
+    type: object
+  entities.PlanAuditEntry:
+    properties:
+      action:
+        description: created, updated, deleted, activated, deactivated
+        type: string
+      changes:
+        additionalProperties: true
+        type: object
+      created_at:
+        type: string
+      id:
+        type: string
+      plan_id:
+        type: string
+      plan_name:
+        type: string
+      reason:
+        type: string
+      user_email:
+        type: string
+      user_id:
+        type: string
+    type: object
+  entities.PlanAuditResponse:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/entities.PlanAuditEntry'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  entities.PlanCompanyListItem:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      last_payment_date:
+        type: string
+      name:
+        type: string
+      next_payment_date:
+        type: string
+      organization_id:
+        type: string
+      subscription_started_at:
+        type: string
+      subscription_status:
+        type: string
+      total_users:
+        type: integer
+      trial_ends_at:
+        type: string
+    type: object
+  entities.PlanDeletionCheck:
+    properties:
+      active_companies:
+        type: integer
+      blocking_issues:
+        items:
+          type: string
+        type: array
+      can_delete:
+        type: boolean
+      reason:
+        type: string
+      recommendations:
+        items:
+          type: string
+        type: array
+      trial_companies:
+        type: integer
+    type: object
+  entities.PlanFeatureCreateRequest:
+    properties:
+      description:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  entities.PlanFeatureEntity:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  entities.PlanFinancialReport:
+    properties:
+      plan_id:
+        type: string
+      plan_name:
+        type: string
+      projections:
+        $ref: '#/definitions/entities.PlanRevenueProjections'
+      report_period:
+        description: '"monthly", "quarterly", "yearly"'
+        type: string
+      revenue:
+        $ref: '#/definitions/entities.PlanRevenueMetrics'
+      subscriptions:
+        $ref: '#/definitions/entities.PlanSubscriptionMetrics'
+      trends:
+        items:
+          $ref: '#/definitions/entities.PlanRevenueTrendPoint'
+        type: array
+    type: object
+  entities.PlanMigrationRequest:
+    properties:
+      company_ids:
+        description: If empty, migrates all companies
+        items:
+          type: string
+        type: array
+      from_plan_id:
+        type: string
+      notify_users:
+        type: boolean
+      options:
+        additionalProperties: true
+        type: object
+      reason:
+        type: string
+      scheduled_for:
+        description: If empty, immediate
+        type: string
+      to_plan_id:
+        type: string
+    required:
+    - from_plan_id
+    - reason
+    - to_plan_id
+    type: object
+  entities.PlanMigrationResult:
+    properties:
+      completed_at:
+        type: string
+      failed:
+        type: integer
+      from_plan_id:
+        type: string
+      from_plan_name:
+        type: string
+      migration_id:
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/entities.MigrationCompanyItem'
+        type: array
+      scheduled_for:
+        type: string
+      status:
+        description: scheduled, in_progress, completed, failed
+        type: string
+      successful:
+        type: integer
+      summary:
+        type: string
+      to_plan_id:
+        type: string
+      to_plan_name:
+        type: string
+      total_companies:
+        type: integer
+    type: object
+  entities.PlanRevenueMetrics:
+    properties:
+      average_per_user:
+        type: number
+      current_period:
+        type: number
+      growth_percentage:
+        type: number
+      previous_period:
+        type: number
+      total_lifetime:
+        type: number
+    type: object
+  entities.PlanRevenueProjections:
+    properties:
+      methodology:
+        description: How the projection was calculated
+        type: string
+      next_month:
+        type: number
+      next_quarter:
+        type: number
+      next_year:
+        type: number
+    type: object
+  entities.PlanRevenueTrendPoint:
+    properties:
+      period:
+        description: '"2024-01", "2024-Q1", etc'
+        type: string
+      revenue:
+        type: number
+      subscriptions:
+        type: integer
+    type: object
+  entities.PlanStats:
+    properties:
+      active_companies:
+        type: integer
+      annual_revenue:
+        type: number
+      churn_rate:
+        type: number
+      conversion_rate:
+        description: trial to paid conversion
+        type: number
+      monthly_revenue:
+        type: number
+      plan_id:
+        type: string
+      plan_name:
+        type: string
+      total_active_users:
+        type: integer
+      total_companies:
+        type: integer
+      trial_companies:
+        type: integer
+    type: object
+  entities.PlanSubscriptionMetrics:
+    properties:
+      cancelled_subscriptions:
+        type: integer
+      churn_rate:
+        type: number
+      conversion_rate:
+        type: number
+      new_subscriptions:
+        type: integer
+      retention_rate:
+        type: number
+    type: object
+  entities.PlanTemplate:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      plan_data:
+        $ref: '#/definitions/entities.PlanTemplateData'
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
+    type: object
+  entities.PlanTemplateData:
+    properties:
+      cycle:
+        type: string
+      description:
+        type: string
+      features:
+        items:
+          $ref: '#/definitions/entities.PlanTemplateFeature'
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  entities.PlanTemplateFeature:
+    properties:
+      description:
+        type: string
+      is_active:
+        type: boolean
+      name:
         type: string
     type: object
   entities.PresetEntity:
@@ -165,11 +1666,23 @@ definitions:
         type: boolean
       name:
         type: string
+      organization_id:
+        type: string
       type:
         $ref: '#/definitions/entities.PresetType'
       updated_at:
         type: string
       user_id:
+        type: string
+    type: object
+  entities.PresetInfo:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        description: '"machine", "energy", "cost"'
         type: string
     type: object
   entities.PresetType:
@@ -182,6 +1695,67 @@ definitions:
     - PresetTypeMachine
     - PresetTypeEnergy
     - PresetTypeCost
+  entities.RegisterRequest:
+    properties:
+      address:
+        description: Address
+        type: string
+      address_number:
+        type: string
+      city:
+        type: string
+      company_document:
+        description: CNPJ
+        type: string
+      company_name:
+        description: Company data
+        type: string
+      company_phone:
+        type: string
+      company_trade_name:
+        type: string
+      complement:
+        type: string
+      email:
+        type: string
+      name:
+        description: User data
+        minLength: 3
+        type: string
+      neighborhood:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      state:
+        type: string
+      zip_code:
+        type: string
+    required:
+    - address
+    - address_number
+    - city
+    - company_document
+    - company_name
+    - company_phone
+    - email
+    - name
+    - neighborhood
+    - password
+    - state
+    - zip_code
+    type: object
+  entities.RegisterResponse:
+    properties:
+      message:
+        type: string
+      organization_id:
+        type: string
+      trial_ends_at:
+        type: string
+      user_id:
+        type: string
+    type: object
   entities.RequestLoginEntity:
     description: RequestLoginEntity model data
     properties:
@@ -190,6 +1764,287 @@ definitions:
         type: string
       password:
         description: User password
+        type: string
+    type: object
+  entities.SubscriptionDetailsResponse:
+    properties:
+      company_name:
+        type: string
+      current_plan:
+        $ref: '#/definitions/entities.SubscriptionPlanResponse'
+      organization_id:
+        type: string
+      recent_payments:
+        description: |-
+          Note: Asaas info and payment timing moved to separate tables
+          Use PaymentGatewayLink and SubscriptionPayments for detailed info
+        items:
+          $ref: '#/definitions/entities.PaymentHistoryItem'
+        type: array
+      status_updated_at:
+        type: string
+      subscription_plan_id:
+        description: UUID as string
+        type: string
+      subscription_started_at:
+        type: string
+      subscription_status:
+        type: string
+      trial_ends_at:
+        type: string
+    type: object
+  entities.SubscriptionListItem:
+    properties:
+      company_name:
+        type: string
+      created_at:
+        type: string
+      current_plan:
+        $ref: '#/definitions/entities.SubscriptionPlanResponse'
+      organization_id:
+        type: string
+      subscription_plan_id:
+        description: UUID as string
+        type: string
+      subscription_status:
+        type: string
+      trial_ends_at:
+        type: string
+    type: object
+  entities.SubscriptionPlanCreateRequest:
+    properties:
+      cycle:
+        enum:
+        - MONTHLY
+        - YEARLY
+        type: string
+      description:
+        type: string
+      features:
+        items:
+          $ref: '#/definitions/entities.PlanFeatureCreateRequest'
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+    required:
+    - cycle
+    - name
+    - price
+    type: object
+  entities.SubscriptionPlanResponse:
+    properties:
+      created_at:
+        type: string
+      cycle:
+        type: string
+      description:
+        type: string
+      features:
+        items:
+          $ref: '#/definitions/entities.PlanFeatureEntity'
+        type: array
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  entities.SubscriptionPlanUpdateRequest:
+    properties:
+      cycle:
+        enum:
+        - MONTHLY
+        - YEARLY
+        type: string
+      description:
+        type: string
+      features:
+        description: Replace all features
+        items:
+          $ref: '#/definitions/entities.PlanFeatureCreateRequest'
+        type: array
+      is_active:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  entities.UpdateBudgetRequest:
+    properties:
+      customer_id:
+        type: string
+      delivery_days:
+        description: Additional fields for PDF
+        minimum: 0
+        type: integer
+      description:
+        maxLength: 1000
+        type: string
+      energy_preset_id:
+        type: string
+      include_energy_cost:
+        description: Configuration flags
+        type: boolean
+      include_waste_cost:
+        type: boolean
+      items:
+        description: Items (optional - if provided, replaces all items)
+        items:
+          $ref: '#/definitions/entities.BudgetItemRequest'
+        minItems: 1
+        type: array
+      machine_preset_id:
+        description: Global presets
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      notes:
+        maxLength: 2000
+        type: string
+      payment_terms:
+        maxLength: 1000
+        type: string
+    type: object
+  entities.UpdateCompanyRequest:
+    properties:
+      address:
+        maxLength: 500
+        type: string
+      city:
+        maxLength: 100
+        type: string
+      document:
+        maxLength: 20
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      instagram:
+        maxLength: 255
+        type: string
+      logo_url:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      phone:
+        maxLength: 50
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      trade_name:
+        maxLength: 255
+        type: string
+      website:
+        maxLength: 255
+        type: string
+      whatsapp:
+        maxLength: 50
+        type: string
+      zip_code:
+        maxLength: 20
+        type: string
+    type: object
+  entities.UpdateCustomerRequest:
+    properties:
+      address:
+        maxLength: 500
+        type: string
+      city:
+        maxLength: 255
+        type: string
+      document:
+        maxLength: 50
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      notes:
+        maxLength: 1000
+        type: string
+      phone:
+        maxLength: 50
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      zip_code:
+        maxLength: 20
+        type: string
+    type: object
+  entities.UpdateFilamentRequest:
+    properties:
+      bed_temperature:
+        maximum: 300
+        minimum: 0
+        type: integer
+      brand_id:
+        type: string
+      color:
+        description: Color configuration
+        maxLength: 100
+        minLength: 1
+        type: string
+      color_data:
+        type: object
+      color_hex:
+        type: string
+      color_type:
+        $ref: '#/definitions/entities.ColorType'
+      description:
+        maxLength: 1000
+        type: string
+      diameter:
+        description: Physical properties
+        maximum: 10
+        type: number
+      is_active:
+        description: Status
+        type: boolean
+      material_id:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      price_per_kg:
+        minimum: 0
+        type: number
+      print_temperature:
+        description: Technical specifications
+        maximum: 500
+        minimum: 0
+        type: integer
+      url:
+        description: Additional properties
+        type: string
+      weight:
+        type: number
+    type: object
+  entities.UpdateUserRequest:
+    properties:
+      is_active:
+        type: boolean
+      name:
         type: string
     type: object
   entities.UpsertBrandRequestEntity:
@@ -222,6 +2077,30 @@ definitions:
     required:
     - name
     type: object
+  entities.UserEntity:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      keycloak_user_id:
+        type: string
+      name:
+        type: string
+      organization_id:
+        type: string
+      updated_at:
+        type: string
+      user_type:
+        description: '''owner'', ''admin'', ''user'''
+        type: string
+    type: object
   errors.HTTPError:
     properties:
       cause:
@@ -235,6 +2114,40 @@ definitions:
         type: string
       stack_trace:
         type: string
+    type: object
+  github_com_RodolfoBonis_spooliq_features_admin_domain_entities.UpdateStatusRequest:
+    properties:
+      reason:
+        type: string
+      status:
+        enum:
+        - trial
+        - active
+        - suspended
+        - cancelled
+        - permanent
+        type: string
+    required:
+    - reason
+    - status
+    type: object
+  github_com_RodolfoBonis_spooliq_features_budget_domain_entities.UpdateStatusRequest:
+    properties:
+      notes:
+        maxLength: 500
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/entities.BudgetStatus'
+        enum:
+        - draft
+        - sent
+        - approved
+        - rejected
+        - printing
+        - completed
+    required:
+    - status
     type: object
   usecases.CreateCostPresetRequest:
     properties:
@@ -363,6 +2276,132 @@ definitions:
     - power_consumption
     - print_speed_max
     type: object
+  usecases.MachinePresetResponse:
+    properties:
+      bed_temperature_max:
+        type: number
+      brand:
+        type: string
+      build_volume_x:
+        type: number
+      build_volume_y:
+        type: number
+      build_volume_z:
+        type: number
+      cost_per_hour:
+        type: number
+      description:
+        type: string
+      extruder_temperature_max:
+        type: number
+      filament_diameter:
+        type: number
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      layer_height_max:
+        type: number
+      layer_height_min:
+        type: number
+      model:
+        type: string
+      name:
+        type: string
+      nozzle_diameter:
+        type: number
+      power_consumption:
+        type: number
+      print_speed_max:
+        type: number
+      type:
+        type: string
+    type: object
+  usecases.SubscribeRequest:
+    properties:
+      billing_type:
+        enum:
+        - CREDIT_CARD
+        - BOLETO
+        - PIX
+        type: string
+      payment_method_id:
+        description: Optional if using boleto/pix
+        type: string
+      plan_id:
+        type: string
+    required:
+    - billing_type
+    - plan_id
+    type: object
+  usecases.SubscribeResponse:
+    properties:
+      cycle:
+        type: string
+      first_payment_id:
+        type: string
+      first_payment_invoice:
+        type: string
+      next_due_date:
+        type: string
+      plan_name:
+        type: string
+      status:
+        description: ACTIVE, PENDING, etc
+        type: string
+      subscription_id:
+        description: Asaas subscription ID
+        type: string
+      value:
+        type: number
+    type: object
+  usecases.UpdateBrandingRequest:
+    properties:
+      accent_color:
+        type: string
+      background_color:
+        type: string
+      body_text_color:
+        type: string
+      border_color:
+        type: string
+      header_bg_color:
+        type: string
+      header_text_color:
+        type: string
+      primary_color:
+        type: string
+      primary_text_color:
+        type: string
+      secondary_color:
+        type: string
+      secondary_text_color:
+        type: string
+      table_header_bg_color:
+        type: string
+      table_row_alt_bg_color:
+        type: string
+      template_name:
+        type: string
+      title_color:
+        type: string
+    required:
+    - accent_color
+    - background_color
+    - body_text_color
+    - border_color
+    - header_bg_color
+    - header_text_color
+    - primary_color
+    - primary_text_color
+    - secondary_color
+    - secondary_text_color
+    - table_header_bg_color
+    - table_row_alt_bg_color
+    - title_color
+    type: object
   usecases.UpdateCostPresetRequest:
     properties:
       description:
@@ -475,171 +2514,6 @@ definitions:
 info:
   contact: {}
 paths:
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate user and return JWT tokens
-      parameters:
-      - description: Login credentials
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/entities.RequestLoginEntity'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successful login
-          schema:
-            $ref: '#/definitions/entities.LoginResponseEntity'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-      summary: User Login
-      tags:
-      - Auth
-  /auth/logout:
-    post:
-      consumes:
-      - application/json
-      description: Invalidate the refresh token and logout the user
-      parameters:
-      - description: Bearer refresh token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Logout successful
-          schema:
-            type: boolean
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-      summary: User Logout
-      tags:
-      - Auth
-  /auth/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Refresh the user's access and refresh tokens
-      parameters:
-      - description: Bearer refresh token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Tokens refreshed
-          schema:
-            $ref: '#/definitions/entities.LoginResponseEntity'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-      summary: Refresh Login Access Token
-      tags:
-      - Auth
-  /auth/validate:
-    post:
-      consumes:
-      - application/json
-      description: Validate the current access token
-      parameters:
-      - description: Bearer access token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Token is valid
-          schema:
-            type: boolean
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/errors.HTTPError'
-      summary: Validate Auth Token
-      tags:
-      - Auth
   /brands:
     get:
       consumes:
@@ -838,6 +2712,471 @@ paths:
       summary: Update Brand
       tags:
       - Brands
+  /company/branding:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current branding configuration for the company, or
+        returns the default template if not configured
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.CompanyBrandingEntity'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get company branding configuration
+      tags:
+      - Company Branding
+    put:
+      consumes:
+      - application/json
+      description: Updates or creates the branding configuration for the company with
+        custom colors
+      parameters:
+      - description: Branding configuration
+        in: body
+        name: branding
+        required: true
+        schema:
+          $ref: '#/definitions/usecases.UpdateBrandingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.CompanyBrandingEntity'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update company branding configuration
+      tags:
+      - Company Branding
+  /company/branding/templates:
+    get:
+      consumes:
+      - application/json
+      description: Returns all pre-defined branding templates that users can choose
+        from
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/entities.BrandingTemplate'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List available branding templates
+      tags:
+      - Company Branding
+  /filaments:
+    get:
+      consumes:
+      - application/json
+      description: Find all 3D printing filaments (user's own + global catalog)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved filaments
+          schema:
+            $ref: '#/definitions/entities.FindAllFilamentsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      security:
+      - Bearer: []
+      summary: Find All Filaments
+      tags:
+      - Filaments
+    post:
+      consumes:
+      - application/json
+      description: Create a new 3D printing filament
+      parameters:
+      - description: Filament data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.CreateFilamentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created filament
+          schema:
+            $ref: '#/definitions/entities.FilamentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      security:
+      - Bearer: []
+      summary: Create Filament
+      tags:
+      - Filaments
+  /filaments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a 3D printing filament (soft delete)
+      parameters:
+      - description: Filament ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully deleted filament
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      security:
+      - Bearer: []
+      summary: Delete Filament
+      tags:
+      - Filaments
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single filament by its ID
+      parameters:
+      - description: Filament ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved filament
+          schema:
+            $ref: '#/definitions/entities.FilamentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      security:
+      - Bearer: []
+      summary: Find Filament By ID
+      tags:
+      - Filaments
+    put:
+      consumes:
+      - application/json
+      description: Update an existing 3D printing filament
+      parameters:
+      - description: Filament ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filament update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.UpdateFilamentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated filament
+          schema:
+            $ref: '#/definitions/entities.FilamentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      security:
+      - Bearer: []
+      summary: Update Filament
+      tags:
+      - Filaments
+  /filaments/search:
+    get:
+      consumes:
+      - application/json
+      description: Search 3D printing filaments with various filters
+      parameters:
+      - description: Filter by name (partial match)
+        in: query
+        name: name
+        type: string
+      - description: Filter by brand ID (UUID)
+        in: query
+        name: brand_id
+        type: string
+      - description: Filter by material ID (UUID)
+        in: query
+        name: material_id
+        type: string
+      - description: Filter by color type (solid, gradient, duo, rainbow)
+        in: query
+        name: color_type
+        type: string
+      - description: Filter by diameter (exact match)
+        in: query
+        name: diameter
+        type: number
+      - description: Minimum price per kg
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price per kg
+        in: query
+        name: max_price
+        type: number
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved filaments
+          schema:
+            $ref: '#/definitions/entities.FindAllFilamentsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      security:
+      - Bearer: []
+      summary: Search Filaments
+      tags:
+      - Filaments
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.RequestLoginEntity'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful login
+          schema:
+            $ref: '#/definitions/entities.LoginResponseEntity'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      summary: User Login
+      tags:
+      - Auth
+  /logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate the refresh token and logout the user
+      parameters:
+      - description: Bearer refresh token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            type: boolean
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      summary: User Logout
+      tags:
+      - Auth
   /materials:
     get:
       consumes:
@@ -1077,6 +3416,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get presets with filters
       tags:
       - Presets
@@ -1104,6 +3445,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Delete preset
       tags:
       - Presets
@@ -1132,6 +3475,8 @@ paths:
           description: Not Found - Preset not found
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get preset by ID
       tags:
       - Presets
@@ -1153,6 +3498,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get all cost presets
       tags:
       - Cost Presets
@@ -1184,7 +3531,7 @@ paths:
           schema:
             $ref: '#/definitions/errors.HTTPError'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Create cost preset
       tags:
       - Cost Presets
@@ -1215,6 +3562,8 @@ paths:
           description: Not Found - Cost preset not found
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get cost preset by ID
       tags:
       - Cost Presets
@@ -1250,7 +3599,7 @@ paths:
           schema:
             $ref: '#/definitions/errors.HTTPError'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Update cost preset
       tags:
       - Cost Presets
@@ -1273,6 +3622,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get all energy presets
       tags:
       - Energy Presets
@@ -1304,7 +3655,7 @@ paths:
           schema:
             $ref: '#/definitions/errors.HTTPError'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Create energy preset
       tags:
       - Energy Presets
@@ -1335,6 +3686,8 @@ paths:
           description: Not Found - Energy preset not found
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get energy preset by ID
       tags:
       - Energy Presets
@@ -1371,7 +3724,7 @@ paths:
           schema:
             $ref: '#/definitions/errors.HTTPError'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Update energy preset
       tags:
       - Energy Presets
@@ -1400,6 +3753,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get energy presets by currency
       tags:
       - Energy Presets
@@ -1434,6 +3789,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get energy presets by location
       tags:
       - Energy Presets
@@ -1449,12 +3806,14 @@ paths:
           description: Successfully retrieved machine presets
           schema:
             items:
-              $ref: '#/definitions/entities.PresetEntity'
+              $ref: '#/definitions/usecases.MachinePresetResponse'
             type: array
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get all machine presets
       tags:
       - Machine Presets
@@ -1486,7 +3845,7 @@ paths:
           schema:
             $ref: '#/definitions/errors.HTTPError'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Create machine preset
       tags:
       - Machine Presets
@@ -1517,6 +3876,8 @@ paths:
           description: Not Found - Machine preset not found
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get machine preset by ID
       tags:
       - Machine Presets
@@ -1552,7 +3913,7 @@ paths:
           schema:
             $ref: '#/definitions/errors.HTTPError'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Update machine preset
       tags:
       - Machine Presets
@@ -1580,7 +3941,2749 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/errors.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get machine presets by brand
       tags:
       - Machine Presets
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh the user's access and refresh tokens
+      parameters:
+      - description: Bearer refresh token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tokens refreshed
+          schema:
+            $ref: '#/definitions/entities.LoginResponseEntity'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      summary: Refresh Login Access Token
+      tags:
+      - Auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new company with owner user, starts 14-day trial
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entities.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new company
+      tags:
+      - auth
+  /v1/admin/companies:
+    get:
+      consumes:
+      - application/json
+      description: Lists all companies in the system with pagination (PlatformAdmin
+        only)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by subscription status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of companies
+          schema:
+            $ref: '#/definitions/entities.ListCompaniesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all companies
+      tags:
+      - admin
+  /v1/admin/companies/{organization_id}:
+    get:
+      consumes:
+      - application/json
+      description: Gets detailed information about a specific company (PlatformAdmin
+        only)
+      parameters:
+      - description: Organization ID (UUID)
+        in: path
+        name: organization_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Company details
+          schema:
+            $ref: '#/definitions/entities.CompanyDetailsResponse'
+        "400":
+          description: Invalid organization ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Company not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get company details
+      tags:
+      - admin
+  /v1/admin/companies/{organization_id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Manually updates a company's subscription status (PlatformAdmin
+        only)
+      parameters:
+      - description: Organization ID (UUID)
+        in: path
+        name: organization_id
+        required: true
+        type: string
+      - description: Status update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RodolfoBonis_spooliq_features_admin_domain_entities.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated company details
+          schema:
+            $ref: '#/definitions/entities.CompanyDetailsResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Company not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update company subscription status
+      tags:
+      - admin
+  /v1/admin/features/available:
+    get:
+      description: Get list of available features that can be added to plans (admin
+        only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Available features
+          schema:
+            items:
+              $ref: '#/definitions/entities.AvailableFeature'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get available features
+      tags:
+      - admin-features
+  /v1/admin/features/validate:
+    post:
+      consumes:
+      - application/json
+      description: Validate if the provided features are available and compatible
+        (admin only)
+      parameters:
+      - description: Feature validation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.FeatureValidationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Validation result
+          schema:
+            $ref: '#/definitions/entities.FeatureValidationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Validate features
+      tags:
+      - admin-features
+  /v1/admin/plans:
+    get:
+      description: List all subscription plans including inactive (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plans list
+          schema:
+            items:
+              $ref: '#/definitions/entities.SubscriptionPlanResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all subscription plans
+      tags:
+      - admin-plans
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription plan (admin only)
+      parameters:
+      - description: Plan data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.SubscriptionPlanCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Plan created
+          schema:
+            $ref: '#/definitions/entities.SubscriptionPlanResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Plan with this name already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create subscription plan
+      tags:
+      - admin-plans
+  /v1/admin/plans/{id}:
+    delete:
+      description: Soft delete a subscription plan (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Plan deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete subscription plan
+      tags:
+      - admin-plans
+    put:
+      consumes:
+      - application/json
+      description: Update a subscription plan (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plan data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.SubscriptionPlanUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan updated
+          schema:
+            $ref: '#/definitions/entities.SubscriptionPlanResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update subscription plan
+      tags:
+      - admin-plans
+  /v1/admin/stats:
+    get:
+      consumes:
+      - application/json
+      description: Gets platform analytics including MRR, subscription counts, and
+        churn rate (PlatformAdmin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Platform statistics
+          schema:
+            $ref: '#/definitions/entities.AdminStats'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get platform stats
+      tags:
+      - admin
+  /v1/admin/subscription-plans/{id}:
+    get:
+      description: Get a specific subscription plan by ID (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan details
+          schema:
+            $ref: '#/definitions/entities.SubscriptionPlanResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription plan by ID
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/{id}/can-delete:
+    get:
+      description: Check if a subscription plan can be safely deleted without affecting
+        active subscriptions (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deletion validation result
+          schema:
+            $ref: '#/definitions/entities.PlanDeletionCheck'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check if subscription plan can be deleted
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/{id}/companies:
+    get:
+      description: Get paginated list of companies using a specific subscription plan
+        (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by subscription status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Companies using the plan
+          schema:
+            $ref: '#/definitions/entities.ListPlanCompaniesResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get companies using a subscription plan
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/{id}/financial-report:
+    get:
+      description: Get detailed financial report for a specific subscription plan
+        (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: '"monthly"'
+        description: Report period
+        enum:
+        - monthly
+        - quarterly
+        - yearly
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan financial report
+          schema:
+            $ref: '#/definitions/entities.PlanFinancialReport'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription plan financial report
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/{id}/history:
+    get:
+      description: Get detailed audit history for a specific subscription plan (admin
+        only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan audit history
+          schema:
+            $ref: '#/definitions/entities.PlanAuditResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription plan audit history
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/{id}/stats:
+    get:
+      description: Get detailed statistics for a specific subscription plan (admin
+        only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan statistics
+          schema:
+            $ref: '#/definitions/entities.PlanStats'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription plan statistics
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/bulk-activate:
+    put:
+      consumes:
+      - application/json
+      description: Activate multiple subscription plans at once (admin only)
+      parameters:
+      - description: Bulk operation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bulk operation result
+          schema:
+            $ref: '#/definitions/entities.BulkOperationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk activate subscription plans
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/bulk-deactivate:
+    put:
+      consumes:
+      - application/json
+      description: Deactivate multiple subscription plans at once (admin only)
+      parameters:
+      - description: Bulk operation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bulk operation result
+          schema:
+            $ref: '#/definitions/entities.BulkOperationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk deactivate subscription plans
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/bulk-update:
+    post:
+      consumes:
+      - application/json
+      description: Update multiple subscription plans at once (admin only)
+      parameters:
+      - description: Bulk update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.BulkUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bulk operation result
+          schema:
+            $ref: '#/definitions/entities.BulkOperationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk update subscription plans
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/from-template:
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription plan from an existing template (admin
+        only)
+      parameters:
+      - description: Create from template request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.CreateFromTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created plan
+          schema:
+            $ref: '#/definitions/entities.SubscriptionPlanResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create plan from template
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/migrate:
+    post:
+      consumes:
+      - application/json
+      description: Create a migration to move companies from one plan to another (admin
+        only)
+      parameters:
+      - description: Plan migration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.PlanMigrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Migration result
+          schema:
+            $ref: '#/definitions/entities.PlanMigrationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create plan migration
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/migrations/{migration_id}:
+    get:
+      description: Get the status of a plan migration (admin only)
+      parameters:
+      - description: Migration ID
+        in: path
+        name: migration_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Migration status
+          schema:
+            $ref: '#/definitions/entities.PlanMigrationResult'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Migration not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get migration status
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/migrations/{migration_id}/execute:
+    post:
+      description: Execute a scheduled plan migration immediately (admin only)
+      parameters:
+      - description: Migration ID
+        in: path
+        name: migration_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Migration result
+          schema:
+            $ref: '#/definitions/entities.PlanMigrationResult'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Migration not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Execute plan migration
+      tags:
+      - admin-plans
+  /v1/admin/subscription-plans/templates:
+    get:
+      description: Get list of available plan templates (admin only)
+      parameters:
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan templates
+          schema:
+            items:
+              $ref: '#/definitions/entities.PlanTemplate'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plan templates
+      tags:
+      - admin-plans
+  /v1/admin/subscriptions:
+    get:
+      consumes:
+      - application/json
+      description: Lists all subscriptions in the system with pagination (PlatformAdmin
+        only)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by subscription status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of subscriptions
+          schema:
+            $ref: '#/definitions/entities.ListSubscriptionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all subscriptions
+      tags:
+      - admin
+  /v1/admin/subscriptions/{organization_id}:
+    get:
+      consumes:
+      - application/json
+      description: Gets detailed information about a company's subscription (PlatformAdmin
+        only)
+      parameters:
+      - description: Organization ID (UUID)
+        in: path
+        name: organization_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Subscription details
+          schema:
+            $ref: '#/definitions/entities.SubscriptionDetailsResponse'
+        "400":
+          description: Invalid organization ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Company not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription details
+      tags:
+      - admin
+  /v1/admin/subscriptions/{organization_id}/payments:
+    get:
+      consumes:
+      - application/json
+      description: Gets payment history for a specific company (PlatformAdmin only)
+      parameters:
+      - description: Organization ID (UUID)
+        in: path
+        name: organization_id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment history
+          schema:
+            $ref: '#/definitions/entities.PaymentHistoryResponse'
+        "400":
+          description: Invalid organization ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Company not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payment history
+      tags:
+      - admin
+  /v1/budgets:
+    get:
+      consumes:
+      - application/json
+      description: Get all budgets with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.ListBudgetsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List budgets
+      tags:
+      - budgets
+    post:
+      consumes:
+      - application/json
+      description: Create a new budget with items
+      parameters:
+      - description: Create budget request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.CreateBudgetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entities.BudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create budget
+      tags:
+      - budgets
+  /v1/budgets/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a budget (soft delete)
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete budget
+      tags:
+      - budgets
+    get:
+      consumes:
+      - application/json
+      description: Get a specific budget by ID with all details
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.BudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get budget by ID
+      tags:
+      - budgets
+    put:
+      consumes:
+      - application/json
+      description: Update an existing budget (only drafts)
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update budget request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.UpdateBudgetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.BudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update budget
+      tags:
+      - budgets
+  /v1/budgets/{id}/calculate:
+    get:
+      consumes:
+      - application/json
+      description: Recalculate all costs for a budget
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.BudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recalculate budget costs
+      tags:
+      - budgets
+  /v1/budgets/{id}/duplicate:
+    post:
+      consumes:
+      - application/json
+      description: Duplicate a budget as a new draft
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entities.BudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Duplicate budget
+      tags:
+      - budgets
+  /v1/budgets/{id}/history:
+    get:
+      consumes:
+      - application/json
+      description: Get the status change history for a budget
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/entities.BudgetStatusHistoryEntity'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get budget status history
+      tags:
+      - budgets
+  /v1/budgets/{id}/pdf:
+    get:
+      consumes:
+      - application/json
+      description: Generate PDF for a specific budget and return CDN URL. Use ?force=true
+        to regenerate existing PDF.
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Force regenerate PDF even if exists
+        in: query
+        name: force
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: PDF URL and metadata
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate budget PDF
+      tags:
+      - budgets
+  /v1/budgets/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of a budget with validation
+      parameters:
+      - description: Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update status request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RodolfoBonis_spooliq_features_budget_domain_entities.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.BudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update budget status
+      tags:
+      - budgets
+  /v1/budgets/by-customer/{customer_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get all budgets for a specific customer
+      parameters:
+      - description: Customer ID
+        in: path
+        name: customer_id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.ListBudgetsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List budgets by customer
+      tags:
+      - budgets
+  /v1/company:
+    get:
+      consumes:
+      - application/json
+      description: Get company information for the current organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.CompanyResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get company
+      tags:
+      - company
+    post:
+      consumes:
+      - application/json
+      description: Create a new company for the organization
+      parameters:
+      - description: Create company request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.CreateCompanyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entities.CompanyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create company
+      tags:
+      - company
+    put:
+      consumes:
+      - application/json
+      description: Update company information for the current organization
+      parameters:
+      - description: Update company request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.UpdateCompanyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.CompanyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update company
+      tags:
+      - company
+  /v1/company/logo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload logo image for the company
+      parameters:
+      - description: Logo image file (png, jpg, jpeg)
+        in: formData
+        name: logo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload company logo
+      tags:
+      - company
+  /v1/customers:
+    get:
+      consumes:
+      - application/json
+      description: Get all customers with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.ListCustomersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List customers
+      tags:
+      - customers
+    post:
+      consumes:
+      - application/json
+      description: Create a new customer
+      parameters:
+      - description: Create customer request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.CreateCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entities.CustomerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create customer
+      tags:
+      - customers
+  /v1/customers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a customer (soft delete)
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete customer
+      tags:
+      - customers
+    get:
+      consumes:
+      - application/json
+      description: Get a specific customer by ID
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.CustomerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer by ID
+      tags:
+      - customers
+    put:
+      consumes:
+      - application/json
+      description: Update an existing customer
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update customer request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.UpdateCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.CustomerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update customer
+      tags:
+      - customers
+  /v1/customers/search:
+    get:
+      consumes:
+      - application/json
+      description: Search customers with various filters
+      parameters:
+      - description: Customer name
+        in: query
+        name: name
+        type: string
+      - description: Customer email
+        in: query
+        name: email
+        type: string
+      - description: Customer phone
+        in: query
+        name: phone
+        type: string
+      - description: Customer document (CPF/CNPJ)
+        in: query
+        name: document
+        type: string
+      - description: Customer city
+        in: query
+        name: city
+        type: string
+      - description: Customer state
+        in: query
+        name: state
+        type: string
+      - description: Active status
+        in: query
+        name: is_active
+        type: boolean
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - email
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_dir
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.ListCustomersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search customers
+      tags:
+      - customers
+  /v1/payment-methods:
+    get:
+      description: List all payment methods for the organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment methods list
+          schema:
+            items:
+              $ref: '#/definitions/entities.PaymentMethodResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List payment methods
+      tags:
+      - payment-methods
+    post:
+      consumes:
+      - application/json
+      description: Tokenize and save a credit card for the organization
+      parameters:
+      - description: Payment method data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.PaymentMethodCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Payment method created
+          schema:
+            $ref: '#/definitions/entities.PaymentMethodResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Company not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add payment method
+      tags:
+      - payment-methods
+  /v1/payment-methods/{id}:
+    delete:
+      description: Soft delete a payment method
+      parameters:
+      - description: Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Payment method deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID or cannot delete primary
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Payment method not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete payment method
+      tags:
+      - payment-methods
+  /v1/payment-methods/{id}/set-primary:
+    put:
+      description: Set a payment method as primary (and unset others)
+      parameters:
+      - description: Payment Method ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Payment method set as primary
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Payment method not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set primary payment method
+      tags:
+      - payment-methods
+  /v1/plans:
+    get:
+      description: List all active subscription plans available for subscription
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plans list
+          schema:
+            items:
+              $ref: '#/definitions/entities.SubscriptionPlanResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List active subscription plans
+      tags:
+      - plans
+  /v1/subscriptions/cancel:
+    delete:
+      description: Cancel the current active subscription
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Subscription cancelled
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: No active subscription
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel subscription
+      tags:
+      - subscriptions
+  /v1/subscriptions/status:
+    get:
+      description: Get detailed status of the current subscription
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Subscription status
+          schema:
+            $ref: '#/definitions/usecases.SubscribeResponse'
+        "404":
+          description: No active subscription
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get subscription status
+      tags:
+      - subscriptions
+  /v1/subscriptions/subscribe:
+    post:
+      consumes:
+      - application/json
+      description: Subscribe to a subscription plan with chosen payment method
+      parameters:
+      - description: Subscription data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usecases.SubscribeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Subscription created
+          schema:
+            $ref: '#/definitions/usecases.SubscribeResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Plan or payment method not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Subscribe to a plan
+      tags:
+      - subscriptions
+  /v1/uploads/file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a generic file (PDF, 3MF, images, etc.)
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Optional folder path
+        in: formData
+        name: folder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload file
+      tags:
+      - uploads
+  /v1/uploads/logo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a logo image for the company
+      parameters:
+      - description: Logo file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload company logo
+      tags:
+      - uploads
+  /v1/users:
+    get:
+      consumes:
+      - application/json
+      description: Lists all users within the organization (Owner and OrgAdmin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            items:
+              $ref: '#/definitions/entities.UserEntity'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user within the organization (Owner and OrgAdmin
+        only)
+      parameters:
+      - description: User creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/entities.UserEntity'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: User already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new user
+      tags:
+      - users
+  /v1/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a user (Owner can delete anyone except self, OrgAdmin can
+        delete users only)
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User deleted successfully
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Gets a user by ID (Owner, OrgAdmin, or self)
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            $ref: '#/definitions/entities.UserEntity'
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Updates a user (Owner can update anyone, OrgAdmin can update users
+        only, not self)
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entities.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User updated successfully
+          schema:
+            $ref: '#/definitions/entities.UserEntity'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - users
+  /validate_token:
+    post:
+      consumes:
+      - application/json
+      description: Validate the current access token
+      parameters:
+      - description: Bearer access token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token is valid
+          schema:
+            type: boolean
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.HTTPError'
+      summary: Validate Auth Token
+      tags:
+      - Auth
 swagger: "2.0"

@@ -29,20 +29,6 @@ func NewListSubscriptionsUseCase(
 }
 
 // Execute lists all subscriptions with pagination (PlatformAdmin only)
-// @Summary List all subscriptions
-// @Description Lists all subscriptions in the system with pagination (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Items per page" default(20)
-// @Param status query string false "Filter by subscription status"
-// @Success 200 {object} adminEntities.ListSubscriptionsResponse "List of subscriptions"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions [get]
 func (uc *ListSubscriptionsUseCase) Execute(ctx context.Context, userRoles []string, page, pageSize int, statusFilter string) (*adminEntities.ListSubscriptionsResponse, error) {
 	uc.logger.Info(ctx, "Admin listing subscriptions", map[string]interface{}{
 		"page":      page,

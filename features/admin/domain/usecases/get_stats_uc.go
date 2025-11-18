@@ -28,17 +28,6 @@ func NewGetStatsUseCase(
 }
 
 // Execute gets platform analytics and stats (PlatformAdmin only)
-// @Summary Get platform stats
-// @Description Gets platform analytics including MRR, subscription counts, and churn rate (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} adminEntities.AdminStats "Platform statistics"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/stats [get]
 func (uc *GetStatsUseCase) Execute(ctx context.Context, userRoles []string) (*adminEntities.AdminStats, error) {
 	uc.logger.Info(ctx, "Admin getting platform stats", nil)
 

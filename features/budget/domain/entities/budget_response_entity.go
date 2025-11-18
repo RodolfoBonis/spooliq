@@ -36,7 +36,7 @@ type FilamentUsageInfo struct {
 
 	// Advanced color system
 	ColorType    string          `json:"color_type"`
-	ColorData    json.RawMessage `json:"color_data,omitempty"`
+	ColorData    json.RawMessage `json:"color_data,omitempty" swaggertype:"object"`
 	ColorHex     string          `json:"color_hex,omitempty"`
 	ColorPreview string          `json:"color_preview,omitempty"`
 

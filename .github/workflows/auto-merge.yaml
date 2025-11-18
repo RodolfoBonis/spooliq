@@ -76,41 +76,9 @@ jobs:
           gh pr review --approve "${{ github.event.pull_request.html_url }}" \
             --body "✅ Auto-approving backport PR as all checks have passed."
 
-  release-auto-merge:
-    runs-on: ubuntu-latest
-    if: |
-      github.event.pull_request.head.ref && 
-      startsWith(github.event.pull_request.head.ref, 'release/') &&
-      github.event.pull_request.base.ref == 'main'
-    steps:
-      - name: Check PR approval and status
-        id: pr-check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Check if PR has required approvals
-          APPROVALS=$(gh pr view ${{ github.event.pull_request.number }} \
-            --json reviews \
-            -q '[.reviews[] | select(.state == "APPROVED")] | length')
-          
-          # Check if all checks passed
-          CHECKS_STATUS=$(gh pr checks ${{ github.event.pull_request.number }} \
-            --json status \
-            -q '[.[] | .status] | all(. == "COMPLETED")')
-          
-          echo "approvals=$APPROVALS" >> $GITHUB_OUTPUT
-          echo "checks_passed=$CHECKS_STATUS" >> $GITHUB_OUTPUT
-
-      - name: Enable auto-merge for approved releases
-        if: |
-          steps.pr-check.outputs.approvals >= 1 &&
-          steps.pr-check.outputs.checks_passed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
-          gh pr comment "${{ github.event.pull_request.html_url }}" \
-            --body "🚀 Release PR approved and checks passed. Auto-merge enabled."
+  # NOTE: Release PRs do NOT auto-merge
+  # They require explicit manual merge after QA validation in staging
+  # This ensures conscious review of production deployments
 
   cleanup-branches:
     runs-on: ubuntu-latest

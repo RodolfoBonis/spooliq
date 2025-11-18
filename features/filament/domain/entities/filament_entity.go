@@ -24,7 +24,7 @@ type FilamentEntity struct {
 
 	// Advanced color system
 	ColorType    ColorType       `json:"color_type"`
-	ColorData    json.RawMessage `json:"color_data,omitempty"`
+	ColorData    json.RawMessage `json:"color_data,omitempty" swaggertype:"object"`
 	ColorPreview string          `json:"color_preview,omitempty"`
 
 	// Physical properties

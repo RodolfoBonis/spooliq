@@ -33,21 +33,21 @@ type BudgetItemModel struct {
 	PrintTimeHours   int `gorm:"type:integer;default:0" json:"print_time_hours"`
 	PrintTimeMinutes int `gorm:"type:integer;default:0" json:"print_time_minutes"`
 
-	// NEW: Additional costs specific to this item
-	CostPresetID        *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id,omitempty"`
-	AdditionalLaborCost *int64     `gorm:"type:bigint" json:"additional_labor_cost,omitempty"` // cents (pintura, acabamento, etc)
-	AdditionalNotes     *string    `gorm:"type:text" json:"additional_notes,omitempty"`
+	// Labor breakdown fields
+	SetupTimeMinutes        int `gorm:"type:integer;default:0" json:"setup_time_minutes"`         // Setup time for this product (minutes)
+	ManualLaborMinutesTotal int `gorm:"type:integer;default:0" json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
 
-	// NEW: Calculated costs per item
-	FilamentCost  int64 `gorm:"type:bigint;default:0" json:"filament_cost"`   // cents
-	WasteCost     int64 `gorm:"type:bigint;default:0" json:"waste_cost"`      // cents
-	EnergyCost    int64 `gorm:"type:bigint;default:0" json:"energy_cost"`     // cents
-	LaborCost     int64 `gorm:"type:bigint;default:0" json:"labor_cost"`      // cents
-	ItemTotalCost int64 `gorm:"type:bigint;default:0" json:"item_total_cost"` // cents (sum of all costs)
+	// Additional costs specific to this item
+	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id,omitempty"`
+	AdditionalNotes *string    `gorm:"type:text" json:"additional_notes,omitempty"`
 
-	// OLD FIELDS (will be removed in later migration, kept for compatibility)
-	WasteAmount float64 `gorm:"type:numeric;default:0" json:"waste_amount"` // grams (deprecated)
-	ItemCost    int64   `gorm:"type:bigint;default:0" json:"item_cost"`     // cents (deprecated, use ItemTotalCost)
+	// Calculated costs per item
+	FilamentCost    int64 `gorm:"type:bigint;default:0" json:"filament_cost"`     // cents
+	WasteCost       int64 `gorm:"type:bigint;default:0" json:"waste_cost"`        // cents
+	EnergyCost      int64 `gorm:"type:bigint;default:0" json:"energy_cost"`       // cents
+	SetupCost       int64 `gorm:"type:bigint;default:0" json:"setup_cost"`        // cents
+	ManualLaborCost int64 `gorm:"type:bigint;default:0" json:"manual_labor_cost"` // cents
+	ItemTotalCost   int64 `gorm:"type:bigint;default:0" json:"item_total_cost"`   // cents (sum of all costs)
 
 	// Timestamps
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
@@ -77,31 +77,31 @@ func (bi *BudgetItemModel) BeforeCreate(tx *gorm.DB) error {
 // ToEntity converts the GORM model to domain entity
 func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 	return &entities.BudgetItemEntity{
-		ID:                  bi.ID,
-		BudgetID:            bi.BudgetID,
-		FilamentID:          bi.FilamentID,
-		OrganizationID:      bi.OrganizationID,
-		Quantity:            bi.Quantity,
-		Order:               bi.Order,
-		ProductName:         bi.ProductName,
-		ProductDescription:  bi.ProductDescription,
-		ProductQuantity:     bi.ProductQuantity,
-		UnitPrice:           bi.UnitPrice,
-		ProductDimensions:   bi.ProductDimensions,
-		PrintTimeHours:      bi.PrintTimeHours,
-		PrintTimeMinutes:    bi.PrintTimeMinutes,
-		CostPresetID:        bi.CostPresetID,
-		AdditionalLaborCost: bi.AdditionalLaborCost,
-		AdditionalNotes:     bi.AdditionalNotes,
-		FilamentCost:        bi.FilamentCost,
-		WasteCost:           bi.WasteCost,
-		EnergyCost:          bi.EnergyCost,
-		LaborCost:           bi.LaborCost,
-		ItemTotalCost:       bi.ItemTotalCost,
-		WasteAmount:         bi.WasteAmount,
-		ItemCost:            bi.ItemCost,
-		CreatedAt:           bi.CreatedAt,
-		UpdatedAt:           bi.UpdatedAt,
+		ID:                      bi.ID,
+		BudgetID:                bi.BudgetID,
+		FilamentID:              bi.FilamentID,
+		OrganizationID:          bi.OrganizationID,
+		Quantity:                bi.Quantity,
+		Order:                   bi.Order,
+		ProductName:             bi.ProductName,
+		ProductDescription:      bi.ProductDescription,
+		ProductQuantity:         bi.ProductQuantity,
+		UnitPrice:               bi.UnitPrice,
+		ProductDimensions:       bi.ProductDimensions,
+		PrintTimeHours:          bi.PrintTimeHours,
+		PrintTimeMinutes:        bi.PrintTimeMinutes,
+		SetupTimeMinutes:        bi.SetupTimeMinutes,
+		ManualLaborMinutesTotal: bi.ManualLaborMinutesTotal,
+		CostPresetID:            bi.CostPresetID,
+		AdditionalNotes:         bi.AdditionalNotes,
+		FilamentCost:            bi.FilamentCost,
+		WasteCost:               bi.WasteCost,
+		EnergyCost:              bi.EnergyCost,
+		SetupCost:               bi.SetupCost,
+		ManualLaborCost:         bi.ManualLaborCost,
+		ItemTotalCost:           bi.ItemTotalCost,
+		CreatedAt:               bi.CreatedAt,
+		UpdatedAt:               bi.UpdatedAt,
 	}
 }
 
@@ -120,16 +120,16 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ProductDimensions = entity.ProductDimensions
 	bi.PrintTimeHours = entity.PrintTimeHours
 	bi.PrintTimeMinutes = entity.PrintTimeMinutes
+	bi.SetupTimeMinutes = entity.SetupTimeMinutes
+	bi.ManualLaborMinutesTotal = entity.ManualLaborMinutesTotal
 	bi.CostPresetID = entity.CostPresetID
-	bi.AdditionalLaborCost = entity.AdditionalLaborCost
 	bi.AdditionalNotes = entity.AdditionalNotes
 	bi.FilamentCost = entity.FilamentCost
 	bi.WasteCost = entity.WasteCost
 	bi.EnergyCost = entity.EnergyCost
-	bi.LaborCost = entity.LaborCost
+	bi.SetupCost = entity.SetupCost
+	bi.ManualLaborCost = entity.ManualLaborCost
 	bi.ItemTotalCost = entity.ItemTotalCost
-	bi.WasteAmount = entity.WasteAmount
-	bi.ItemCost = entity.ItemCost
 	bi.CreatedAt = entity.CreatedAt
 	bi.UpdatedAt = entity.UpdatedAt
 }

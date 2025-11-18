@@ -68,9 +68,14 @@ func (uc *CustomerUseCase) FindAll(c *gin.Context) {
 	for i, customer := range customers {
 		// Get budget count for each customer
 		budgetCount, _ := uc.repository.CountBudgetsByCustomer(ctx, customer.ID)
+
+		// Get total budgets amount for printing and completed statuses
+		totalBudgets, _ := uc.repository.SumBudgetTotalsByCustomerAndStatus(ctx, customer.ID, []string{"printing", "completed"})
+
 		customerResponses[i] = entities.CustomerResponse{
-			Customer:    customer,
-			BudgetCount: int(budgetCount),
+			Customer:     customer,
+			BudgetCount:  int(budgetCount),
+			TotalBudgets: &totalBudgets,
 		}
 	}
 

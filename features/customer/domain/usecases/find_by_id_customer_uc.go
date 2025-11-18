@@ -62,6 +62,9 @@ func (uc *CustomerUseCase) FindByID(c *gin.Context) {
 
 	budgetCount, _ := uc.repository.CountBudgetsByCustomer(ctx, customer.ID)
 
+	// Get total budgets amount for printing and completed statuses
+	totalBudgets, _ := uc.repository.SumBudgetTotalsByCustomerAndStatus(ctx, customer.ID, []string{"printing", "completed"})
+
 	budgets, err := uc.repository.GetCustomerBudgets(ctx, customer.ID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve customer budgets", map[string]interface{}{
@@ -72,9 +75,10 @@ func (uc *CustomerUseCase) FindByID(c *gin.Context) {
 	}
 
 	response := entities.CustomerResponse{
-		Customer:    customer,
-		BudgetCount: int(budgetCount),
-		Budgets:     budgets,
+		Customer:     customer,
+		BudgetCount:  int(budgetCount),
+		TotalBudgets: &totalBudgets,
+		Budgets:      budgets,
 	}
 
 	uc.logger.Info(ctx, "Customer retrieved successfully", map[string]interface{}{

@@ -23,4 +23,6 @@ type CustomerRepository interface {
 	CountBudgetsByCustomer(ctx context.Context, customerID uuid.UUID) (int64, error)
 
 	GetCustomerBudgets(ctx context.Context, customerID uuid.UUID) ([]entities.BudgetSummary, error)
+
+	SumBudgetTotalsByCustomerAndStatus(ctx context.Context, customerID uuid.UUID, statuses []string) (int64, error)
 }

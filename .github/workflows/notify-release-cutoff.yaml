@@ -1,0 +1,94 @@
+name: Notify Release Cutoff
+
+on:
+  create:
+    branches:
+      - 'release/**'
+      - 'hotfix/**'
+
+permissions:
+  contents: read
+
+jobs:
+  notify-cutoff:
+    runs-on: ubuntu-latest
+    if: github.event.ref_type == 'branch' && (startsWith(github.event.ref, 'release/') || startsWith(github.event.ref, 'hotfix/'))
+    steps:
+      - name: Extract version from branch
+        id: extract-version
+        run: |
+          BRANCH="${{ github.event.ref }}"
+
+          # Remove release/ or hotfix/ prefix
+          VERSION=${BRANCH#release/}
+          VERSION=${VERSION#hotfix/}
+
+          # Determine type
+          if [[ "$BRANCH" == release/* ]]; then
+            TYPE="Release"
+            URGENCY="normal"
+          else
+            TYPE="Hotfix"
+            URGENCY="critical"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+          echo "urgency=$URGENCY" >> $GITHUB_OUTPUT
+
+      - name: Notify team of feature cutoff
+        run: |
+          TYPE="${{ steps.extract-version.outputs.type }}"
+          VERSION="${{ steps.extract-version.outputs.version }}"
+          URGENCY="${{ steps.extract-version.outputs.urgency }}"
+
+          if [ "$URGENCY" == "critical" ]; then
+            MESSAGE="🚨 HOTFIX $VERSION created!
+
+⚠️ CRITICAL: Production issue detected
+⛔ FEATURE CUTOFF ACTIVE
+
+New features merged to develop will go to NEXT release.
+This hotfix takes priority.
+
+🔴 Priority: CRITICAL
+⏱️ Timeline: 1-2 hours
+📋 PR will be created shortly"
+          else
+            MESSAGE="🚀 Release $VERSION created!
+
+📸 Snapshot of develop taken
+⚠️ FEATURE CUTOFF ACTIVE
+
+Features merged to develop AFTER this point will go to NEXT release.
+
+✅ Features IN this release: Everything in develop NOW
+❌ Features NOT in this release: Anything merged after this
+
+⏱️ Quick Release Timeline: 2-8 hours
+🧪 Staging deployment: Will trigger automatically
+📋 PR to main: Will be created shortly
+
+💡 Tip: Check the release PR for full changelog"
+          fi
+
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "feature_cutoff_announced",
+              "repository": "${{ github.repository }}",
+              "version": "'"$VERSION"'",
+              "branch": "${{ github.event.ref }}",
+              "type": "'"$TYPE"'",
+              "urgency": "'"$URGENCY"'",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "feature_cutoff": true,
+                "next_features_go_to_next_release": true
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}",
+              "telegram_message": "'"$MESSAGE"'"
+            }' || echo "Notification failed (non-critical)"

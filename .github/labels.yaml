@@ -1,0 +1,94 @@
+# GitHub Labels Configuration for SpoolIQ
+# Auto-created by workflows when needed
+
+- name: "release"
+  description: "Release preparation and deployment"
+  color: "0052CC"
+
+- name: "automated"
+  description: "Automatically created by workflows"
+  color: "E99695"
+
+- name: "backport"
+  description: "Backport changes to other branches"
+  color: "FBCA04"
+
+- name: "hotfix"
+  description: "Urgent fix for production issues"
+  color: "D93F0B"
+
+- name: "priority:critical"
+  description: "Critical priority - requires immediate attention"
+  color: "B60205"
+
+- name: "priority:high"
+  description: "High priority"
+  color: "D93F0B"
+
+- name: "priority:medium"
+  description: "Medium priority"
+  color: "FBCA04"
+
+- name: "priority:low"
+  description: "Low priority"
+  color: "0E8A16"
+
+- name: "bug"
+  description: "Something isn't working"
+  color: "D73A4A"
+
+- name: "feature"
+  description: "New feature or request"
+  color: "A2EEEF"
+
+- name: "enhancement"
+  description: "Improvement to existing functionality"
+  color: "84B6EB"
+
+- name: "documentation"
+  description: "Improvements or additions to documentation"
+  color: "0075CA"
+
+- name: "dependencies"
+  description: "Pull requests that update a dependency file"
+  color: "0366D6"
+
+- name: "ci/cd"
+  description: "Changes to CI/CD workflows"
+  color: "BFDADC"
+
+- name: "security"
+  description: "Security-related changes"
+  color: "EE0701"
+
+- name: "performance"
+  description: "Performance improvements"
+  color: "F9D0C4"
+
+- name: "refactor"
+  description: "Code refactoring"
+  color: "FBCA04"
+
+- name: "test"
+  description: "Testing-related changes"
+  color: "C5DEF5"
+
+- name: "wip"
+  description: "Work in progress"
+  color: "EDEDED"
+
+- name: "needs-review"
+  description: "Requires review"
+  color: "FEF2C0"
+
+- name: "approved"
+  description: "Changes approved"
+  color: "0E8A16"
+
+- name: "blocked"
+  description: "Blocked by other issues or dependencies"
+  color: "B60205"
+
+- name: "auto-merge"
+  description: "Automatically merge when approved"
+  color: "0E8A16"

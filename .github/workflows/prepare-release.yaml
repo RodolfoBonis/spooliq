@@ -147,68 +147,132 @@ jobs:
           git add CHANGELOG.md
           git diff --staged --quiet || git commit -m "docs: update CHANGELOG for v${{ steps.determine-version.outputs.version }}"
 
-      - name: Push release branch
+      - name: Create and push tag
         run: |
-          git push origin ${{ env.RELEASE_BRANCH }}
+          TAG="v${{ steps.determine-version.outputs.version }}"
 
-      - name: Create Pull Request to main
+          echo "Creating tag $TAG..."
+          git tag -a "$TAG" -m "Release $TAG"
+
+          echo "Pushing tag and branch..."
+          git push origin ${{ env.RELEASE_BRANCH }}
+          git push origin "$TAG"
+
+          echo "✓ Tag $TAG created and pushed"
+          echo "✓ Branch ${{ env.RELEASE_BRANCH }} pushed"
+
+      - name: Ensure labels exist
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr create \
+          # Create release label if it doesn't exist
+          gh label create "release" \
+            --description "Release preparation and deployment" \
+            --color "0052CC" \
+            --force 2>/dev/null || true
+
+          # Create automated label if it doesn't exist
+          gh label create "automated" \
+            --description "Automatically created by workflows" \
+            --color "E99695" \
+            --force 2>/dev/null || true
+
+          # Create backport label if it doesn't exist
+          gh label create "backport" \
+            --description "Backport changes to other branches" \
+            --color "FBCA04" \
+            --force 2>/dev/null || true
+
+          echo "✓ Labels ensured"
+
+      - name: Create Pull Request to main
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          SNAPSHOT_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          EXPECTED_COMPLETION=$(date -u -d '+8 hours' +"%Y-%m-%d %H:%M:%S UTC")
+
+          PR_URL=$(gh pr create \
             --base main \
             --head ${{ env.RELEASE_BRANCH }} \
             --title "🚀 Release v${{ steps.determine-version.outputs.version }}" \
-            --body "$(cat <<'EOF'
-          ## 🎯 Release v${{ steps.determine-version.outputs.version }}
-          
-          This PR prepares the release of version **v${{ steps.determine-version.outputs.version }}**.
-          
+            --body "$(cat <<EOF
+          ## 🎯 Quick Release v${{ steps.determine-version.outputs.version }}
+
+          This PR prepares release **v${{ steps.determine-version.outputs.version }}** for production deployment.
+
+          ### 📸 Develop Snapshot
+          ✓ Tag \`v${{ steps.determine-version.outputs.version }}\` created
+          ✓ Snapshot of \`${{ inputs.from_branch }}\` branch at: **${SNAPSHOT_TIME}**
+
+          ⚠️ **FEATURE CUTOFF ACTIVE**
+          Features merged to develop AFTER this snapshot will go to the **next release**.
+
           ${{ env.CHANGELOG }}
-          
+
+          ### ⏱️ Quick Release Timeline (Target: 2-8 hours)
+          - [x] Snapshot created & tag pushed
+          - [x] Staging deployment (check below)
+          - [ ] QA validation in staging (2-4h)
+          - [ ] PR approval & merge to main
+          - [ ] Production deployment (automatic)
+          - [ ] Backport to develop (automatic)
+
+          **Expected completion:** ${EXPECTED_COMPLETION}
+
+          ### 🧪 Staging Environment
+          Staging deployment triggered automatically.
+          Check the Actions tab for deployment status.
+
           ### 📝 Release Checklist
           - [ ] Version bumped to v${{ steps.determine-version.outputs.version }}
           - [ ] CHANGELOG.md updated
-          - [ ] All tests passing
-          - [ ] Staging deployment tested
+          - [ ] All CI tests passing
+          - [ ] Staging deployment successful
+          - [ ] QA validation complete
           - [ ] Breaking changes documented (if any)
-          
-          ### 🔄 Post-merge actions
-          After merging this PR:
-          1. Production deployment will be triggered automatically
-          2. Git tag `v${{ steps.determine-version.outputs.version }}` will be created
-          3. Changes will be backported to `develop` branch
-          4. GitHub Release will be created with artifacts
-          
-          ### ⚠️ Important
-          - Review all changes carefully
-          - Ensure staging tests have passed
-          - Confirm no sensitive data is included
-          
+          - [ ] No sensitive data included
+
+          ### 🔄 Post-merge Actions (Automatic)
+          1. **Production deployment** via release.yaml (triggered by post-merge-release.yaml)
+          2. **ArgoCD sync** to production cluster
+          3. **Backport PR** created to develop with auto-merge
+          4. **GitHub Release** created with artifacts
+          5. **Team notification** via Telegram/n8n
+
+          ### ⚠️ Important Notes
+          - **Tag already created:** \`v${{ steps.determine-version.outputs.version }}\`
+          - **Feature cutoff:** New features will go to next release
+          - **No auto-merge:** This PR requires manual approval
+          - **Quick cycle:** Target completion in 8 hours
+
           ---
-          *This PR was automatically created by the release preparation workflow.*
+          *Automated quick release - develop = next release model*
           EOF
           )" \
             --label "release" \
-            --label "automated"
+            --label "automated")
 
-      - name: Create Draft Pull Request to develop (for backport preview)
-        if: ${{ inputs.from_branch == 'develop' }}
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "✓ PR created: $PR_URL"
+
+      - name: Trigger staging deployment
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr create \
-            --base develop \
-            --head ${{ env.RELEASE_BRANCH }} \
-            --title "🔄 Backport: Release v${{ steps.determine-version.outputs.version }}" \
-            --body "This PR will be used for backporting changes after release is merged to main." \
-            --label "backport" \
-            --label "automated" \
-            --draft || echo "Draft PR for backport already exists or cannot be created"
+          echo "Triggering staging deployment for release branch..."
+
+          gh workflow run release-staging.yaml \
+            --ref ${{ env.RELEASE_BRANCH }} || echo "Staging deployment will trigger automatically on push"
+
+          echo "✓ Staging deployment triggered (or will trigger on push)"
 
       - name: Notify n8n
         if: success()
         run: |
+          EXPECTED_COMPLETION=$(date -u -d '+8 hours' +"%Y-%m-%dT%H:%M:%SZ")
+
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -220,9 +284,15 @@ jobs:
               "actor": "${{ github.actor }}",
               "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
               "details": {
-                "pr_url": "Check GitHub for PR link",
-                "from_branch": "${{ inputs.from_branch }}"
+                "pr_url": "${{ steps.create-pr.outputs.pr_url }}",
+                "from_branch": "${{ inputs.from_branch }}",
+                "tag_created": true,
+                "staging_triggered": true,
+                "expected_completion": "'"$EXPECTED_COMPLETION"'",
+                "feature_cutoff": true,
+                "quick_release": true
               },
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
-              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
-            }' || echo "Notification failed"
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}",
+              "telegram_message": "🚀 Release v${{ steps.determine-version.outputs.version }} prepared!\n\n⚠️ FEATURE CUTOFF: New features → next release\n⏱️ Target: 8h\n🧪 Staging: deploying\n📋 PR: ${{ steps.create-pr.outputs.pr_url }}"
+            }' || echo "Notification failed (non-critical)"

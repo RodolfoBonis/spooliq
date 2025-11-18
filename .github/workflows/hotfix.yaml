@@ -74,9 +74,49 @@ jobs:
           git add version.txt
           git commit -m "chore: bump version to ${{ steps.determine-version.outputs.version }} for hotfix"
 
-      - name: Push hotfix branch
+      - name: Create and push tag
         run: |
+          TAG="v${{ steps.determine-version.outputs.version }}"
+
+          echo "Creating hotfix tag $TAG..."
+          git tag -a "$TAG" -m "Hotfix $TAG: ${{ inputs.description }}"
+
+          echo "Pushing tag and branch..."
           git push origin ${{ env.HOTFIX_BRANCH }}
+          git push origin "$TAG"
+
+          echo "✓ Hotfix tag $TAG created and pushed"
+          echo "✓ Branch ${{ env.HOTFIX_BRANCH }} pushed"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Create hotfix label if it doesn't exist
+          gh label create "hotfix" \
+            --description "Urgent fix for production issues" \
+            --color "D93F0B" \
+            --force 2>/dev/null || true
+
+          # Create priority:critical label if it doesn't exist
+          gh label create "priority:critical" \
+            --description "Critical priority - requires immediate attention" \
+            --color "B60205" \
+            --force 2>/dev/null || true
+
+          # Create automated label if it doesn't exist
+          gh label create "automated" \
+            --description "Automatically created by workflows" \
+            --color "E99695" \
+            --force 2>/dev/null || true
+
+          # Create backport label if it doesn't exist
+          gh label create "backport" \
+            --description "Backport changes to other branches" \
+            --color "FBCA04" \
+            --force 2>/dev/null || true
+
+          echo "✓ Labels ensured"
 
       - name: Create Pull Request to main
         id: pr-main
@@ -86,34 +126,51 @@ jobs:
           PR_URL=$(gh pr create \
             --base main \
             --head ${{ env.HOTFIX_BRANCH }} \
-            --title "🚨 Hotfix v${{ steps.determine-version.outputs.version }}: ${{ inputs.description }}" \
-            --body "$(cat <<'EOF'
-          ## 🚨 Critical Hotfix v${{ steps.determine-version.outputs.version }}
-          
-          ### Description
-          ${{ inputs.description }}
-          
-          ### Type
-          **HOTFIX** - This is a critical fix that needs to be deployed to production immediately.
-          
-          ### Deployment Process
-          1. ✅ Review and approve this PR
-          2. 🚀 Merge to main (will trigger production deployment)
-          3. 🔄 Automatic backport to develop will be created
-          4. 📦 Tag v${{ steps.determine-version.outputs.version }} will be created
-          
-          ### Checklist
-          - [ ] Fix has been tested locally
+            --title "🚨 HOTFIX v${{ steps.determine-version.outputs.version }}: ${{ inputs.description }}" \
+            --body "$(cat <<EOF
+          ## 🚨 CRITICAL HOTFIX v${{ steps.determine-version.outputs.version }}
+
+          ### Issue Description
+          **${{ inputs.description }}**
+
+          ### Hotfix Details
+          - **Type:** CRITICAL - Production issue requiring immediate deployment
+          - **Version:** v${{ steps.determine-version.outputs.version }} (patch increment)
+          - **Tag:** ✓ Already created and pushed
+          - **Target:** Production (main branch)
+
+          ### ⏱️ Hotfix Timeline (URGENT - 1-2 hours)
+          - [x] Hotfix branch created from main
+          - [x] Version bumped (patch)
+          - [x] Tag created
+          - [ ] Code review & approval (ASAP!)
+          - [ ] Merge to main
+          - [ ] Production deployment (automatic)
+          - [ ] Backport to develop (automatic)
+
+          ### 📝 Critical Checklist
+          - [ ] Fix tested locally and verified
           - [ ] No breaking changes introduced
-          - [ ] Critical issue is resolved
-          
-          ### Post-merge
-          - Production deployment will happen automatically
-          - Backport PR to develop will be created automatically
-          - Please review and merge the backport PR promptly
-          
+          - [ ] Critical issue FULLY resolved
+          - [ ] No unintended side effects
+          - [ ] Logs/metrics reviewed
+
+          ### 🔄 Post-merge (Automatic)
+          1. **Production deployment** via release.yaml
+          2. **ArgoCD sync** to production cluster
+          3. **Backport PR** to develop (auto-merge enabled)
+          4. **GitHub Release** created
+          5. **Team notification** via Telegram
+
+          ### ⚠️ PRIORITY DEPLOYMENT
+          This hotfix addresses a critical production issue.
+          **Review and deploy IMMEDIATELY!**
+
+          Tag \`v${{ steps.determine-version.outputs.version }}\` is already created.
+          Deployment will trigger automatically on merge.
+
           ---
-          ⚠️ **This is a hotfix and should be reviewed and deployed with priority.**
+          *Critical hotfix - expedited review required*
           EOF
           )" \
             --label "hotfix" \
@@ -122,20 +179,6 @@ jobs:
           
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           echo "PR created: $PR_URL"
-
-      - name: Create Draft PR to develop
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh pr create \
-            --base develop \
-            --head ${{ env.HOTFIX_BRANCH }} \
-            --title "🔄 Backport Hotfix v${{ steps.determine-version.outputs.version }} to develop" \
-            --body "This PR will backport hotfix v${{ steps.determine-version.outputs.version }} to develop branch after it's merged to main." \
-            --label "backport" \
-            --label "hotfix" \
-            --label "automated" \
-            --draft || echo "Draft PR to develop already exists or cannot be created"
 
       - name: Notify n8n
         if: success()
@@ -153,40 +196,11 @@ jobs:
               "details": {
                 "description": "${{ inputs.description }}",
                 "pr_url": "${{ steps.pr-main.outputs.pr_url }}",
-                "priority": "critical"
+                "priority": "critical",
+                "tag_created": true,
+                "urgent": true
               },
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
-              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
-            }' || echo "Notification failed"
-
-  deploy-hotfix:
-    needs: create-hotfix
-    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'hotfix/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger production deployment
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          # The release.yaml workflow will handle the actual deployment
-          # This is just a placeholder to show the flow
-          echo "Production deployment will be triggered by release.yaml workflow"
-
-      - name: Notify n8n deployment started
-        run: |
-          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "event_type": "hotfix_deployment_started",
-              "repository": "${{ github.repository }}",
-              "version": "v${{ steps.determine-version.outputs.version }}",
-              "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-              "details": {
-                "environment": "production",
-                "description": "${{ inputs.description }}"
-              },
-              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
-              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
-            }' || echo "Notification failed"
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}",
+              "telegram_message": "🚨 HOTFIX v${{ steps.determine-version.outputs.version }} created!\n\n${{ inputs.description }}\n\n⚠️ CRITICAL - Review ASAP\n📋 PR: ${{ steps.pr-main.outputs.pr_url }}"
+            }' || echo "Notification failed (non-critical)"

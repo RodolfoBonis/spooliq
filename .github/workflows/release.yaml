@@ -2,35 +2,93 @@ name: Release with GoReleaser
 
 permissions:
   contents: write
+  pull-requests: write
 
 on:
-  workflow_run:
-    workflows: ["CI - spooliq"]
-    types:
-      - completed
-    branches: [main]
-  push:
-    tags:
-      - 'v*'
-  pull_request:
-    types: [closed]
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v2.1.0)'
+        required: true
+        type: string
+      version:
+        description: 'Version without v prefix (e.g., 2.1.0)'
+        required: true
+        type: string
+
+concurrency:
+  group: release-production
+  cancel-in-progress: false
 
 env:
   GO_VERSION: '1.23'
 
 jobs:
-  release:
-    runs-on: [ubuntu-latest]
-    if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || 
-      github.event.workflow_run.conclusion == 'success' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/'))
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
     steps:
-      - name: Checkout
+      - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Validate version consistency
+        id: validate
+        run: |
+          # Extract version from inputs
+          INPUT_VERSION="${{ inputs.version }}"
+          INPUT_TAG="${{ inputs.tag }}"
+
+          # Read version from version.txt
+          FILE_VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
+
+          # Verify tag format
+          if [[ ! "$INPUT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Tag must be in format v1.2.3"
+            echo "Got: $INPUT_TAG"
+            exit 1
+          fi
+
+          # Extract version from tag
+          TAG_VERSION=${INPUT_TAG#v}
+
+          # Verify input version matches tag version
+          if [ "$INPUT_VERSION" != "$TAG_VERSION" ]; then
+            echo "ERROR: Input version ($INPUT_VERSION) doesn't match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+
+          # Verify file version matches tag version
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) doesn't match version.txt ($FILE_VERSION)"
+            echo ""
+            echo "This means the tag was created with the wrong version!"
+            echo "Expected: $FILE_VERSION"
+            echo "Got: $TAG_VERSION"
+            exit 1
+          fi
+
+          # All validations passed
+          echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+
+          echo "✓ Version validated: $INPUT_VERSION"
+          echo "✓ Tag validated: $INPUT_TAG"
+          echo "✓ version.txt matches: $FILE_VERSION"
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
           fetch-depth: 0
 
       - name: Setup Go
@@ -51,52 +109,6 @@ jobs:
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Determine Version Strategy
-        id: version-strategy
-        run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "strategy=tag" >> $GITHUB_OUTPUT
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "strategy=auto" >> $GITHUB_OUTPUT
-            # Only auto-increment for workflow_run events (after CI success)
-            if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-              chmod +x ./.config/scripts/increment_version.sh
-              ./.config/scripts/increment_version.sh
-              VERSION=$(cat version.txt)
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-              echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-            else
-              # For direct tag pushes, use the tag version
-              echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-              echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Add, commit and push version increment
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: "GitHub Actions"
-          author_email: "actions@github.com"
-          message: "Increment version"
-          add: "version.txt"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Create Tag (if auto-increment)
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        run: |
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/RodolfoBonis/spooliq.git
-          git tag ${{ steps.version-strategy.outputs.tag }}
-          git push origin ${{ steps.version-strategy.outputs.tag }}
-
-      - name: Reset git state before GoReleaser
-        run: |
-          git reset --hard HEAD
-          git clean -fd
 
       - name: Set lowercase repository owner
         id: repo-owner
@@ -124,16 +136,16 @@ jobs:
 
       - name: Update K3s Manifests
         env:
-          VERSION: ${{ steps.version-strategy.outputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
         run: |
           cd k3s-manifest
-          
+
           # Update Helm values for production
           yq e -i ".image.tag = \"${VERSION}\"" \
             ./apps/spooliq/app/chart/values-prod.yaml
-          
+
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add ./apps/spooliq/app/chart/values-prod.yaml
@@ -161,14 +173,14 @@ jobs:
             # Fallback: use workflow start time (approximate)
             START_TIME=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
           fi
-          
+
           END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          
+
           # Calculate duration in seconds using date command
           START_EPOCH=$(date -d "$START_TIME" +%s)
           END_EPOCH=$(date -d "$END_TIME" +%s)
           DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
-          
+
           # Convert to human readable format
           if [ $DURATION_SECONDS -lt 60 ]; then
             DURATION="${DURATION_SECONDS}s"
@@ -182,13 +194,13 @@ jobs:
             SECONDS=$((DURATION_SECONDS % 60))
             DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
           fi
-          
+
           echo "duration=$DURATION" >> $GITHUB_OUTPUT
 
       - name: Notify n8n Success
         if: success()
         run: |
-          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version-strategy.outputs.version }}"
+          DOCKER_IMAGE="${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ needs.validate.outputs.version }}"
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -197,7 +209,7 @@ jobs:
               "repository": "${{ github.repository }}",
               "workflow": "${{ github.workflow }}",
               "commit_sha": "${{ github.sha }}",
-              "tag": "${{ steps.version-strategy.outputs.tag }}",
+              "tag": "${{ needs.validate.outputs.tag }}",
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
               "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
@@ -205,13 +217,13 @@ jobs:
                 "docker_image": "'$DOCKER_IMAGE'",
                 "argocd_sync": "success",
                 "build_time": "${{ steps.build-duration.outputs.duration }}",
-                "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}"
+                "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
               },
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
               "telegram_thread_id": "${{ secrets.THREAD_ID }}"
             }'
 
-      - name: Notify n8n Failure  
+      - name: Notify n8n Failure
         if: failure()
         run: |
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
@@ -222,7 +234,7 @@ jobs:
               "repository": "${{ github.repository }}",
               "workflow": "${{ github.workflow }}",
               "commit_sha": "${{ github.sha }}",
-              "tag": "${{ steps.version-strategy.outputs.tag }}",
+              "tag": "${{ needs.validate.outputs.tag }}",
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
               "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
@@ -235,40 +247,115 @@ jobs:
               "telegram_thread_id": "${{ secrets.THREAD_ID }}"
             }'
 
-      - name: Backport to develop
-        if: success() && (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/'))
+  backport:
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Create backport label if it doesn't exist
+          gh label create "backport" \
+            --description "Backport changes to other branches" \
+            --color "FBCA04" \
+            --force 2>/dev/null || true
+
+          # Create automated label if it doesn't exist
+          gh label create "automated" \
+            --description "Automatically created by workflows" \
+            --color "E99695" \
+            --force 2>/dev/null || true
+
+          # Create auto-merge label if it doesn't exist
+          gh label create "auto-merge" \
+            --description "Automatically merge when approved" \
+            --color "0E8A16" \
+            --force 2>/dev/null || true
+
+      - name: Create backport to develop
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Setup git
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          
+
           # Fetch all branches
           git fetch origin develop:develop
-          
-          # Get the release version from the merged PR
-          VERSION="${{ steps.version-strategy.outputs.version }}"
-          
-          # Create backport branch
-          BACKPORT_BRANCH="backport/v${VERSION}-to-develop"
+
+          # Get the release version
+          VERSION="${{ needs.validate.outputs.version }}"
+          TAG="${{ needs.validate.outputs.tag }}"
+
+          # Create backport branch from develop
+          BACKPORT_BRANCH="backport/${TAG}-to-develop"
           git checkout -b $BACKPORT_BRANCH develop
-          
-          # Cherry-pick the merge commit
-          git cherry-pick -m 1 ${{ github.sha }} || {
-            echo "Cherry-pick failed, trying merge strategy"
-            git checkout develop
-            git merge --no-ff ${{ github.sha }} -m "chore: backport v${VERSION} to develop"
+
+          # Merge main into the backport branch
+          git merge origin/main --no-ff -m "chore: backport ${TAG} to develop" || {
+            echo "Merge conflict detected"
+            echo "This requires manual intervention"
+            exit 1
           }
-          
+
           # Push the backport branch
           git push origin $BACKPORT_BRANCH
-          
-          # Create PR
+
+          # Create PR with auto-merge label
           gh pr create \
             --base develop \
             --head $BACKPORT_BRANCH \
-            --title "🔄 Backport v${VERSION} to develop" \
-            --body "Automated backport of release v${VERSION} changes to develop branch" \
+            --title "🔄 Backport ${TAG} to develop" \
+            --body "$(cat <<'EOF'
+          ## Automated Backport
+
+          This PR backports release **${TAG}** from main to develop.
+
+          ### Changes Included
+          - Version bump to $VERSION
+          - CHANGELOG updates
+          - All features and fixes from the release
+
+          ### Auto-merge
+          This PR is labeled for auto-merge and will be merged automatically after:
+          - ✓ All CI checks pass
+          - ✓ No merge conflicts
+
+          If there are conflicts, manual resolution is required.
+
+          ---
+          *Automated by release workflow*
+          EOF
+          )" \
             --label "backport" \
-            --label "automated" || echo "PR creation failed or already exists"
+            --label "automated" \
+            --label "auto-merge" || echo "PR creation failed or already exists"
+
+      - name: Notify n8n backport created
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "backport_created",
+              "repository": "${{ github.repository }}",
+              "version": "${{ needs.validate.outputs.tag }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "target_branch": "develop",
+                "auto_merge": true
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }' || echo "Notification failed (non-critical)"

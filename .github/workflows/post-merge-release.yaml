@@ -1,0 +1,149 @@
+name: Post-Merge Release Handler
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  trigger-release:
+    if: |
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.head.ref, 'release/') ||
+       startsWith(github.event.pull_request.head.ref, 'hotfix/'))
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+      tag: ${{ steps.extract-version.outputs.tag }}
+    steps:
+      - name: Extract version from branch
+        id: extract-version
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+
+          # Remove release/ or hotfix/ prefix
+          VERSION=${BRANCH#release/}
+          VERSION=${VERSION#hotfix/}
+
+          # Remove v prefix if exists
+          VERSION=${VERSION#v}
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+          echo "Tag: v${VERSION}"
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify tag exists
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          TAG="${{ steps.extract-version.outputs.tag }}"
+
+          # Check if tag exists locally
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "✓ Tag $TAG exists locally"
+          else
+            # Try to fetch from remote
+            git fetch --tags
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              echo "✓ Tag $TAG fetched from remote"
+            else
+              echo "ERROR: Tag $TAG does not exist!"
+              echo "The release workflow expects tags to be created during prepare-release or hotfix"
+              exit 1
+            fi
+          fi
+
+          echo "✓ Tag validation passed"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Create release label if it doesn't exist
+          gh label create "release" \
+            --description "Release preparation and deployment" \
+            --color "0052CC" \
+            --force 2>/dev/null || true
+
+          # Create automated label if it doesn't exist
+          gh label create "automated" \
+            --description "Automatically created by workflows" \
+            --color "E99695" \
+            --force 2>/dev/null || true
+
+          # Create backport label if it doesn't exist
+          gh label create "backport" \
+            --description "Backport changes to other branches" \
+            --color "FBCA04" \
+            --force 2>/dev/null || true
+
+          # Create hotfix label if it doesn't exist
+          gh label create "hotfix" \
+            --description "Urgent fix for production issues" \
+            --color "D93F0B" \
+            --force 2>/dev/null || true
+
+          # Create priority:critical label if it doesn't exist
+          gh label create "priority:critical" \
+            --description "Critical priority - requires immediate attention" \
+            --color "B60205" \
+            --force 2>/dev/null || true
+
+          echo "✓ Labels ensured"
+
+      - name: Trigger production deployment
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          TAG="${{ steps.extract-version.outputs.tag }}"
+
+          echo "🚀 Triggering production deployment for $TAG"
+
+          gh workflow run release.yaml \
+            --ref "$TAG" \
+            -f tag="$TAG" \
+            -f version="${{ steps.extract-version.outputs.version }}"
+
+          echo "✓ Production deployment workflow triggered"
+
+      - name: Notify n8n
+        if: success()
+        run: |
+          BRANCH_TYPE="release"
+          if [[ "${{ github.event.pull_request.head.ref }}" == hotfix/* ]]; then
+            BRANCH_TYPE="hotfix"
+          fi
+
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "production_deployment_triggered",
+              "repository": "${{ github.repository }}",
+              "version": "${{ steps.extract-version.outputs.tag }}",
+              "branch_type": "'"$BRANCH_TYPE"'",
+              "pr_number": ${{ github.event.pull_request.number }},
+              "pr_title": "${{ github.event.pull_request.title }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "pr_url": "${{ github.event.pull_request.html_url }}",
+                "merged_by": "${{ github.event.pull_request.merged_by.login }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }' || echo "Notification failed (non-critical)"
+
+          echo "✓ Team notified"

@@ -43,7 +43,8 @@ jobs:
           URGENCY="${{ steps.extract-version.outputs.urgency }}"
 
           if [ "$URGENCY" == "critical" ]; then
-            MESSAGE="🚨 HOTFIX $VERSION created!
+            MESSAGE=$(cat <<'EOF'
+🚨 HOTFIX %VERSION% created!
 
 ⚠️ CRITICAL: Production issue detected
 ⛔ FEATURE CUTOFF ACTIVE
@@ -53,9 +54,13 @@ This hotfix takes priority.
 
 🔴 Priority: CRITICAL
 ⏱️ Timeline: 1-2 hours
-📋 PR will be created shortly"
+📋 PR will be created shortly
+EOF
+)
+            MESSAGE="${MESSAGE//%VERSION%/$VERSION}"
           else
-            MESSAGE="🚀 Release $VERSION created!
+            MESSAGE=$(cat <<'EOF'
+🚀 Release %VERSION% created!
 
 📸 Snapshot of develop taken
 ⚠️ FEATURE CUTOFF ACTIVE
@@ -69,26 +74,32 @@ Features merged to develop AFTER this point will go to NEXT release.
 🧪 Staging deployment: Will trigger automatically
 📋 PR to main: Will be created shortly
 
-💡 Tip: Check the release PR for full changelog"
+💡 Tip: Check the release PR for full changelog
+EOF
+)
+            MESSAGE="${MESSAGE//%VERSION%/$VERSION}"
           fi
+
+          # Escape message for JSON
+          MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)
 
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "event_type": "feature_cutoff_announced",
-              "repository": "${{ github.repository }}",
-              "version": "'"$VERSION"'",
-              "branch": "${{ github.event.ref }}",
-              "type": "'"$TYPE"'",
-              "urgency": "'"$URGENCY"'",
-              "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-              "details": {
-                "feature_cutoff": true,
-                "next_features_go_to_next_release": true
+            -d "{
+              \"event_type\": \"feature_cutoff_announced\",
+              \"repository\": \"${{ github.repository }}\",
+              \"version\": \"$VERSION\",
+              \"branch\": \"${{ github.event.ref }}\",
+              \"type\": \"$TYPE\",
+              \"urgency\": \"$URGENCY\",
+              \"actor\": \"${{ github.actor }}\",
+              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+              \"details\": {
+                \"feature_cutoff\": true,
+                \"next_features_go_to_next_release\": true
               },
-              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
-              "telegram_thread_id": "${{ secrets.THREAD_ID }}",
-              "telegram_message": "'"$MESSAGE"'"
-            }' || echo "Notification failed (non-critical)"
+              \"telegram_chat_id\": \"${{ secrets.CHAT_ID }}\",
+              \"telegram_thread_id\": \"${{ secrets.THREAD_ID }}\",
+              \"telegram_message\": $MESSAGE_ESCAPED
+            }" || echo "Notification failed (non-critical)"

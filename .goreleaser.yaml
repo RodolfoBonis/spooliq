@@ -30,12 +30,12 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
-# Compressão UPX
-upx:
-  - enabled: true
-    compress: best
-    lzma: true
-    goos: [linux]
+# Compressão UPX (temporariamente desabilitado para troubleshooting)
+# upx:
+#   - enabled: true
+#     compress: best
+#     lzma: true
+#     goos: [linux]
 
 # Docker Images
 dockers:

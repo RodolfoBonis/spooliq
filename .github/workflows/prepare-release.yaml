@@ -90,6 +90,22 @@ jobs:
           
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Sync with main branch
+        run: |
+          echo "Fetching main branch..."
+          git fetch origin main
+
+          echo "Merging main into ${{ inputs.source_branch }}..."
+          git merge origin/main --no-edit -m "chore: sync with main before release" || {
+            echo "Merge conflict detected. Auto-resolving by preferring main's version..."
+            # Auto-resolve conflicts by preferring main's versions of version.txt and CHANGELOG.md
+            git checkout --theirs version.txt CHANGELOG.md 2>/dev/null || true
+            git add version.txt CHANGELOG.md 2>/dev/null || true
+            git commit -m "chore: sync with main before release (auto-resolved)" || true
+          }
+
+          echo "Sync with main completed successfully"
+
       - name: Create release branch
         run: |
           RELEASE_BRANCH="release/v${{ steps.determine-version.outputs.version }}"

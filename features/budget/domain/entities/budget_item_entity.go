@@ -28,21 +28,21 @@ type BudgetItemEntity struct {
 	PrintTimeHours   int `json:"print_time_hours"`
 	PrintTimeMinutes int `json:"print_time_minutes"`
 
+	// Labor breakdown fields
+	SetupTimeMinutes        int `json:"setup_time_minutes"`         // Setup time for this product (minutes)
+	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
+
 	// Additional costs specific to this item
-	CostPresetID        *uuid.UUID `json:"cost_preset_id,omitempty"`
-	AdditionalLaborCost *int64     `json:"additional_labor_cost,omitempty"` // cents
-	AdditionalNotes     *string    `json:"additional_notes,omitempty"`
+	CostPresetID    *uuid.UUID `json:"cost_preset_id,omitempty"`
+	AdditionalNotes *string    `json:"additional_notes,omitempty"`
 
 	// Calculated costs per item
-	FilamentCost  int64 `json:"filament_cost"`   // cents
-	WasteCost     int64 `json:"waste_cost"`      // cents
-	EnergyCost    int64 `json:"energy_cost"`     // cents
-	LaborCost     int64 `json:"labor_cost"`      // cents
-	ItemTotalCost int64 `json:"item_total_cost"` // cents (sum of all costs)
-
-	// OLD FIELDS (deprecated, kept for compatibility)
-	WasteAmount float64 `json:"waste_amount"` // grams (deprecated)
-	ItemCost    int64   `json:"item_cost"`    // cents (deprecated, use ItemTotalCost)
+	FilamentCost    int64 `json:"filament_cost"`     // cents
+	WasteCost       int64 `json:"waste_cost"`        // cents
+	EnergyCost      int64 `json:"energy_cost"`       // cents
+	SetupCost       int64 `json:"setup_cost"`        // cents
+	ManualLaborCost int64 `json:"manual_labor_cost"` // cents
+	ItemTotalCost   int64 `json:"item_total_cost"`   // cents (sum of all costs)
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at"`

@@ -73,7 +73,7 @@ func (s *PDFService) GenerateBudgetPDF(ctx context.Context, data BudgetPDFData) 
 	s.addCustomerInfo(pdf, data.Customer, data.Branding)
 
 	// Add items table
-	s.addItemsTable(pdf, data.Items, data.Branding)
+	s.addItemsTable(pdf, data.Items, data.Budget, data.Branding)
 
 	// Add cost summary
 	s.addCostSummary(pdf, data.Budget, data.Branding)
@@ -238,7 +238,7 @@ func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.
 }
 
 // addItemsTable adds the items table showing products (customer-facing)
-func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.BudgetItemResponse, branding *companyEntities.CompanyBrandingEntity) {
+func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.BudgetItemResponse, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 10) // Reduced from 11
 	r, g, b := s.hexToRGB(branding.SecondaryColor)
 	pdf.SetTextColor(r, g, b)
@@ -257,6 +257,12 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 	pdf.CellFormat(35, 6, s.convertUTF8("Valor Unitário (R$)"), "1", 0, "C", true, 0, "")
 	pdf.CellFormat(35, 6, s.convertUTF8("Subtotal (R$)"), "1", 0, "C", true, 0, "")
 	pdf.Ln(-1)
+
+	// Calculate total direct costs (subtotal) for proportional distribution
+	var budgetSubtotal int64 = 0
+	for _, item := range items {
+		budgetSubtotal += item.ItemTotalCost
+	}
 
 	// Table rows - showing products
 	pdf.SetFont("Arial", "", 7) // Reduced from 8
@@ -281,13 +287,28 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 			description = description[:57] + "..."
 		}
 
-		// Calculate subtotal (ProductQuantity * UnitPrice)
-		subtotal := float64(item.ProductQuantity) * (float64(item.UnitPrice) / 100.0)
+		// Calculate final price with overhead and profit distributed proportionally
+		var itemFinalCost int64 = item.ItemTotalCost
+		if budgetSubtotal > 0 {
+			// Calculate item's proportion of total direct costs
+			itemProportion := float64(item.ItemTotalCost) / float64(budgetSubtotal)
+
+			// Distribute overhead and profit proportionally
+			itemOverhead := int64(float64(budget.OverheadCost) * itemProportion)
+			itemProfit := int64(float64(budget.ProfitAmount) * itemProportion)
+
+			// Final cost includes direct costs + overhead + profit
+			itemFinalCost = item.ItemTotalCost + itemOverhead + itemProfit
+		}
+
+		// Calculate unit price and subtotal with markup
+		unitPriceWithMarkup := float64(itemFinalCost) / 100.0 / float64(item.ProductQuantity)
+		subtotalWithMarkup := float64(item.ProductQuantity) * unitPriceWithMarkup
 
 		pdf.CellFormat(95, 5, s.convertUTF8(description), "1", 0, "L", fillColor, 0, "") // Reduced height from 6 to 5
 		pdf.CellFormat(20, 5, fmt.Sprintf("%d", item.ProductQuantity), "1", 0, "C", fillColor, 0, "")
-		pdf.CellFormat(35, 5, fmt.Sprintf("%.2f", float64(item.UnitPrice)/100.0), "1", 0, "R", fillColor, 0, "")
-		pdf.CellFormat(35, 5, fmt.Sprintf("%.2f", subtotal), "1", 0, "R", fillColor, 0, "")
+		pdf.CellFormat(35, 5, fmt.Sprintf("%.2f", unitPriceWithMarkup), "1", 0, "R", fillColor, 0, "")
+		pdf.CellFormat(35, 5, fmt.Sprintf("%.2f", subtotalWithMarkup), "1", 0, "R", fillColor, 0, "")
 		pdf.Ln(-1)
 	}
 

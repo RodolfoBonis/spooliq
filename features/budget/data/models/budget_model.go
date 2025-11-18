@@ -33,27 +33,21 @@ type BudgetModel struct {
 	// Presets (global - apply to all items unless overridden at item level)
 	MachinePresetID *uuid.UUID `gorm:"type:uuid" json:"machine_preset_id"`
 	EnergyPresetID  *uuid.UUID `gorm:"type:uuid" json:"energy_preset_id"`
-
-	// DEPRECATED: CostPresetID moved to budget_items (per-item, not global)
-	CostPresetID *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"`
+	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"` // For overhead/profit percentages
 
 	// Configuration flags
 	IncludeEnergyCost bool `gorm:"default:false" json:"include_energy_cost"`
-
-	// DEPRECATED: IncludeLaborCost moved to item level (via CostPreset or AdditionalLaborCost)
-	IncludeLaborCost bool `gorm:"default:false" json:"include_labor_cost"`
-
-	IncludeWasteCost bool `gorm:"default:false" json:"include_waste_cost"`
-
-	// DEPRECATED: LaborCostPerHour moved to item level (via CostPreset)
-	LaborCostPerHour *float64 `gorm:"type:numeric" json:"labor_cost_per_hour"`
+	IncludeWasteCost  bool `gorm:"default:false" json:"include_waste_cost"`
 
 	// Calculated costs (in cents)
-	FilamentCost int64 `gorm:"type:bigint;default:0" json:"filament_cost"`
-	WasteCost    int64 `gorm:"type:bigint;default:0" json:"waste_cost"`
-	EnergyCost   int64 `gorm:"type:bigint;default:0" json:"energy_cost"`
-	LaborCost    int64 `gorm:"type:bigint;default:0" json:"labor_cost"`
-	TotalCost    int64 `gorm:"type:bigint;default:0" json:"total_cost"`
+	FilamentCost int64 `gorm:"type:bigint;default:0" json:"filament_cost"` // Sum of all items filament costs
+	WasteCost    int64 `gorm:"type:bigint;default:0" json:"waste_cost"`    // Sum of all items waste costs
+	EnergyCost   int64 `gorm:"type:bigint;default:0" json:"energy_cost"`   // Sum of all items energy costs
+	SetupCost    int64 `gorm:"type:bigint;default:0" json:"setup_cost"`    // Sum of all items setup costs
+	LaborCost    int64 `gorm:"type:bigint;default:0" json:"labor_cost"`    // Sum of all items manual labor costs
+	OverheadCost int64 `gorm:"type:bigint;default:0" json:"overhead_cost"` // Overhead calculated on subtotal (from CostPreset.OverheadPercentage)
+	ProfitAmount int64 `gorm:"type:bigint;default:0" json:"profit_amount"` // Profit margin calculated (from CostPreset.ProfitMarginPercentage)
+	TotalCost    int64 `gorm:"type:bigint;default:0" json:"total_cost"`    // Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit
 
 	// Additional fields for PDF generation
 	DeliveryDays *int    `gorm:"type:integer" json:"delivery_days"`
@@ -111,13 +105,14 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		EnergyPresetID:    b.EnergyPresetID,
 		CostPresetID:      b.CostPresetID,
 		IncludeEnergyCost: b.IncludeEnergyCost,
-		IncludeLaborCost:  b.IncludeLaborCost,
 		IncludeWasteCost:  b.IncludeWasteCost,
-		LaborCostPerHour:  b.LaborCostPerHour,
 		FilamentCost:      b.FilamentCost,
 		WasteCost:         b.WasteCost,
 		EnergyCost:        b.EnergyCost,
+		SetupCost:         b.SetupCost,
 		LaborCost:         b.LaborCost,
+		OverheadCost:      b.OverheadCost,
+		ProfitAmount:      b.ProfitAmount,
 		TotalCost:         b.TotalCost,
 		DeliveryDays:      b.DeliveryDays,
 		PaymentTerms:      b.PaymentTerms,
@@ -152,13 +147,14 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.EnergyPresetID = entity.EnergyPresetID
 	b.CostPresetID = entity.CostPresetID
 	b.IncludeEnergyCost = entity.IncludeEnergyCost
-	b.IncludeLaborCost = entity.IncludeLaborCost
 	b.IncludeWasteCost = entity.IncludeWasteCost
-	b.LaborCostPerHour = entity.LaborCostPerHour
 	b.FilamentCost = entity.FilamentCost
 	b.WasteCost = entity.WasteCost
 	b.EnergyCost = entity.EnergyCost
+	b.SetupCost = entity.SetupCost
 	b.LaborCost = entity.LaborCost
+	b.OverheadCost = entity.OverheadCost
+	b.ProfitAmount = entity.ProfitAmount
 	b.TotalCost = entity.TotalCost
 	b.DeliveryDays = entity.DeliveryDays
 	b.PaymentTerms = entity.PaymentTerms

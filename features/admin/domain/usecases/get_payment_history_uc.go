@@ -33,22 +33,6 @@ func NewGetPaymentHistoryUseCase(
 }
 
 // Execute gets payment history for a company (PlatformAdmin only)
-// @Summary Get payment history
-// @Description Gets payment history for a specific company (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param organization_id path string true "Organization ID (UUID)"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Items per page" default(20)
-// @Success 200 {object} adminEntities.PaymentHistoryResponse "Payment history"
-// @Failure 400 {object} map[string]string "Invalid organization ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Company not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions/{organization_id}/payments [get]
 func (uc *GetPaymentHistoryUseCase) Execute(ctx context.Context, userRoles []string, organizationID uuid.UUID, page, pageSize int) (*adminEntities.PaymentHistoryResponse, error) {
 	uc.logger.Info(ctx, "Admin getting payment history", map[string]interface{}{
 		"organization_id": organizationID,

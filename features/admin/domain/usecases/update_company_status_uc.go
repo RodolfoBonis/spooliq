@@ -32,21 +32,6 @@ func NewUpdateCompanyStatusUseCase(
 }
 
 // Execute updates company subscription status (PlatformAdmin only)
-// @Summary Update company subscription status
-// @Description Manually updates a company's subscription status (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param organization_id path string true "Organization ID (UUID)"
-// @Param request body adminEntities.UpdateStatusRequest true "Status update request"
-// @Success 200 {object} adminEntities.CompanyDetailsResponse "Updated company details"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Company not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies/{organization_id}/status [patch]
 func (uc *UpdateCompanyStatusUseCase) Execute(ctx context.Context, userRoles []string, organizationID uuid.UUID, req *adminEntities.UpdateStatusRequest) (*adminEntities.CompanyDetailsResponse, error) {
 	uc.logger.Info(ctx, "Admin updating company status", map[string]interface{}{
 		"organization_id": organizationID,

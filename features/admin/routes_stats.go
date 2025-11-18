@@ -15,7 +15,7 @@ import (
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} adminEntities.AdminStats "Platform statistics"
+// @Success 200 {object} entities.AdminStats "Platform statistics"
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"

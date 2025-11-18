@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3.2 - 2025-11-18
+
+### Changes
+- chore: bump version to 2.3.2 (991b473)
+- fix: update GoReleaser to v2.12.3 and use 'ids' field (38b75c7)
+
+
 ## v2.3.1 - 2025-11-18
 
 ### Changes

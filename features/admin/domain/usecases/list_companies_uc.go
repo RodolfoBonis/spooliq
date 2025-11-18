@@ -29,20 +29,6 @@ func NewListCompaniesUseCase(
 }
 
 // Execute lists all companies with pagination (PlatformAdmin only)
-// @Summary List all companies
-// @Description Lists all companies in the system with pagination (PlatformAdmin only)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Items per page" default(20)
-// @Param status query string false "Filter by subscription status"
-// @Success 200 {object} adminEntities.ListCompaniesResponse "List of companies"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies [get]
 func (uc *ListCompaniesUseCase) Execute(ctx context.Context, userRoles []string, page, pageSize int, statusFilter string) (*adminEntities.ListCompaniesResponse, error) {
 	uc.logger.Info(ctx, "Admin listing companies", map[string]interface{}{
 		"page":      page,

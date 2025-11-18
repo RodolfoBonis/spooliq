@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	budgetModels "github.com/RodolfoBonis/spooliq/features/budget/data/models"
 	"github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
@@ -185,12 +186,11 @@ func (r *customerRepositoryImpl) ExistsByEmail(ctx context.Context, email string
 func (r *customerRepositoryImpl) CountBudgetsByCustomer(ctx context.Context, customerID uuid.UUID) (int64, error) {
 	var count int64
 
-	// Query budgets table to count budgets for this customer
 	if err := r.db.WithContext(ctx).
 		Table("budgets").
 		Where("customer_id = ?", customerID).
+		Where("budgets.deleted_at IS NULL").
 		Count(&count).Error; err != nil {
-		// If table doesn't exist yet, return 0
 		if strings.Contains(err.Error(), "does not exist") {
 			return 0, nil
 		}
@@ -198,4 +198,49 @@ func (r *customerRepositoryImpl) CountBudgetsByCustomer(ctx context.Context, cus
 	}
 
 	return count, nil
+}
+
+func (r *customerRepositoryImpl) GetCustomerBudgets(ctx context.Context, customerID uuid.UUID) ([]entities.BudgetSummary, error) {
+	var budgetModels []budgetModels.BudgetModel
+
+	if err := r.db.WithContext(ctx).
+		Where("customer_id = ?", customerID).
+		Order("created_at DESC").
+		Limit(10).
+		Find(&budgetModels).Error; err != nil {
+		return nil, fmt.Errorf("failed to get customer budgets: %w", err)
+	}
+
+	// Converte para BudgetSummary
+	summaries := make([]entities.BudgetSummary, len(budgetModels))
+	for i, budget := range budgetModels {
+		summaries[i] = entities.BudgetSummary{
+			ID:        budget.ID,
+			Name:      budget.Name,
+			Status:    budget.Status,
+			TotalCost: budget.TotalCost,
+			CreatedAt: budget.CreatedAt,
+		}
+	}
+
+	return summaries, nil
+}
+
+func (r *customerRepositoryImpl) SumBudgetTotalsByCustomerAndStatus(ctx context.Context, customerID uuid.UUID, statuses []string) (int64, error) {
+	var totalSum int64
+
+	if err := r.db.WithContext(ctx).
+		Table("budgets").
+		Select("COALESCE(SUM(total_cost), 0)").
+		Where("customer_id = ?", customerID).
+		Where("status IN ?", statuses).
+		Where("budgets.deleted_at IS NULL").
+		Scan(&totalSum).Error; err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to sum budget totals: %w", err)
+	}
+
+	return totalSum, nil
 }

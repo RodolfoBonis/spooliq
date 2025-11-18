@@ -38,7 +38,7 @@ func NewUploadUseCase(cdnService *services.CDNService, logger logger.Logger) IUp
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "Logo file"
-// @Success 200 {object} map[string]string{"url": "string"}
+// @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /v1/uploads/logo [post]
@@ -128,7 +128,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 // @Produce json
 // @Param file formData file true "File to upload"
 // @Param folder formData string false "Optional folder path"
-// @Success 200 {object} map[string]string{"url": "string"}
+// @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /v1/uploads/file [post]

@@ -43,37 +43,9 @@ jobs:
           URGENCY="${{ steps.extract-version.outputs.urgency }}"
 
           if [ "$URGENCY" == "critical" ]; then
-            read -r -d '' MESSAGE << EOM || true
-HOTFIX $VERSION created!
-
-CRITICAL: Production issue detected
-FEATURE CUTOFF ACTIVE
-
-New features merged to develop will go to NEXT release.
-This hotfix takes priority.
-
-Priority: CRITICAL
-Timeline: 1-2 hours
-PR will be created shortly
-EOM
+            MESSAGE=$(printf "HOTFIX %s created!\n\nCRITICAL: Production issue detected\nFEATURE CUTOFF ACTIVE\n\nNew features merged to develop will go to NEXT release.\nThis hotfix takes priority.\n\nPriority: CRITICAL\nTimeline: 1-2 hours\nPR will be created shortly" "$VERSION")
           else
-            read -r -d '' MESSAGE << EOM || true
-Release $VERSION created!
-
-Snapshot of develop taken
-FEATURE CUTOFF ACTIVE
-
-Features merged to develop AFTER this point will go to NEXT release.
-
-Features IN this release: Everything in develop NOW
-Features NOT in this release: Anything merged after this
-
-Quick Release Timeline: 2-8 hours
-Staging deployment: Will trigger automatically
-PR to main: Will be created shortly
-
-Tip: Check the release PR for full changelog
-EOM
+            MESSAGE=$(printf "Release %s created!\n\nSnapshot of develop taken\nFEATURE CUTOFF ACTIVE\n\nFeatures merged to develop AFTER this point will go to NEXT release.\n\nFeatures IN this release: Everything in develop NOW\nFeatures NOT in this release: Anything merged after this\n\nQuick Release Timeline: 2-8 hours\nStaging deployment: Will trigger automatically\nPR to main: Will be created shortly\n\nTip: Check the release PR for full changelog" "$VERSION")
           fi
 
           MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)

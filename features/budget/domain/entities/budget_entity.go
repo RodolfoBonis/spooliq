@@ -35,20 +35,21 @@ type BudgetEntity struct {
 	// Presets used for calculations
 	MachinePresetID *uuid.UUID `json:"machine_preset_id,omitempty"`
 	EnergyPresetID  *uuid.UUID `json:"energy_preset_id,omitempty"`
-	CostPresetID    *uuid.UUID `json:"cost_preset_id,omitempty"`
+	CostPresetID    *uuid.UUID `json:"cost_preset_id,omitempty"` // For overhead/profit percentages
 
 	// Configuration flags
-	IncludeEnergyCost bool     `json:"include_energy_cost"`
-	IncludeLaborCost  bool     `json:"include_labor_cost"`
-	IncludeWasteCost  bool     `json:"include_waste_cost"`
-	LaborCostPerHour  *float64 `json:"labor_cost_per_hour,omitempty"` // Override preset if provided
+	IncludeEnergyCost bool `json:"include_energy_cost"`
+	IncludeWasteCost  bool `json:"include_waste_cost"`
 
 	// Calculated costs (in cents for precision)
-	FilamentCost int64 `json:"filament_cost"` // cents
-	WasteCost    int64 `json:"waste_cost"`    // cents
-	EnergyCost   int64 `json:"energy_cost"`   // cents
-	LaborCost    int64 `json:"labor_cost"`    // cents
-	TotalCost    int64 `json:"total_cost"`    // cents
+	FilamentCost int64 `json:"filament_cost"` // cents - Sum of all items filament costs
+	WasteCost    int64 `json:"waste_cost"`    // cents - Sum of all items waste costs
+	EnergyCost   int64 `json:"energy_cost"`   // cents - Sum of all items energy costs
+	SetupCost    int64 `json:"setup_cost"`    // cents - Sum of all items setup costs
+	LaborCost    int64 `json:"labor_cost"`    // cents - Sum of all items manual labor costs
+	OverheadCost int64 `json:"overhead_cost"` // cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)
+	ProfitAmount int64 `json:"profit_amount"` // cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)
+	TotalCost    int64 `json:"total_cost"`    // cents - Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit
 
 	// Additional fields for PDF generation
 	DeliveryDays *int    `json:"delivery_days,omitempty"` // prazo de entrega em dias

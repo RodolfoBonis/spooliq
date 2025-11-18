@@ -43,41 +43,33 @@ jobs:
           URGENCY="${{ steps.extract-version.outputs.urgency }}"
 
           if [ "$URGENCY" == "critical" ]; then
-            MESSAGE=$(cat <<'EOF'
-🚨 HOTFIX %VERSION% created!
+            MESSAGE="HOTFIX $VERSION created!
 
-⚠️ CRITICAL: Production issue detected
-⛔ FEATURE CUTOFF ACTIVE
+CRITICAL: Production issue detected
+FEATURE CUTOFF ACTIVE
 
 New features merged to develop will go to NEXT release.
 This hotfix takes priority.
 
-🔴 Priority: CRITICAL
-⏱️ Timeline: 1-2 hours
-📋 PR will be created shortly
-EOF
-)
-            MESSAGE="${MESSAGE//%VERSION%/$VERSION}"
+Priority: CRITICAL
+Timeline: 1-2 hours
+PR will be created shortly"
           else
-            MESSAGE=$(cat <<'EOF'
-🚀 Release %VERSION% created!
+            MESSAGE="Release $VERSION created!
 
-📸 Snapshot of develop taken
-⚠️ FEATURE CUTOFF ACTIVE
+Snapshot of develop taken
+FEATURE CUTOFF ACTIVE
 
 Features merged to develop AFTER this point will go to NEXT release.
 
-✅ Features IN this release: Everything in develop NOW
-❌ Features NOT in this release: Anything merged after this
+Features IN this release: Everything in develop NOW
+Features NOT in this release: Anything merged after this
 
-⏱️ Quick Release Timeline: 2-8 hours
-🧪 Staging deployment: Will trigger automatically
-📋 PR to main: Will be created shortly
+Quick Release Timeline: 2-8 hours
+Staging deployment: Will trigger automatically
+PR to main: Will be created shortly
 
-💡 Tip: Check the release PR for full changelog
-EOF
-)
-            MESSAGE="${MESSAGE//%VERSION%/$VERSION}"
+Tip: Check the release PR for full changelog"
           fi
 
           # Escape message for JSON

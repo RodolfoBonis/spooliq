@@ -1,5 +1,19 @@
 # Changelog
 
+## v2.3.0 - 2025-11-18
+
+### Changes
+- chore: bump version to 2.3.0 (eeadfc3)
+- fix: increase GoReleaser timeout and disable UPX to resolve error 500 (c6197d4)
+- feat: add automatic sync with main in prepare-release workflow (805a0ff)
+- chore: sync CHANGELOG.md and version.txt from main (225366c)
+- docs: update CHANGELOG for v2.2.0 (06cdc05)
+- chore: bump version to 2.2.0 (33704a0)
+- Increment version (1122c4d)
+- docs: update CHANGELOG for v2.1.0 (2f7c480)
+- chore: bump version to 2.1.0 (3eb2c44)
+
+
 ## v2.2.1 - 2025-11-18
 
 ### Changes

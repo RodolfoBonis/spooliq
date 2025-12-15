@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/logger"
@@ -40,6 +41,8 @@ import (
 // NewFxApp cria e retorna uma nova instância da aplicação Fx.
 func NewFxApp() *fx.App {
 	return fx.New(
+		fx.StartTimeout(60*time.Second),
+		fx.StopTimeout(30*time.Second),
 		logger.Module,
 		config.Module,
 		// Sistema completo de observabilidade OpenTelemetry/SignOz

@@ -50,7 +50,7 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--label=org.opencontainers.image.source=https://github.com/RodolfoBonis/spooliq"
-      - "--build-arg=GITHUB_TOKEN={{ .Env.GITHUB_TOKEN }}"
+      - "--build-arg=SSH_PRIVATE_KEY={{ .Env.SSH_PRIVATE_KEY_B64 }}"
       - "--build-arg=VERSION={{.Version}}"
       - "--platform=linux/amd64"
     extra_files:

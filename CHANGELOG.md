@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.4.0 - 2025-12-28
+
+### Changes
+- fix: handle no-change case in prepare-release version bump (fd79849)
+- fix: prevent prepare-release from failing when version unchanged (bf30165)
+- fix: add SSH setup before GoReleaser for private module access (#20) (01e26bb)
+- fix: add SSH setup before GoReleaser for private module access (a070a04)
+- 🚀 Release v2.4.0 (#19) (707ad7b)
+- Feature/spooliq 44 (#18) (3e59b46)
+- Feature/spooliq 44 (#17) (11a9fd0)
+- Feature/spooliq 44 (#16) (b53a2c4)
+- Feature/spooliq 44 (#15) (67ef42d)
+- fix: increase Fx startup timeout to 60s (#14) (02febe2)
+
+
+## v2.4.0 - 2025-12-28
+
+### Changes
+- chore: bump version to 2.4.0 (4052e0a)
+- Feature/spooliq 44 (#18) (3e59b46)
+- Feature/spooliq 44 (#17) (11a9fd0)
+- Feature/spooliq 44 (#16) (b53a2c4)
+- Feature/spooliq 44 (#15) (67ef42d)
+- fix: increase Fx startup timeout to 60s (#14) (02febe2)
+
+
 ## v2.3.2 - 2025-11-18
 
 ### Changes

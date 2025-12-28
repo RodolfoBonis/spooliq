@@ -102,7 +102,7 @@ jobs:
           cd k3s-manifest
           
           # Update Helm values for staging
-          yq e -i ".image.tag = \"${VERSION}\"" \
+          yq e -i ".web-server.image.tag = \"${VERSION}\"" \
             ./apps/spooliq/values-stg.yaml
 
           git config --global user.name "GitHub Actions"
@@ -116,14 +116,14 @@ jobs:
 
       - name: Sync ArgoCD Staging
         run: |
-          argocd app sync spooliq-app-stg \
+          argocd app sync spooliq-api-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}
 
       - name: Wait for Deployment
         run: |
-          argocd app wait spooliq-app-stg \
+          argocd app wait spooliq-api-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }} \

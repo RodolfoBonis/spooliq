@@ -144,7 +144,7 @@ jobs:
           cd k3s-manifest
 
           # Update Helm values for production
-          yq e -i ".image.tag = \"${VERSION}\"" \
+          yq e -i ".web-server.image.tag = \"${VERSION}\"" \
             ./apps/spooliq/values-prod.yaml
 
           git config --global user.name "GitHub Actions"
@@ -158,7 +158,7 @@ jobs:
 
       - name: Sync ArgoCD
         run: |
-          argocd app sync spooliq-app-prod \
+          argocd app sync spooliq-api-prod \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}

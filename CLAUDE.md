@@ -4,120 +4,121 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SpoolIq is a Go-based API for calculating 3D printing costs, supporting multi-color filament calculations, energy costs, wear and overhead, and labor. Built with Gin framework, Uber FX for dependency injection, and infrastructure services including PostgreSQL, Redis, RabbitMQ, and Keycloak.
+SpoolIQ is a Go-based API for calculating 3D printing costs, supporting multi-color filament calculations, energy costs, wear and overhead, and labor. Built with Gin framework, Uber FX for dependency injection, and multi-tenant architecture with Keycloak authentication.
 
 ## Essential Commands
 
-### Development
 ```bash
-make run                    # Run application locally
+make run                    # Run application locally (triggers AutoMigration)
 make build                  # Build the binary
-make test                   # Run tests
+make test                   # Run all tests
 make lint                   # Run linters (gofmt, go vet, golint, staticcheck, goimports)
-```
-
-### Infrastructure Management
-```bash
 make infrastructure/raise   # Start PostgreSQL, Redis, RabbitMQ, Keycloak
-make infrastructure/down    # Stop all infrastructure services
-make app/run               # Start full application with Docker Compose
-make app/down              # Stop full application
-```
-
-### Database Schema Management
-SpoolIQ uses GORM's AutoMigration feature - database tables are automatically created and updated when the application starts. No manual migration commands are needed.
-
-```bash
-# Database schema is managed automatically via GORM AutoMigration
-# Schema updates happen automatically when starting the application
-make run                   # Triggers AutoMigration on startup
-```
-
-### Cache Management
-```bash
-make cache/test            # Test cache endpoints
-make cache/status          # Show Redis status and cache keys
-make cache/clear           # Clear all cache
-```
-
-### Docker
-```bash
-make docker/build          # Build ultra-optimized image (scratch + UPX)
-make docker/build-ca       # Build image with CA certificates
-```
-
-### Swagger Documentation
-```bash
+make infrastructure/down    # Stop infrastructure services
 bash scripts/generate-swagger.sh  # Generate Swagger docs
-# Auto-generated API docs available at http://localhost:8000/docs/index.html
+```
+
+Run specific tests:
+```bash
+go test ./features/auth/...     # Test specific module
+go test -v -run TestName ./...  # Run single test by name
 ```
 
 ## Architecture
 
-### Directory Structure
-- **app/** - Application initialization, FX modules, lifecycle hooks
-- **core/** - Central components: config, logger, middlewares, services, errors
-  - **config/** - App configuration and environment management
-  - **middlewares/** - Auth, CORS, cache, monitoring middlewares
-  - **services/** - Database, Redis, AMQP, Auth services with GORM AutoMigration
-- **features/** - Business domain modules (currently auth module)
-- **routes/** - API route definitions and router setup
-- **docs/** - Swagger/OpenAPI documentation
+### Clean Architecture with FX Dependency Injection
 
-### Key Technologies
-- **Framework**: Gin for HTTP routing
-- **DI**: Uber FX for dependency injection
-- **Database**: GORM with PostgreSQL
-- **Cache**: Redis with decorator-style caching
-- **Auth**: Keycloak integration with JWT
-- **Monitoring**: Prometheus metrics, structured logging with Zap
-- **Message Queue**: RabbitMQ via AMQP
-
-### Service Dependencies
-The application expects these services (provided via Docker Compose):
-- PostgreSQL on :5432 (user/password from .env)
-- Redis on :6379 (password: redis123)
-- RabbitMQ on :5672/:15672 (admin/admin123)
-- Keycloak on :8180 (admin/admin123, realm: spooliq-realm)
-
-### Authentication
-- JWT-based authentication with Keycloak
-- Role-based access control (admin, user roles)
-- API key authentication support
-- Middleware in `core/middlewares/auth_middleware.go`
-
-### Caching System
-- Redis-based caching with TypeScript-like decorators
-- Cache strategies: time-based, user-specific, query-aware
-- Cache middleware for automatic HTTP response caching
-- Detailed documentation in `app_docs/cache.md`
-
-### Git Workflow
-Conventional commits are enforced (see `.cursor/rules/commit-flow.mdc`):
-- feat: New feature
-- fix: Bug fix  
-- refactor: Code refactoring
-- test: Test changes
-- docs: Documentation
-- chore: Maintenance
-
-### Testing Approach
-Tests use Go's standard testing package. Run specific tests with:
-```bash
-go test ./features/auth/...  # Test specific module
-go test -v ./...             # Verbose test output
+Each feature module follows this structure:
+```
+features/<domain>/
+├── di/                    # FX module with dependency wiring
+│   └── <domain>_di.go     # fx.Module providing repositories and use cases
+├── data/
+│   ├── models/            # GORM database models (snake_case table names)
+│   └── repositories/      # Repository implementations
+├── domain/
+│   ├── entities/          # Domain entities and DTOs
+│   ├── repositories/      # Repository interfaces
+│   └── usecases/          # Business logic (one file per use case)
+└── routes.go              # HTTP route definitions with Swagger annotations
 ```
 
-## Important Configuration Files
-- **.env** - Environment variables (copy from .env.example)
-- **docker-compose.yaml** - Full stack orchestration
-- **Makefile** - All development commands
-- **go.mod** - Go dependencies
+### Adding a New Feature Module
 
-## Docusaurus Documentation
-A separate Docusaurus site exists in `spooliq_docs/`:
-```bash
-cd spooliq_docs
-npm install
-npm start  # Starts on localhost:3000
+1. Create the domain structure under `features/<name>/`
+2. Define the FX module in `di/<name>_di.go`:
+```go
+var Module = fx.Module("name", fx.Provide(
+    fx.Annotate(func(db *gorm.DB) domainRepos.Repository {
+        return repositories.NewRepository(db)
+    }),
+    fx.Annotate(func(repo domainRepos.Repository, logger logger.Logger) usecases.IUseCase {
+        return usecases.NewUseCase(repo, logger)
+    }),
+))
 ```
+3. Register module in `app/fx.go`
+4. Add routes in `routes/router.go`
+5. Add model to `core/services/database_service.go` AutoMigration (respect FK order)
+
+### Multi-Tenant Architecture
+
+All tenant-scoped tables use `organization_id` (UUID) as the tenant identifier:
+- Extract from JWT context via `helpers.GetOrganizationID(c)`
+- Foreign key references `companies(organization_id)` with `ON DELETE RESTRICT`
+- Models must include `OrganizationID string` field with appropriate GORM tags
+
+### Role-Based Access Control
+
+Roles defined in `core/roles/roles.go` must match Keycloak realm roles:
+- `User` - Basic user access
+- `OrgAdmin` - Organization administrator
+- `Owner` - Organization owner
+- `PlatformAdmin` - System-wide admin
+
+Use `protectFactory(handler, roles.OwnerRole, roles.OrgAdminRole)` in routes.
+
+### Database Migrations
+
+GORM AutoMigration runs on startup. Migration order in `database_service.go:RunMigrations()` is critical:
+1. Independent tables (subscription_plans)
+2. Companies (root tenant table)
+3. Tables with FK to companies only (users, brands, materials)
+4. Tables with multiple FKs (filaments, customers, presets)
+5. Complex hierarchies (budgets → budget_items → budget_item_filaments)
+
+### Handler Patterns
+
+Two patterns exist:
+1. **UseCase-as-Handler**: Use case methods directly as `gin.HandlerFunc` (see `features/brand/routes.go`)
+2. **Dedicated Handler**: Separate Handler struct with use case dependencies (see `features/preset/routes.go`)
+
+### Swagger Annotations
+
+Add annotations above handler functions:
+```go
+// @Summary Create brand
+// @Tags Brands
+// @Accept json
+// @Produce json
+// @Param request body entities.UpsertBrandRequest true "Brand data"
+// @Success 201 {object} entities.BrandEntity
+// @Failure 400 {object} errors.HTTPError
+// @Security BearerAuth
+// @Router /brands [post]
+```
+
+## Key Files
+
+- `app/fx.go` - Central FX app configuration, all modules registered here
+- `routes/router.go` - All route registrations
+- `core/services/database_service.go` - Database connection and migrations
+- `core/middlewares/auth_middleware.go` - JWT validation and context injection
+- `core/helpers/context_helpers.go` - Extract user/org info from request context
+
+## Service Dependencies (via Docker Compose)
+
+- PostgreSQL :5432 (config from .env)
+- Redis :6379 (password: redis123)
+- RabbitMQ :5672/:15672 (admin/admin123)
+- Keycloak :8180 (admin/admin123, realm: spooliq-realm)

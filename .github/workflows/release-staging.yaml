@@ -80,10 +80,10 @@ jobs:
             -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }} \
             -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest \
             --build-arg VERSION=${{ steps.version.outputs.version }} \
-            --build-arg COMMIT=${{ github.sha }} \
-            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}" \
+            -f dockerfile.with-ca \
             .
-          
+
           docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }}
           docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest
 

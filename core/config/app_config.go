@@ -24,8 +24,7 @@ type AppConfig struct {
 	RedisPassword      string
 	RedisDB            int
 	CDNBaseURL         string
-	CDNAPIKey          string
-	CDNBucket          string
+	CDNKeys            entities.CdnKeysEntity
 	AsaasAPIKey        string
 	AsaasBaseURL       string
 	AsaasWebhookSecret string
@@ -54,8 +53,7 @@ func NewAppConfig() *AppConfig {
 		RedisPassword:      EnvRedisPassword(),
 		RedisDB:            EnvRedisDB(),
 		CDNBaseURL:         EnvCDNBaseURL(),
-		CDNAPIKey:          EnvCDNAPIKey(),
-		CDNBucket:          EnvCDNBucket(),
+		CDNKeys:            EnvCDNKeys(),
 		AsaasAPIKey:        EnvAsaasAPIKey(),
 		AsaasBaseURL:       EnvAsaasBaseURL(),
 		AsaasWebhookSecret: EnvAsaasWebhookSecret(),

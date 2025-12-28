@@ -140,14 +140,13 @@ func EnvCDNBaseURL() string {
 	return GetEnv("CDN_BASE_URL", "https://rb-cdn.rodolfodebonis.com.br")
 }
 
-// EnvCDNAPIKey returns the CDN API key from environment variables.
-func EnvCDNAPIKey() string {
-	return GetEnv("CDN_API_KEY", "")
-}
-
-// EnvCDNBucket returns the CDN bucket name from environment variables.
-func EnvCDNBucket() string {
-	return GetEnv("CDN_BUCKET", "spooliq")
+// EnvCDNKeys returns the CDN API key from environment variables.
+func EnvCDNKeys() entities.CdnKeysEntity {
+	return entities.CdnKeysEntity{
+		ClientID:     GetEnv("CDN_CLIENT_ID", ""),
+		ClientSecret: GetEnv("CDN_CLIENT_SECRET", ""),
+		Bucket:       GetEnv("CDN_BUCKET", "spooliq"),
+	}
 }
 
 // EnvAsaasAPIKey returns the Asaas API key from environment variables.

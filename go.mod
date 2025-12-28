@@ -1,8 +1,6 @@
 module github.com/RodolfoBonis/spooliq
 
-go 1.23.0
-
-toolchain go1.23.6
+go 1.24.5
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.8.0
@@ -48,6 +46,7 @@ require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/RodolfoBonis/rb_auth_client v0.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.1 // indirect

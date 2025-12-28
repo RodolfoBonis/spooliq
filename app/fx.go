@@ -67,8 +67,7 @@ func NewFxApp() *fx.App {
 			func(logger logger.Logger) *services.CDNService {
 				return services.NewCDNService(
 					config.EnvCDNBaseURL(),
-					config.EnvCDNAPIKey(),
-					config.EnvCDNBucket(),
+					config.EnvCDNKeys(),
 					logger,
 				)
 			},

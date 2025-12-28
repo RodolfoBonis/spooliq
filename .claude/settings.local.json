@@ -138,7 +138,16 @@
       "Bash(git -C \"/Users/rodolfodebonis/Documents/projects/spooliq copy\" log --all --oneline --decorate --graph --max-count=30)",
       "Bash(git -C \"/Users/rodolfodebonis/Documents/projects/spooliq copy\" log --all --oneline --grep=\"Increment version\" --max-count=10)",
       "Bash(git -C \"/Users/rodolfodebonis/Documents/projects/spooliq copy\" log main --oneline --max-count=10)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(CHANGELOG.md)",
+      "Bash(version.txt)",
+      "Bash(goreleaser check:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:goreleaser.com)",
+      "Bash(goreleaser:*)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []

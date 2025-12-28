@@ -10,14 +10,15 @@ import (
 	"net/http"
 	"time"
 
+	rbauth "github.com/RodolfoBonis/rb_auth_client"
+	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 )
 
 // CDNService handles file uploads to the CDN
 type CDNService struct {
 	baseURL    string
-	apiKey     string
-	bucket     string
+	keys       entities.CdnKeysEntity
 	httpClient *http.Client
 	logger     logger.Logger
 }
@@ -29,16 +30,30 @@ type CDNUploadResponse struct {
 }
 
 // NewCDNService creates a new CDN service instance
-func NewCDNService(baseURL, apiKey, bucket string, logger logger.Logger) *CDNService {
+func NewCDNService(baseURL string, keys entities.CdnKeysEntity, logger logger.Logger) *CDNService {
 	return &CDNService{
 		baseURL: baseURL,
-		apiKey:  apiKey,
-		bucket:  bucket,
+		keys:    keys,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
 		logger: logger,
 	}
+}
+
+func getCdnToken(keys entities.CdnKeysEntity) (string, error) {
+	authConfig := rbauth.Config{
+		ClientID:     keys.ClientID,
+		ClientSecret: keys.ClientSecret,
+	}
+	auth := rbauth.NewKeycloakAuthenticator(authConfig)
+
+	token, err := auth.GetToken()
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }
 
 // UploadFile uploads a file to the CDN
@@ -97,9 +112,17 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 		return "", fmt.Errorf("failed to create upload request: %w", err)
 	}
 
+	token, err := getCdnToken(s.keys)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to get cdn token", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return "", fmt.Errorf("failed to get cdn token: %w", err)
+	}
+
 	// Set headers
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("X-API-KEY", s.apiKey)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	s.logger.Info(ctx, "Uploading file to CDN", map[string]interface{}{
 		"filename": filename,
@@ -156,7 +179,7 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 
 // GetFileURL constructs the full URL for a file path
 func (s *CDNService) GetFileURL(path string) string {
-	return fmt.Sprintf("%s/v1/cdn/%s/%s", s.baseURL, s.bucket, path)
+	return fmt.Sprintf("%s/v1/cdn/%s/%s", s.baseURL, s.keys.Bucket, path)
 }
 
 // DownloadFile downloads a file from the CDN with authentication
@@ -174,8 +197,16 @@ func (s *CDNService) DownloadFile(ctx context.Context, path string) ([]byte, err
 		return nil, fmt.Errorf("failed to create download request: %w", err)
 	}
 
+	token, err := getCdnToken(s.keys)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to get cdn token", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, fmt.Errorf("failed to get cdn token: %w", err)
+	}
+
 	// Set authentication header
-	req.Header.Set("X-API-KEY", s.apiKey)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	s.logger.Info(ctx, "Downloading file from CDN", map[string]interface{}{
 		"path": path,

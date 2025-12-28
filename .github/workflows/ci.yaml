@@ -26,7 +26,7 @@ permissions:
   pull-requests: write      
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.24'
 
 jobs:
   lint_go:
@@ -55,9 +55,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Setup git config for private repos
+      - name: Setup SSH for private repos
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          git config --global url."https://${{ github.token }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Set GOPRIVATE
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
 
       - name: Download dependencies
         run: go mod download
@@ -137,9 +146,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Setup git config for private repos (if needed)
+      - name: Setup SSH for private repos
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          git config --global url."https://${{ github.token }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Set GOPRIVATE
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
 
       - name: Download dependencies
         run: go mod download
@@ -190,12 +208,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Setup SSH for private repos
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Set GOPRIVATE
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
+
       - name: Download dependencies
         run: go mod download
-
-      - name: Define Private Dependencies
-        run: |
-          export GOPRIVATE=github.com/RodolfoBonis/go_key_guardian
 
       - name: Run govulncheck
         id: govulncheck

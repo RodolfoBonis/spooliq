@@ -1,5 +1,5 @@
 # Builder stage
-FROM golang:1.23.6-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Build arguments
 ARG GITHUB_TOKEN

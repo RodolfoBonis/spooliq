@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.24'
 
 jobs:
   release-staging:
@@ -80,10 +80,10 @@ jobs:
             -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }} \
             -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest \
             --build-arg VERSION=${{ steps.version.outputs.version }} \
-            --build-arg COMMIT=${{ github.sha }} \
-            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}" \
+            -f dockerfile.with-ca \
             .
-          
+
           docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }}
           docker push ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest
 
@@ -102,12 +102,12 @@ jobs:
           cd k3s-manifest
           
           # Update Helm values for staging
-          yq e -i ".image.tag = \"${VERSION}\"" \
-            ./apps/spooliq/app/chart/values-stg.yaml
-          
+          yq e -i ".web-server.image.tag = \"${VERSION}\"" \
+            ./apps/spooliq/values-stg.yaml
+
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add ./apps/spooliq/app/chart/values-stg.yaml
+          git add ./apps/spooliq/values-stg.yaml
           git commit -m "feat: update spooliq staging to ${VERSION}"
           git push
 
@@ -116,14 +116,14 @@ jobs:
 
       - name: Sync ArgoCD Staging
         run: |
-          argocd app sync spooliq-app-stg \
+          argocd app sync spooliq-api-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}
 
       - name: Wait for Deployment
         run: |
-          argocd app wait spooliq-app-stg \
+          argocd app wait spooliq-api-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }} \

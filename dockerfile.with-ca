@@ -2,10 +2,10 @@
 # Use this if your application makes HTTPS requests to external APIs
 
 # Builder stage
-FROM golang:1.23.6-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Build arguments
-ARG GITHUB_TOKEN
+ARG SSH_PRIVATE_KEY
 ARG VERSION=unknown
 
 # Environment variables for optimized build
@@ -13,15 +13,24 @@ ENV CGO_ENABLED=0 \
     GOOS=linux \
     GOARCH=amd64 \
     GO111MODULE=on \
-    TOKEN=$GITHUB_TOKEN \
+    GOPRIVATE=github.com/RodolfoBonis/* \
     VERSION=${VERSION} \
     USER=spooliq
 
-# Install minimal dependencies including UPX
-RUN apk add --no-cache git ca-certificates upx
+# Install minimal dependencies including UPX and openssh-client
+RUN apk add --no-cache git ca-certificates upx openssh-client
 
-# Configure git for private repositories
-RUN git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+# Setup SSH for private repositories
+RUN mkdir -p /root/.ssh && \
+    chmod 700 /root/.ssh && \
+    ssh-keyscan github.com >> /root/.ssh/known_hosts
+
+# Add SSH private key (passed as build arg, will be discarded in final image)
+RUN echo "${SSH_PRIVATE_KEY}" > /root/.ssh/id_rsa && \
+    chmod 600 /root/.ssh/id_rsa
+
+# Configure git to use SSH instead of HTTPS for GitHub
+RUN git config --global url."git@github.com:".insteadOf "https://github.com/"
 
 # Set working directory
 WORKDIR /app
@@ -29,8 +38,11 @@ WORKDIR /app
 # Copy dependency files first (better layer caching)
 COPY go.mod go.sum* ./
 
-# Download dependencies
-RUN go mod download
+# Download dependencies (SSH key is needed here)
+RUN go mod download && go mod tidy
+
+# Clean up SSH key after dependencies are downloaded
+RUN rm -rf /root/.ssh
 
 # Install swag for API documentation
 RUN go install github.com/swaggo/swag/cmd/swag@latest

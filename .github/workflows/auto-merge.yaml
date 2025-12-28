@@ -47,9 +47,12 @@ jobs:
   backport-auto-merge:
     runs-on: ubuntu-latest
     if: |
-      github.event.pull_request.head.ref && 
+      github.event.pull_request.head.ref &&
       startsWith(github.event.pull_request.head.ref, 'backport/')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Check PR status
         id: pr-check
         env:

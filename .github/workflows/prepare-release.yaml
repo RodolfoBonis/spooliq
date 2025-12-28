@@ -116,7 +116,7 @@ jobs:
         run: |
           echo "${{ steps.determine-version.outputs.version }}" > version.txt
           git add version.txt
-          git commit -m "chore: bump version to ${{ steps.determine-version.outputs.version }}"
+          git diff --staged --quiet || git commit -m "chore: bump version to ${{ steps.determine-version.outputs.version }}"
 
       - name: Generate CHANGELOG
         id: changelog

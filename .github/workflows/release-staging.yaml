@@ -73,12 +73,6 @@ jobs:
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
 
-      - name: Prepare SSH key for Docker build
-        id: ssh-key
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -w 0 > /tmp/ssh_key_b64
-          echo "ssh_key_b64=$(cat /tmp/ssh_key_b64)" >> $GITHUB_OUTPUT
-
       - name: Build and Push Docker Image
         run: |
           docker build \
@@ -86,7 +80,7 @@ jobs:
             -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:${{ steps.version.outputs.version }} \
             -t ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq:staging-latest \
             --build-arg VERSION=${{ steps.version.outputs.version }} \
-            --build-arg SSH_PRIVATE_KEY="${{ steps.ssh-key.outputs.ssh_key_b64 }}" \
+            --build-arg SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}" \
             -f dockerfile.with-ca \
             .
 

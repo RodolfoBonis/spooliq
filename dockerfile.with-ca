@@ -26,7 +26,7 @@ RUN mkdir -p /root/.ssh && \
     ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 # Add SSH private key (passed as build arg, will be discarded in final image)
-RUN echo "${SSH_PRIVATE_KEY}" | base64 -d > /root/.ssh/id_rsa && \
+RUN echo "${SSH_PRIVATE_KEY}" > /root/.ssh/id_rsa && \
     chmod 600 /root/.ssh/id_rsa
 
 # Configure git to use SSH instead of HTTPS for GitHub

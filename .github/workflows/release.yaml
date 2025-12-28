@@ -116,12 +116,6 @@ jobs:
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
 
-      - name: Prepare SSH key for Docker build
-        id: ssh-key
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -w 0 > /tmp/ssh_key_b64
-          echo "ssh_key_b64=$(cat /tmp/ssh_key_b64)" >> $GITHUB_OUTPUT
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -129,7 +123,7 @@ jobs:
           args: release --clean --timeout 30m --parallelism 1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          SSH_PRIVATE_KEY_B64: ${{ steps.ssh-key.outputs.ssh_key_b64 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
 

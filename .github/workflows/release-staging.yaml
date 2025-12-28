@@ -116,14 +116,14 @@ jobs:
 
       - name: Sync ArgoCD Staging
         run: |
-          argocd app sync spooliq-app-stg \
+          argocd app sync spooliq-api-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}
 
       - name: Wait for Deployment
         run: |
-          argocd app wait spooliq-app-stg \
+          argocd app wait spooliq-api-stg \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }} \

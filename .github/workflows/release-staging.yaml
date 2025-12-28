@@ -103,11 +103,11 @@ jobs:
           
           # Update Helm values for staging
           yq e -i ".image.tag = \"${VERSION}\"" \
-            ./apps/spooliq/app/chart/values-stg.yaml
-          
+            ./apps/spooliq/values-stg.yaml
+
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add ./apps/spooliq/app/chart/values-stg.yaml
+          git add ./apps/spooliq/values-stg.yaml
           git commit -m "feat: update spooliq staging to ${VERSION}"
           git push
 

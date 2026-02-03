@@ -2,9 +2,11 @@ package usecases
 
 import (
 	"net/http"
+	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -86,4 +88,15 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 	})
 
 	c.Status(http.StatusNoContent)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionDeleted,
+		EntityType:     activityEntities.EntityBudget,
+		EntityID:       budgetID.String(),
+		EntityName:     budget.Name,
+		CreatedAt:      time.Now(),
+	})
 }

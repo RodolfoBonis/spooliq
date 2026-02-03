@@ -7,6 +7,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -286,4 +287,15 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusCreated, response)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         userID,
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityBudget,
+		EntityID:       budget.ID.String(),
+		EntityName:     budget.Name,
+		CreatedAt:      time.Now(),
+	})
 }

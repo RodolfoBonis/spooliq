@@ -2,9 +2,12 @@ package usecases
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -208,4 +211,15 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusCreated, filament)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationIDStr,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityFilament,
+		EntityID:       filament.ID.String(),
+		EntityName:     filament.Name,
+		CreatedAt:      time.Now(),
+	})
 }

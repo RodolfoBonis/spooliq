@@ -6,6 +6,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -130,4 +131,14 @@ func (uc *CustomerUseCase) Create(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, response)
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         userID,
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityCustomer,
+		EntityID:       customer.ID.String(),
+		EntityName:     customer.Name,
+		Description:    "Customer created: " + customer.Name,
+	})
 }

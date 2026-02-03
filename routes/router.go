@@ -4,6 +4,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
+	"github.com/RodolfoBonis/spooliq/features/activity"
+	activityuc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/admin"
 	"github.com/RodolfoBonis/spooliq/features/auth"
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
@@ -15,6 +17,7 @@ import (
 	companyuc "github.com/RodolfoBonis/spooliq/features/company/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/customer"
 	customeruc "github.com/RodolfoBonis/spooliq/features/customer/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/dashboard"
 	"github.com/RodolfoBonis/spooliq/features/filament"
 	filamentuc "github.com/RodolfoBonis/spooliq/features/filament/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/material"
@@ -35,6 +38,7 @@ import (
 // InitializeRoutes sets up all application routes.
 func InitializeRoutes(
 	router *gin.Engine,
+	activityService activityuc.IActivityService,
 	authUc authuc.AuthUseCase,
 	registerUc *authuc.RegisterUseCase,
 	brandUc branduc.IBrandUseCase,
@@ -49,6 +53,7 @@ func InitializeRoutes(
 	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
 	manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase,
 	presetHandler *preset.Handler,
+	dashboardHandler *dashboard.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
 	adminHandler *admin.Handler,
@@ -63,11 +68,13 @@ func InitializeRoutes(
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	health.Routes(root, logger)
+	activity.Routes(root, activityService, protectFactory)
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
 	company.Routes(root, companyUc, brandingUc, paymentMethodUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
+	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	preset.SetupRoutes(root, presetHandler, protectFactory)

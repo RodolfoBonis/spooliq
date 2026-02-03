@@ -1,0 +1,90 @@
+package mocks
+
+import (
+	"time"
+
+	"github.com/RodolfoBonis/spooliq/features/dashboard/domain/entities"
+	"github.com/stretchr/testify/mock"
+)
+
+// MockDashboardRepository is a mock implementation of DashboardRepository
+type MockDashboardRepository struct {
+	mock.Mock
+}
+
+// NewMockDashboardRepository creates a new mock dashboard repository.
+func NewMockDashboardRepository() *MockDashboardRepository {
+	return &MockDashboardRepository{}
+}
+
+// GetOverview mocks the GetOverview method.
+func (m *MockDashboardRepository) GetOverview(organizationID string, start, end, prevStart, prevEnd time.Time) (*entities.OverviewResponse, error) {
+	args := m.Called(organizationID, start, end, prevStart, prevEnd)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.OverviewResponse), args.Error(1)
+}
+
+// GetRevenueTrend mocks the GetRevenueTrend method.
+func (m *MockDashboardRepository) GetRevenueTrend(organizationID string, start, end time.Time, truncate string) (*entities.RevenueTrendResponse, error) {
+	args := m.Called(organizationID, start, end, truncate)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.RevenueTrendResponse), args.Error(1)
+}
+
+// GetConversionFunnel mocks the GetConversionFunnel method.
+func (m *MockDashboardRepository) GetConversionFunnel(organizationID string, start, end time.Time) (*entities.ConversionFunnelResponse, error) {
+	args := m.Called(organizationID, start, end)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.ConversionFunnelResponse), args.Error(1)
+}
+
+// GetTopCustomers mocks the GetTopCustomers method.
+func (m *MockDashboardRepository) GetTopCustomers(organizationID string, start, end time.Time, limit int) (*entities.TopCustomersResponse, error) {
+	args := m.Called(organizationID, start, end, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.TopCustomersResponse), args.Error(1)
+}
+
+// GetOperationalInsights mocks the GetOperationalInsights method.
+func (m *MockDashboardRepository) GetOperationalInsights(organizationID string, start, end, prevStart, prevEnd time.Time) (*entities.OperationalInsightsResponse, error) {
+	args := m.Called(organizationID, start, end, prevStart, prevEnd)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.OperationalInsightsResponse), args.Error(1)
+}
+
+// GetTopFilaments mocks the GetTopFilaments method.
+func (m *MockDashboardRepository) GetTopFilaments(organizationID string, start, end time.Time, limit int) (*entities.TopFilamentsResponse, error) {
+	args := m.Called(organizationID, start, end, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.TopFilamentsResponse), args.Error(1)
+}
+
+// GetTopMaterials mocks the GetTopMaterials method.
+func (m *MockDashboardRepository) GetTopMaterials(organizationID string, start, end time.Time, limit int) (*entities.TopMaterialsResponse, error) {
+	args := m.Called(organizationID, start, end, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.TopMaterialsResponse), args.Error(1)
+}
+
+// GetGoalsAlerts mocks the GetGoalsAlerts method.
+func (m *MockDashboardRepository) GetGoalsAlerts(organizationID string) (*entities.GoalsAlertsResponse, error) {
+	args := m.Called(organizationID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.GoalsAlertsResponse), args.Error(1)
+}

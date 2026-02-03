@@ -2,9 +2,12 @@ package preset
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
+	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	"github.com/gin-gonic/gin"
@@ -13,10 +16,11 @@ import (
 
 // Handler handles HTTP requests for preset operations
 type Handler struct {
-	createUC *usecases.CreatePresetUseCase
-	findUC   *usecases.FindPresetUseCase
-	updateUC *usecases.UpdatePresetUseCase
-	deleteUC *usecases.DeletePresetUseCase
+	createUC        *usecases.CreatePresetUseCase
+	findUC          *usecases.FindPresetUseCase
+	updateUC        *usecases.UpdatePresetUseCase
+	deleteUC        *usecases.DeletePresetUseCase
+	activityService activityUc.IActivityService
 }
 
 // NewPresetHandler creates a new preset handler
@@ -25,12 +29,14 @@ func NewPresetHandler(
 	findUC *usecases.FindPresetUseCase,
 	updateUC *usecases.UpdatePresetUseCase,
 	deleteUC *usecases.DeletePresetUseCase,
+	activityService activityUc.IActivityService,
 ) *Handler {
 	return &Handler{
-		createUC: createUC,
-		findUC:   findUC,
-		updateUC: updateUC,
-		deleteUC: deleteUC,
+		createUC:        createUC,
+		findUC:          findUC,
+		updateUC:        updateUC,
+		deleteUC:        deleteUC,
+		activityService: activityService,
 	}
 }
 
@@ -178,12 +184,30 @@ func (h *Handler) DeletePreset(c *gin.Context) {
 		return
 	}
 
+	// Fetch preset before deleting to get name for activity
+	preset, _ := h.findUC.FindByID(id)
+
 	if err := h.deleteUC.Execute(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+
+	// Record activity (fire-and-forget)
+	presetName := ""
+	if preset != nil {
+		presetName = preset.Name
+	}
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: helpers.GetOrganizationID(c),
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionDeleted,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       id.String(),
+		EntityName:     presetName,
+		CreatedAt:      time.Now(),
+	})
 }
 
 // CreateMachinePreset creates a new machine preset
@@ -219,6 +243,17 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, preset)
+
+	// Record activity (fire-and-forget)
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
 }
 
 // GetMachinePresets retrieves all machine presets
@@ -312,6 +347,17 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, preset)
+
+	// Record activity (fire-and-forget)
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: helpers.GetOrganizationID(c),
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
 }
 
 // GetMachinePresetsByBrand retrieves machine presets by brand
@@ -377,6 +423,17 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, preset)
+
+	// Record activity (fire-and-forget)
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
 }
 
 // GetEnergyPresets retrieves all energy presets
@@ -470,6 +527,17 @@ func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, preset)
+
+	// Record activity (fire-and-forget)
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: helpers.GetOrganizationID(c),
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
 }
 
 // GetEnergyPresetsByLocation retrieves energy presets by location
@@ -569,6 +637,17 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, preset)
+
+	// Record activity (fire-and-forget)
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
 }
 
 // GetCostPresets retrieves all cost presets
@@ -662,4 +741,15 @@ func (h *Handler) UpdateCostPreset(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, preset)
+
+	// Record activity (fire-and-forget)
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: helpers.GetOrganizationID(c),
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
 }

@@ -2,6 +2,7 @@ package usecases
 
 import (
 	log "github.com/RodolfoBonis/spooliq/core/logger"
+	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -9,9 +10,10 @@ import (
 
 // BrandUseCase implements brand business logic operations.
 type BrandUseCase struct {
-	repository repositories.BrandRepository
-	validator  *validator.Validate
-	logger     log.Logger
+	repository      repositories.BrandRepository
+	validator       *validator.Validate
+	logger          log.Logger
+	activityService activityUc.IActivityService
 }
 
 // IBrandUseCase defines the contract for brand use case operations.
@@ -24,10 +26,11 @@ type IBrandUseCase interface {
 }
 
 // NewBrandUseCase creates a new instance of the brand use case.
-func NewBrandUseCase(repository repositories.BrandRepository, logger log.Logger) IBrandUseCase {
+func NewBrandUseCase(repository repositories.BrandRepository, logger log.Logger, activityService activityUc.IActivityService) IBrandUseCase {
 	return &BrandUseCase{
-		repository: repository,
-		validator:  validator.New(),
-		logger:     logger,
+		repository:      repository,
+		validator:       validator.New(),
+		logger:          logger,
+		activityService: activityService,
 	}
 }

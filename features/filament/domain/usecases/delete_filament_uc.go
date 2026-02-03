@@ -4,11 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -139,4 +141,15 @@ func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	})
 
 	c.Status(http.StatusNoContent)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionDeleted,
+		EntityType:     activityEntities.EntityFilament,
+		EntityID:       id.String(),
+		EntityName:     existingFilament.Name,
+		CreatedAt:      time.Now(),
+	})
 }

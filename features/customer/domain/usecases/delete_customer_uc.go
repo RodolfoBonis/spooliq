@@ -5,6 +5,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -98,4 +99,14 @@ func (uc *CustomerUseCase) Delete(c *gin.Context) {
 	})
 
 	c.Status(http.StatusNoContent)
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionDeleted,
+		EntityType:     activityEntities.EntityCustomer,
+		EntityID:       customer.ID.String(),
+		EntityName:     customer.Name,
+		Description:    "Customer deleted: " + customer.Name,
+	})
 }

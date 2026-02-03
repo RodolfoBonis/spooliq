@@ -15,6 +15,73 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/activities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Activities"
+                ],
+                "summary": "List activities",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by entity type",
+                        "name": "entity_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by action",
+                        "name": "action",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PaginatedActivities"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/brands": {
             "get": {
                 "security": [
@@ -470,6 +537,577 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/conversion-funnel": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns the budget status funnel showing conversion rates between stages (draft, sent, approved, rejected, completed)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get budget conversion funnel",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ConversionFunnelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/goals-alerts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns monthly goals progress (revenue, budgets, profit margin) and active alerts for low stock, expiring budgets, and pending approvals",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get goals progress and alerts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.GoalsAlertsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/operational-insights": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns operational metrics including average ticket, profit margin, print time, rejection rate, and cost breakdown by category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get operational insights and metrics",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.OperationalInsightsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/overview": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns key metrics including revenue, budgets, approval rate, profit margin, and new customers with period-over-period changes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard overview metrics",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.OverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/recent-activity": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns the most recent activity items for the organization including budget changes, customer actions, and filament updates",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get recent activity",
+                "parameters": [
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of items to return (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.RecentActivityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/revenue-trend": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns revenue, cost, and profit data points over time for charting purposes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get revenue trend data",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.RevenueTrendResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/top-customers": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns the top customers ranked by total revenue for the selected period, including budget count and average ticket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get top customers by revenue",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of customers to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.TopCustomersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/top-filaments": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns the most used filaments ranked by total grams consumed, including brand, material, and color information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get top filaments by usage",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of filaments to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.TopFilamentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/top-materials": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns the most used materials ranked by total grams consumed across all filaments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get top materials by usage",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of materials to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.TopMaterialsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -6425,6 +7063,76 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "entities.ActivityAction": {
+            "type": "string",
+            "enum": [
+                "created",
+                "updated",
+                "deleted",
+                "status_changed"
+            ],
+            "x-enum-varnames": [
+                "ActionCreated",
+                "ActionUpdated",
+                "ActionDeleted",
+                "ActionStatusChanged"
+            ]
+        },
+        "entities.ActivityEntity": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/entities.ActivityAction"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_name": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "$ref": "#/definitions/entities.ActivityEntityType"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ActivityEntityType": {
+            "type": "string",
+            "enum": [
+                "brand",
+                "customer",
+                "filament",
+                "material",
+                "budget",
+                "preset"
+            ],
+            "x-enum-varnames": [
+                "EntityBrand",
+                "EntityCustomer",
+                "EntityFilament",
+                "EntityMaterial",
+                "EntityBudget",
+                "EntityPreset"
+            ]
+        },
         "entities.AdminStats": {
             "type": "object",
             "properties": {
@@ -6447,6 +7155,26 @@ const docTemplate = `{
                 },
                 "trial_subscriptions": {
                     "type": "integer"
+                }
+            }
+        },
+        "entities.Alert": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -6886,6 +7614,17 @@ const docTemplate = `{
                 "StatusCompleted"
             ]
         },
+        "entities.BudgetStatusCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.BudgetStatusHistoryEntity": {
             "type": "object",
             "properties": {
@@ -7277,6 +8016,49 @@ const docTemplate = `{
                 },
                 "zip_code": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.ConversionFunnelResponse": {
+            "type": "object",
+            "properties": {
+                "overall_conversion": {
+                    "type": "number"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.FunnelStep"
+                    }
+                },
+                "total_budgets": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.CostBreakdown": {
+            "type": "object",
+            "properties": {
+                "energy_pct": {
+                    "type": "number"
+                },
+                "filament_pct": {
+                    "type": "number"
+                },
+                "labor_pct": {
+                    "type": "number"
+                },
+                "overhead_pct": {
+                    "type": "number"
+                },
+                "setup_pct": {
+                    "type": "number"
+                },
+                "waste_pct": {
+                    "type": "number"
                 }
             }
         },
@@ -7978,6 +8760,57 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.FunnelStep": {
+            "type": "object",
+            "properties": {
+                "conversion_rate": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.Goal": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "number"
+                },
+                "target": {
+                    "type": "number"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.GoalsAlertsResponse": {
+            "type": "object",
+            "properties": {
+                "alerts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Alert"
+                    }
+                },
+                "goals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Goal"
+                    }
+                }
+            }
+        },
         "entities.InvalidFeatureError": {
             "type": "object",
             "properties": {
@@ -8246,6 +9079,114 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "entities.OperationalInsightsResponse": {
+            "type": "object",
+            "properties": {
+                "avg_profit_margin": {
+                    "type": "number"
+                },
+                "avg_ticket": {
+                    "type": "integer"
+                },
+                "avg_ticket_change": {
+                    "type": "number"
+                },
+                "cost_breakdown": {
+                    "$ref": "#/definitions/entities.CostBreakdown"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "print_time_change": {
+                    "type": "number"
+                },
+                "profit_margin_change": {
+                    "type": "number"
+                },
+                "rejection_rate": {
+                    "type": "number"
+                },
+                "rejection_rate_change": {
+                    "type": "number"
+                },
+                "total_print_time_hours": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.OverviewResponse": {
+            "type": "object",
+            "properties": {
+                "approval_rate": {
+                    "type": "number"
+                },
+                "approval_rate_change": {
+                    "type": "number"
+                },
+                "avg_profit_margin": {
+                    "type": "number"
+                },
+                "avg_ticket": {
+                    "type": "integer"
+                },
+                "avg_ticket_change": {
+                    "type": "number"
+                },
+                "budgets_by_status": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetStatusCount"
+                    }
+                },
+                "budgets_change": {
+                    "type": "number"
+                },
+                "new_customers": {
+                    "type": "integer"
+                },
+                "new_customers_change": {
+                    "type": "number"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "profit_margin_change": {
+                    "type": "number"
+                },
+                "revenue_change": {
+                    "type": "number"
+                },
+                "total_budgets": {
+                    "type": "integer"
+                },
+                "total_revenue": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PaginatedActivities": {
+            "type": "object",
+            "properties": {
+                "activities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ActivityEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -8888,6 +9829,53 @@ const docTemplate = `{
                 "PresetTypeCost"
             ]
         },
+        "entities.RecentActivityItem": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_name": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.RecentActivityResponse": {
+            "type": "object",
+            "properties": {
+                "activities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.RecentActivityItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.RegisterRequest": {
             "type": "object",
             "required": [
@@ -8983,6 +9971,40 @@ const docTemplate = `{
                 "password": {
                     "description": "User password",
                     "type": "string"
+                }
+            }
+        },
+        "entities.RevenueTrendPoint": {
+            "type": "object",
+            "properties": {
+                "budget_count": {
+                    "type": "integer"
+                },
+                "cost": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "profit": {
+                    "type": "integer"
+                },
+                "revenue": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.RevenueTrendResponse": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.RevenueTrendPoint"
+                    }
                 }
             }
         },
@@ -9145,6 +10167,114 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.TopCustomer": {
+            "type": "object",
+            "properties": {
+                "avg_ticket": {
+                    "type": "integer"
+                },
+                "budget_count": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "total_revenue": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.TopCustomersResponse": {
+            "type": "object",
+            "properties": {
+                "customers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.TopCustomer"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.TopFilament": {
+            "type": "object",
+            "properties": {
+                "brand_name": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "material_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "total_grams": {
+                    "type": "number"
+                },
+                "usage_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.TopFilamentsResponse": {
+            "type": "object",
+            "properties": {
+                "filaments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.TopFilament"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.TopMaterial": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "total_grams": {
+                    "type": "number"
+                },
+                "usage_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.TopMaterialsResponse": {
+            "type": "object",
+            "properties": {
+                "materials": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.TopMaterial"
+                    }
+                },
+                "period": {
+                    "type": "string"
                 }
             }
         },

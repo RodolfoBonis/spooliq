@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -19,16 +20,18 @@ type ICustomerUseCase interface {
 
 // CustomerUseCase implements the customer use cases
 type CustomerUseCase struct {
-	repository repositories.CustomerRepository
-	validator  *validator.Validate
-	logger     logger.Logger
+	repository      repositories.CustomerRepository
+	validator       *validator.Validate
+	logger          logger.Logger
+	activityService activityUc.IActivityService
 }
 
 // NewCustomerUseCase creates a new instance of CustomerUseCase
-func NewCustomerUseCase(repository repositories.CustomerRepository, logger logger.Logger) ICustomerUseCase {
+func NewCustomerUseCase(repository repositories.CustomerRepository, logger logger.Logger, activityService activityUc.IActivityService) ICustomerUseCase {
 	return &CustomerUseCase{
-		repository: repository,
-		validator:  validator.New(),
-		logger:     logger,
+		repository:      repository,
+		validator:       validator.New(),
+		logger:          logger,
+		activityService: activityService,
 	}
 }

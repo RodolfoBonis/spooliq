@@ -9,6 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/logger"
+	activities "github.com/RodolfoBonis/spooliq/features/activity/data/models"
 	brands "github.com/RodolfoBonis/spooliq/features/brand/data/models"
 	budgets "github.com/RodolfoBonis/spooliq/features/budget/data/models"
 	companies "github.com/RodolfoBonis/spooliq/features/company/data/models"
@@ -313,6 +314,11 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING USER MIGRATION: %s", err.Error()))
 	}
 
+	// 5.1. Activities (FK: OrganizationID → Companies)
+	if err := Connector.AutoMigrate(&activities.ActivityModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING ACTIVITY MIGRATION: %s", err.Error()))
+	}
+
 	// 6. Brands (FK: OrganizationID → Companies, referenced by FilamentModel)
 	if err := Connector.AutoMigrate(&brands.BrandModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
@@ -412,7 +418,7 @@ func RunMigrations() {
 	fmt.Println("Adding organization_id foreign key constraints...")
 
 	orgFKTables := map[string]bool{
-		"users": true, "brands": true, "materials": true, "filaments": true,
+		"activities": true, "users": true, "brands": true, "materials": true, "filaments": true,
 		"customers": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
@@ -455,6 +461,55 @@ func RunMigrations() {
 	}
 
 	fmt.Println("✓ Organization FK constraints setup completed")
+
+	// ========================================
+	// DASHBOARD PERFORMANCE INDEXES
+	// ========================================
+	fmt.Println("Adding dashboard performance indexes...")
+
+	dashboardIndexes := []struct {
+		name string
+		sql  string
+	}{
+		{
+			"idx_budgets_org_status_created",
+			"CREATE INDEX IF NOT EXISTS idx_budgets_org_status_created ON budgets(organization_id, status, created_at) WHERE deleted_at IS NULL",
+		},
+		{
+			"idx_budgets_customer_status",
+			"CREATE INDEX IF NOT EXISTS idx_budgets_customer_status ON budgets(customer_id, status) WHERE deleted_at IS NULL",
+		},
+		{
+			"idx_budget_items_budget",
+			"CREATE INDEX IF NOT EXISTS idx_budget_items_budget ON budget_items(budget_id, organization_id)",
+		},
+		{
+			"idx_bif_org_filament",
+			"CREATE INDEX IF NOT EXISTS idx_bif_org_filament ON budget_item_filaments(organization_id, filament_id)",
+		},
+		{
+			"idx_customers_org_created",
+			"CREATE INDEX IF NOT EXISTS idx_customers_org_created ON customers(organization_id, created_at) WHERE deleted_at IS NULL",
+		},
+		{
+			"idx_activities_org_created",
+			"CREATE INDEX IF NOT EXISTS idx_activities_org_created ON activities(organization_id, created_at DESC)",
+		},
+		{
+			"idx_activities_org_type",
+			"CREATE INDEX IF NOT EXISTS idx_activities_org_type ON activities(organization_id, entity_type)",
+		},
+	}
+
+	for _, idx := range dashboardIndexes {
+		if err := Connector.Exec(idx.sql).Error; err != nil {
+			fmt.Printf("Warning: Index %s creation failed: %v\n", idx.name, err)
+		} else {
+			fmt.Printf("✓ Created index %s\n", idx.name)
+		}
+	}
+
+	fmt.Println("✓ Dashboard indexes setup completed")
 }
 
 // addOtelCallbacks adds OpenTelemetry tracing callbacks to GORM using the official plugin

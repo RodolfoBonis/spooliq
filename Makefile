@@ -44,19 +44,13 @@ lint:
 	@echo "Running linter..."
 	@sh .config/scripts/lint.sh
 
-# Raise the infrastructure (PostgreSQL + RabbitMQ + Keycloak + Redis)
+# Raise the infrastructure (PostgreSQL + Redis)
 infrastructure/raise:
 	@echo "🚀 Starting infrastructure services..."
-	@$(DOCKER_COMPOSE) up -d postgres rabbitmq keycloak redis
+	@$(DOCKER_COMPOSE) up -d postgres redis
 	@echo "✅ Infrastructure services started!"
 	@echo "📊 PostgreSQL running on localhost:5432"
-	@echo "🐰 RabbitMQ Management UI: http://localhost:15672 (admin/admin123)"
-	@echo "🔐 Keycloak Admin Console: http://localhost:8180 (admin/admin123)"
-	@echo "🌐 Keycloak Realm: spooliq-realm"
 	@echo "🗄️  Redis Cache: localhost:6379 (password: redis123)"
-	@echo "👤 Test Users:"
-	@echo "   - admin/admin123 (admin role)"
-	@echo "   - testuser/test123 (user role)"
 
 # Stop the infrastructure
 infrastructure/down:

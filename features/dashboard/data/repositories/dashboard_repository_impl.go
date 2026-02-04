@@ -59,47 +59,30 @@ type overviewMetrics struct {
 func (r *DashboardRepositoryImpl) queryOverviewMetrics(organizationID string, start, end time.Time) (*overviewMetrics, error) {
 	m := &overviewMetrics{}
 
-	// Revenue: sum + count of revenue-status budgets
+	// Single query with conditional aggregation replaces 4 separate budget queries.
+	// Uses idx_budgets_org_created (org + date without status filter on full table scan).
 	{
-		sql := "SELECT COALESCE(SUM(total_cost),0), COUNT(*) FROM budgets WHERE organization_id = ? AND status IN ('approved','printing','completed') AND deleted_at IS NULL"
+		sql := `SELECT
+			COUNT(*) AS total_budgets,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN total_cost ELSE 0 END), 0) AS total_revenue,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN 1 ELSE 0 END), 0) AS revenue_count,
+			COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0) AS approved_count,
+			COALESCE(SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejected_count,
+			COALESCE(AVG(CASE WHEN status IN ('approved','printing','completed') THEN profit_amount * 100.0 / NULLIF(total_cost, 0) END), 0) AS avg_profit_margin
+		FROM budgets
+		WHERE organization_id = ? AND deleted_at IS NULL`
 		params := []any{organizationID}
 		sql, params = budgetDateFilter(sql, params, start, end)
-		if err := r.db.Raw(sql, params...).Row().Scan(&m.TotalRevenue, &m.RevenueCount); err != nil {
+
+		if err := r.db.Raw(sql, params...).Row().Scan(
+			&m.TotalBudgets, &m.TotalRevenue, &m.RevenueCount,
+			&m.ApprovedCount, &m.RejectedCount, &m.AvgProfitMargin,
+		); err != nil {
 			return nil, err
 		}
 	}
 
-	// Total budgets
-	{
-		sql := "SELECT COUNT(*) FROM budgets WHERE organization_id = ? AND deleted_at IS NULL"
-		params := []any{organizationID}
-		sql, params = budgetDateFilter(sql, params, start, end)
-		if err := r.db.Raw(sql, params...).Row().Scan(&m.TotalBudgets); err != nil {
-			return nil, err
-		}
-	}
-
-	// Approved / rejected counts
-	{
-		sql := "SELECT COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END),0), COALESCE(SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END),0) FROM budgets WHERE organization_id = ? AND deleted_at IS NULL"
-		params := []any{organizationID}
-		sql, params = budgetDateFilter(sql, params, start, end)
-		if err := r.db.Raw(sql, params...).Row().Scan(&m.ApprovedCount, &m.RejectedCount); err != nil {
-			return nil, err
-		}
-	}
-
-	// Average profit margin for revenue budgets (Margin = Profit / Revenue × 100)
-	{
-		sql := "SELECT COALESCE(AVG(profit_amount * 100.0 / NULLIF(total_cost, 0)), 0) FROM budgets WHERE organization_id = ? AND status IN ('approved','printing','completed') AND deleted_at IS NULL"
-		params := []any{organizationID}
-		sql, params = budgetDateFilter(sql, params, start, end)
-		if err := r.db.Raw(sql, params...).Row().Scan(&m.AvgProfitMargin); err != nil {
-			return nil, err
-		}
-	}
-
-	// New customers
+	// New customers (separate table, cannot merge with budgets query)
 	{
 		sql := "SELECT COUNT(*) FROM customers WHERE organization_id = ? AND deleted_at IS NULL"
 		params := []any{organizationID}
@@ -410,21 +393,24 @@ type opsMetrics struct {
 func (r *DashboardRepositoryImpl) queryOpsMetrics(organizationID string, start, end time.Time) (*opsMetrics, error) {
 	m := &opsMetrics{}
 
-	// Avg ticket + count + avg profit margin (Margin = Profit / Revenue × 100) + cost breakdown sums
+	// Single query merging revenue stats, cost breakdown, and rejection rate
+	// using conditional aggregation on the full budgets table.
+	// Uses idx_budgets_org_created for the base scan.
 	{
-		sql := `SELECT COALESCE(SUM(total_cost), 0),
-		               COUNT(*),
-		               COALESCE(AVG(profit_amount * 100.0 / NULLIF(total_cost, 0)), 0),
-		               COALESCE(SUM(filament_cost), 0),
-		               COALESCE(SUM(waste_cost), 0),
-		               COALESCE(SUM(energy_cost), 0),
-		               COALESCE(SUM(setup_cost), 0),
-		               COALESCE(SUM(labor_cost), 0),
-		               COALESCE(SUM(overhead_cost), 0)
-		        FROM budgets
-		        WHERE organization_id = ?
-		          AND status IN ('approved','printing','completed')
-		          AND deleted_at IS NULL`
+		sql := `SELECT
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN total_cost ELSE 0 END), 0) AS total_revenue,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN 1 ELSE 0 END), 0) AS revenue_count,
+			COALESCE(AVG(CASE WHEN status IN ('approved','printing','completed') THEN profit_amount * 100.0 / NULLIF(total_cost, 0) END), 0) AS avg_profit_margin,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN filament_cost ELSE 0 END), 0) AS filament_cost,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN waste_cost ELSE 0 END), 0) AS waste_cost,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN energy_cost ELSE 0 END), 0) AS energy_cost,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN setup_cost ELSE 0 END), 0) AS setup_cost,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN labor_cost ELSE 0 END), 0) AS labor_cost,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN overhead_cost ELSE 0 END), 0) AS overhead_cost,
+			COALESCE(SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejected_count,
+			COALESCE(SUM(CASE WHEN status IN ('approved','rejected') THEN 1 ELSE 0 END), 0) AS decided_count
+		FROM budgets
+		WHERE organization_id = ? AND deleted_at IS NULL`
 		params := []any{organizationID}
 		sql, params = budgetDateFilter(sql, params, start, end)
 
@@ -433,6 +419,7 @@ func (r *DashboardRepositoryImpl) queryOpsMetrics(organizationID string, start, 
 			&totalRevenue, &m.RevenueCount, &m.AvgProfitMargin,
 			&m.FilamentCost, &m.WasteCost, &m.EnergyCost,
 			&m.SetupCost, &m.LaborCost, &m.OverheadCost,
+			&m.RejectedCount, &m.DecidedCount,
 		); err != nil {
 			return nil, err
 		}
@@ -441,7 +428,7 @@ func (r *DashboardRepositoryImpl) queryOpsMetrics(organizationID string, start, 
 		}
 	}
 
-	// Print time from budget_items
+	// Print time from budget_items (requires JOIN, kept as separate query)
 	{
 		sql := `SELECT COALESCE(SUM(bi.print_time_hours * 60 + bi.print_time_minutes), 0)
 		        FROM budget_items bi
@@ -454,21 +441,6 @@ func (r *DashboardRepositoryImpl) queryOpsMetrics(organizationID string, start, 
 			params = append(params, start, end)
 		}
 		if err := r.db.Raw(sql, params...).Row().Scan(&m.TotalPrintMins); err != nil {
-			return nil, err
-		}
-	}
-
-	// Rejection rate
-	{
-		sql := `SELECT
-		          COALESCE(SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END), 0),
-		          COALESCE(SUM(CASE WHEN status IN ('approved','rejected') THEN 1 ELSE 0 END), 0)
-		        FROM budgets
-		        WHERE organization_id = ?
-		          AND deleted_at IS NULL`
-		params := []any{organizationID}
-		sql, params = budgetDateFilter(sql, params, start, end)
-		if err := r.db.Raw(sql, params...).Row().Scan(&m.RejectedCount, &m.DecidedCount); err != nil {
 			return nil, err
 		}
 	}
@@ -631,111 +603,133 @@ func (r *DashboardRepositoryImpl) GetTopMaterials(organizationID string, start, 
 // GetGoalsAlerts
 // ──────────────────────────────────────────────
 
+// goalPeriodMetrics holds aggregated metrics for a single period used by GetGoalsAlerts.
+type goalPeriodMetrics struct {
+	Revenue     int64
+	BudgetCount int
+	Approved    int
+	Decided     int
+}
+
 // GetGoalsAlerts returns goals progress and active alerts.
 func (r *DashboardRepositoryImpl) GetGoalsAlerts(organizationID string) (*entities.GoalsAlertsResponse, error) {
 	now := time.Now().UTC()
 	currentStart := now.AddDate(0, 0, -30)
 	prevStart := now.AddDate(0, 0, -60)
-	prevEnd := now.AddDate(0, 0, -30)
 
+	var current, previous goalPeriodMetrics
+	var staleDrafts, inactiveCustomers int
+
+	g := new(errgroup.Group)
+
+	// Query 1: Both periods in a single query using period bucketing.
+	// Replaces 4 sequential queries (prev revenue, prev approval, cur revenue, cur approval).
+	g.Go(func() error {
+		type periodRow struct {
+			Period      string `gorm:"column:period"`
+			Revenue     int64  `gorm:"column:revenue"`
+			BudgetCount int    `gorm:"column:budget_count"`
+			Approved    int    `gorm:"column:approved"`
+			Decided     int    `gorm:"column:decided"`
+		}
+
+		sql := `SELECT
+			CASE WHEN created_at >= ? THEN 'current' ELSE 'previous' END AS period,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN total_cost ELSE 0 END), 0) AS revenue,
+			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN 1 ELSE 0 END), 0) AS budget_count,
+			COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0) AS approved,
+			COALESCE(SUM(CASE WHEN status IN ('approved','rejected') THEN 1 ELSE 0 END), 0) AS decided
+		FROM budgets
+		WHERE organization_id = ?
+		  AND deleted_at IS NULL
+		  AND created_at >= ? AND created_at < ?
+		GROUP BY period`
+
+		var rows []periodRow
+		if err := r.db.Raw(sql, currentStart, organizationID, prevStart, now).Scan(&rows).Error; err != nil {
+			return err
+		}
+
+		for _, row := range rows {
+			switch row.Period {
+			case "current":
+				current = goalPeriodMetrics{Revenue: row.Revenue, BudgetCount: row.BudgetCount, Approved: row.Approved, Decided: row.Decided}
+			case "previous":
+				previous = goalPeriodMetrics{Revenue: row.Revenue, BudgetCount: row.BudgetCount, Approved: row.Approved, Decided: row.Decided}
+			}
+		}
+		return nil
+	})
+
+	// Query 2: Stale drafts (uses idx_budgets_org_status_updated)
+	g.Go(func() error {
+		sql := `SELECT COUNT(*)
+		        FROM budgets
+		        WHERE organization_id = ?
+		          AND status = 'draft'
+		          AND updated_at < ?
+		          AND deleted_at IS NULL`
+		staleThreshold := now.AddDate(0, 0, -7)
+		return r.db.Raw(sql, organizationID, staleThreshold).Row().Scan(&staleDrafts)
+	})
+
+	// Query 3: Inactive customers
+	g.Go(func() error {
+		sql := `SELECT COUNT(*)
+		        FROM customers c
+		        WHERE c.organization_id = ?
+		          AND c.is_active = true
+		          AND c.deleted_at IS NULL
+		          AND NOT EXISTS (
+		            SELECT 1 FROM budgets b
+		            WHERE b.customer_id = c.id
+		              AND b.deleted_at IS NULL
+		              AND b.created_at >= ?
+		          )`
+		return r.db.Raw(sql, organizationID, currentStart).Row().Scan(&inactiveCustomers)
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	// Build goals
 	goals := make([]entities.Goal, 0, 3)
-	alerts := make([]entities.Alert, 0, 3)
 
-	// ── Previous-period baselines (used as targets * 1.1) ──
-
-	var prevRevenue int64
-	var prevBudgetCount int
-	var prevApproved, prevDecided int
-	{
-		sql := `SELECT COALESCE(SUM(total_cost), 0),
-		               COUNT(*)
-		        FROM budgets
-		        WHERE organization_id = ?
-		          AND status IN ('approved','printing','completed')
-		          AND deleted_at IS NULL
-		          AND created_at >= ? AND created_at < ?`
-		if err := r.db.Raw(sql, organizationID, prevStart, prevEnd).Row().Scan(&prevRevenue, &prevBudgetCount); err != nil {
-			return nil, err
-		}
-
-		sql2 := `SELECT
-		           COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0),
-		           COALESCE(SUM(CASE WHEN status IN ('approved','rejected') THEN 1 ELSE 0 END), 0)
-		         FROM budgets
-		         WHERE organization_id = ?
-		           AND deleted_at IS NULL
-		           AND created_at >= ? AND created_at < ?`
-		if err := r.db.Raw(sql2, organizationID, prevStart, prevEnd).Row().Scan(&prevApproved, &prevDecided); err != nil {
-			return nil, err
-		}
-	}
-
-	// ── Current-period metrics ──
-
-	var curRevenue int64
-	var curBudgetCount int
-	var curApproved, curDecided int
-	{
-		sql := `SELECT COALESCE(SUM(total_cost), 0),
-		               COUNT(*)
-		        FROM budgets
-		        WHERE organization_id = ?
-		          AND status IN ('approved','printing','completed')
-		          AND deleted_at IS NULL
-		          AND created_at >= ? AND created_at < ?`
-		if err := r.db.Raw(sql, organizationID, currentStart, now).Row().Scan(&curRevenue, &curBudgetCount); err != nil {
-			return nil, err
-		}
-
-		sql2 := `SELECT
-		           COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0),
-		           COALESCE(SUM(CASE WHEN status IN ('approved','rejected') THEN 1 ELSE 0 END), 0)
-		         FROM budgets
-		         WHERE organization_id = ?
-		           AND deleted_at IS NULL
-		           AND created_at >= ? AND created_at < ?`
-		if err := r.db.Raw(sql2, organizationID, currentStart, now).Row().Scan(&curApproved, &curDecided); err != nil {
-			return nil, err
-		}
-	}
-
-	// Revenue goal
-	revenueTarget := float64(prevRevenue) * 1.1
+	revenueTarget := float64(previous.Revenue) * 1.1
 	var revProgress float64
 	if revenueTarget > 0 {
-		revProgress = float64(curRevenue) / revenueTarget * 100
+		revProgress = float64(current.Revenue) / revenueTarget * 100
 	}
 	goals = append(goals, entities.Goal{
 		Name:     "Monthly Revenue",
-		Current:  float64(curRevenue),
+		Current:  float64(current.Revenue),
 		Target:   revenueTarget,
 		Progress: math.Min(revProgress, 100),
 		Unit:     "cents",
 	})
 
-	// Budget count goal
-	budgetTarget := float64(prevBudgetCount) * 1.1
+	budgetTarget := float64(previous.BudgetCount) * 1.1
 	var budgetProgress float64
 	if budgetTarget > 0 {
-		budgetProgress = float64(curBudgetCount) / budgetTarget * 100
+		budgetProgress = float64(current.BudgetCount) / budgetTarget * 100
 	}
 	goals = append(goals, entities.Goal{
 		Name:     "Monthly Budgets",
-		Current:  float64(curBudgetCount),
+		Current:  float64(current.BudgetCount),
 		Target:   budgetTarget,
 		Progress: math.Min(budgetProgress, 100),
 		Unit:     "count",
 	})
 
-	// Conversion rate goal
 	var prevConvRate float64
-	if prevDecided > 0 {
-		prevConvRate = float64(prevApproved) / float64(prevDecided) * 100
+	if previous.Decided > 0 {
+		prevConvRate = float64(previous.Approved) / float64(previous.Decided) * 100
 	}
 	convTarget := prevConvRate * 1.1
 	var curConvRate float64
-	if curDecided > 0 {
-		curConvRate = float64(curApproved) / float64(curDecided) * 100
+	if current.Decided > 0 {
+		curConvRate = float64(current.Approved) / float64(current.Decided) * 100
 	}
 	var convProgress float64
 	if convTarget > 0 {
@@ -749,22 +743,9 @@ func (r *DashboardRepositoryImpl) GetGoalsAlerts(organizationID string) (*entiti
 		Unit:     "percent",
 	})
 
-	// ── Alerts ──
+	// Build alerts
+	alerts := make([]entities.Alert, 0, 3)
 
-	// Stale drafts: drafts not updated in 7 days
-	var staleDrafts int
-	{
-		sql := `SELECT COUNT(*)
-		        FROM budgets
-		        WHERE organization_id = ?
-		          AND status = 'draft'
-		          AND updated_at < ?
-		          AND deleted_at IS NULL`
-		staleThreshold := now.AddDate(0, 0, -7)
-		if err := r.db.Raw(sql, organizationID, staleThreshold).Row().Scan(&staleDrafts); err != nil {
-			return nil, err
-		}
-	}
 	if staleDrafts > 0 {
 		alerts = append(alerts, entities.Alert{
 			Type:       "stale_drafts",
@@ -775,38 +756,19 @@ func (r *DashboardRepositoryImpl) GetGoalsAlerts(organizationID string) (*entiti
 		})
 	}
 
-	// High rejection rate in last 30 days
-	if curDecided > 0 {
-		rejRate := float64(curDecided-curApproved) / float64(curDecided) * 100
+	if current.Decided > 0 {
+		rejRate := float64(current.Decided-current.Approved) / float64(current.Decided) * 100
 		if rejRate > 30 {
 			alerts = append(alerts, entities.Alert{
 				Type:       "high_rejection",
 				Severity:   "danger",
 				Message:    fmt.Sprintf("Rejection rate is %.1f%% in the last 30 days", rejRate),
-				Count:      curDecided - curApproved,
+				Count:      current.Decided - current.Approved,
 				EntityType: "budget",
 			})
 		}
 	}
 
-	// Inactive customers: active customers with no budget in last 30 days
-	var inactiveCustomers int
-	{
-		sql := `SELECT COUNT(*)
-		        FROM customers c
-		        WHERE c.organization_id = ?
-		          AND c.is_active = true
-		          AND c.deleted_at IS NULL
-		          AND NOT EXISTS (
-		            SELECT 1 FROM budgets b
-		            WHERE b.customer_id = c.id
-		              AND b.deleted_at IS NULL
-		              AND b.created_at >= ?
-		          )`
-		if err := r.db.Raw(sql, organizationID, currentStart).Row().Scan(&inactiveCustomers); err != nil {
-			return nil, err
-		}
-	}
 	if inactiveCustomers > 0 {
 		alerts = append(alerts, entities.Alert{
 			Type:       "inactive_customers",

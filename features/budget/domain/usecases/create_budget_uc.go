@@ -122,6 +122,24 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
+	// Record initial status history for the draft status
+	initialHistory := &entities.BudgetStatusHistoryEntity{
+		ID:             uuid.New(),
+		BudgetID:       budget.ID,
+		OrganizationID: organizationID,
+		PreviousStatus: "",
+		NewStatus:      entities.StatusDraft,
+		ChangedBy:      userID,
+		CreatedAt:      time.Now(),
+	}
+
+	if err := uc.budgetRepository.AddStatusHistory(ctx, initialHistory); err != nil {
+		uc.logger.Error(ctx, "Failed to save initial status history", map[string]interface{}{
+			"error":     err.Error(),
+			"budget_id": budget.ID,
+		})
+	}
+
 	// Create budget items (products) with their filaments
 	for _, itemReq := range request.Items {
 		// Use the first filament as the primary filament (for backward compatibility)

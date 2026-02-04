@@ -139,7 +139,7 @@ type responseWriter struct {
 
 func (w *responseWriter) Write(data []byte) (int, error) {
 	w.body = append(w.body, data...)
-	return len(data), nil
+	return w.ResponseWriter.Write(data)
 }
 
 func (w *responseWriter) WriteHeader(statusCode int) {

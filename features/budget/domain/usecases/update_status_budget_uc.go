@@ -113,6 +113,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	history := &entities.BudgetStatusHistoryEntity{
 		ID:             uuid.New(),
 		BudgetID:       budget.ID,
+		OrganizationID: organizationID,
 		PreviousStatus: previousStatus,
 		NewStatus:      request.Status,
 		ChangedBy:      userID,

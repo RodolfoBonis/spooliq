@@ -7647,6 +7647,9 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "organization_id": {
+                    "type": "string"
+                },
                 "previous_status": {
                     "$ref": "#/definitions/entities.BudgetStatus"
                 }

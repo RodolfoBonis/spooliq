@@ -264,37 +264,72 @@ func (r *DashboardRepositoryImpl) GetRevenueTrend(organizationID string, start, 
 // GetConversionFunnel
 // ──────────────────────────────────────────────
 
-// GetConversionFunnel returns conversion funnel data.
+// GetConversionFunnel returns conversion funnel data with step-to-step conversion rates.
+// It uses budget_status_history to count how many budgets reached each status,
+// then derives the rate as: reached(next) / reached(current) * 100.
 func (r *DashboardRepositoryImpl) GetConversionFunnel(organizationID string, start, end time.Time) (*entities.ConversionFunnelResponse, error) {
-	sql := "SELECT status, COUNT(*) AS count FROM budgets WHERE organization_id = ? AND deleted_at IS NULL"
-	params := []any{organizationID}
-	sql, params = budgetDateFilter(sql, params, start, end)
-	sql += " GROUP BY status"
+	// 1. Total budgets = budgets that reached "draft" (all budgets start as draft).
+	totalSQL := "SELECT COUNT(*) FROM budgets WHERE organization_id = ? AND deleted_at IS NULL"
+	totalParams := []any{organizationID}
+	totalSQL, totalParams = budgetDateFilter(totalSQL, totalParams, start, end)
 
-	type statusRow struct {
-		Status string
-		Count  int
-	}
-	var rows []statusRow
-	if err := r.db.Raw(sql, params...).Scan(&rows).Error; err != nil {
+	var totalBudgets int
+	if err := r.db.Raw(totalSQL, totalParams...).Row().Scan(&totalBudgets); err != nil {
 		return nil, err
 	}
 
-	statusMap := make(map[string]int)
-	total := 0
-	for _, row := range rows {
-		statusMap[row.Status] = row.Count
-		total += row.Count
+	// 2. Count distinct budgets that reached each status via history.
+	//    Filter by budget created_at (not transition created_at) for consistency.
+	historySQL := `SELECT bsh.new_status, COUNT(DISTINCT bsh.budget_id) AS reached
+		FROM budget_status_history bsh
+		JOIN budgets b ON b.id = bsh.budget_id AND b.deleted_at IS NULL
+		WHERE bsh.organization_id = ?`
+	historyParams := []any{organizationID}
+	if !isAllPeriod(start) {
+		historySQL += " AND b.created_at >= ? AND b.created_at < ?"
+		historyParams = append(historyParams, start, end)
+	}
+	historySQL += " GROUP BY bsh.new_status"
+
+	type reachedRow struct {
+		NewStatus string `gorm:"column:new_status"`
+		Reached   int    `gorm:"column:reached"`
+	}
+	var rows []reachedRow
+	if err := r.db.Raw(historySQL, historyParams...).Scan(&rows).Error; err != nil {
+		return nil, err
 	}
 
+	// 3. Build reached map. Draft = totalBudgets (every budget starts there).
+	reached := map[string]int{"draft": totalBudgets}
+	for _, row := range rows {
+		reached[row.NewStatus] = row.Reached
+	}
+
+	// 4. Compute step-to-step conversion rates.
+	//    Main funnel: draft → sent → approved → printing → completed
+	//    Rejected is a branch off "sent".
 	funnelOrder := []string{"draft", "sent", "approved", "printing", "completed", "rejected"}
 	steps := make([]entities.FunnelStep, 0, len(funnelOrder))
-	for _, status := range funnelOrder {
-		count := statusMap[status]
+
+	for i, status := range funnelOrder {
+		count := reached[status]
 		var rate float64
-		if total > 0 {
-			rate = float64(count) / float64(total) * 100
+
+		switch {
+		case status == "draft":
+			rate = 100
+		case status == "rejected":
+			if reached["sent"] > 0 {
+				rate = float64(count) / float64(reached["sent"]) * 100
+			}
+		default:
+			prevStatus := funnelOrder[i-1]
+			if reached[prevStatus] > 0 {
+				rate = float64(count) / float64(reached[prevStatus]) * 100
+			}
 		}
+
 		steps = append(steps, entities.FunnelStep{
 			Status:         status,
 			Count:          count,
@@ -303,13 +338,13 @@ func (r *DashboardRepositoryImpl) GetConversionFunnel(organizationID string, sta
 	}
 
 	var overallConversion float64
-	if total > 0 {
-		overallConversion = float64(statusMap["completed"]) / float64(total) * 100
+	if totalBudgets > 0 {
+		overallConversion = float64(reached["completed"]) / float64(totalBudgets) * 100
 	}
 
 	return &entities.ConversionFunnelResponse{
 		Steps:             steps,
-		TotalBudgets:      total,
+		TotalBudgets:      totalBudgets,
 		OverallConversion: overallConversion,
 	}, nil
 }

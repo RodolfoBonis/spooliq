@@ -10,6 +10,7 @@ import (
 type BudgetStatusHistoryEntity struct {
 	ID             uuid.UUID    `json:"id"`
 	BudgetID       uuid.UUID    `json:"budget_id"`
+	OrganizationID string       `json:"organization_id"`
 	PreviousStatus BudgetStatus `json:"previous_status"`
 	NewStatus      BudgetStatus `json:"new_status"`
 	ChangedBy      string       `json:"changed_by"` // user_id

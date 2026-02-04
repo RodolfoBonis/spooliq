@@ -499,6 +499,31 @@ func RunMigrations() {
 			"idx_activities_org_type",
 			"CREATE INDEX IF NOT EXISTS idx_activities_org_type ON activities(organization_id, entity_type)",
 		},
+		// Conversion funnel: optimize GROUP BY new_status + COUNT(DISTINCT budget_id) on budget_status_history
+		{
+			"idx_bsh_org_status_budget",
+			"CREATE INDEX IF NOT EXISTS idx_bsh_org_status_budget ON budget_status_history(organization_id, new_status, budget_id)",
+		},
+		// Queries filtering by org + date without status (total budget count, rejection rate)
+		{
+			"idx_budgets_org_created",
+			"CREATE INDEX IF NOT EXISTS idx_budgets_org_created ON budgets(organization_id, created_at) WHERE deleted_at IS NULL",
+		},
+		// Stale drafts alert: org + status + updated_at
+		{
+			"idx_budgets_org_status_updated",
+			"CREATE INDEX IF NOT EXISTS idx_budgets_org_status_updated ON budgets(organization_id, status, updated_at) WHERE deleted_at IS NULL",
+		},
+		// Top filaments/materials JOIN: budget_item_filaments → budget_items
+		{
+			"idx_bif_budget_item",
+			"CREATE INDEX IF NOT EXISTS idx_bif_budget_item ON budget_item_filaments(budget_item_id, filament_id)",
+		},
+		// Top filaments JOIN chain: filaments → brands/materials
+		{
+			"idx_filaments_brand_material",
+			"CREATE INDEX IF NOT EXISTS idx_filaments_brand_material ON filaments(brand_id, material_id) WHERE deleted_at IS NULL",
+		},
 	}
 
 	for _, idx := range dashboardIndexes {

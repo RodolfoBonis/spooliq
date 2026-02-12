@@ -10,8 +10,8 @@ github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tN
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/RodolfoBonis/go-otel-agent v0.1.3 h1:XFXtBqL2p5ZL1n5WYO2gvyOrNPf5IHb7qUvAwLEPIBc=
-github.com/RodolfoBonis/go-otel-agent v0.1.3/go.mod h1:zKXDZyvpKvLtnsRQGX0fF3WYHnYjRiLcpnC/o63h5HE=
+github.com/RodolfoBonis/go-otel-agent v0.2.0 h1:FFc2P5agYxsYva+zD1MK4vkgD7rJ+MQE3YIPTX/jdSc=
+github.com/RodolfoBonis/go-otel-agent v0.2.0/go.mod h1:zKXDZyvpKvLtnsRQGX0fF3WYHnYjRiLcpnC/o63h5HE=
 github.com/RodolfoBonis/rb_auth_client v0.1.1 h1:wuU5j5UPozvb2potaFP7dr+mRsthJkTxjG7zP8waa3E=
 github.com/RodolfoBonis/rb_auth_client v0.1.1/go.mod h1:r16vwjOEBXfepFTSNl1gIvlZG4IMfyG1h4wU8vsArbw=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=

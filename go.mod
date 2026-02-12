@@ -4,7 +4,7 @@ go 1.24.13
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.8.0
-	github.com/RodolfoBonis/go-otel-agent v0.1.3
+	github.com/RodolfoBonis/go-otel-agent v0.2.0
 	github.com/RodolfoBonis/rb_auth_client v0.1.1
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/gin-contrib/cors v1.6.0

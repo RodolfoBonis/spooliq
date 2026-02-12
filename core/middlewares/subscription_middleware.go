@@ -8,7 +8,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"github.com/gin-gonic/gin"

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	budgetEntities "github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/jung-kurt/gofpdf/v2"

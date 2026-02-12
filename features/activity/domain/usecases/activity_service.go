@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/activity/domain/repositories"
 	"github.com/gin-gonic/gin"

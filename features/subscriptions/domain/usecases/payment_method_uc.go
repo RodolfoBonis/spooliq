@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"

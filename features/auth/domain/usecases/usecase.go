@@ -3,7 +3,7 @@ package usecases
 import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/RodolfoBonis/spooliq/core/entities"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/gin-gonic/gin"
 )
 

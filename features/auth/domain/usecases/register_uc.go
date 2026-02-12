@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	authEntities "github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"

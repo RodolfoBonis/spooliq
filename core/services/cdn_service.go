@@ -12,7 +12,7 @@ import (
 
 	rbauth "github.com/RodolfoBonis/rb_auth_client"
 	"github.com/RodolfoBonis/spooliq/core/entities"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 )
 
 // CDNService handles file uploads to the CDN

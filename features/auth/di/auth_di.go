@@ -2,7 +2,7 @@ package di
 
 import (
 	"github.com/RodolfoBonis/spooliq/core/config"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"

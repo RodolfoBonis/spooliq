@@ -3,7 +3,7 @@ package health
 import (
 	"net/http"
 
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/gin-gonic/gin"
 )
 

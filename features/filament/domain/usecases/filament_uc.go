@@ -3,7 +3,7 @@ package usecases
 import (
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 
-	log "github.com/RodolfoBonis/spooliq/core/logger"
+	log "github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/filament/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

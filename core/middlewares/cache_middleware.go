@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 )

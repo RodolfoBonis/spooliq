@@ -6,7 +6,7 @@ import (
 
 	coreEntities "github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	"github.com/gin-gonic/gin"
 )

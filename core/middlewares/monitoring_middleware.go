@@ -3,7 +3,7 @@ package middlewares
 import (
 	"context"
 
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,11 +31,12 @@ func (m *MonitoringMiddleware) SentryMiddleware() gin.HandlerFunc {
 func (m *MonitoringMiddleware) LogMiddleware(ctx *gin.Context) {
 	requestID := uuid.NewString()
 	ctx.Set("requestID", requestID)
-	var responseBody = logger.HandleResponseBody(ctx.Writer)
+	var responseBody = HandleResponseBody(ctx.Writer)
 	ctx.Writer = responseBody
 
 	ctxWithIP := context.WithValue(ctx.Request.Context(), contextKey("ip"), ctx.ClientIP())
-	ctx.Request = ctx.Request.WithContext(ctxWithIP)
+	ctxWithReqID := context.WithValue(ctxWithIP, logger.RequestIDKey, requestID)
+	ctx.Request = ctx.Request.WithContext(ctxWithReqID)
 
 	ctx.Next()
 }

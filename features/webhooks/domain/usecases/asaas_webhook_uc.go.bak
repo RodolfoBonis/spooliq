@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"

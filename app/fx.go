@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	otelagent "github.com/RodolfoBonis/go-otel-agent"
+	"github.com/RodolfoBonis/go-otel-agent/fxmodule"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
-	"github.com/RodolfoBonis/spooliq/core/logger"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
-	"github.com/RodolfoBonis/spooliq/core/observability"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	activityDi "github.com/RodolfoBonis/spooliq/features/activity/di"
 	activityuc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
@@ -41,15 +42,17 @@ import (
 	"go.uber.org/fx"
 )
 
-// NewFxApp cria e retorna uma nova instância da aplicação Fx.
+// NewFxApp creates and returns a new FX application instance.
 func NewFxApp() *fx.App {
 	return fx.New(
 		fx.StartTimeout(60*time.Second),
 		fx.StopTimeout(30*time.Second),
-		logger.Module,
 		config.Module,
-		// Sistema completo de observabilidade OpenTelemetry/SignOz
-		observability.Module,
+		fxmodule.ProvideWithConfiguration(
+			otelagent.WithServiceName("spooliq-api"),
+			otelagent.WithServiceNamespace("spooliq"),
+			otelagent.WithServiceVersion("1.0.0"),
+		),
 		services.Module,
 		middlewares.Module,
 		activityDi.Module,
@@ -81,7 +84,7 @@ func NewFxApp() *fx.App {
 			},
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, activityService activityuc.IActivityService, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, paymentMethodUc *subscriptionuc.PaymentMethodUseCase, subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase, manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase, presetHandler *preset.Handler, dashboardHandler *dashboard.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, adminHandler *admin.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, obsManager *observability.Manager, helper *observability.Helper, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, activityService activityuc.IActivityService, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, materialUc materialuc.IMaterialUseCase, uploadsUc uploadsuc.IUploadUseCase, paymentMethodUc *subscriptionuc.PaymentMethodUseCase, subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase, manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase, presetHandler *preset.Handler, dashboardHandler *dashboard.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, adminHandler *admin.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, agent *otelagent.Agent, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -90,10 +93,9 @@ func NewFxApp() *fx.App {
 				}
 
 				// Setup middlewares and lifecycle hooks
-				SetupMiddlewaresAndRoutes(lc, router, activityService, authUc, registerUc, brandUc, budgetUc, companyUc, brandingUc, customerUc, filamentUc, materialUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, dashboardHandler, webhookHandler, userHandler, adminHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, obsManager, helper)
+				SetupMiddlewaresAndRoutes(lc, router, activityService, authUc, registerUc, brandUc, budgetUc, companyUc, brandingUc, customerUc, filamentUc, materialUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, dashboardHandler, webhookHandler, userHandler, adminHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, agent)
 			},
 		),
-		// Incluir as migrações e seeds do init.go
 		InitAndRun(),
 	)
 }

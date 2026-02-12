@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"

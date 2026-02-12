@@ -1,7 +1,7 @@
 package usecases
 
 import (
-	log "github.com/RodolfoBonis/spooliq/core/logger"
+	log "github.com/RodolfoBonis/go-otel-agent/logger"
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
 	"github.com/gin-gonic/gin"

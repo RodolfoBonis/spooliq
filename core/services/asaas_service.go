@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 )
 
 // IAsaasService defines the interface for Asaas API interactions.

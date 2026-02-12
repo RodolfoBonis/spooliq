@@ -1,7 +1,8 @@
 package services
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	otelagent "github.com/RodolfoBonis/go-otel-agent"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
@@ -14,9 +15,9 @@ var Module = fx.Module("services",
 		NewAuthService,
 		NewAsaasService,
 		NewKeycloakAdminService,
-		func(logger logger.Logger) *gorm.DB {
+		func(logger logger.Logger, agent *otelagent.Agent) *gorm.DB {
 			if Connector == nil {
-				_ = OpenConnection(logger)
+				_ = OpenConnection(logger, agent)
 			}
 			return Connector
 		},

@@ -8,8 +8,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/config"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // IAsaasService defines the interface for Asaas API interactions.
@@ -41,7 +42,9 @@ func NewAsaasService(cfg *config.AppConfig, logger logger.Logger) IAsaasService 
 		apiKey:  cfg.AsaasAPIKey,
 		baseURL: cfg.AsaasBaseURL,
 		logger:  logger,
-		client:  &http.Client{},
+		client: &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
 	}
 }
 

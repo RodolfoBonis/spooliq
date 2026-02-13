@@ -129,7 +129,10 @@ func OpenConnection(logger logger.Logger, agent *otelagent.Agent) *errors.AppErr
 	sqlDB.SetMaxOpenConns(100)
 
 	// Add OTel instrumentation via go-otel-agent's GORM plugin
-	if err := gormplugin.Instrument(db, agent); err != nil {
+	if err := gormplugin.Instrument(db, agent,
+		gormplugin.WithDBName(connConfig.DBName),
+		gormplugin.WithDBUser(connConfig.User),
+	); err != nil {
 		logger.Warning(context.Background(), "Failed to instrument database with OTel", map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -156,7 +159,10 @@ func OpenConnection(logger logger.Logger, agent *otelagent.Agent) *errors.AppErr
 							return false, e
 						}
 
-						if err := gormplugin.Instrument(retryDB, agent); err != nil {
+						if err := gormplugin.Instrument(retryDB, agent,
+							gormplugin.WithDBName(connConfig.DBName),
+							gormplugin.WithDBUser(connConfig.User),
+						); err != nil {
 							logger.Warning(context.Background(), "Failed to instrument reconnected database", map[string]interface{}{
 								"error": err.Error(),
 							})

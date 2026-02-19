@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/config"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 )
 
 // IKeycloakAdminService defines the interface for Keycloak Admin API interactions.
@@ -106,7 +107,8 @@ func NewKeycloakAdminService(cfg *config.AppConfig, logger logger.Logger) IKeycl
 		adminPassword: cfg.Keycloak.AdminPassword,
 		logger:        logger,
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout:   10 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
 	}
 }

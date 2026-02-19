@@ -1,9 +1,12 @@
 package services
 
 import (
+	"net/http"
+
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // AuthService provides authentication capabilities.
@@ -17,10 +20,9 @@ type AuthService struct {
 func NewAuthService(logger logger.Logger, cfg *config.AppConfig) *AuthService {
 	client := gocloak.NewClient(cfg.Keycloak.Host)
 
-	// Get the internal Resty client and configure it with instrumented HTTP transport
+	// Wrap Resty transport with OpenTelemetry instrumentation
 	restyClient := client.RestyClient()
-	instrumentedHTTPClient := NewInstrumentedHTTPClient()
-	restyClient.SetTransport(instrumentedHTTPClient.Transport)
+	restyClient.SetTransport(otelhttp.NewTransport(http.DefaultTransport))
 
 	return &AuthService{
 		client: client,

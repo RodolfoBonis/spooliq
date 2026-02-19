@@ -396,7 +396,7 @@ func (r *subscriptionPlanRepositoryImpl) BulkUpdate(ctx context.Context, planIDs
 					Changes:   updates,
 					Reason:    reason,
 				}
-				r.CreateAuditEntry(ctx, auditEntry)
+				_ = r.CreateAuditEntry(ctx, auditEntry)
 			}
 		}
 
@@ -427,7 +427,7 @@ func (r *subscriptionPlanRepositoryImpl) BulkActivate(ctx context.Context, planI
 				Changes:   updates,
 				Reason:    reason,
 			}
-			r.CreateAuditEntry(ctx, auditEntry)
+			_ = r.CreateAuditEntry(ctx, auditEntry)
 		}
 	}
 
@@ -455,7 +455,7 @@ func (r *subscriptionPlanRepositoryImpl) BulkDeactivate(ctx context.Context, pla
 				Changes:   updates,
 				Reason:    reason,
 			}
-			r.CreateAuditEntry(ctx, auditEntry)
+			_ = r.CreateAuditEntry(ctx, auditEntry)
 		}
 	}
 
@@ -821,7 +821,7 @@ func (r *subscriptionPlanRepositoryImpl) ExecutePlanMigration(ctx context.Contex
 				},
 				Reason: migration.Reason,
 			}
-			r.CreateAuditEntry(ctx, auditEntry)
+			_ = r.CreateAuditEntry(ctx, auditEntry)
 		}
 
 		results = append(results, item)

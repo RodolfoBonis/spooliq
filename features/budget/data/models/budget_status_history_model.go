@@ -43,6 +43,7 @@ func (bh *BudgetStatusHistoryModel) ToEntity() *entities.BudgetStatusHistoryEnti
 	return &entities.BudgetStatusHistoryEntity{
 		ID:             bh.ID,
 		BudgetID:       bh.BudgetID,
+		OrganizationID: bh.OrganizationID,
 		PreviousStatus: entities.BudgetStatus(bh.PreviousStatus),
 		NewStatus:      entities.BudgetStatus(bh.NewStatus),
 		ChangedBy:      bh.ChangedBy,
@@ -55,6 +56,7 @@ func (bh *BudgetStatusHistoryModel) ToEntity() *entities.BudgetStatusHistoryEnti
 func (bh *BudgetStatusHistoryModel) FromEntity(entity *entities.BudgetStatusHistoryEntity) {
 	bh.ID = entity.ID
 	bh.BudgetID = entity.BudgetID
+	bh.OrganizationID = entity.OrganizationID
 	bh.PreviousStatus = string(entity.PreviousStatus)
 	bh.NewStatus = string(entity.NewStatus)
 	bh.ChangedBy = entity.ChangedBy

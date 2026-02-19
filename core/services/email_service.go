@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 )
 
 // IEmailService defines the interface for email notifications

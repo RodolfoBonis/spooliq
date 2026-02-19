@@ -1,8 +1,9 @@
 package usecases
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
+	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
@@ -34,6 +35,7 @@ type BudgetUseCase struct {
 	cdnService         *services.CDNService
 	validator          *validator.Validate
 	logger             logger.Logger
+	activityService    activityUc.IActivityService
 }
 
 // NewBudgetUseCase creates a new instance of BudgetUseCase
@@ -44,6 +46,7 @@ func NewBudgetUseCase(
 	pdfService *services.PDFService,
 	cdnService *services.CDNService,
 	logger logger.Logger,
+	activityService activityUc.IActivityService,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
@@ -53,6 +56,7 @@ func NewBudgetUseCase(
 		cdnService:         cdnService,
 		validator:          validator.New(),
 		logger:             logger,
+		activityService:    activityService,
 	}
 }
 

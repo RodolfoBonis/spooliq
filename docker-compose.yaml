@@ -118,6 +118,10 @@ services:
       - REALM=spooliq-realm
       - REALM=spooliq-realm
       - KEYCLOAK_HOST=http://keycloak:8080
+      - OTEL_SERVICE_NAME=spooliq-api
+      - OTEL_SERVICE_NAMESPACE=spooliq
+      - OTEL_SERVICE_VERSION=1.0.0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=signoz-otel-collector:4317
     depends_on:
       postgres:
         condition: service_healthy

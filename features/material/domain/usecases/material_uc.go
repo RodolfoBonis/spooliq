@@ -1,7 +1,8 @@
 package usecases
 
 import (
-	log "github.com/RodolfoBonis/spooliq/core/logger"
+	log "github.com/RodolfoBonis/go-otel-agent/logger"
+	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -9,9 +10,10 @@ import (
 
 // MaterialUseCase implements material business logic operations.
 type MaterialUseCase struct {
-	repository repositories.MaterialRepository
-	validator  *validator.Validate
-	logger     log.Logger
+	repository      repositories.MaterialRepository
+	validator       *validator.Validate
+	logger          log.Logger
+	activityService activityUc.IActivityService
 }
 
 // IMaterialUseCase defines the contract for material use case operations.
@@ -24,10 +26,11 @@ type IMaterialUseCase interface {
 }
 
 // NewMaterialUseCase creates a new instance of the material use case.
-func NewMaterialUseCase(repository repositories.MaterialRepository, logger log.Logger) IMaterialUseCase {
+func NewMaterialUseCase(repository repositories.MaterialRepository, logger log.Logger, activityService activityUc.IActivityService) IMaterialUseCase {
 	return &MaterialUseCase{
-		repository: repository,
-		validator:  validator.New(),
-		logger:     logger,
+		repository:      repository,
+		validator:       validator.New(),
+		logger:          logger,
+		activityService: activityService,
 	}
 }

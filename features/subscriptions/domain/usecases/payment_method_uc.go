@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
@@ -163,11 +163,6 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 		})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to tokenize credit card"})
 		return
-	}
-
-	// If this should be the primary method, unset current primary
-	if req.SetAsPrimary {
-		// This will be handled by the repository's SetAsPrimary method
 	}
 
 	// Save payment method

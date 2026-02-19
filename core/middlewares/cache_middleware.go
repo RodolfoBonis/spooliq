@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 )
@@ -139,7 +139,7 @@ type responseWriter struct {
 
 func (w *responseWriter) Write(data []byte) (int, error) {
 	w.body = append(w.body, data...)
-	return len(data), nil
+	return w.ResponseWriter.Write(data)
 }
 
 func (w *responseWriter) WriteHeader(statusCode int) {

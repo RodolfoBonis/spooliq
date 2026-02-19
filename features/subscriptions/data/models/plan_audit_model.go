@@ -34,7 +34,7 @@ func (PlanAuditModel) TableName() string {
 func (m *PlanAuditModel) ToEntity() *adminEntities.PlanAuditEntry {
 	var changes map[string]interface{}
 	if m.Changes != "" {
-		json.Unmarshal([]byte(m.Changes), &changes)
+		_ = json.Unmarshal([]byte(m.Changes), &changes)
 	}
 
 	return &adminEntities.PlanAuditEntry{

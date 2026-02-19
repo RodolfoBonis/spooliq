@@ -4,11 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -309,4 +311,15 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityFilament,
+		EntityID:       updatedFilament.ID.String(),
+		EntityName:     updatedFilament.Name,
+		CreatedAt:      time.Now(),
+	})
 }

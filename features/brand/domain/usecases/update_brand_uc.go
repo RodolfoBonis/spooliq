@@ -7,6 +7,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -175,4 +176,14 @@ func (uc *BrandUseCase) Update(c *gin.Context) {
 	})
 
 	c.JSON(200, brand)
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityBrand,
+		EntityID:       brand.ID.String(),
+		EntityName:     brand.Name,
+		Description:    "Brand updated: " + brand.Name,
+	})
 }

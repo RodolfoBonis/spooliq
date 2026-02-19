@@ -8,6 +8,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -109,4 +110,14 @@ func (uc *BrandUseCase) Delete(c *gin.Context) {
 	})
 
 	c.Status(http.StatusNoContent)
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionDeleted,
+		EntityType:     activityEntities.EntityBrand,
+		EntityID:       brand.ID.String(),
+		EntityName:     brand.Name,
+		Description:    "Brand deleted: " + brand.Name,
+	})
 }

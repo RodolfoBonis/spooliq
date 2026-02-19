@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

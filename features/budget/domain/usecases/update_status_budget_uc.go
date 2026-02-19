@@ -8,6 +8,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -105,11 +106,15 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		return
 	}
 
+	// Capture previous status before changing
+	previousStatus := budget.Status
+
 	// Save status history
 	history := &entities.BudgetStatusHistoryEntity{
 		ID:             uuid.New(),
 		BudgetID:       budget.ID,
-		PreviousStatus: budget.Status,
+		OrganizationID: organizationID,
+		PreviousStatus: previousStatus,
 		NewStatus:      request.Status,
 		ChangedBy:      userID,
 		Notes:          request.Notes,
@@ -144,6 +149,21 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, response)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         userID,
+		Action:         activityEntities.ActionStatusChanged,
+		EntityType:     activityEntities.EntityBudget,
+		EntityID:       budget.ID.String(),
+		EntityName:     budget.Name,
+		Metadata: map[string]any{
+			"previous_status": string(previousStatus),
+			"new_status":      string(request.Status),
+		},
+		CreatedAt: time.Now(),
+	})
 }
 
 // buildBudgetResponse builds a complete budget response with items and filaments (helper function)

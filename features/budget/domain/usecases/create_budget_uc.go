@@ -7,6 +7,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -121,6 +122,24 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
+	// Record initial status history for the draft status
+	initialHistory := &entities.BudgetStatusHistoryEntity{
+		ID:             uuid.New(),
+		BudgetID:       budget.ID,
+		OrganizationID: organizationID,
+		PreviousStatus: "",
+		NewStatus:      entities.StatusDraft,
+		ChangedBy:      userID,
+		CreatedAt:      time.Now(),
+	}
+
+	if err := uc.budgetRepository.AddStatusHistory(ctx, initialHistory); err != nil {
+		uc.logger.Error(ctx, "Failed to save initial status history", map[string]interface{}{
+			"error":     err.Error(),
+			"budget_id": budget.ID,
+		})
+	}
+
 	// Create budget items (products) with their filaments
 	for _, itemReq := range request.Items {
 		// Use the first filament as the primary filament (for backward compatibility)
@@ -155,7 +174,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 				"error": err.Error(),
 			})
 			// Rollback: delete the budget
-			uc.budgetRepository.Delete(ctx, budget.ID)
+			_ = uc.budgetRepository.Delete(ctx, budget.ID)
 			appError := coreErrors.RepositoryError(err.Error())
 			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 			return
@@ -181,7 +200,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 					"filament_id": filReq.FilamentID,
 				})
 				// Rollback: delete the budget
-				uc.budgetRepository.Delete(ctx, budget.ID)
+				_ = uc.budgetRepository.Delete(ctx, budget.ID)
 				appError := coreErrors.RepositoryError("Failed to add filament: " + err.Error())
 				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 				return
@@ -286,4 +305,15 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusCreated, response)
+
+	// Record activity (fire-and-forget)
+	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         userID,
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityBudget,
+		EntityID:       budget.ID.String(),
+		EntityName:     budget.Name,
+		CreatedAt:      time.Now(),
+	})
 }

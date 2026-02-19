@@ -1,7 +1,9 @@
 package usecases
 
 import (
-	log "github.com/RodolfoBonis/spooliq/core/logger"
+	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
+
+	log "github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/filament/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -9,9 +11,10 @@ import (
 
 // FilamentUseCase implements filament business logic operations.
 type FilamentUseCase struct {
-	repository repositories.FilamentRepository
-	validator  *validator.Validate
-	logger     log.Logger
+	repository      repositories.FilamentRepository
+	validator       *validator.Validate
+	logger          log.Logger
+	activityService activityUc.IActivityService
 }
 
 // IFilamentUseCase defines the contract for filament use case operations.
@@ -25,10 +28,11 @@ type IFilamentUseCase interface {
 }
 
 // NewFilamentUseCase creates a new instance of the filament use case.
-func NewFilamentUseCase(repository repositories.FilamentRepository, logger log.Logger) IFilamentUseCase {
+func NewFilamentUseCase(repository repositories.FilamentRepository, logger log.Logger, activityService activityUc.IActivityService) IFilamentUseCase {
 	return &FilamentUseCase{
-		repository: repository,
-		validator:  validator.New(),
-		logger:     logger,
+		repository:      repository,
+		validator:       validator.New(),
+		logger:          logger,
+		activityService: activityService,
 	}
 }

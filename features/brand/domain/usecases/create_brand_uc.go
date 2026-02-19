@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -123,4 +124,14 @@ func (uc *BrandUseCase) Create(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusCreated, brand)
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityBrand,
+		EntityID:       brand.ID.String(),
+		EntityName:     brand.Name,
+		Description:    "Brand created: " + brand.Name,
+	})
 }

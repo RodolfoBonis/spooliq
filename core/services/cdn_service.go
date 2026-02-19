@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	rbauth "github.com/RodolfoBonis/rb_auth_client"
 	"github.com/RodolfoBonis/spooliq/core/entities"
-	"github.com/RodolfoBonis/spooliq/core/logger"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // CDNService handles file uploads to the CDN
@@ -35,7 +36,8 @@ func NewCDNService(baseURL string, keys entities.CdnKeysEntity, logger logger.Lo
 		baseURL: baseURL,
 		keys:    keys,
 		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout:   60 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
 		logger: logger,
 	}

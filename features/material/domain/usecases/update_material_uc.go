@@ -7,6 +7,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -177,4 +178,14 @@ func (uc *MaterialUseCase) Update(c *gin.Context) {
 	})
 
 	c.JSON(200, material)
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityMaterial,
+		EntityID:       material.ID.String(),
+		EntityName:     material.Name,
+		Description:    "Material updated: " + material.Name,
+	})
 }

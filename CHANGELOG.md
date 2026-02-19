@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.5.0 - 2026-02-19
+
+### Changes
+- chore: bump version to 2.5.0 (fa2784c)
+- fix: resolve errcheck and staticcheck lint errors (d7b78b1)
+- chore(deps): bump go-otel-agent to v0.4.0 (4e86108)
+- feat(otel): full trace enrichment with HTTP client instrumentation (bb07ed6)
+- chore(deps): bump go-otel-agent to v0.2.1 (b66a38b)
+- feat: upgrade go-otel-agent to v0.2.0 for full observability (7a7d06a)
+- refactor: migrate observability to go-otel-agent library (94457da)
+- fix: insert initial status history record on budget creation (6b503d6)
+- perf: add missing indexes and consolidate dashboard queries (aac76b5)
+- fix: use budget_status_history for step-to-step funnel conversion rates (4d1e88e)
+- fix: propagate response data to client on cache miss (9e90b9d)
+- feat: add dashboard module with activity tracking (93d2e67)
+- fix: add checkout step to backport-auto-merge job (a3cf228)
+- chore: trigger CI (b019f13)
+- fix: add checkout step to backport-auto-merge job (ba72e59)
+
+
 ## v2.4.0 - 2025-12-28
 
 ### Changes

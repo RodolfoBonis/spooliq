@@ -33,7 +33,7 @@ func (PlanTemplateModel) TableName() string {
 func (m *PlanTemplateModel) ToEntity() *adminEntities.PlanTemplate {
 	var planData adminEntities.PlanTemplateData
 	if m.PlanData != "" {
-		json.Unmarshal([]byte(m.PlanData), &planData)
+		_ = json.Unmarshal([]byte(m.PlanData), &planData)
 	}
 
 	return &adminEntities.PlanTemplate{
@@ -106,7 +106,7 @@ func (PlanMigrationModel) TableName() string {
 func (m *PlanMigrationModel) ToEntity() *adminEntities.PlanMigrationResult {
 	var results []adminEntities.MigrationCompanyItem
 	if m.Results != "" {
-		json.Unmarshal([]byte(m.Results), &results)
+		_ = json.Unmarshal([]byte(m.Results), &results)
 	}
 
 	fromPlanName := ""

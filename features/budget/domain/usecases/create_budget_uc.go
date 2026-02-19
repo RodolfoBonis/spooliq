@@ -174,7 +174,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 				"error": err.Error(),
 			})
 			// Rollback: delete the budget
-			uc.budgetRepository.Delete(ctx, budget.ID)
+			_ = uc.budgetRepository.Delete(ctx, budget.ID)
 			appError := coreErrors.RepositoryError(err.Error())
 			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 			return
@@ -200,7 +200,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 					"filament_id": filReq.FilamentID,
 				})
 				// Rollback: delete the budget
-				uc.budgetRepository.Delete(ctx, budget.ID)
+				_ = uc.budgetRepository.Delete(ctx, budget.ID)
 				appError := coreErrors.RepositoryError("Failed to add filament: " + err.Error())
 				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 				return

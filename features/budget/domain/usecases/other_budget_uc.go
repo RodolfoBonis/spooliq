@@ -104,7 +104,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 			CreatedAt:               time.Now(),
 			UpdatedAt:               time.Now(),
 		}
-		uc.budgetRepository.AddItem(ctx, newItem)
+		_ = uc.budgetRepository.AddItem(ctx, newItem)
 
 		// Copy filaments
 		originalFilaments, _ := uc.budgetRepository.GetItemFilaments(ctx, originalItem.ID)
@@ -118,12 +118,12 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 				CreatedAt:    time.Now(),
 				UpdatedAt:    time.Now(),
 			}
-			uc.budgetRepository.AddItemFilament(ctx, newFil)
+			_ = uc.budgetRepository.AddItemFilament(ctx, newFil)
 		}
 	}
 
 	// Calculate costs
-	uc.budgetRepository.CalculateCosts(ctx, newBudget.ID)
+	_ = uc.budgetRepository.CalculateCosts(ctx, newBudget.ID)
 
 	// Return new budget
 	response, _ := uc.buildBudgetResponse(ctx, newBudget.ID, organizationID)

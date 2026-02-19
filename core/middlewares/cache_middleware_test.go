@@ -81,7 +81,7 @@ func TestCacheMiddlewareCacheMiss(t *testing.T) {
 		// Simulate handler writing response (like dashboard handler would)
 		testResponse := []byte(`{"data": [{"id": 1, "name": "test"}]}`)
 		c.Writer.WriteHeader(http.StatusOK)
-		c.Writer.Write(testResponse)
+		_, _ = c.Writer.Write(testResponse)
 
 		// Check what the client would receive
 		recorderBody := recorder.Body.Bytes()

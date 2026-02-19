@@ -165,11 +165,6 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 		return
 	}
 
-	// If this should be the primary method, unset current primary
-	if req.SetAsPrimary {
-		// This will be handled by the repository's SetAsPrimary method
-	}
-
 	// Save payment method
 	paymentMethod := &entities.PaymentMethodEntity{
 		OrganizationID:       orgID,

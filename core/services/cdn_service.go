@@ -184,8 +184,11 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 func (s *CDNService) DeleteFile(ctx context.Context, fileURL string) error {
 	deleteURL := fmt.Sprintf("%s/v1/delete", s.baseURL)
 
-	reqBody := fmt.Sprintf(`{"url":"%s"}`, fileURL)
-	req, err := http.NewRequestWithContext(ctx, "DELETE", deleteURL, bytes.NewBufferString(reqBody))
+	payload, err := json.Marshal(map[string]string{"url": fileURL})
+	if err != nil {
+		return fmt.Errorf("failed to marshal delete request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, "DELETE", deleteURL, bytes.NewBuffer(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}

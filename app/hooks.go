@@ -40,7 +40,7 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activ
 		panic(err)
 	}
 
-	router.MaxMultipartMemory = 64 << 20 // 64MB (supports model3d uploads up to 50MB)
+	router.MaxMultipartMemory = 32 << 20 // 32MB
 
 	config.SentryConfig()
 

@@ -29,6 +29,10 @@ func NewThumbnailService(logger logger.Logger) *ThumbnailService {
 // Generate renders a 3D model file to a PNG thumbnail.
 // Returns the PNG image as an io.Reader, or nil if rendering fails or format is unsupported.
 // This method is fault-tolerant: errors are logged but never propagated to the caller.
+//
+// NOTE: 3MF format is not yet supported for thumbnail generation. Models uploaded as .3mf
+// will be stored without a thumbnail. The frontend should handle this gracefully by showing
+// a placeholder when thumbnail_url is nil.
 func (s *ThumbnailService) Generate(file io.Reader, format string) (io.Reader, error) {
 	format = strings.ToLower(format)
 
@@ -80,7 +84,6 @@ func (s *ThumbnailService) renderMesh(mesh *fauxgl.Mesh) (io.Reader, error) {
 		height = 512
 		fovy   = 30.0
 		near   = 0.1
-		far    = 1000.0
 	)
 
 	// Compute bounding box to position camera
@@ -100,6 +103,9 @@ func (s *ThumbnailService) renderMesh(mesh *fauxgl.Mesh) (io.Reader, error) {
 		Y: center.Y + distance*0.6,
 		Z: center.Z + distance*0.5,
 	}
+
+	// Compute far plane dynamically based on model size to avoid clipping large models
+	far := math.Max(1000.0, diagonal*5.0)
 
 	aspect := float64(width) / float64(height)
 	matrix := fauxgl.LookAt(eye, center, fauxgl.Vector{X: 0, Y: 0, Z: 1})

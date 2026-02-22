@@ -58,6 +58,13 @@ jobs:
           PR_NUMBER=${{ github.event.pull_request.number }}
           echo "Enabling auto-merge for backport PR #$PR_NUMBER..."
           gh pr merge "$PR_NUMBER" --auto --merge
+
+      - name: Auto-approve backport PR
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
           gh pr review "$PR_NUMBER" --approve \
             --body "✅ Auto-approving backport PR. Will merge automatically when all checks pass."
 

@@ -10,11 +10,11 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // IKeycloakAdminService defines the interface for Keycloak Admin API interactions.

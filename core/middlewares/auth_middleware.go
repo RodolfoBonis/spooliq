@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 

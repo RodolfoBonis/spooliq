@@ -18,7 +18,10 @@ if not lint_output:
     print("Nenhum problema de lint encontrado. Nenhum comentário será criado.")
     exit(0)
 
-prompt = f"""
+detailed_report = None
+
+try:
+    prompt = f"""
 Você é um engenheiro de software sênior revisando um pull request. O CI identificou os seguintes problemas de lint e qualidade de código Go. Para cada problema, gere um comentário técnico claro e objetivo, explicando:
 
 * **Descrição do Problema:** Explique o que está errado e por que é importante corrigir.
@@ -31,14 +34,17 @@ Os problemas encontrados foram:
 Formate sua resposta como uma lista numerada em markdown, com um item para cada problema identificado.
 """
 
-response = openai.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system", "content": prompt},
-    ],
-)
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": prompt},
+        ],
+    )
 
-detailed_report = response.choices[0].message.content.strip()
+    detailed_report = response.choices[0].message.content.strip()
+except Exception as e:
+    print(f"Aviso: Não foi possível gerar relatório via OpenAI: {e}")
+    detailed_report = f"```\n{lint_output}\n```"
 
 auth = Auth.Token(GITHUB_TOKEN)
 git = Github(auth=auth)
@@ -47,4 +53,4 @@ pull_request = repo.get_pull(int(PR_NUMBER))
 
 comment_body = f"### Problemas de Lint encontrados pelo CI\n\n{detailed_report}\n\n**Sugestões:**\n\n- Corrija os problemas apontados para garantir a qualidade e padronização do código.\n- Utilize o script `.config/scripts/lint.sh` localmente para validar antes de subir novas alterações."
 
-pull_request.create_issue_comment(comment_body) 
+pull_request.create_issue_comment(comment_body)

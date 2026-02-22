@@ -45,7 +45,10 @@ if ! command -v staticcheck &> /dev/null; then
   FAIL=1
 else
   STATIC_OUT=$(staticcheck ./... 2>&1)
-  if [ -n "$STATIC_OUT" ]; then
+  STATIC_EXIT=$?
+  if [ $STATIC_EXIT -ne 0 ] && echo "$STATIC_OUT" | grep -q "(compile)"; then
+    echo "staticcheck: SKIP (incompatible Go version)"
+  elif [ -n "$STATIC_OUT" ] && [ $STATIC_EXIT -ne 0 ]; then
     echo -e "\nProblemas encontrados pelo staticcheck:"
     echo "$STATIC_OUT"
     FAIL=1

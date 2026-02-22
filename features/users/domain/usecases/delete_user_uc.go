@@ -3,8 +3,8 @@ package usecases
 import (
 	"context"
 
-	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
 	"github.com/google/uuid"

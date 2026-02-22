@@ -5,8 +5,6 @@ on:
     types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted]
-  check_suite:
-    types: [completed]
 
 permissions:
   contents: write
@@ -46,46 +44,22 @@ jobs:
 
   backport-auto-merge:
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'check_suite' &&
-      github.event.check_suite.conclusion == 'success'
+    if: |
+      github.event_name == 'pull_request' &&
+      startsWith(github.event.pull_request.head.ref, 'backport/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find and merge backport PRs
+      - name: Enable auto-merge for backport PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Find open backport PRs
-          PRS=$(gh pr list --state open --json number,headRefName,mergeable \
-            --jq '[.[] | select(.headRefName | startswith("backport/"))]')
-
-          COUNT=$(echo "$PRS" | jq length)
-          if [ "$COUNT" -eq 0 ]; then
-            echo "No open backport PRs found."
-            exit 0
-          fi
-
-          echo "$PRS" | jq -c '.[]' | while read -r pr; do
-            PR_NUMBER=$(echo "$pr" | jq -r '.number')
-            MERGEABLE=$(echo "$pr" | jq -r '.mergeable')
-
-            echo "Checking backport PR #$PR_NUMBER..."
-
-            # Check all non-auto-merge checks passed (exclude self to avoid circular dep)
-            ALL_PASSED=$(gh pr checks "$PR_NUMBER" --json state,workflow \
-              -q '[.[] | select(.workflow != "Auto-merge") | .state] | all(. == "SUCCESS" or . == "SKIPPED")')
-
-            if [ "$MERGEABLE" == "MERGEABLE" ] && [ "$ALL_PASSED" == "true" ]; then
-              echo "All checks passed! Auto-merging PR #$PR_NUMBER..."
-              gh pr merge "$PR_NUMBER" --auto --merge
-              gh pr review "$PR_NUMBER" --approve \
-                --body "✅ Auto-approving backport PR as all checks have passed."
-            else
-              echo "PR #$PR_NUMBER not ready: mergeable=$MERGEABLE, checks=$ALL_PASSED"
-            fi
-          done
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          echo "Enabling auto-merge for backport PR #$PR_NUMBER..."
+          gh pr merge "$PR_NUMBER" --auto --merge
+          gh pr review "$PR_NUMBER" --approve \
+            --body "✅ Auto-approving backport PR. Will merge automatically when all checks pass."
 
   # NOTE: Release PRs do NOT auto-merge
   # They require explicit manual merge after QA validation in staging

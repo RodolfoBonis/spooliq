@@ -11,6 +11,9 @@ type BudgetItemFilamentRequest struct {
 
 // BudgetItemRequest represents a product item in a budget request
 type BudgetItemRequest struct {
+	// Optional: reference to a 3D model
+	Model3DID *uuid.UUID `json:"model_3d_id,omitempty"`
+
 	// Product information (customer-facing)
 	ProductName        string  `json:"product_name" validate:"required,min=1,max=255"`
 	ProductDescription *string `json:"product_description,omitempty" validate:"omitempty,max=1000"`

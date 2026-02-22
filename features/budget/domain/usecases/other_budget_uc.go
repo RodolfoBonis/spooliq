@@ -90,6 +90,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 		newItem := &entities.BudgetItemEntity{
 			ID:                      uuid.New(),
 			BudgetID:                newBudget.ID,
+			Model3DID:               originalItem.Model3DID,
 			ProductName:             originalItem.ProductName,
 			ProductDescription:      originalItem.ProductDescription,
 			ProductQuantity:         originalItem.ProductQuantity,
@@ -322,9 +323,17 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 			costPresetIDStr = &s
 		}
 
+		// Convert Model3DID to string pointer
+		var model3DIDStr *string
+		if item.Model3DID != nil {
+			s := item.Model3DID.String()
+			model3DIDStr = &s
+		}
+
 		itemResponses[i] = entities.BudgetItemResponse{
 			ID:                      item.ID.String(),
 			BudgetID:                item.BudgetID.String(),
+			Model3DID:               model3DIDStr,
 			ProductName:             item.ProductName,
 			ProductDescription:      item.ProductDescription,
 			ProductQuantity:         item.ProductQuantity,

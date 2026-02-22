@@ -91,9 +91,17 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 			costPresetIDStr = &s
 		}
 
+		// Convert Model3DID to string pointer
+		var model3DIDStr *string
+		if item.Model3DID != nil {
+			s := item.Model3DID.String()
+			model3DIDStr = &s
+		}
+
 		itemResponses[i] = entities.BudgetItemResponse{
 			ID:                      item.ID.String(),
 			BudgetID:                item.BudgetID.String(),
+			Model3DID:               model3DIDStr,
 			ProductName:             item.ProductName,
 			ProductDescription:      item.ProductDescription,
 			ProductQuantity:         item.ProductQuantity,

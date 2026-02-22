@@ -8,10 +8,11 @@ import (
 
 // BudgetItemEntity represents a filament item in a budget
 type BudgetItemEntity struct {
-	ID             uuid.UUID `json:"id"`
-	BudgetID       uuid.UUID `json:"budget_id"`
-	FilamentID     uuid.UUID `json:"filament_id"`
-	OrganizationID string    `json:"organization_id"`
+	ID             uuid.UUID  `json:"id"`
+	BudgetID       uuid.UUID  `json:"budget_id"`
+	FilamentID     uuid.UUID  `json:"filament_id"`
+	Model3DID      *uuid.UUID `json:"model_3d_id,omitempty"`
+	OrganizationID string     `json:"organization_id"`
 
 	// Filament quantity (internal - for cost calculation)
 	Quantity float64 `json:"quantity"` // grams

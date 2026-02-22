@@ -18,6 +18,7 @@ import (
 	customers "github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
+	models3d "github.com/RodolfoBonis/spooliq/features/model3d/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
@@ -290,6 +291,11 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
 	}
 
+	// 9.1. Models3D (FK: OrganizationID -> Companies, CustomerID -> Customers)
+	if err := Connector.AutoMigrate(&models3d.Model3DModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING MODEL3D MIGRATION: %s", err.Error()))
+	}
+
 	// ========================================
 	// LEVEL 3 (continued): Presets
 	// ========================================
@@ -361,7 +367,7 @@ func RunMigrations() {
 
 	orgFKTables := map[string]bool{
 		"activities": true, "users": true, "brands": true, "materials": true, "filaments": true,
-		"customers": true, "presets": true, "budgets": true, "budget_items": true,
+		"customers": true, "models_3d": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
 	}

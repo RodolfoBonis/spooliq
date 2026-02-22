@@ -46,38 +46,46 @@ jobs:
 
   backport-auto-merge:
     runs-on: ubuntu-latest
-    if: |
-      github.event.pull_request.head.ref &&
-      startsWith(github.event.pull_request.head.ref, 'backport/')
+    if: >-
+      github.event_name == 'check_suite' &&
+      github.event.check_suite.conclusion == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check PR status
-        id: pr-check
+      - name: Find and merge backport PRs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get PR details
-          PR_STATE=$(gh pr view ${{ github.event.pull_request.number }} --json state -q '.state')
-          PR_MERGEABLE=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable -q '.mergeable')
-          PR_CHECKS=$(gh pr checks ${{ github.event.pull_request.number }} --json state -q '[.[] | .state] | all(. == "SUCCESS" or . == "SKIPPED")')
-          
-          echo "state=$PR_STATE" >> $GITHUB_OUTPUT
-          echo "mergeable=$PR_MERGEABLE" >> $GITHUB_OUTPUT
-          echo "checks=$PR_CHECKS" >> $GITHUB_OUTPUT
+          # Find open backport PRs
+          PRS=$(gh pr list --state open --json number,headRefName,mergeable \
+            --jq '[.[] | select(.headRefName | startswith("backport/"))]')
 
-      - name: Auto-merge backport PR
-        if: |
-          steps.pr-check.outputs.state == 'OPEN' &&
-          steps.pr-check.outputs.mergeable == 'MERGEABLE' &&
-          steps.pr-check.outputs.checks == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
-          gh pr review --approve "${{ github.event.pull_request.html_url }}" \
-            --body "✅ Auto-approving backport PR as all checks have passed."
+          COUNT=$(echo "$PRS" | jq length)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No open backport PRs found."
+            exit 0
+          fi
+
+          echo "$PRS" | jq -c '.[]' | while read -r pr; do
+            PR_NUMBER=$(echo "$pr" | jq -r '.number')
+            MERGEABLE=$(echo "$pr" | jq -r '.mergeable')
+
+            echo "Checking backport PR #$PR_NUMBER..."
+
+            # Check all non-auto-merge checks passed (exclude self to avoid circular dep)
+            ALL_PASSED=$(gh pr checks "$PR_NUMBER" --json state,workflow \
+              -q '[.[] | select(.workflow != "Auto-merge") | .state] | all(. == "SUCCESS" or . == "SKIPPED")')
+
+            if [ "$MERGEABLE" == "MERGEABLE" ] && [ "$ALL_PASSED" == "true" ]; then
+              echo "All checks passed! Auto-merging PR #$PR_NUMBER..."
+              gh pr merge "$PR_NUMBER" --auto --merge
+              gh pr review "$PR_NUMBER" --approve \
+                --body "✅ Auto-approving backport PR as all checks have passed."
+            else
+              echo "PR #$PR_NUMBER not ready: mergeable=$MERGEABLE, checks=$ALL_PASSED"
+            fi
+          done
 
   # NOTE: Release PRs do NOT auto-merge
   # They require explicit manual merge after QA validation in staging

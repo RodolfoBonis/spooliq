@@ -61,7 +61,7 @@ jobs:
           # Get PR details
           PR_STATE=$(gh pr view ${{ github.event.pull_request.number }} --json state -q '.state')
           PR_MERGEABLE=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable -q '.mergeable')
-          PR_CHECKS=$(gh pr checks ${{ github.event.pull_request.number }} --json status -q '[.[] | .status] | all(. == "COMPLETED")')
+          PR_CHECKS=$(gh pr checks ${{ github.event.pull_request.number }} --json state -q '[.[] | .state] | all(. == "SUCCESS" or . == "SKIPPED")')
           
           echo "state=$PR_STATE" >> $GITHUB_OUTPUT
           echo "mergeable=$PR_MERGEABLE" >> $GITHUB_OUTPUT

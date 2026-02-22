@@ -81,6 +81,26 @@ func (uc *Model3DUseCase) Delete(c *gin.Context) {
 		return
 	}
 
+	// Clean up CDN files (best-effort: log errors but don't fail the request)
+	if model.FileURL != "" {
+		if err := uc.cdnService.DeleteFile(ctx, model.FileURL); err != nil {
+			uc.logger.Warning(ctx, "Failed to delete model file from CDN", map[string]interface{}{
+				"model_id": model.ID,
+				"file_url": model.FileURL,
+				"error":    err.Error(),
+			})
+		}
+	}
+	if model.ThumbnailURL != nil && *model.ThumbnailURL != "" {
+		if err := uc.cdnService.DeleteFile(ctx, *model.ThumbnailURL); err != nil {
+			uc.logger.Warning(ctx, "Failed to delete thumbnail from CDN", map[string]interface{}{
+				"model_id":      model.ID,
+				"thumbnail_url": *model.ThumbnailURL,
+				"error":         err.Error(),
+			})
+		}
+	}
+
 	uc.logger.Info(ctx, "3D model deleted successfully", map[string]interface{}{
 		"model_id":   model.ID,
 		"model_name": model.Name,

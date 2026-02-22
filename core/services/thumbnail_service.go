@@ -14,6 +14,7 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/fogleman/fauxgl"
+	"github.com/hpinc/go3mf"
 )
 
 // ThumbnailService handles generating thumbnail images from 3D model files.
@@ -29,22 +30,27 @@ func NewThumbnailService(logger logger.Logger) *ThumbnailService {
 // Generate renders a 3D model file to a PNG thumbnail.
 // Returns the PNG image as an io.Reader, or nil if rendering fails or format is unsupported.
 // This method is fault-tolerant: errors are logged but never propagated to the caller.
+//
+// Supported formats: .stl (binary/ASCII), .3mf (via go3mf mesh extraction).
 func (s *ThumbnailService) Generate(file io.Reader, format string) (io.Reader, error) {
 	format = strings.ToLower(format)
 
-	if format == ".3mf" {
-		s.logger.Warning(context.Background(), "Thumbnail generation not yet supported for 3MF files", nil)
-		return nil, nil
-	}
+	var reader io.Reader
+	var err error
 
-	if format != ".stl" {
+	switch format {
+	case ".stl":
+		reader, err = s.generateSTLThumbnail(file)
+	case ".3mf":
+		reader, err = s.generate3MFThumbnail(file)
+	default:
 		return nil, fmt.Errorf("unsupported format for thumbnail: %s", format)
 	}
 
-	reader, err := s.generateSTLThumbnail(file)
 	if err != nil {
-		s.logger.Warning(context.Background(), "STL thumbnail generation failed", map[string]interface{}{
-			"error": err.Error(),
+		s.logger.Warning(context.Background(), "Thumbnail generation failed", map[string]interface{}{
+			"format": format,
+			"error":  err.Error(),
 		})
 		return nil, nil
 	}
@@ -74,13 +80,81 @@ func (s *ThumbnailService) generateSTLThumbnail(file io.Reader) (io.Reader, erro
 	return s.renderMesh(mesh)
 }
 
+// generate3MFThumbnail parses a 3MF file, extracts all mesh geometry from build items,
+// converts to fauxgl triangles and renders a thumbnail using the shared renderMesh pipeline.
+func (s *ThumbnailService) generate3MFThumbnail(file io.Reader) (io.Reader, error) {
+	// go3mf.NewDecoder requires an io.ReaderAt + size, so buffer the entire file
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read 3MF data: %w", err)
+	}
+
+	reader := bytes.NewReader(data)
+	decoder := go3mf.NewDecoder(reader, int64(len(data)))
+
+	var model go3mf.Model
+	if err := decoder.Decode(&model); err != nil {
+		return nil, fmt.Errorf("failed to decode 3MF: %w", err)
+	}
+
+	// Extract all meshes from build items and merge into a single fauxgl mesh
+	mesh := fauxgl.NewEmptyMesh()
+	triangleCount := 0
+
+	for _, item := range model.Build.Items {
+		obj, ok := model.FindObject(item.ObjectPath(), item.ObjectID)
+		if !ok || obj == nil || obj.Mesh == nil {
+			continue
+		}
+
+		m := obj.Mesh
+		vertices := m.Vertices.Vertex
+		for _, tri := range m.Triangles.Triangle {
+			if int(tri.V1) >= len(vertices) || int(tri.V2) >= len(vertices) || int(tri.V3) >= len(vertices) {
+				continue // skip invalid triangle indices
+			}
+
+			v1 := vertices[tri.V1]
+			v2 := vertices[tri.V2]
+			v3 := vertices[tri.V3]
+
+			p1 := fauxgl.Vector{X: float64(v1.X()), Y: float64(v1.Y()), Z: float64(v1.Z())}
+			p2 := fauxgl.Vector{X: float64(v2.X()), Y: float64(v2.Y()), Z: float64(v2.Z())}
+			p3 := fauxgl.Vector{X: float64(v3.X()), Y: float64(v3.Y()), Z: float64(v3.Z())}
+
+			// Compute face normal from edge vectors
+			e1 := p2.Sub(p1)
+			e2 := p3.Sub(p1)
+			n := e1.Cross(e2).Normalize()
+
+			t := fauxgl.Triangle{
+				V1: fauxgl.Vertex{Position: p1, Normal: n},
+				V2: fauxgl.Vertex{Position: p2, Normal: n},
+				V3: fauxgl.Vertex{Position: p3, Normal: n},
+			}
+
+			mesh.Triangles = append(mesh.Triangles, &t)
+			triangleCount++
+		}
+	}
+
+	if triangleCount == 0 {
+		return nil, fmt.Errorf("3MF file contains no renderable geometry")
+	}
+
+	s.logger.Info(context.Background(), "3MF mesh extracted for thumbnail", map[string]interface{}{
+		"triangles": triangleCount,
+	})
+
+	return s.renderMesh(mesh)
+}
+
 func (s *ThumbnailService) renderMesh(mesh *fauxgl.Mesh) (io.Reader, error) {
 	const (
 		width  = 512
 		height = 512
 		fovy   = 30.0
 		near   = 0.1
-		far    = 1000.0
 	)
 
 	// Compute bounding box to position camera
@@ -100,6 +174,9 @@ func (s *ThumbnailService) renderMesh(mesh *fauxgl.Mesh) (io.Reader, error) {
 		Y: center.Y + distance*0.6,
 		Z: center.Z + distance*0.5,
 	}
+
+	// Compute far plane dynamically based on model size to avoid clipping large models
+	far := math.Max(1000.0, diagonal*5.0)
 
 	aspect := float64(width) / float64(height)
 	matrix := fauxgl.LookAt(eye, center, fauxgl.Vector{X: 0, Y: 0, Z: 1})

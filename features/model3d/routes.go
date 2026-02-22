@@ -7,6 +7,9 @@ import (
 )
 
 // Routes configures all model3d-related HTTP routes with authentication middleware.
+// Note: MaxMultipartMemory stays at the global default (32MB). Uploads larger than that
+// are automatically spilled to temp files by Gin, which is safe. The actual file size
+// limit (50MB) is enforced in the Upload use case via fileHeader.Size validation.
 func Routes(route *gin.RouterGroup, useCase usecases.IModel3DUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	models := route.Group("/models3d")
 	{

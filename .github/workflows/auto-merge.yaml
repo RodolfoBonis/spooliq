@@ -5,8 +5,6 @@ on:
     types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted]
-  check_suite:
-    types: [completed]
 
 permissions:
   contents: write
@@ -47,37 +45,28 @@ jobs:
   backport-auto-merge:
     runs-on: ubuntu-latest
     if: |
-      github.event.pull_request.head.ref &&
+      github.event_name == 'pull_request' &&
       startsWith(github.event.pull_request.head.ref, 'backport/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check PR status
-        id: pr-check
+      - name: Enable auto-merge for backport PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get PR details
-          PR_STATE=$(gh pr view ${{ github.event.pull_request.number }} --json state -q '.state')
-          PR_MERGEABLE=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable -q '.mergeable')
-          PR_CHECKS=$(gh pr checks ${{ github.event.pull_request.number }} --json status -q '[.[] | .status] | all(. == "COMPLETED")')
-          
-          echo "state=$PR_STATE" >> $GITHUB_OUTPUT
-          echo "mergeable=$PR_MERGEABLE" >> $GITHUB_OUTPUT
-          echo "checks=$PR_CHECKS" >> $GITHUB_OUTPUT
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          echo "Enabling auto-merge for backport PR #$PR_NUMBER..."
+          gh pr merge "$PR_NUMBER" --auto --merge
 
-      - name: Auto-merge backport PR
-        if: |
-          steps.pr-check.outputs.state == 'OPEN' &&
-          steps.pr-check.outputs.mergeable == 'MERGEABLE' &&
-          steps.pr-check.outputs.checks == 'true'
+      - name: Auto-approve backport PR
+        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
-          gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
-          gh pr review --approve "${{ github.event.pull_request.html_url }}" \
-            --body "✅ Auto-approving backport PR as all checks have passed."
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh pr review "$PR_NUMBER" --approve \
+            --body "✅ Auto-approving backport PR. Will merge automatically when all checks pass."
 
   # NOTE: Release PRs do NOT auto-merge
   # They require explicit manual merge after QA validation in staging

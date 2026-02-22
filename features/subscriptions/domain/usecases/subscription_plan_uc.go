@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"

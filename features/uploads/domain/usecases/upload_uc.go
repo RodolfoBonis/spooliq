@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"path/filepath"
 
-	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

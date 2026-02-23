@@ -47,6 +47,8 @@ func getCdnToken(keys entities.CdnKeysEntity) (string, error) {
 	authConfig := rbauth.Config{
 		ClientID:     keys.ClientID,
 		ClientSecret: keys.ClientSecret,
+		KeycloakURL:  keys.KeycloakHost,
+		Realm:        "master",
 	}
 	auth := rbauth.NewKeycloakAuthenticator(authConfig)
 
@@ -83,6 +85,16 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 		return "", fmt.Errorf("failed to copy file content: %w", err)
 	}
 
+	// Add bucket field (required by CDN)
+	err = writer.WriteField("bucket", s.keys.Bucket)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to add bucket field", map[string]interface{}{
+			"error":  err.Error(),
+			"bucket": s.keys.Bucket,
+		})
+		return "", fmt.Errorf("failed to add bucket field: %w", err)
+	}
+
 	// Add folder field if provided
 	if folder != "" {
 		err = writer.WriteField("folder", folder)
@@ -104,7 +116,7 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 	}
 
 	// Create request
-	uploadURL := fmt.Sprintf("%s/v1/upload", s.baseURL)
+	uploadURL := fmt.Sprintf("%s/v1/upload/", s.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, body)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to create upload request", map[string]interface{}{

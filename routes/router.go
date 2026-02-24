@@ -22,6 +22,8 @@ import (
 	filamentuc "github.com/RodolfoBonis/spooliq/features/filament/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/material"
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/model3d"
+	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
@@ -48,6 +50,7 @@ func InitializeRoutes(
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
+	model3dUc model3duc.IModel3DUseCase,
 	uploadsUc uploadsuc.IUploadUseCase,
 	paymentMethodUc *subscriptionuc.PaymentMethodUseCase,
 	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
@@ -77,6 +80,7 @@ func InitializeRoutes(
 	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
+	model3d.Routes(root, model3dUc, protectFactory)
 	preset.SetupRoutes(root, presetHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
 	users.SetupRoutes(root, userHandler, protectFactory)

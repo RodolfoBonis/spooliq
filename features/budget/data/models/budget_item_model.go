@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	filamentModels "github.com/RodolfoBonis/spooliq/features/filament/data/models"
+	model3dModels "github.com/RodolfoBonis/spooliq/features/model3d/data/models"
 	presetModels "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -13,10 +14,11 @@ import (
 
 // BudgetItemModel represents the budget item data model for GORM
 type BudgetItemModel struct {
-	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	BudgetID       uuid.UUID `gorm:"type:uuid;not null;index" json:"budget_id"`
-	FilamentID     uuid.UUID `gorm:"type:uuid;not null" json:"filament_id"`
-	OrganizationID string    `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
+	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	BudgetID       uuid.UUID  `gorm:"type:uuid;not null;index" json:"budget_id"`
+	FilamentID     uuid.UUID  `gorm:"type:uuid;not null" json:"filament_id"`
+	Model3DID      *uuid.UUID `gorm:"type:uuid" json:"model_3d_id,omitempty"`
+	OrganizationID string     `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 
 	// Filament quantity (internal - for cost calculation)
 	Quantity float64 `gorm:"type:numeric;not null" json:"quantity"` // grams
@@ -58,6 +60,7 @@ type BudgetItemModel struct {
 	Budget       *BudgetModel                  `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"budget,omitempty"`
 	Filament     *filamentModels.FilamentModel `gorm:"foreignKey:FilamentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filament,omitempty"`
 	CostPreset   *presetModels.CostPresetModel `gorm:"foreignKey:CostPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"cost_preset,omitempty"`
+	Model3D      *model3dModels.Model3DModel   `gorm:"foreignKey:Model3DID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"model_3d,omitempty"`
 	Filaments    []BudgetItemFilamentModel     `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"filaments,omitempty"`
 }
 
@@ -80,6 +83,7 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		ID:                      bi.ID,
 		BudgetID:                bi.BudgetID,
 		FilamentID:              bi.FilamentID,
+		Model3DID:               bi.Model3DID,
 		OrganizationID:          bi.OrganizationID,
 		Quantity:                bi.Quantity,
 		Order:                   bi.Order,
@@ -110,6 +114,7 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ID = entity.ID
 	bi.BudgetID = entity.BudgetID
 	bi.FilamentID = entity.FilamentID
+	bi.Model3DID = entity.Model3DID
 	bi.OrganizationID = entity.OrganizationID
 	bi.Quantity = entity.Quantity
 	bi.Order = entity.Order

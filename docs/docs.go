@@ -1982,6 +1982,422 @@ const docTemplate = `{
                 }
             }
         },
+        "/models3d": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "List all 3D models with pagination and optional filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3D Models"
+                ],
+                "summary": "List 3D Models",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search term for model name or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Filter by customer ID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by file format (e.g. .stl, .3mf)",
+                        "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved 3D models",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllModel3DResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Upload a new 3D model file (STL or 3MF) with metadata",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3D Models"
+                ],
+                "summary": "Upload 3D Model",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "3D model file (.stl or .3mf, max 50MB)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Notes",
+                        "name": "notes",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tags",
+                        "name": "tags",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully uploaded 3D model",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Model3DEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate file already exists",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/models3d/by-customer/{customer_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "List all 3D models associated with a specific customer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3D Models"
+                ],
+                "summary": "Get 3D Models by Customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved 3D models",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllModel3DResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/models3d/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get a specific 3D model by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3D Models"
+                ],
+                "summary": "Get 3D Model by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved 3D model",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Model3DEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing 3D model's metadata",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3D Models"
+                ],
+                "summary": "Update 3D Model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateModel3DRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated 3D model",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Model3DEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Soft-delete a 3D model by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3D Models"
+                ],
+                "summary": "Delete 3D Model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted 3D model"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/presets": {
             "get": {
                 "security": [
@@ -7122,7 +7538,8 @@ const docTemplate = `{
                 "filament",
                 "material",
                 "budget",
-                "preset"
+                "preset",
+                "model3d"
             ],
             "x-enum-varnames": [
                 "EntityBrand",
@@ -7130,7 +7547,8 @@ const docTemplate = `{
                 "EntityFilament",
                 "EntityMaterial",
                 "EntityBudget",
-                "EntityPreset"
+                "EntityPreset",
+                "EntityModel3D"
             ]
         },
         "entities.AdminStats": {
@@ -7303,6 +7721,10 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
+                "model_3d_id": {
+                    "description": "Optional: reference to a 3D model",
+                    "type": "string"
+                },
                 "order": {
                     "description": "Order in the budget",
                     "type": "integer",
@@ -7387,6 +7809,9 @@ const docTemplate = `{
                 "manual_labor_minutes_total": {
                     "description": "Total manual labor time for ALL units (minutes)",
                     "type": "integer"
+                },
+                "model_3d_id": {
+                    "type": "string"
                 },
                 "order": {
                     "type": "integer"
@@ -8747,6 +9172,29 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.FindAllModel3DResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Model3DEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.FindByIDBrandResponse": {
             "type": "object",
             "properties": {
@@ -9082,6 +9530,62 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "entities.Model3DEntity": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "file_format": {
+                    "type": "string"
+                },
+                "file_hash": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "file_size_bytes": {
+                    "type": "integer"
+                },
+                "file_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_user_id": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -10499,6 +11003,31 @@ const docTemplate = `{
                 },
                 "weight": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.UpdateModel3DRequest": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "tags": {
+                    "type": "string",
+                    "maxLength": 1000
                 }
             }
         },

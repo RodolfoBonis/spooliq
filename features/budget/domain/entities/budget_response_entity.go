@@ -54,8 +54,9 @@ type PresetInfo struct {
 
 // BudgetItemResponse represents a budget item (product) with all filaments and costs
 type BudgetItemResponse struct {
-	ID       string `json:"id"`
-	BudgetID string `json:"budget_id"`
+	ID        string  `json:"id"`
+	BudgetID  string  `json:"budget_id"`
+	Model3DID *string `json:"model_3d_id,omitempty"`
 
 	// Product information (customer-facing)
 	ProductName        string  `json:"product_name"`

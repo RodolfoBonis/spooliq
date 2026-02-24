@@ -146,6 +146,7 @@ func EnvCDNKeys() entities.CdnKeysEntity {
 		ClientID:     GetEnv("CDN_CLIENT_ID", ""),
 		ClientSecret: GetEnv("CDN_CLIENT_SECRET", ""),
 		Bucket:       GetEnv("CDN_BUCKET", "spooliq"),
+		KeycloakHost: GetEnv("KEYCLOAK_HOST", ""),
 	}
 }
 

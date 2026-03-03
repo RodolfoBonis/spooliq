@@ -12,8 +12,8 @@ github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
 github.com/RodolfoBonis/go-otel-agent v0.4.0 h1:VKkzpmoSBzbgyg2kkwAoDtjJxDzc2kDVuVflg9IaCKE=
 github.com/RodolfoBonis/go-otel-agent v0.4.0/go.mod h1:O05DDY1JYlulMJEXb6sV92Rz6MOs4HsQRwk+JSAzA+w=
-github.com/RodolfoBonis/rb_auth_client v0.1.1 h1:wuU5j5UPozvb2potaFP7dr+mRsthJkTxjG7zP8waa3E=
-github.com/RodolfoBonis/rb_auth_client v0.1.1/go.mod h1:r16vwjOEBXfepFTSNl1gIvlZG4IMfyG1h4wU8vsArbw=
+github.com/RodolfoBonis/rb_auth_client v0.5.0 h1:AgtiOflm7EkyyxOOit+vxb9T3iab+pUDfD6naG5JbM0=
+github.com/RodolfoBonis/rb_auth_client v0.5.0/go.mod h1:r16vwjOEBXfepFTSNl1gIvlZG4IMfyG1h4wU8vsArbw=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

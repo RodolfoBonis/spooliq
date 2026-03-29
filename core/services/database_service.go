@@ -54,14 +54,24 @@ func buildConnectorConfig() *ConnectorConfig {
 }
 
 func connectorURL(connectorConfig *ConnectorConfig) string {
-	return fmt.Sprintf(
-		"host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+	sslMode := config.EnvDBSSLMode()
+	sslRootCert := config.EnvDBSSLRootCert()
+
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
 		connectorConfig.Host,
 		connectorConfig.Port,
 		connectorConfig.User,
 		connectorConfig.DBName,
 		connectorConfig.Password,
+		sslMode,
 	)
+
+	if sslRootCert != "" {
+		dsn += fmt.Sprintf(" sslrootcert=%s", sslRootCert)
+	}
+
+	return dsn
 }
 
 func newGormConfig() *gorm.Config {

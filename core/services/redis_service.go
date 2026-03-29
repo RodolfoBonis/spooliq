@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"os"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -31,11 +34,36 @@ func NewRedisService(logger logger.Logger, cfg *config.AppConfig) *RedisService 
 
 // Init initializes the Redis connection.
 func (r *RedisService) Init() *errors.AppError {
-	rdb := redis.NewClient(&redis.Options{
+	opts := &redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", r.cfg.RedisHost, r.cfg.RedisPort),
 		Password: r.cfg.RedisPassword,
 		DB:       r.cfg.RedisDB,
-	})
+	}
+
+	// Configure TLS if enabled
+	if config.EnvRedisTLSEnabled() {
+		tlsCA := config.EnvRedisTLSCA()
+
+		if tlsCA != "" {
+			caCert, err := os.ReadFile(tlsCA)
+			if err != nil {
+				appErr := errors.NewAppError(entities.ErrService, fmt.Sprintf("failed to read CA cert: %v", err), map[string]interface{}{
+					"redis_tls_ca": tlsCA,
+				}, err)
+				r.logger.LogError(context.Background(), "Failed to load Redis TLS CA certificate", appErr)
+				return appErr
+			}
+
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+
+			opts.TLSConfig = &tls.Config{
+				RootCAs: caCertPool,
+			}
+		}
+	}
+
+	rdb := redis.NewClient(opts)
 
 	// Add OpenTelemetry instrumentation for Redis
 	if err := redisotel.InstrumentTracing(rdb); err != nil {

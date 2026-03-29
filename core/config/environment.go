@@ -185,3 +185,33 @@ func LoadEnvVars() {
 		os.Exit(1)
 	}
 }
+
+// EnvDBSSLMode returns the database SSL mode from environment variables.
+func EnvDBSSLMode() string {
+	return GetEnv("DB_SSLMODE", "disable")
+}
+
+// EnvDBSSLRootCert returns the database SSL root certificate path from environment variables.
+func EnvDBSSLRootCert() string {
+	return GetEnv("DB_SSLROOTCERT", "")
+}
+
+// EnvRedisTLSEnabled returns whether Redis TLS is enabled from environment variables.
+func EnvRedisTLSEnabled() bool {
+	return GetEnv("REDIS_TLS_ENABLED", "false") == "true"
+}
+
+// EnvRedisTLSCA returns the Redis TLS CA certificate path from environment variables.
+func EnvRedisTLSCA() string {
+	return GetEnv("REDIS_TLS_CA", "")
+}
+
+// EnvRedisTLSCert returns the Redis TLS client certificate path from environment variables.
+func EnvRedisTLSCert() string {
+	return GetEnv("REDIS_TLS_CERT", "")
+}
+
+// EnvRedisTLSKey returns the Redis TLS client key path from environment variables.
+func EnvRedisTLSKey() string {
+	return GetEnv("REDIS_TLS_KEY", "")
+}

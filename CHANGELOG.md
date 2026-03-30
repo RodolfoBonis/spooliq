@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6.0 - 2026-03-30
+
+### Changes
+- chore: bump version to 2.6.0 (2c36574)
+- style(lint): apply gofmt/goimports across lint-target files (1f5bdd7)
+- style(redis): apply gofmt import ordering for lint compliance (94d5dee)
+- feat(database,redis): add TLS support for PostgreSQL and Redis (b635210)
+
+
 ## v2.5.0 - 2026-02-19
 
 ### Changes

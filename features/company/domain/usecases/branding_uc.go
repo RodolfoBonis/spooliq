@@ -3,9 +3,9 @@ package usecases
 import (
 	"net/http"
 
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/gin-gonic/gin"

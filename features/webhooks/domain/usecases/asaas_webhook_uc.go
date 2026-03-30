@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/config"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"

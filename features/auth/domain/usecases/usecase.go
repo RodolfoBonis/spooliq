@@ -2,8 +2,8 @@ package usecases
 
 import (
 	"github.com/Nerzal/gocloak/v13"
-	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/gin-gonic/gin"
 )
 

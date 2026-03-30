@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/features/activity"
 	activityuc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"

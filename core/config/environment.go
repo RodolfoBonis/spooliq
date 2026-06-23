@@ -135,17 +135,21 @@ func EnvAmqpConnection() string {
 	return fmt.Sprintf("amqp://%s:%s@%s/", user, password, host)
 }
 
-// EnvCDNBaseURL returns the CDN base URL from environment variables.
+// EnvCDNBaseURL returns the public cdn edge that serves the bucket; persisted file URLs point here
+// (e.g. https://assets.spooliq.com/<key>).
 func EnvCDNBaseURL() string {
-	return GetEnv("CDN_BASE_URL", "https://rb-cdn.rodolfodebonis.com.br")
+	return GetEnv("CDN_PUBLIC_BASE_URL", "https://assets.spooliq.com")
 }
 
-// EnvCDNKeys returns the CDN API key from environment variables.
+// EnvCDNKeys returns the MinIO connection for direct uploads (creds from Vault k3s/spooliq/minio).
 func EnvCDNKeys() entities.CdnKeysEntity {
+	useSSL, _ := strconv.ParseBool(GetEnv("MINIO_USE_SSL", "false"))
 	return entities.CdnKeysEntity{
-		ClientID:     GetEnv("CDN_CLIENT_ID", ""),
-		ClientSecret: GetEnv("CDN_CLIENT_SECRET", ""),
-		Bucket:       GetEnv("CDN_BUCKET", "spooliq"),
+		Bucket:    GetEnv("MINIO_BUCKET", "spooliq"),
+		Endpoint:  GetEnv("MINIO_SERVER", ""),
+		AccessKey: GetEnv("MINIO_ACCESS_ID", ""),
+		SecretKey: GetEnv("MINIO_SECRET_KEY", ""),
+		UseSSL:    useSSL,
 	}
 }
 

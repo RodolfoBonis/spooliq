@@ -1,8 +1,10 @@
 package entities
 
-// CdnKeysEntity holds the credentials and configuration for CDN authentication.
+// CdnKeysEntity holds the MinIO connection + bucket for direct uploads (replaces the rb-cdn proxy).
 type CdnKeysEntity struct {
-	ClientID     string
-	ClientSecret string
-	Bucket       string
+	Bucket    string
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	UseSSL    bool
 }

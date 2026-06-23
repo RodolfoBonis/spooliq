@@ -389,29 +389,15 @@ func (s *PDFService) addFooterAtBottom(pdf *gofpdf.Fpdf, company *budgetEntities
 	pdf.Cell(0, 3, s.convertUTF8("Este orçamento é válido por 15 dias a partir da data de emissão."))
 }
 
-// downloadLogoFromCDN downloads logo from CDN with authentication
+// downloadLogoFromCDN downloads logo from MinIO. The stored logoURL may be an old rb-cdn proxy URL
+// or a new cdn edge URL; DownloadFile derives the object key from either form.
 func (s *PDFService) downloadLogoFromCDN(ctx context.Context, logoURL string) ([]byte, error) {
-	// Extract path from CDN URL
-	// Expected format: https://rb-cdn.rodolfodebonis.com.br/v1/cdn/spooliq/org-{id}/company/logo.{ext}
-	// We need: org-{id}/company/logo.{ext}
-
-	// Parse URL to extract path after bucket name
-	parts := strings.Split(logoURL, "/v1/cdn/spooliq/")
-	if len(parts) != 2 {
-		s.logger.Error(ctx, "Invalid CDN URL format", map[string]interface{}{
-			"url": logoURL,
-		})
-		return nil, fmt.Errorf("invalid CDN URL format")
-	}
-
-	path := parts[1]
-
-	// Download from CDN with authentication
-	logoBytes, err := s.cdnService.DownloadFile(ctx, path)
+	// Download from MinIO (DownloadFile resolves the object key from the URL).
+	logoBytes, err := s.cdnService.DownloadFile(ctx, logoURL)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to download logo from CDN", map[string]interface{}{
 			"error": err.Error(),
-			"path":  path,
+			"url":   logoURL,
 		})
 		return nil, fmt.Errorf("failed to download logo from CDN: %w", err)
 	}

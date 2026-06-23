@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.6.1 - 2026-06-23
+
+### Changes
+- chore: bump version to 2.6.1 (002809c)
+- feat(cdn): direct MinIO upload/download (replace rb-cdn) (#41) (99b9c8d)
+- 🚀 Release v2.6.0 (#40) (8a51324)
+- style(lint): apply gofmt/goimports across lint-target files (1f5bdd7)
+- style(redis): apply gofmt import ordering for lint compliance (94d5dee)
+- feat(database,redis): add TLS support for PostgreSQL and Redis (b635210)
+
+
 ## v2.6.0 - 2026-03-30
 
 ### Changes

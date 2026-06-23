@@ -1,252 +1,127 @@
 package services
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
-	"net/http"
+	"mime"
+	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
-	rbauth "github.com/RodolfoBonis/rb_auth_client"
 	"github.com/RodolfoBonis/spooliq/core/entities"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// CDNService handles file uploads to the CDN
+// CDNService uploads/serves files directly via MinIO + the new cdn edge (replaces the rb-cdn proxy).
 type CDNService struct {
-	baseURL    string
-	keys       entities.CdnKeysEntity
-	httpClient *http.Client
-	logger     logger.Logger
+	minio         *minio.Client
+	bucket        string
+	publicBaseURL string
+	logger        logger.Logger
 }
 
-// CDNUploadResponse represents the response from CDN upload
-type CDNUploadResponse struct {
-	Message string `json:"message"`
-	URL     string `json:"url"`
-}
-
-// NewCDNService creates a new CDN service instance
-func NewCDNService(baseURL string, keys entities.CdnKeysEntity, logger logger.Logger) *CDNService {
-	return &CDNService{
-		baseURL: baseURL,
-		keys:    keys,
-		httpClient: &http.Client{
-			Timeout:   60 * time.Second,
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		},
-		logger: logger,
+// NewCDNService creates a new CDN service instance. publicBaseURL is the cdn edge that serves the
+// bucket (e.g. https://assets.spooliq.com). MinIO creds come from keys (Vault k3s/spooliq/minio).
+func NewCDNService(publicBaseURL string, keys entities.CdnKeysEntity, log logger.Logger) *CDNService {
+	s := &CDNService{
+		bucket:        keys.Bucket,
+		publicBaseURL: strings.TrimRight(publicBaseURL, "/"),
+		logger:        log,
 	}
+	if keys.Endpoint == "" || keys.AccessKey == "" || keys.SecretKey == "" {
+		return s // minio nil: methods error gracefully (keeps boot working without creds)
+	}
+	mc, err := minio.New(keys.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(keys.AccessKey, keys.SecretKey, ""),
+		Secure: keys.UseSSL,
+	})
+	if err == nil {
+		s.minio = mc
+	}
+	return s
 }
 
-func getCdnToken(keys entities.CdnKeysEntity) (string, error) {
-	authConfig := rbauth.Config{
-		ClientID:     keys.ClientID,
-		ClientSecret: keys.ClientSecret,
-	}
-	auth := rbauth.NewKeycloakAuthenticator(authConfig)
-
-	token, err := auth.GetToken()
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
-// UploadFile uploads a file to the CDN
+// UploadFile puts file into the bucket under {folder}/{filename} and returns the public cdn URL.
 func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename string, folder string) (string, error) {
-	// Create multipart form
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+	if s.minio == nil {
+		return "", fmt.Errorf("cdn: MinIO client not configured")
+	}
+	key := path.Join(folder, filename)
 
-	// Add file field
-	part, err := writer.CreateFormFile("file", filename)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to create form file", map[string]interface{}{
-			"error":    err.Error(),
-			"filename": filename,
-		})
-		return "", fmt.Errorf("failed to create form file: %w", err)
+	contentType := mime.TypeByExtension(filepath.Ext(filename))
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
 
-	_, err = io.Copy(part, file)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to copy file content", map[string]interface{}{
-			"error":    err.Error(),
-			"filename": filename,
+	uctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	if _, err := s.minio.PutObject(uctx, s.bucket, key, file, -1, minio.PutObjectOptions{
+		ContentType: contentType,
+	}); err != nil {
+		s.logger.Error(ctx, "Failed to upload file to MinIO", map[string]interface{}{
+			"error": err.Error(), "key": key,
 		})
-		return "", fmt.Errorf("failed to copy file content: %w", err)
+		return "", fmt.Errorf("cdn: put object: %w", err)
 	}
 
-	// Add folder field if provided
-	if folder != "" {
-		err = writer.WriteField("folder", folder)
-		if err != nil {
-			s.logger.Error(ctx, "Failed to add folder field", map[string]interface{}{
-				"error":  err.Error(),
-				"folder": folder,
-			})
-			return "", fmt.Errorf("failed to add folder field: %w", err)
+	url := s.publicBaseURL + "/" + key
+	s.logger.Info(ctx, "File uploaded to MinIO", map[string]interface{}{"key": key, "url": url})
+	return url, nil
+}
+
+// GetFileURL constructs the public served URL for an object key.
+func (s *CDNService) GetFileURL(objectKey string) string {
+	return s.publicBaseURL + "/" + strings.TrimPrefix(objectKey, "/")
+}
+
+// DownloadFile fetches an object's bytes. pathOrURL may be a bare object key or a full URL (old
+// rb-cdn proxy `…/v1/cdn/<bucket>/<key>` or the new edge `https://<host>/<key>`); the key is derived.
+func (s *CDNService) DownloadFile(ctx context.Context, pathOrURL string) ([]byte, error) {
+	if s.minio == nil {
+		return nil, fmt.Errorf("cdn: MinIO client not configured")
+	}
+	key := s.objectKey(pathOrURL)
+
+	uctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	obj, err := s.minio.GetObject(uctx, s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("cdn: get object: %w", err)
+	}
+	defer func() { _ = obj.Close() }()
+
+	data, err := io.ReadAll(obj)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to download file from MinIO", map[string]interface{}{
+			"error": err.Error(), "key": key,
+		})
+		return nil, fmt.Errorf("cdn: read object: %w", err)
+	}
+	return data, nil
+}
+
+// objectKey derives the bucket-relative key from a bare key or any stored URL form.
+func (s *CDNService) objectKey(pathOrURL string) string {
+	// Old rb-cdn proxy form: <host>/v1/cdn/<bucket>/<key>
+	if i := strings.Index(pathOrURL, "/v1/cdn/"); i >= 0 {
+		rest := pathOrURL[i+len("/v1/cdn/"):]
+		if j := strings.Index(rest, "/"); j >= 0 {
+			return rest[j+1:] // drop the bucket segment
+		}
+		return rest
+	}
+	// New edge form: https://<host>/<key>
+	if i := strings.Index(pathOrURL, "://"); i >= 0 {
+		rest := pathOrURL[i+3:]
+		if j := strings.Index(rest, "/"); j >= 0 {
+			return rest[j+1:]
 		}
 	}
-
-	err = writer.Close()
-	if err != nil {
-		s.logger.Error(ctx, "Failed to close multipart writer", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return "", fmt.Errorf("failed to close multipart writer: %w", err)
-	}
-
-	// Create request
-	uploadURL := fmt.Sprintf("%s/v1/upload", s.baseURL)
-	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, body)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to create upload request", map[string]interface{}{
-			"error": err.Error(),
-			"url":   uploadURL,
-		})
-		return "", fmt.Errorf("failed to create upload request: %w", err)
-	}
-
-	token, err := getCdnToken(s.keys)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to get cdn token", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return "", fmt.Errorf("failed to get cdn token: %w", err)
-	}
-
-	// Set headers
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-
-	s.logger.Info(ctx, "Uploading file to CDN", map[string]interface{}{
-		"filename": filename,
-		"folder":   folder,
-		"url":      uploadURL,
-	})
-
-	// Execute request
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to execute upload request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return "", fmt.Errorf("failed to execute upload request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to read response body", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return "", fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	// Check status code
-	if resp.StatusCode != http.StatusOK {
-		s.logger.Error(ctx, "CDN upload failed", map[string]interface{}{
-			"status_code": resp.StatusCode,
-			"response":    string(respBody),
-		})
-		return "", fmt.Errorf("CDN upload failed with status %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	// Parse response
-	var uploadResp CDNUploadResponse
-	err = json.Unmarshal(respBody, &uploadResp)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to parse upload response", map[string]interface{}{
-			"error":    err.Error(),
-			"response": string(respBody),
-		})
-		return "", fmt.Errorf("failed to parse upload response: %w", err)
-	}
-
-	s.logger.Info(ctx, "File uploaded successfully to CDN", map[string]interface{}{
-		"filename": filename,
-		"url":      uploadResp.URL,
-	})
-
-	return uploadResp.URL, nil
-}
-
-// GetFileURL constructs the full URL for a file path
-func (s *CDNService) GetFileURL(path string) string {
-	return fmt.Sprintf("%s/v1/cdn/%s/%s", s.baseURL, s.keys.Bucket, path)
-}
-
-// DownloadFile downloads a file from the CDN with authentication
-func (s *CDNService) DownloadFile(ctx context.Context, path string) ([]byte, error) {
-	// Construct CDN URL
-	fileURL := s.GetFileURL(path)
-
-	// Create request
-	req, err := http.NewRequestWithContext(ctx, "GET", fileURL, nil)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to create download request", map[string]interface{}{
-			"error": err.Error(),
-			"url":   fileURL,
-		})
-		return nil, fmt.Errorf("failed to create download request: %w", err)
-	}
-
-	token, err := getCdnToken(s.keys)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to get cdn token", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return nil, fmt.Errorf("failed to get cdn token: %w", err)
-	}
-
-	// Set authentication header
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-
-	s.logger.Info(ctx, "Downloading file from CDN", map[string]interface{}{
-		"path": path,
-		"url":  fileURL,
-	})
-
-	// Execute request
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to execute download request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return nil, fmt.Errorf("failed to execute download request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		s.logger.Error(ctx, "Failed to read download response", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return nil, fmt.Errorf("failed to read download response: %w", err)
-	}
-
-	// Check status code
-	if resp.StatusCode != http.StatusOK {
-		s.logger.Error(ctx, "CDN download failed", map[string]interface{}{
-			"status_code": resp.StatusCode,
-			"response":    string(data),
-		})
-		return nil, fmt.Errorf("CDN download failed with status %d: %s", resp.StatusCode, string(data))
-	}
-
-	s.logger.Info(ctx, "File downloaded successfully from CDN", map[string]interface{}{
-		"path": path,
-		"size": len(data),
-	})
-
-	return data, nil
+	return strings.TrimPrefix(pathOrURL, "/")
 }

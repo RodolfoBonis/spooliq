@@ -296,6 +296,7 @@ jobs:
             --force 2>/dev/null || true
 
       - name: Create backport to develop
+        id: backport
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
@@ -314,17 +315,25 @@ jobs:
           BACKPORT_BRANCH="backport/${TAG}-to-develop"
           git checkout -b $BACKPORT_BRANCH develop
 
-          # Merge main into the backport branch
-          git merge origin/main --no-ff -m "chore: backport ${TAG} to develop" || {
-            echo "Merge conflict detected"
-            echo "This requires manual intervention"
-            exit 1
-          }
+          # Merge main into the backport branch. A conflict means develop has
+          # diverged and needs manual reconciliation -- this must NOT fail the
+          # release (the image is already published). Flag it and exit cleanly.
+          if ! git merge origin/main --no-ff -m "chore: backport ${TAG} to develop"; then
+            echo "::warning::Backport of ${TAG} to develop has merge conflicts; manual resolution required."
+            git merge --abort || true
+            gh issue create \
+              --title "🔄 Backport ${TAG} to develop needs manual resolution" \
+              --body "The automated backport of ${TAG} from main to develop has merge conflicts. Reconcile develop with main manually." \
+              --label "backport" --label "automated" 2>/dev/null \
+              || echo "Issue create skipped (may already exist)"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-          # Push the backport branch
+          # Clean merge -> push the backport branch and open the auto-merge PR
           git push origin $BACKPORT_BRANCH
+          echo "created=true" >> "$GITHUB_OUTPUT"
 
-          # Create PR with auto-merge label
           gh pr create \
             --base develop \
             --head $BACKPORT_BRANCH \
@@ -355,7 +364,7 @@ jobs:
             --label "auto-merge" || echo "PR creation failed or already exists"
 
       - name: Notify n8n backport created
-        if: success()
+        if: success() && steps.backport.outputs.created == 'true'
         run: |
           curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \

@@ -5,12 +5,14 @@ go 1.25.0
 require (
 	github.com/Nerzal/gocloak/v13 v13.8.0
 	github.com/RodolfoBonis/go-otel-agent v0.4.0
+	github.com/fogleman/fauxgl v0.0.0-20250110135958-abf826acbbbd
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/gin-contrib/cors v1.6.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
+	github.com/hpinc/go3mf v0.24.2
 	github.com/joho/godotenv v1.5.1
 	github.com/jung-kurt/gofpdf/v2 v2.17.3
 	github.com/minio/minio-go/v7 v7.2.0
@@ -50,6 +52,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/fogleman/simplify v0.0.0-20170216171241-d32f302d5046 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
@@ -96,6 +99,7 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
+	github.com/qmuntal/opc v0.7.10 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.17.3 // indirect

@@ -26,6 +26,7 @@ const (
 	EntityMaterial ActivityEntityType = "material"
 	EntityBudget   ActivityEntityType = "budget"
 	EntityPreset   ActivityEntityType = "preset"
+	EntityModel3D  ActivityEntityType = "model3d"
 )
 
 // ActivityEntity represents a recorded activity.

@@ -18,6 +18,7 @@ import (
 	customers "github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
+	models3d "github.com/RodolfoBonis/spooliq/features/model3d/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
@@ -298,6 +299,11 @@ func RunMigrations() {
 	// 9. Customers (FK: OrganizationID -> Companies, OwnerUserID -> Users)
 	if err := Connector.AutoMigrate(&customers.CustomerModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
+	}
+
+	// 3D Models (FK: OrganizationID -> Companies, CustomerID -> Customers)
+	if err := Connector.AutoMigrate(&models3d.Model3DModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING MODEL3D MIGRATION: %s", err.Error()))
 	}
 
 	// ========================================

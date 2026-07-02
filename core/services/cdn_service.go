@@ -106,6 +106,27 @@ func (s *CDNService) DownloadFile(ctx context.Context, pathOrURL string) ([]byte
 	return data, nil
 }
 
+// DeleteFile removes an object from the bucket. pathOrURL may be a bare object key or a full
+// URL (old rb-cdn proxy or new edge form); the key is derived like DownloadFile.
+func (s *CDNService) DeleteFile(ctx context.Context, pathOrURL string) error {
+	if s.minio == nil {
+		return fmt.Errorf("cdn: MinIO client not configured")
+	}
+	key := s.objectKey(pathOrURL)
+
+	uctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	if err := s.minio.RemoveObject(uctx, s.bucket, key, minio.RemoveObjectOptions{}); err != nil {
+		s.logger.Error(ctx, "Failed to delete file from MinIO", map[string]interface{}{
+			"error": err.Error(), "key": key,
+		})
+		return fmt.Errorf("cdn: remove object: %w", err)
+	}
+	s.logger.Info(ctx, "File deleted from MinIO", map[string]interface{}{"key": key})
+	return nil
+}
+
 // objectKey derives the bucket-relative key from a bare key or any stored URL form.
 func (s *CDNService) objectKey(pathOrURL string) string {
 	// Old rb-cdn proxy form: <host>/v1/cdn/<bucket>/<key>

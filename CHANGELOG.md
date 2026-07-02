@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.6.2 - 2026-07-02
+
+### Changes
+- chore: bump version to 2.6.2 (003db93)
+- fix(cache): fail open when Redis is unavailable instead of panicking (#43) (d802eba)
+
+
 ## v2.6.1 - 2026-06-23
 
 ### Changes

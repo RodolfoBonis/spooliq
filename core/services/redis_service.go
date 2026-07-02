@@ -78,21 +78,26 @@ func (r *RedisService) Init() *errors.AppError {
 		})
 	}
 
+	// Assign the client before pinging. A *redis.Client is safe to use
+	// immediately and reconnects lazily on each command, so a transient failure
+	// at boot must not leave the cache permanently disabled until a pod restart.
+	// Ping is only a startup diagnostic; the cache layer already fails open when
+	// commands error (see cache_middleware.go).
+	r.client = rdb
+
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := rdb.Ping(ctx).Result()
-	if err != nil {
+	if _, err := rdb.Ping(ctx).Result(); err != nil {
 		appErr := errors.NewAppError(entities.ErrService, err.Error(), map[string]interface{}{
 			"redis_host": config.EnvRedisHost(),
 			"redis_port": config.EnvRedisPort(),
 		}, err)
-		r.logger.LogError(context.Background(), "Failed to connect to Redis", appErr)
+		r.logger.LogError(context.Background(), "Failed to connect to Redis at startup; cache will retry lazily", appErr)
 		return appErr
 	}
 
-	r.client = rdb
 	r.logger.Info(context.Background(), "Redis connected successfully with OpenTelemetry instrumentation", map[string]interface{}{
 		"redis_host": config.EnvRedisHost(),
 		"redis_port": config.EnvRedisPort(),
@@ -106,8 +111,27 @@ func (r *RedisService) GetClient() *redis.Client {
 	return r.client
 }
 
+// available reports whether the Redis client is initialized and usable.
+//
+// When Redis fails to initialize (see Init), the client stays nil. Instead of
+// dereferencing it and panicking, the cache layer degrades gracefully
+// (fail-open): reads behave as a cache miss and writes become no-ops, so
+// business endpoints keep serving even while the cache is down. Init already
+// logs the connection failure loudly at boot, so here we only emit a debug line
+// to avoid per-request log spam.
+func (r *RedisService) available(ctx context.Context) bool {
+	if r.client == nil {
+		r.logger.Debug(ctx, "Redis client unavailable; bypassing cache")
+		return false
+	}
+	return true
+}
+
 // Set stores a key-value pair with optional expiration.
 func (r *RedisService) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *errors.AppError {
+	if !r.available(ctx) {
+		return nil // fail-open: cache unavailable, skip write
+	}
 	// Automatic instrumentation is now handled by the observability system
 	err := r.client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
@@ -127,6 +151,9 @@ func (r *RedisService) Set(ctx context.Context, key string, value interface{}, e
 
 // Get retrieves a value by key.
 func (r *RedisService) Get(ctx context.Context, key string) (string, *errors.AppError) {
+	if !r.available(ctx) {
+		return "", nil // fail-open: cache unavailable, behave as a miss
+	}
 	// Automatic instrumentation is now handled by the observability system
 	val, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
@@ -149,6 +176,9 @@ func (r *RedisService) Get(ctx context.Context, key string) (string, *errors.App
 
 // Delete removes a key from Redis.
 func (r *RedisService) Delete(ctx context.Context, key string) *errors.AppError {
+	if !r.available(ctx) {
+		return nil // fail-open: cache unavailable, nothing to delete
+	}
 	// Automatic instrumentation is now handled by the observability system
 	err := r.client.Del(ctx, key).Err()
 	if err != nil {
@@ -167,6 +197,9 @@ func (r *RedisService) Delete(ctx context.Context, key string) *errors.AppError 
 
 // Exists checks if a key exists in Redis.
 func (r *RedisService) Exists(ctx context.Context, key string) (bool, *errors.AppError) {
+	if !r.available(ctx) {
+		return false, nil // fail-open: cache unavailable, key considered absent
+	}
 	count, err := r.client.Exists(ctx, key).Result()
 	if err != nil {
 		appErr := errors.NewAppError(entities.ErrService, err.Error(), map[string]interface{}{

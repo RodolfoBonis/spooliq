@@ -45,7 +45,7 @@ jobs:
           if [ "$URGENCY" == "critical" ]; then
             MESSAGE=$(printf "HOTFIX %s created!\n\nCRITICAL: Production issue detected\nFEATURE CUTOFF ACTIVE\n\nNew features merged to develop will go to NEXT release.\nThis hotfix takes priority.\n\nPriority: CRITICAL\nTimeline: 1-2 hours\nPR will be created shortly" "$VERSION")
           else
-            MESSAGE=$(printf "Release %s created!\n\nSnapshot of develop taken\nFEATURE CUTOFF ACTIVE\n\nFeatures merged to develop AFTER this point will go to NEXT release.\n\nFeatures IN this release: Everything in develop NOW\nFeatures NOT in this release: Anything merged after this\n\nQuick Release Timeline: 2-8 hours\nStaging deployment: Will trigger automatically\nPR to main: Will be created shortly\n\nTip: Check the release PR for full changelog" "$VERSION")
+            MESSAGE=$(printf "Release %s created!\n\nSnapshot of develop taken\nFEATURE CUTOFF ACTIVE\n\nFeatures merged to develop AFTER this point will go to NEXT release.\n\nFeatures IN this release: Everything in develop NOW\nFeatures NOT in this release: Anything merged after this\n\nQuick Release Timeline: 2-8 hours\nPR to main: Will be created shortly\n\nTip: Check the release PR for full changelog" "$VERSION")
           fi
 
           MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)

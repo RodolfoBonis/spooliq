@@ -229,24 +229,17 @@ jobs:
 
           ### ⏱️ Quick Release Timeline (Target: 2-8 hours)
           - [x] Snapshot created & tag pushed
-          - [x] Staging deployment (check below)
-          - [ ] QA validation in staging (2-4h)
+          - [ ] Release PR review & approval (2-4h)
           - [ ] PR approval & merge to main
           - [ ] Production deployment (automatic)
           - [ ] Backport to develop (automatic)
 
           **Expected completion:** ${EXPECTED_COMPLETION}
 
-          ### 🧪 Staging Environment
-          Staging deployment triggered automatically.
-          Check the Actions tab for deployment status.
-
           ### 📝 Release Checklist
           - [ ] Version bumped to v${{ steps.determine-version.outputs.version }}
           - [ ] CHANGELOG.md updated
           - [ ] All CI tests passing
-          - [ ] Staging deployment successful
-          - [ ] QA validation complete
           - [ ] Breaking changes documented (if any)
           - [ ] No sensitive data included
 
@@ -273,17 +266,6 @@ jobs:
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           echo "✓ PR created: $PR_URL"
 
-      - name: Trigger staging deployment
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "Triggering staging deployment for release branch..."
-
-          gh workflow run release-staging.yaml \
-            --ref ${{ env.RELEASE_BRANCH }} || echo "Staging deployment will trigger automatically on push"
-
-          echo "✓ Staging deployment triggered (or will trigger on push)"
-
       - name: Notify n8n
         if: success()
         run: |
@@ -303,12 +285,11 @@ jobs:
                 "pr_url": "${{ steps.create-pr.outputs.pr_url }}",
                 "from_branch": "${{ inputs.from_branch }}",
                 "tag_created": true,
-                "staging_triggered": true,
                 "expected_completion": "'"$EXPECTED_COMPLETION"'",
                 "feature_cutoff": true,
                 "quick_release": true
               },
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
               "telegram_thread_id": "${{ secrets.THREAD_ID }}",
-              "telegram_message": "🚀 Release v${{ steps.determine-version.outputs.version }} prepared!\n\n⚠️ FEATURE CUTOFF: New features → next release\n⏱️ Target: 8h\n🧪 Staging: deploying\n📋 PR: ${{ steps.create-pr.outputs.pr_url }}"
+              "telegram_message": "🚀 Release v${{ steps.determine-version.outputs.version }} prepared!\n\n⚠️ FEATURE CUTOFF: New features → next release\n⏱️ Target: 8h\n📋 PR: ${{ steps.create-pr.outputs.pr_url }}"
             }' || echo "Notification failed (non-critical)"

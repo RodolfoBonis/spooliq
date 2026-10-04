@@ -80,7 +80,7 @@ jobs:
             --body "✅ Auto-approving backport PR as all checks have passed."
 
   # NOTE: Release PRs do NOT auto-merge
-  # They require explicit manual merge after QA validation in staging
+  # They require explicit manual merge after review and approval of the release PR
   # This ensures conscious review of production deployments
 
   cleanup-branches:

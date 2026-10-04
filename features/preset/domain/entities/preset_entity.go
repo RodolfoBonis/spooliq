@@ -35,6 +35,17 @@ type PresetEntity struct {
 	DeletedAt      *time.Time `json:"deleted_at,omitempty"`
 }
 
+// PresetFilters holds the combinable filters used when listing presets.
+// All provided filters are applied together (logical AND) within a single
+// organization-scoped query.
+type PresetFilters struct {
+	Type        *PresetType
+	ActiveOnly  bool
+	DefaultOnly bool
+	GlobalOnly  bool
+	UserID      *uuid.UUID
+}
+
 // IsGlobal returns true if the preset is global (not user-specific)
 func (p *PresetEntity) IsGlobal() bool {
 	return p.UserID == nil

@@ -6,21 +6,22 @@ import (
 	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // PresetModel represents the base preset model in the database
 type PresetModel struct {
-	ID             uuid.UUID  `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
-	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
-	Description    string     `gorm:"type:text" json:"description,omitempty"`
-	Type           string     `gorm:"type:varchar(50);not null" json:"type"`
-	IsActive       bool       `gorm:"type:boolean;default:true" json:"is_active"`
-	IsDefault      bool       `gorm:"type:boolean;default:false" json:"is_default"`
-	UserID         *uuid.UUID `gorm:"type:uuid;index" json:"user_id,omitempty"`
-	OrganizationID string     `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
-	CreatedAt      time.Time  `gorm:"<-:create;type:timestamp" json:"created_at,omitempty"`
-	UpdatedAt      time.Time  `gorm:"<-:update;type:timestamp" json:"updated_at,omitempty"`
-	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	ID             uuid.UUID      `gorm:"<-:create;type:uuid;primaryKey" json:"id"`
+	Name           string         `gorm:"type:varchar(255);not null" json:"name"`
+	Description    string         `gorm:"type:text" json:"description,omitempty"`
+	Type           string         `gorm:"type:varchar(50);not null" json:"type"`
+	IsActive       bool           `gorm:"type:boolean;default:true" json:"is_active"`
+	IsDefault      bool           `gorm:"type:boolean;default:false" json:"is_default"`
+	UserID         *uuid.UUID     `gorm:"type:uuid;index" json:"user_id,omitempty"`
+	OrganizationID string         `gorm:"type:varchar(255);not null;index" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
+	CreatedAt      time.Time      `gorm:"<-:create;type:timestamp" json:"created_at,omitempty"`
+	UpdatedAt      time.Time      `gorm:"<-:update;type:timestamp" json:"updated_at,omitempty"`
+	DeletedAt      gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deleted_at,omitempty"`
 
 	// GORM v2 Relationships
 	Organization *companyModels.CompanyModel `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
@@ -47,11 +48,21 @@ func (p *PresetModel) FromEntity(entity *entities.PresetEntity) {
 	p.OrganizationID = entity.OrganizationID
 	p.CreatedAt = entity.CreatedAt
 	p.UpdatedAt = entity.UpdatedAt
-	p.DeletedAt = entity.DeletedAt
+	if entity.DeletedAt != nil {
+		p.DeletedAt = gorm.DeletedAt{Time: *entity.DeletedAt, Valid: true}
+	} else {
+		p.DeletedAt = gorm.DeletedAt{}
+	}
 }
 
 // ToEntity converts the PresetModel to a PresetEntity
 func (p *PresetModel) ToEntity() entities.PresetEntity {
+	var deletedAt *time.Time
+	if p.DeletedAt.Valid {
+		t := p.DeletedAt.Time
+		deletedAt = &t
+	}
+
 	return entities.PresetEntity{
 		ID:             p.ID,
 		Name:           p.Name,
@@ -63,6 +74,6 @@ func (p *PresetModel) ToEntity() entities.PresetEntity {
 		OrganizationID: p.OrganizationID,
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
-		DeletedAt:      p.DeletedAt,
+		DeletedAt:      deletedAt,
 	}
 }

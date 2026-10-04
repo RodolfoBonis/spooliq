@@ -26,12 +26,13 @@ func (r *PresetRepositoryImpl) Create(preset *entities.PresetEntity) error {
 	return r.db.Create(model).Error
 }
 
-// GetByID retrieves a preset by its ID
-func (r *PresetRepositoryImpl) GetByID(id uuid.UUID) (*entities.PresetEntity, error) {
+// GetByID retrieves a preset by its ID, scoped to the organization.
+// Soft-deleted rows are excluded automatically by GORM (gorm.DeletedAt).
+func (r *PresetRepositoryImpl) GetByID(id uuid.UUID, organizationID string) (*entities.PresetEntity, error) {
 	var model models.PresetModel
 
 	err := r.db.
-		Where("id = ?", id).
+		Where("id = ? AND organization_id = ?", id, organizationID).
 		First(&model).Error
 	if err != nil {
 		return nil, err
@@ -41,113 +42,80 @@ func (r *PresetRepositoryImpl) GetByID(id uuid.UUID) (*entities.PresetEntity, er
 	return &entity, nil
 }
 
-// GetByType retrieves presets by type
-func (r *PresetRepositoryImpl) GetByType(presetType entities.PresetType) ([]*entities.PresetEntity, error) {
-	var models []models.PresetModel
+// ListPresets retrieves presets for an organization applying combinable filters.
+func (r *PresetRepositoryImpl) ListPresets(organizationID string, filters entities.PresetFilters) ([]*entities.PresetEntity, error) {
+	var presetModels []models.PresetModel
 
-	err := r.db.
-		// For list views, we don't preload relationships to keep queries lightweight
-		Where("type = ?", string(presetType)).
-		Find(&models).Error
-	if err != nil {
+	query := r.db.Where("organization_id = ?", organizationID)
+
+	if filters.Type != nil {
+		query = query.Where("type = ?", string(*filters.Type))
+	}
+	if filters.ActiveOnly {
+		query = query.Where("is_active = ?", true)
+	}
+	if filters.DefaultOnly {
+		query = query.Where("is_default = ?", true)
+	}
+	if filters.GlobalOnly {
+		query = query.Where("user_id IS NULL")
+	}
+	if filters.UserID != nil {
+		query = query.Where("user_id = ?", *filters.UserID)
+	}
+
+	if err := query.Find(&presetModels).Error; err != nil {
 		return nil, err
 	}
 
-	var entities []*entities.PresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
+	entitiesList := make([]*entities.PresetEntity, 0, len(presetModels))
+	for i := range presetModels {
+		entity := presetModels[i].ToEntity()
+		entitiesList = append(entitiesList, &entity)
 	}
 
-	return entities, nil
+	return entitiesList, nil
 }
 
-// GetByUserID retrieves presets by user ID
-func (r *PresetRepositoryImpl) GetByUserID(userID uuid.UUID) ([]*entities.PresetEntity, error) {
-	var models []models.PresetModel
-
-	err := r.db.
-		// For list views, we don't preload relationships to keep queries lightweight
-		Where("user_id = ?", userID).
-		Find(&models).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var entities []*entities.PresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
-	}
-
-	return entities, nil
-}
-
-// GetGlobalPresets retrieves global presets (user_id is null)
-func (r *PresetRepositoryImpl) GetGlobalPresets() ([]*entities.PresetEntity, error) {
-	var models []models.PresetModel
-
-	err := r.db.Where("user_id IS NULL").Find(&models).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var entities []*entities.PresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
-	}
-
-	return entities, nil
-}
-
-// GetActivePresets retrieves active presets
-func (r *PresetRepositoryImpl) GetActivePresets() ([]*entities.PresetEntity, error) {
-	var models []models.PresetModel
-
-	err := r.db.Where("is_active = ?", true).Find(&models).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var entities []*entities.PresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
-	}
-
-	return entities, nil
-}
-
-// GetDefaultPresets retrieves default presets
-func (r *PresetRepositoryImpl) GetDefaultPresets() ([]*entities.PresetEntity, error) {
-	var models []models.PresetModel
-
-	err := r.db.Where("is_default = ?", true).Find(&models).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var entities []*entities.PresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
-	}
-
-	return entities, nil
-}
-
-// Update updates an existing preset
-func (r *PresetRepositoryImpl) Update(preset *entities.PresetEntity) error {
+// updateBasePreset updates the base preset row within the given db/tx handle,
+// scoped to its organization. Returns gorm.ErrRecordNotFound when no row matches
+// the id+organization pair. Shared by Update and the atomic *WithPreset methods.
+func updateBasePreset(db *gorm.DB, preset *entities.PresetEntity) error {
 	model := &models.PresetModel{}
 	model.FromEntity(preset)
 
-	return r.db.Save(model).Error
+	result := db.Model(&models.PresetModel{}).
+		Where("id = ? AND organization_id = ?", model.ID, model.OrganizationID).
+		Select("name", "description", "type", "is_active", "is_default", "user_id", "updated_at").
+		Updates(model)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
-// Delete soft deletes a preset
-func (r *PresetRepositoryImpl) Delete(id uuid.UUID) error {
-	return r.db.Where("id = ?", id).Delete(&models.PresetModel{}).Error
+// Update updates an existing preset, scoped to its organization.
+// Returns gorm.ErrRecordNotFound when no row matches the id+organization pair.
+func (r *PresetRepositoryImpl) Update(preset *entities.PresetEntity) error {
+	return updateBasePreset(r.db, preset)
+}
+
+// Delete soft deletes a preset, scoped to its organization.
+// Returns gorm.ErrRecordNotFound when no row matches the id+organization pair.
+func (r *PresetRepositoryImpl) Delete(id uuid.UUID, organizationID string) error {
+	result := r.db.
+		Where("id = ? AND organization_id = ?", id, organizationID).
+		Delete(&models.PresetModel{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // CreateMachine creates a new machine preset with base preset
@@ -169,12 +137,15 @@ func (r *PresetRepositoryImpl) CreateMachine(preset *entities.PresetEntity, mach
 	})
 }
 
-// GetMachineByID retrieves a machine preset by ID
-func (r *PresetRepositoryImpl) GetMachineByID(id uuid.UUID) (*entities.MachinePresetEntity, error) {
+// GetMachineByID retrieves a machine preset by ID, verifying the base preset
+// belongs to the organization and is not soft-deleted.
+func (r *PresetRepositoryImpl) GetMachineByID(id uuid.UUID, organizationID string) (*entities.MachinePresetEntity, error) {
 	var model models.MachinePresetModel
 
 	err := r.db.
-		Where("id = ?", id).
+		Select("machine_presets.*").
+		Joins("INNER JOIN presets ON presets.id = machine_presets.id").
+		Where("machine_presets.id = ? AND presets.organization_id = ? AND presets.deleted_at IS NULL", id, organizationID).
 		First(&model).Error
 	if err != nil {
 		return nil, err
@@ -184,30 +155,63 @@ func (r *PresetRepositoryImpl) GetMachineByID(id uuid.UUID) (*entities.MachinePr
 	return &entity, nil
 }
 
-// GetMachinesByBrand retrieves machine presets by brand
-func (r *PresetRepositoryImpl) GetMachinesByBrand(brand string) ([]*entities.MachinePresetEntity, error) {
-	var models []models.MachinePresetModel
+// GetMachinesByBrand retrieves machine presets by brand, scoped to the organization.
+func (r *PresetRepositoryImpl) GetMachinesByBrand(brand, organizationID string) ([]*entities.MachinePresetEntity, error) {
+	var machineModels []models.MachinePresetModel
 
-	err := r.db.Where("brand = ?", brand).Find(&models).Error
+	err := r.db.
+		Select("machine_presets.*").
+		Joins("INNER JOIN presets ON presets.id = machine_presets.id").
+		Where("machine_presets.brand = ? AND presets.organization_id = ? AND presets.deleted_at IS NULL", brand, organizationID).
+		Find(&machineModels).Error
 	if err != nil {
 		return nil, err
 	}
 
-	var entities []*entities.MachinePresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
+	entitiesList := make([]*entities.MachinePresetEntity, 0, len(machineModels))
+	for i := range machineModels {
+		entity := machineModels[i].ToEntity()
+		entitiesList = append(entitiesList, &entity)
 	}
 
-	return entities, nil
+	return entitiesList, nil
 }
 
-// UpdateMachine updates a machine preset
-func (r *PresetRepositoryImpl) UpdateMachine(machine *entities.MachinePresetEntity) error {
+// updateMachineChild updates a machine child row within the given db/tx handle,
+// scoped to its organization. Returns gorm.ErrRecordNotFound when no row matches.
+func updateMachineChild(db *gorm.DB, machine *entities.MachinePresetEntity) error {
 	model := &models.MachinePresetModel{}
 	model.FromEntity(machine)
 
-	return r.db.Save(model).Error
+	result := db.Model(&models.MachinePresetModel{}).
+		Where("id = ? AND organization_id = ?", model.ID, model.OrganizationID).
+		Select("*").
+		Updates(model)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdateMachine updates a machine preset, scoped to its organization.
+func (r *PresetRepositoryImpl) UpdateMachine(machine *entities.MachinePresetEntity) error {
+	return updateMachineChild(r.db, machine)
+}
+
+// UpdateMachineWithPreset atomically updates the base preset and its machine child
+// in a single, organization-scoped transaction. Either both rows are updated or
+// neither is: if either the base preset or the machine child does not match the
+// id+organization pair, the transaction rolls back with gorm.ErrRecordNotFound.
+func (r *PresetRepositoryImpl) UpdateMachineWithPreset(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := updateBasePreset(tx, preset); err != nil {
+			return err
+		}
+		return updateMachineChild(tx, machine)
+	})
 }
 
 // CreateEnergy creates a new energy preset with base preset
@@ -229,12 +233,15 @@ func (r *PresetRepositoryImpl) CreateEnergy(preset *entities.PresetEntity, energ
 	})
 }
 
-// GetEnergyByID retrieves an energy preset by ID
-func (r *PresetRepositoryImpl) GetEnergyByID(id uuid.UUID) (*entities.EnergyPresetEntity, error) {
+// GetEnergyByID retrieves an energy preset by ID, verifying the base preset
+// belongs to the organization and is not soft-deleted.
+func (r *PresetRepositoryImpl) GetEnergyByID(id uuid.UUID, organizationID string) (*entities.EnergyPresetEntity, error) {
 	var model models.EnergyPresetModel
 
 	err := r.db.
-		Where("id = ?", id).
+		Select("energy_presets.*").
+		Joins("INNER JOIN presets ON presets.id = energy_presets.id").
+		Where("energy_presets.id = ? AND presets.organization_id = ? AND presets.deleted_at IS NULL", id, organizationID).
 		First(&model).Error
 	if err != nil {
 		return nil, err
@@ -244,59 +251,94 @@ func (r *PresetRepositoryImpl) GetEnergyByID(id uuid.UUID) (*entities.EnergyPres
 	return &entity, nil
 }
 
-// GetEnergyByLocation retrieves energy presets by location
-func (r *PresetRepositoryImpl) GetEnergyByLocation(country, state, city string) ([]*entities.EnergyPresetEntity, error) {
-	var models []models.EnergyPresetModel
-	query := r.db
+// GetEnergyByLocation retrieves energy presets by location, scoped to the organization.
+func (r *PresetRepositoryImpl) GetEnergyByLocation(country, state, city, organizationID string) ([]*entities.EnergyPresetEntity, error) {
+	var energyModels []models.EnergyPresetModel
+
+	query := r.db.
+		Select("energy_presets.*").
+		Joins("INNER JOIN presets ON presets.id = energy_presets.id").
+		Where("presets.organization_id = ? AND presets.deleted_at IS NULL", organizationID)
 
 	if country != "" {
-		query = query.Where("country = ?", country)
+		query = query.Where("energy_presets.country = ?", country)
 	}
 	if state != "" {
-		query = query.Where("state = ?", state)
+		query = query.Where("energy_presets.state = ?", state)
 	}
 	if city != "" {
-		query = query.Where("city = ?", city)
+		query = query.Where("energy_presets.city = ?", city)
 	}
 
-	err := query.Find(&models).Error
+	if err := query.Find(&energyModels).Error; err != nil {
+		return nil, err
+	}
+
+	entitiesList := make([]*entities.EnergyPresetEntity, 0, len(energyModels))
+	for i := range energyModels {
+		entity := energyModels[i].ToEntity()
+		entitiesList = append(entitiesList, &entity)
+	}
+
+	return entitiesList, nil
+}
+
+// GetEnergyByCurrency retrieves energy presets by currency, scoped to the organization.
+func (r *PresetRepositoryImpl) GetEnergyByCurrency(currency, organizationID string) ([]*entities.EnergyPresetEntity, error) {
+	var energyModels []models.EnergyPresetModel
+
+	err := r.db.
+		Select("energy_presets.*").
+		Joins("INNER JOIN presets ON presets.id = energy_presets.id").
+		Where("energy_presets.currency = ? AND presets.organization_id = ? AND presets.deleted_at IS NULL", currency, organizationID).
+		Find(&energyModels).Error
 	if err != nil {
 		return nil, err
 	}
 
-	var entities []*entities.EnergyPresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
+	entitiesList := make([]*entities.EnergyPresetEntity, 0, len(energyModels))
+	for i := range energyModels {
+		entity := energyModels[i].ToEntity()
+		entitiesList = append(entitiesList, &entity)
 	}
 
-	return entities, nil
+	return entitiesList, nil
 }
 
-// GetEnergyByCurrency retrieves energy presets by currency
-func (r *PresetRepositoryImpl) GetEnergyByCurrency(currency string) ([]*entities.EnergyPresetEntity, error) {
-	var models []models.EnergyPresetModel
-
-	err := r.db.Where("currency = ?", currency).Find(&models).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var entities []*entities.EnergyPresetEntity
-	for _, model := range models {
-		entity := model.ToEntity()
-		entities = append(entities, &entity)
-	}
-
-	return entities, nil
-}
-
-// UpdateEnergy updates an energy preset
-func (r *PresetRepositoryImpl) UpdateEnergy(energy *entities.EnergyPresetEntity) error {
+// updateEnergyChild updates an energy child row within the given db/tx handle,
+// scoped to its organization. Returns gorm.ErrRecordNotFound when no row matches.
+func updateEnergyChild(db *gorm.DB, energy *entities.EnergyPresetEntity) error {
 	model := &models.EnergyPresetModel{}
 	model.FromEntity(energy)
 
-	return r.db.Save(model).Error
+	result := db.Model(&models.EnergyPresetModel{}).
+		Where("id = ? AND organization_id = ?", model.ID, model.OrganizationID).
+		Select("*").
+		Updates(model)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdateEnergy updates an energy preset, scoped to its organization.
+func (r *PresetRepositoryImpl) UpdateEnergy(energy *entities.EnergyPresetEntity) error {
+	return updateEnergyChild(r.db, energy)
+}
+
+// UpdateEnergyWithPreset atomically updates the base preset and its energy child
+// in a single, organization-scoped transaction. Either both rows are updated or
+// neither is.
+func (r *PresetRepositoryImpl) UpdateEnergyWithPreset(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := updateBasePreset(tx, preset); err != nil {
+			return err
+		}
+		return updateEnergyChild(tx, energy)
+	})
 }
 
 // CreateCost creates a new cost preset with base preset
@@ -318,12 +360,15 @@ func (r *PresetRepositoryImpl) CreateCost(preset *entities.PresetEntity, cost *e
 	})
 }
 
-// GetCostByID retrieves a cost preset by ID
-func (r *PresetRepositoryImpl) GetCostByID(id uuid.UUID) (*entities.CostPresetEntity, error) {
+// GetCostByID retrieves a cost preset by ID, verifying the base preset
+// belongs to the organization and is not soft-deleted.
+func (r *PresetRepositoryImpl) GetCostByID(id uuid.UUID, organizationID string) (*entities.CostPresetEntity, error) {
 	var model models.CostPresetModel
 
 	err := r.db.
-		Where("id = ?", id).
+		Select("cost_presets.*").
+		Joins("INNER JOIN presets ON presets.id = cost_presets.id").
+		Where("cost_presets.id = ? AND presets.organization_id = ? AND presets.deleted_at IS NULL", id, organizationID).
 		First(&model).Error
 	if err != nil {
 		return nil, err
@@ -333,12 +378,40 @@ func (r *PresetRepositoryImpl) GetCostByID(id uuid.UUID) (*entities.CostPresetEn
 	return &entity, nil
 }
 
-// UpdateCost updates a cost preset
-func (r *PresetRepositoryImpl) UpdateCost(cost *entities.CostPresetEntity) error {
+// updateCostChild updates a cost child row within the given db/tx handle, scoped
+// to its organization. Returns gorm.ErrRecordNotFound when no row matches.
+func updateCostChild(db *gorm.DB, cost *entities.CostPresetEntity) error {
 	model := &models.CostPresetModel{}
 	model.FromEntity(cost)
 
-	return r.db.Save(model).Error
+	result := db.Model(&models.CostPresetModel{}).
+		Where("id = ? AND organization_id = ?", model.ID, model.OrganizationID).
+		Select("*").
+		Updates(model)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdateCost updates a cost preset, scoped to its organization.
+func (r *PresetRepositoryImpl) UpdateCost(cost *entities.CostPresetEntity) error {
+	return updateCostChild(r.db, cost)
+}
+
+// UpdateCostWithPreset atomically updates the base preset and its cost child in a
+// single, organization-scoped transaction. Either both rows are updated or
+// neither is.
+func (r *PresetRepositoryImpl) UpdateCostWithPreset(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := updateBasePreset(tx, preset); err != nil {
+			return err
+		}
+		return updateCostChild(tx, cost)
+	})
 }
 
 // OPTIMIZED METHODS WITH ORGANIZATION FILTERING AND JOINS

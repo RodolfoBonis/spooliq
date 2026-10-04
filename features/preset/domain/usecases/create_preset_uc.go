@@ -20,12 +20,14 @@ func NewCreatePresetUseCase(presetRepo repositories.PresetRepository) *CreatePre
 	}
 }
 
-// CreateMachinePresetRequest represents the request to create a machine preset
+// CreateMachinePresetRequest represents the request to create a machine preset.
+// UserID is kept for backwards compatibility but is NOT trusted: the owning
+// user is always derived from the authenticated context.
 type CreateMachinePresetRequest struct {
 	Name                   string     `json:"name" binding:"required"`
 	Description            string     `json:"description"`
 	IsDefault              bool       `json:"is_default"`
-	UserID                 *uuid.UUID `json:"user_id"`
+	UserID                 *uuid.UUID `json:"user_id"` // Deprecated: ignored; derived from the authenticated user.
 	Brand                  string     `json:"brand"`
 	Model                  string     `json:"model"`
 	BuildVolumeX           float32    `json:"build_volume_x" binding:"required,gt=0"`
@@ -42,12 +44,14 @@ type CreateMachinePresetRequest struct {
 	CostPerHour            float32    `json:"cost_per_hour"`
 }
 
-// CreateEnergyPresetRequest represents the request to create an energy preset
+// CreateEnergyPresetRequest represents the request to create an energy preset.
+// UserID is kept for backwards compatibility but is NOT trusted: the owning
+// user is always derived from the authenticated context.
 type CreateEnergyPresetRequest struct {
 	Name                  string     `json:"name" binding:"required"`
 	Description           string     `json:"description"`
 	IsDefault             bool       `json:"is_default"`
-	UserID                *uuid.UUID `json:"user_id"`
+	UserID                *uuid.UUID `json:"user_id"` // Deprecated: ignored; derived from the authenticated user.
 	Country               string     `json:"country"`
 	State                 string     `json:"state"`
 	City                  string     `json:"city"`
@@ -59,12 +63,14 @@ type CreateEnergyPresetRequest struct {
 	OffPeakHourMultiplier float32    `json:"off_peak_hour_multiplier" binding:"required,gt=0"`
 }
 
-// CreateCostPresetRequest represents the request to create a cost preset
+// CreateCostPresetRequest represents the request to create a cost preset.
+// UserID is kept for backwards compatibility but is NOT trusted: the owning
+// user is always derived from the authenticated context.
 type CreateCostPresetRequest struct {
 	Name                      string     `json:"name" binding:"required"`
 	Description               string     `json:"description"`
 	IsDefault                 bool       `json:"is_default"`
-	UserID                    *uuid.UUID `json:"user_id"`
+	UserID                    *uuid.UUID `json:"user_id"` // Deprecated: ignored; derived from the authenticated user.
 	LaborCostPerHour          float32    `json:"labor_cost_per_hour" binding:"min=0"`
 	PackagingCostPerItem      float32    `json:"packaging_cost_per_item" binding:"min=0"`
 	ShippingCostBase          float32    `json:"shipping_cost_base" binding:"min=0"`
@@ -76,8 +82,9 @@ type CreateCostPresetRequest struct {
 	QualityControlCostPerItem float32    `json:"quality_control_cost_per_item" binding:"min=0"`
 }
 
-// CreateMachinePreset Execute creates a new machine preset
-func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetRequest, organizationID string) (*entities.PresetEntity, error) {
+// CreateMachinePreset creates a new machine preset. The owning user is taken
+// from the authenticated context (userID), never from the request body.
+func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetRequest, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
 	// Create base preset entity
 	preset := &entities.PresetEntity{
 		ID:             uuid.New(),
@@ -86,7 +93,7 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 		Type:           entities.PresetTypeMachine,
 		IsActive:       true,
 		IsDefault:      req.IsDefault,
-		UserID:         req.UserID,
+		UserID:         userID,
 		OrganizationID: organizationID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -130,8 +137,9 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 	return preset, nil
 }
 
-// CreateEnergyPreset creates a new energy preset
-func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest, organizationID string) (*entities.PresetEntity, error) {
+// CreateEnergyPreset creates a new energy preset. The owning user is taken
+// from the authenticated context (userID), never from the request body.
+func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
 	// Create base preset entity
 	preset := &entities.PresetEntity{
 		ID:             uuid.New(),
@@ -140,7 +148,7 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 		Type:           entities.PresetTypeEnergy,
 		IsActive:       true,
 		IsDefault:      req.IsDefault,
-		UserID:         req.UserID,
+		UserID:         userID,
 		OrganizationID: organizationID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -179,8 +187,9 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 	return preset, nil
 }
 
-// CreateCostPreset creates a new cost preset
-func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, organizationID string) (*entities.PresetEntity, error) {
+// CreateCostPreset creates a new cost preset. The owning user is taken
+// from the authenticated context (userID), never from the request body.
+func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
 	// Create base preset entity
 	preset := &entities.PresetEntity{
 		ID:             uuid.New(),
@@ -189,7 +198,7 @@ func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, or
 		Type:           entities.PresetTypeCost,
 		IsActive:       true,
 		IsDefault:      req.IsDefault,
-		UserID:         req.UserID,
+		UserID:         userID,
 		OrganizationID: organizationID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),

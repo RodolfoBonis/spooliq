@@ -79,10 +79,10 @@ type UpdateCostPresetRequest struct {
 	QualityControlCostPerItem *float32  `json:"quality_control_cost_per_item"`
 }
 
-// UpdateMachinePreset updates an existing machine preset
-func (uc *UpdatePresetUseCase) UpdateMachinePreset(req *UpdateMachinePresetRequest) (*entities.PresetEntity, error) {
-	// Get existing preset
-	preset, err := uc.presetRepo.GetByID(req.ID)
+// UpdateMachinePreset updates an existing machine preset within the organization scope.
+func (uc *UpdatePresetUseCase) UpdateMachinePreset(req *UpdateMachinePresetRequest, organizationID string) (*entities.PresetEntity, error) {
+	// Get existing preset (organization-scoped)
+	preset, err := uc.presetRepo.GetByID(req.ID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (uc *UpdatePresetUseCase) UpdateMachinePreset(req *UpdateMachinePresetReque
 		return nil, entities.ErrInvalidPresetType
 	}
 
-	// Get existing machine data
-	machine, err := uc.presetRepo.GetMachineByID(req.ID)
+	// Get existing machine data (organization-scoped)
+	machine, err := uc.presetRepo.GetMachineByID(req.ID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,21 +165,19 @@ func (uc *UpdatePresetUseCase) UpdateMachinePreset(req *UpdateMachinePresetReque
 		return nil, err
 	}
 
-	// Save updates
-	if err := uc.presetRepo.Update(preset); err != nil {
-		return nil, err
-	}
-	if err := uc.presetRepo.UpdateMachine(machine); err != nil {
+	// Persist both rows atomically (organization-scoped). A partial write that
+	// leaves the base preset and its machine child inconsistent must never happen.
+	if err := uc.presetRepo.UpdateMachineWithPreset(preset, machine); err != nil {
 		return nil, err
 	}
 
 	return preset, nil
 }
 
-// UpdateEnergyPreset updates an existing energy preset
-func (uc *UpdatePresetUseCase) UpdateEnergyPreset(req *UpdateEnergyPresetRequest) (*entities.PresetEntity, error) {
-	// Get existing preset
-	preset, err := uc.presetRepo.GetByID(req.ID)
+// UpdateEnergyPreset updates an existing energy preset within the organization scope.
+func (uc *UpdatePresetUseCase) UpdateEnergyPreset(req *UpdateEnergyPresetRequest, organizationID string) (*entities.PresetEntity, error) {
+	// Get existing preset (organization-scoped)
+	preset, err := uc.presetRepo.GetByID(req.ID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -189,8 +187,8 @@ func (uc *UpdatePresetUseCase) UpdateEnergyPreset(req *UpdateEnergyPresetRequest
 		return nil, entities.ErrInvalidPresetType
 	}
 
-	// Get existing energy data
-	energy, err := uc.presetRepo.GetEnergyByID(req.ID)
+	// Get existing energy data (organization-scoped)
+	energy, err := uc.presetRepo.GetEnergyByID(req.ID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -247,21 +245,18 @@ func (uc *UpdatePresetUseCase) UpdateEnergyPreset(req *UpdateEnergyPresetRequest
 		return nil, err
 	}
 
-	// Save updates
-	if err := uc.presetRepo.Update(preset); err != nil {
-		return nil, err
-	}
-	if err := uc.presetRepo.UpdateEnergy(energy); err != nil {
+	// Persist both rows atomically (organization-scoped).
+	if err := uc.presetRepo.UpdateEnergyWithPreset(preset, energy); err != nil {
 		return nil, err
 	}
 
 	return preset, nil
 }
 
-// UpdateCostPreset updates an existing cost preset
-func (uc *UpdatePresetUseCase) UpdateCostPreset(req *UpdateCostPresetRequest) (*entities.PresetEntity, error) {
-	// Get existing preset
-	preset, err := uc.presetRepo.GetByID(req.ID)
+// UpdateCostPreset updates an existing cost preset within the organization scope.
+func (uc *UpdatePresetUseCase) UpdateCostPreset(req *UpdateCostPresetRequest, organizationID string) (*entities.PresetEntity, error) {
+	// Get existing preset (organization-scoped)
+	preset, err := uc.presetRepo.GetByID(req.ID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -271,8 +266,8 @@ func (uc *UpdatePresetUseCase) UpdateCostPreset(req *UpdateCostPresetRequest) (*
 		return nil, entities.ErrInvalidPresetType
 	}
 
-	// Get existing cost data
-	cost, err := uc.presetRepo.GetCostByID(req.ID)
+	// Get existing cost data (organization-scoped)
+	cost, err := uc.presetRepo.GetCostByID(req.ID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -329,11 +324,8 @@ func (uc *UpdatePresetUseCase) UpdateCostPreset(req *UpdateCostPresetRequest) (*
 		return nil, err
 	}
 
-	// Save updates
-	if err := uc.presetRepo.Update(preset); err != nil {
-		return nil, err
-	}
-	if err := uc.presetRepo.UpdateCost(cost); err != nil {
+	// Persist both rows atomically (organization-scoped).
+	if err := uc.presetRepo.UpdateCostWithPreset(preset, cost); err != nil {
 		return nil, err
 	}
 

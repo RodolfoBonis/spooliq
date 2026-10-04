@@ -17,7 +17,10 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.POST("/:id/duplicate", protectFactory(useCase.Duplicate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
-		budgetRoutes.GET("/:id/calculate", protectFactory(useCase.Recalculate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Recalculate (mutates stored costs) is a POST and only allowed for drafts.
+		budgetRoutes.POST("/:id/recalculate", protectFactory(useCase.Recalculate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Deprecated: read-only view of stored costs (kept for backward compatibility).
+		budgetRoutes.GET("/:id/calculate", protectFactory(useCase.GetCalculation, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id/history", protectFactory(useCase.GetHistory, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/by-customer/:customer_id", protectFactory(useCase.FindByCustomer, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id/pdf", protectFactory(useCase.GeneratePDF, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))

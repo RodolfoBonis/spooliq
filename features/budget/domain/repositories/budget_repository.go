@@ -9,11 +9,28 @@ import (
 
 // BudgetRepository defines the interface for budget data operations
 type BudgetRepository interface {
+	// Transaction wraps the given function in a single database transaction.
+	// The repository passed to fn is bound to the transaction; any returned
+	// error rolls back all changes made within fn.
+	WithTransaction(ctx context.Context, fn func(repo BudgetRepository) error) error
+
 	// Basic CRUD operations
 	Create(ctx context.Context, budget *entities.BudgetEntity) error
 	FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.BudgetEntity, error)
+	// Update persists editable budget fields. It is guarded to draft budgets:
+	// it returns entities.ErrBudgetNotEditable if the budget is not a draft (or
+	// does not belong to the organization). Status is owned by UpdateStatus and
+	// the PDF URL may be cleared here but is otherwise owned by UpdatePDFURL.
 	Update(ctx context.Context, budget *entities.BudgetEntity) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	// UpdateStatus writes only the status column (and updated_at), scoped by
+	// organization. It is the sole owner of the status column so a concurrent
+	// full Update cannot revert an approval.
+	UpdateStatus(ctx context.Context, budgetID uuid.UUID, organizationID string, status entities.BudgetStatus) error
+	// UpdatePDFURL writes only the pdf_url column (and updated_at), scoped by
+	// organization and allowed in any status (PDFs are generated for approved
+	// budgets, not only drafts).
+	UpdatePDFURL(ctx context.Context, budgetID uuid.UUID, organizationID string, pdfURL *string) error
+	Delete(ctx context.Context, id uuid.UUID, organizationID string) error
 
 	// List operations
 	FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.BudgetEntity, int, error)
@@ -27,14 +44,14 @@ type BudgetRepository interface {
 	RemoveItem(ctx context.Context, itemID uuid.UUID) error
 	UpdateItem(ctx context.Context, item *entities.BudgetItemEntity) error
 	GetItems(ctx context.Context, budgetID uuid.UUID) ([]*entities.BudgetItemEntity, error)
-	DeleteAllItems(ctx context.Context, budgetID uuid.UUID) error
+	DeleteAllItems(ctx context.Context, budgetID uuid.UUID, organizationID string) error
 
 	// Item Filament operations (NEW - multi-filament support)
 	AddItemFilament(ctx context.Context, filament *entities.BudgetItemFilamentEntity) error
 	RemoveItemFilament(ctx context.Context, filamentID uuid.UUID) error
 	GetItemFilaments(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemFilamentEntity, error)
 	DeleteAllItemFilaments(ctx context.Context, itemID uuid.UUID) error
-	GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID) ([]entities.FilamentUsageInfo, error)
+	GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID, organizationID string) ([]entities.FilamentUsageInfo, error)
 
 	// Status history operations
 	AddStatusHistory(ctx context.Context, history *entities.BudgetStatusHistoryEntity) error
@@ -43,10 +60,17 @@ type BudgetRepository interface {
 	// Calculation operations
 	CalculateCosts(ctx context.Context, budgetID uuid.UUID) error
 
+	// Ownership validation (multi-tenant guards)
+	ValidateFilamentsInOrg(ctx context.Context, filamentIDs []uuid.UUID, organizationID string) error
+	// ValidatePresetInOrg ensures the preset belongs to the organization AND is
+	// of the expected type (machine/energy/cost). It only accepts live presets
+	// (deleted_at IS NULL) because it validates freshly provided references.
+	ValidatePresetInOrg(ctx context.Context, presetID uuid.UUID, presetType string, organizationID string) error
+
 	// Relationship helpers
-	GetCustomerInfo(ctx context.Context, customerID uuid.UUID) (*entities.CustomerInfo, error)
-	GetFilamentInfo(ctx context.Context, filamentID uuid.UUID) (*entities.FilamentInfo, error)
-	GetPresetInfo(ctx context.Context, presetID uuid.UUID, presetType string) (*entities.PresetInfo, error)
+	GetCustomerInfo(ctx context.Context, customerID uuid.UUID, organizationID string) (*entities.CustomerInfo, error)
+	GetFilamentInfo(ctx context.Context, filamentID uuid.UUID, organizationID string) (*entities.FilamentInfo, error)
+	GetPresetInfo(ctx context.Context, presetID uuid.UUID, presetType string, organizationID string) (*entities.PresetInfo, error)
 	GetCompanyByOrganizationID(ctx context.Context, organizationID string) (*entities.CompanyInfo, error)
 	FindItemsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]*entities.BudgetItemEntity, error)
 }

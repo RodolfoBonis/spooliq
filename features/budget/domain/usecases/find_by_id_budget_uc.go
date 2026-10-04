@@ -62,7 +62,7 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 	}
 
 	// Get customer info
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 
 	// Get items with filaments
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
@@ -71,7 +71,7 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 
 	for i, item := range items {
 		// Get filament usage info for this item
-		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID, organizationID)
 
 		// Calculate print time display
 		printTimeDisplay := ""

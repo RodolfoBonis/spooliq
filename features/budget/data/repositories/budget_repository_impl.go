@@ -10,6 +10,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/budget/data/models"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -21,6 +22,15 @@ type budgetRepositoryImpl struct {
 // NewBudgetRepository creates a new instance of BudgetRepository
 func NewBudgetRepository(db *gorm.DB) repositories.BudgetRepository {
 	return &budgetRepositoryImpl{db: db}
+}
+
+// WithTransaction runs fn inside a single database transaction. The repository
+// handed to fn is bound to the transaction so every write participates in it;
+// returning an error rolls everything back.
+func (r *budgetRepositoryImpl) WithTransaction(ctx context.Context, fn func(repo repositories.BudgetRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(&budgetRepositoryImpl{db: tx})
+	})
 }
 
 func (r *budgetRepositoryImpl) Create(ctx context.Context, budget *entities.BudgetEntity) error {
@@ -62,23 +72,100 @@ func (r *budgetRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, organ
 	return model.ToEntity(), nil
 }
 
+// Update persists editable budget fields using an explicit column set so that
+// zero values (false flags, nil presets, cleared pdf_url) are written back.
+// GORM's Updates(struct) skips zero values, which previously made it impossible
+// to turn flags off or clear optional references.
+//
+// The status column is intentionally NOT written here: it is owned exclusively by
+// UpdateStatus. Writing status from a full Update caused a race where a PUT that
+// read the budget as a draft could silently revert a concurrent PATCH approval.
+// Cost columns are owned by CalculateCosts.
+//
+// The write is guarded to drafts belonging to the organization
+// (WHERE id = ? AND organization_id = ? AND status = 'draft'). If no row matches
+// (the budget was approved/deleted by a concurrent request, or belongs to another
+// tenant) it returns entities.ErrBudgetNotEditable so callers can surface a 409
+// Conflict instead of silently succeeding.
 func (r *budgetRepositoryImpl) Update(ctx context.Context, budget *entities.BudgetEntity) error {
 	model := &models.BudgetModel{}
 	model.FromEntity(budget)
 
-	// Use Updates instead of Save to avoid issues with zero values
-	if err := r.db.WithContext(ctx).
+	updates := map[string]interface{}{
+		"name":                model.Name,
+		"description":         model.Description,
+		"customer_id":         model.CustomerID,
+		"machine_preset_id":   model.MachinePresetID,
+		"energy_preset_id":    model.EnergyPresetID,
+		"cost_preset_id":      model.CostPresetID,
+		"include_energy_cost": model.IncludeEnergyCost,
+		"include_waste_cost":  model.IncludeWasteCost,
+		"delivery_days":       model.DeliveryDays,
+		"payment_terms":       model.PaymentTerms,
+		"notes":               model.Notes,
+		"pdf_url":             model.PDFUrl,
+		"updated_at":          model.UpdatedAt,
+	}
+
+	result := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).
-		Where("id = ?", budget.ID).
-		Updates(model).Error; err != nil {
-		return fmt.Errorf("failed to update budget: %w", err)
+		Where("id = ? AND organization_id = ? AND status = ?", budget.ID, budget.OrganizationID, string(entities.StatusDraft)).
+		Updates(updates)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update budget: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrBudgetNotEditable
 	}
 
 	return nil
 }
 
-func (r *budgetRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
-	if err := r.db.WithContext(ctx).Delete(&models.BudgetModel{}, "id = ?", id).Error; err != nil {
+// UpdateStatus writes only the status column (and updated_at), scoped by
+// organization. It is the single owner of the status column; keeping status
+// writes out of the generic Update prevents a concurrent full edit from
+// reverting a status transition.
+func (r *budgetRepositoryImpl) UpdateStatus(ctx context.Context, budgetID uuid.UUID, organizationID string, status entities.BudgetStatus) error {
+	result := r.db.WithContext(ctx).
+		Model(&models.BudgetModel{}).
+		Where("id = ? AND organization_id = ?", budgetID, organizationID).
+		Updates(map[string]interface{}{
+			"status":     string(status),
+			"updated_at": time.Now(),
+		})
+	if result.Error != nil {
+		return fmt.Errorf("failed to update budget status: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrBudgetNotFound
+	}
+	return nil
+}
+
+// UpdatePDFURL writes only the pdf_url column (and updated_at), scoped by
+// organization. Unlike Update it is NOT restricted to drafts, because PDFs are
+// generated for approved/sent budgets.
+func (r *budgetRepositoryImpl) UpdatePDFURL(ctx context.Context, budgetID uuid.UUID, organizationID string, pdfURL *string) error {
+	result := r.db.WithContext(ctx).
+		Model(&models.BudgetModel{}).
+		Where("id = ? AND organization_id = ?", budgetID, organizationID).
+		Updates(map[string]interface{}{
+			"pdf_url":    pdfURL,
+			"updated_at": time.Now(),
+		})
+	if result.Error != nil {
+		return fmt.Errorf("failed to update budget pdf url: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrBudgetNotFound
+	}
+	return nil
+}
+
+func (r *budgetRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organizationID string) error {
+	if err := r.db.WithContext(ctx).
+		Where("organization_id = ?", organizationID).
+		Delete(&models.BudgetModel{}, "id = ?", id).Error; err != nil {
 		return fmt.Errorf("failed to delete budget: %w", err)
 	}
 	return nil
@@ -147,6 +234,9 @@ func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, organizationID
 
 	query := r.db.WithContext(ctx).Model(&models.BudgetModel{})
 
+	// Always scope to organization
+	query = query.Where("organization_id = ?", organizationID)
+
 	// Apply filters
 	if name, ok := filters["name"].(string); ok && name != "" {
 		query = query.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(name)+"%")
@@ -203,14 +293,29 @@ func (r *budgetRepositoryImpl) RemoveItem(ctx context.Context, itemID uuid.UUID)
 	return nil
 }
 
+// UpdateItem persists the calculated cost columns of a budget item. It writes an
+// explicit column set (not Updates(struct)) so that zero-valued costs are
+// persisted: GORM's Updates(struct) skips zero fields, which previously left a
+// stale EnergyCost on an item after energy was turned off even though the budget
+// totals (recomputed from scratch) dropped to 0. Only cost columns are touched;
+// product/time fields are owned by the item replacement path. The write is scoped
+// by organization as defense-in-depth.
 func (r *budgetRepositoryImpl) UpdateItem(ctx context.Context, item *entities.BudgetItemEntity) error {
-	model := &models.BudgetItemModel{}
-	model.FromEntity(item)
+	updates := map[string]interface{}{
+		"filament_cost":     item.FilamentCost,
+		"waste_cost":        item.WasteCost,
+		"energy_cost":       item.EnergyCost,
+		"setup_cost":        item.SetupCost,
+		"manual_labor_cost": item.ManualLaborCost,
+		"item_total_cost":   item.ItemTotalCost,
+		"unit_price":        item.UnitPrice,
+		"updated_at":        time.Now(),
+	}
 
 	if err := r.db.WithContext(ctx).
 		Model(&models.BudgetItemModel{}).
-		Where("id = ?", item.ID).
-		Updates(model).Error; err != nil {
+		Where("id = ? AND organization_id = ?", item.ID, item.OrganizationID).
+		Updates(updates).Error; err != nil {
 		return fmt.Errorf("failed to update budget item: %w", err)
 	}
 
@@ -235,9 +340,9 @@ func (r *budgetRepositoryImpl) GetItems(ctx context.Context, budgetID uuid.UUID)
 	return entities, nil
 }
 
-func (r *budgetRepositoryImpl) DeleteAllItems(ctx context.Context, budgetID uuid.UUID) error {
+func (r *budgetRepositoryImpl) DeleteAllItems(ctx context.Context, budgetID uuid.UUID, organizationID string) error {
 	if err := r.db.WithContext(ctx).
-		Where("budget_id = ?", budgetID).
+		Where("budget_id = ? AND organization_id = ?", budgetID, organizationID).
 		Delete(&models.BudgetItemModel{}).Error; err != nil {
 		return fmt.Errorf("failed to delete budget items: %w", err)
 	}
@@ -291,8 +396,9 @@ func (r *budgetRepositoryImpl) DeleteAllItemFilaments(ctx context.Context, itemI
 	return nil
 }
 
-// GetFilamentUsageInfo retrieves detailed filament usage info for a budget item
-func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID) ([]entities.FilamentUsageInfo, error) {
+// GetFilamentUsageInfo retrieves detailed filament usage info for a budget item,
+// scoped by organization (the budget_item_filaments rows carry organization_id).
+func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID, organizationID string) ([]entities.FilamentUsageInfo, error) {
 	// Get filaments with all related info via JOIN
 	var results []struct {
 		FilamentID   uuid.UUID
@@ -328,7 +434,7 @@ func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID 
 		Joins("JOIN filaments f ON f.id = bif.filament_id").
 		Joins("JOIN brands b ON b.id = f.brand_id").
 		Joins("JOIN materials m ON m.id = f.material_id").
-		Where("bif.budget_item_id = ?", itemID).
+		Where("bif.budget_item_id = ? AND bif.organization_id = ?", itemID, organizationID).
 		Order("bif.\"order\" ASC").
 		Scan(&results).Error
 
@@ -337,24 +443,24 @@ func (r *budgetRepositoryImpl) GetFilamentUsageInfo(ctx context.Context, itemID 
 	}
 
 	infos := make([]entities.FilamentUsageInfo, len(results))
-	for i, r := range results {
-		// Quantity já é o total, não precisa multiplicar!
-		// PricePerKg is already in cents, so no need to multiply by 100
-		cost := int64((r.Quantity / 1000.0) * r.PricePerKg)
+	for i, res := range results {
+		// Quantity is the total grams for the item. price_per_kg is in CENTS/kg,
+		// costs are stored in CENTS => convert and round to the nearest cent.
+		cost := pricing.FilamentCostCents(res.Quantity, res.PricePerKg)
 
 		infos[i] = entities.FilamentUsageInfo{
-			FilamentID:   r.FilamentID.String(),
-			FilamentName: r.FilamentName,
-			BrandName:    r.BrandName,
-			MaterialName: r.MaterialName,
-			Color:        r.Color,
-			ColorType:    r.ColorType,
-			ColorData:    json.RawMessage(r.ColorData), // Convert []byte to json.RawMessage
-			ColorHex:     r.ColorHex,
-			ColorPreview: r.ColorPreview,
-			Quantity:     r.Quantity,
+			FilamentID:   res.FilamentID.String(),
+			FilamentName: res.FilamentName,
+			BrandName:    res.BrandName,
+			MaterialName: res.MaterialName,
+			Color:        res.Color,
+			ColorType:    res.ColorType,
+			ColorData:    json.RawMessage(res.ColorData), // Convert []byte to json.RawMessage
+			ColorHex:     res.ColorHex,
+			ColorPreview: res.ColorPreview,
+			Quantity:     res.Quantity,
 			Cost:         cost,
-			Order:        r.Order,
+			Order:        res.Order,
 		}
 	}
 
@@ -392,7 +498,21 @@ func (r *budgetRepositoryImpl) GetStatusHistory(ctx context.Context, budgetID uu
 	return entities, nil
 }
 
-// CalculateCosts calculates all costs for a budget (REFACTORED for multi-filament support)
+// CalculateCosts calculates all costs for a budget (multi-filament aware).
+//
+// All monetary results are stored in CENTS; filament price_per_kg comes in CENTS,
+// energy/labor preset rates come in REAIS. Every conversion rounds to the nearest cent via
+// the pure helpers in the budget domain services package. All lookups are scoped
+// by the budget's organization so cross-tenant references cannot leak into the
+// calculation, and every error is propagated instead of being silently ignored.
+//
+// Historical consistency: presets are resolved by (id, organization) WITHOUT a
+// deleted_at filter, so a preset that was referenced by this budget and later
+// soft-deleted is still usable here. Rejecting soft-deleted presets would make an
+// already-saved budget impossible to recalculate (or even rename). New references
+// are validated separately (see ValidatePresetInOrg, which does require the preset
+// to be live). If a referenced preset ID is set but its typed child row cannot be
+// found, this returns an error instead of silently charging 0.
 func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid.UUID) error {
 	// Get budget
 	var budget models.BudgetModel
@@ -400,21 +520,84 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		return fmt.Errorf("failed to get budget: %w", err)
 	}
 
+	organizationID := budget.OrganizationID
+
 	// Get items
 	items, err := r.GetItems(ctx, budgetID)
 	if err != nil {
 		return err
 	}
 
-	// Get machine and energy presets (global)
+	// Get machine and energy presets (scoped by organization)
 	var machinePreset *entities.PresetInfo
 	var energyPreset *entities.PresetInfo
 
 	if budget.MachinePresetID != nil {
-		machinePreset, _ = r.GetPresetInfo(ctx, *budget.MachinePresetID, "machine")
+		machinePreset, err = r.GetPresetInfo(ctx, *budget.MachinePresetID, "machine", organizationID)
+		if err != nil {
+			return fmt.Errorf("failed to load machine preset: %w", err)
+		}
 	}
 	if budget.EnergyPresetID != nil {
-		energyPreset, _ = r.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy")
+		energyPreset, err = r.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy", organizationID)
+		if err != nil {
+			return fmt.Errorf("failed to load energy preset: %w", err)
+		}
+	}
+
+	// Hoist the energy inputs out of the per-item loop: the machine power draw and
+	// the energy price per kWh are budget-level and constant across items, so they
+	// are loaded once (if energy is enabled) instead of once per item.
+	var powerConsumption float64
+	var energyPrice float64
+	energyEnabled := budget.IncludeEnergyCost && machinePreset != nil && energyPreset != nil
+	if energyEnabled {
+		res := r.db.WithContext(ctx).
+			Table("machine_presets").
+			Select("power_consumption").
+			Where("id = ? AND organization_id = ?", *budget.MachinePresetID, organizationID).
+			Scan(&powerConsumption)
+		if res.Error != nil {
+			return fmt.Errorf("failed to load machine power consumption: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return fmt.Errorf("machine preset %s not found for organization", *budget.MachinePresetID)
+		}
+
+		res = r.db.WithContext(ctx).
+			Table("energy_presets").
+			Select("energy_cost_per_kwh").
+			Where("id = ? AND organization_id = ?", *budget.EnergyPresetID, organizationID).
+			Scan(&energyPrice)
+		if res.Error != nil {
+			return fmt.Errorf("failed to load energy price: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return fmt.Errorf("energy preset %s not found for organization", *budget.EnergyPresetID)
+		}
+	}
+
+	// Cache cost-preset labor rates so each distinct preset is loaded at most once
+	// across all items (and the budget-level fallback) instead of once per item.
+	laborRateCache := make(map[uuid.UUID]float64)
+	laborRateFor := func(presetID uuid.UUID) (float64, error) {
+		if rate, ok := laborRateCache[presetID]; ok {
+			return rate, nil
+		}
+		var rate float64
+		res := r.db.WithContext(ctx).
+			Table("cost_presets").
+			Select("labor_cost_per_hour").
+			Where("id = ? AND organization_id = ?", presetID, organizationID).
+			Scan(&rate)
+		if res.Error != nil {
+			return 0, fmt.Errorf("failed to load labor rate: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return 0, fmt.Errorf("cost preset %s not found for organization", presetID)
+		}
+		laborRateCache[presetID] = rate
+		return rate, nil
 	}
 
 	var totalFilamentCost, totalWasteCost, totalEnergyCost, totalSetupCost, totalManualLaborCost int64
@@ -430,20 +613,16 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		}
 
 		// 2. Calculate filament cost (sum of all filaments in this item)
-		var totalGrams float64
 		var avgPrice float64
 		var totalPrice float64
 
 		for _, itemFil := range itemFilaments {
-			filament, err := r.GetFilamentInfo(ctx, itemFil.FilamentID)
+			filament, err := r.GetFilamentInfo(ctx, itemFil.FilamentID, organizationID)
 			if err != nil {
-				continue
+				return fmt.Errorf("failed to load filament %s: %w", itemFil.FilamentID, err)
 			}
 
-			gramsTotal := itemFil.Quantity
-			cost := (gramsTotal / 1000.0) * filament.PricePerKg
-			itemFilamentCost += int64(cost)
-			totalGrams += gramsTotal
+			itemFilamentCost += pricing.FilamentCostCents(itemFil.Quantity, filament.PricePerKg)
 			totalPrice += filament.PricePerKg
 		}
 
@@ -456,58 +635,26 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			wastePerChange := 15.0 // grams
 			numChanges := len(itemFilaments) - 1
 			totalWaste := wastePerChange * float64(numChanges)
-			itemWasteCost = int64((totalWaste / 1000.0) * avgPrice)
+			itemWasteCost = pricing.WasteCostCents(totalWaste, avgPrice)
 		}
 
 		// 4. Calculate energy cost (proportional to this item's print time)
-		if budget.IncludeEnergyCost && machinePreset != nil && energyPreset != nil {
-			// Get power consumption from machine preset
-			var powerConsumption float64
-			r.db.WithContext(ctx).
-				Table("machine_presets").
-				Select("power_consumption").
-				Where("id = ?", machinePreset.ID).
-				Scan(&powerConsumption)
-
-			// Get energy price from energy preset
-			var energyPrice float64
-			r.db.WithContext(ctx).
-				Table("energy_presets").
-				Select("energy_cost_per_kwh").
-				Where("id = ?", energyPreset.ID).
-				Scan(&energyPrice)
-
-			if powerConsumption > 0 && energyPrice > 0 {
-				itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
-				kwh := powerConsumption * itemHours / 1000.0    // Convert watts to kilowatts
-				itemEnergyCost = int64(kwh * energyPrice * 100) // Convert to cents
-			}
+		if energyEnabled {
+			itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
+			itemEnergyCost = pricing.EnergyCostCents(powerConsumption, itemHours, energyPrice)
 		}
 
-		// 5. Calculate setup cost (NEW)
-		// 6. Calculate manual labor cost (NEW)
+		// 5 & 6. Calculate setup cost and manual labor cost
 		var laborRate float64
 		if item.CostPresetID != nil {
-			r.db.WithContext(ctx).
-				Table("cost_presets").
-				Select("labor_cost_per_hour").
-				Where("id = ?", *item.CostPresetID).
-				Scan(&laborRate)
-		}
-
-		if laborRate > 0 {
-			// Setup cost: (SetupTimeMinutes / 60) * LaborCostPerHour * 100
-			if item.SetupTimeMinutes > 0 {
-				setupHours := float64(item.SetupTimeMinutes) / 60.0
-				itemSetupCost = int64(setupHours * laborRate * 100) // Convert to cents
-			}
-
-			// Manual labor cost: (ManualLaborMinutesTotal / 60) * LaborCostPerHour * 100
-			if item.ManualLaborMinutesTotal > 0 {
-				manualLaborHours := float64(item.ManualLaborMinutesTotal) / 60.0
-				itemManualLaborCost = int64(manualLaborHours * laborRate * 100) // Convert to cents
+			laborRate, err = laborRateFor(*item.CostPresetID)
+			if err != nil {
+				return err
 			}
 		}
+
+		itemSetupCost = pricing.LaborCostCents(item.SetupTimeMinutes, laborRate)
+		itemManualLaborCost = pricing.LaborCostCents(item.ManualLaborMinutesTotal, laborRate)
 
 		// 7. Calculate item total cost
 		item.FilamentCost = itemFilamentCost
@@ -518,9 +665,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		item.ItemTotalCost = itemFilamentCost + itemWasteCost + itemEnergyCost + itemSetupCost + itemManualLaborCost
 
 		// 8. Calculate unit price
-		if item.ProductQuantity > 0 {
-			item.UnitPrice = item.ItemTotalCost / int64(item.ProductQuantity)
-		}
+		item.UnitPrice = pricing.UnitPriceCents(item.ItemTotalCost, item.ProductQuantity)
 
 		// 9. Update item in database
 		if err := r.UpdateItem(ctx, item); err != nil {
@@ -538,41 +683,41 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 	// Calculate budget subtotal (before overhead and profit)
 	budgetSubtotal := totalFilamentCost + totalWasteCost + totalEnergyCost + totalSetupCost + totalManualLaborCost
 
-	// Calculate overhead and profit (NEW)
+	// Calculate overhead and profit
 	var overheadCost, profitAmount int64
 
-	// Get overhead and profit percentages from the first item's CostPreset (or budget's CostPreset if available)
 	var costPreset struct {
 		OverheadPercentage     float64
 		ProfitMarginPercentage float64
 	}
 
-	// Try to get from budget-level CostPreset first
+	// Try to get from budget-level CostPreset first, fall back to first item's CostPreset.
+	var costPresetID *uuid.UUID
 	if budget.CostPresetID != nil {
-		r.db.WithContext(ctx).
-			Table("cost_presets").
-			Select("overhead_percentage, profit_margin_percentage").
-			Where("id = ?", *budget.CostPresetID).
-			Scan(&costPreset)
+		costPresetID = budget.CostPresetID
 	} else if len(items) > 0 && items[0].CostPresetID != nil {
-		// Fallback to first item's CostPreset
-		r.db.WithContext(ctx).
+		costPresetID = items[0].CostPresetID
+	}
+
+	if costPresetID != nil {
+		res := r.db.WithContext(ctx).
 			Table("cost_presets").
 			Select("overhead_percentage, profit_margin_percentage").
-			Where("id = ?", *items[0].CostPresetID).
+			Where("id = ? AND organization_id = ?", *costPresetID, organizationID).
 			Scan(&costPreset)
+		if res.Error != nil {
+			return fmt.Errorf("failed to load cost preset percentages: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return fmt.Errorf("cost preset %s not found for organization", *costPresetID)
+		}
 	}
 
-	// Calculate overhead: Subtotal * (OverheadPercentage / 100)
-	if costPreset.OverheadPercentage > 0 {
-		overheadCost = int64(float64(budgetSubtotal) * (costPreset.OverheadPercentage / 100.0))
-	}
+	// Overhead: Subtotal * (OverheadPercentage / 100)
+	overheadCost = pricing.PercentageCents(budgetSubtotal, costPreset.OverheadPercentage)
 
-	// Calculate profit: (Subtotal + Overhead) * (ProfitMarginPercentage / 100)
-	if costPreset.ProfitMarginPercentage > 0 {
-		baseForProfit := budgetSubtotal + overheadCost
-		profitAmount = int64(float64(baseForProfit) * (costPreset.ProfitMarginPercentage / 100.0))
-	}
+	// Profit: (Subtotal + Overhead) * (ProfitMarginPercentage / 100)
+	profitAmount = pricing.PercentageCents(budgetSubtotal+overheadCost, costPreset.ProfitMarginPercentage)
 
 	// Update budget totals
 	budget.FilamentCost = totalFilamentCost
@@ -586,7 +731,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 
 	if err := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).
-		Where("id = ?", budgetID).
+		Where("id = ? AND organization_id = ?", budgetID, organizationID).
 		Updates(map[string]interface{}{
 			"filament_cost": budget.FilamentCost,
 			"waste_cost":    budget.WasteCost,
@@ -603,8 +748,65 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 	return nil
 }
 
-// GetCustomerInfo fetches customer information by ID
-func (r *budgetRepositoryImpl) GetCustomerInfo(ctx context.Context, customerID uuid.UUID) (*entities.CustomerInfo, error) {
+// ValidateFilamentsInOrg ensures every filament ID belongs to the given
+// organization. Filaments are strictly tenant-scoped (the filament model has a
+// NOT NULL organization_id, there is no global/shared filament), so any filament
+// outside the caller's organization is rejected.
+func (r *budgetRepositoryImpl) ValidateFilamentsInOrg(ctx context.Context, filamentIDs []uuid.UUID, organizationID string) error {
+	if len(filamentIDs) == 0 {
+		return nil
+	}
+
+	// De-duplicate so the count comparison is accurate.
+	seen := make(map[uuid.UUID]struct{}, len(filamentIDs))
+	unique := make([]uuid.UUID, 0, len(filamentIDs))
+	for _, id := range filamentIDs {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+
+	var count int64
+	if err := r.db.WithContext(ctx).
+		Table("filaments").
+		Where("id IN ? AND organization_id = ? AND deleted_at IS NULL", unique, organizationID).
+		Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to validate filaments: %w", err)
+	}
+
+	if int(count) != len(unique) {
+		return fmt.Errorf("one or more referenced filaments do not belong to your organization")
+	}
+
+	return nil
+}
+
+// ValidatePresetInOrg ensures the preset ID belongs to the given organization AND
+// has the expected type (machine/energy/cost). The type check prevents, for
+// example, a cost preset being accepted as a machine_preset_id, which would later
+// cause the typed child-row lookup in CalculateCosts to find nothing and silently
+// charge 0. Only live presets (deleted_at IS NULL) are accepted: this validates
+// freshly provided references, so a soft-deleted preset must not be re-attachable.
+func (r *budgetRepositoryImpl) ValidatePresetInOrg(ctx context.Context, presetID uuid.UUID, presetType string, organizationID string) error {
+	var count int64
+	if err := r.db.WithContext(ctx).
+		Table("presets").
+		Where("id = ? AND organization_id = ? AND type = ? AND deleted_at IS NULL", presetID, organizationID, presetType).
+		Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to validate preset: %w", err)
+	}
+
+	if count == 0 {
+		return fmt.Errorf("referenced %s preset %s does not belong to your organization", presetType, presetID)
+	}
+
+	return nil
+}
+
+// GetCustomerInfo fetches customer information by ID, scoped by organization.
+func (r *budgetRepositoryImpl) GetCustomerInfo(ctx context.Context, customerID uuid.UUID, organizationID string) (*entities.CustomerInfo, error) {
 	var customer struct {
 		ID       uuid.UUID `gorm:"column:id"`
 		Name     string    `gorm:"column:name"`
@@ -616,7 +818,7 @@ func (r *budgetRepositoryImpl) GetCustomerInfo(ctx context.Context, customerID u
 	if err := r.db.WithContext(ctx).
 		Table("customers").
 		Select("id, name, email, phone, document").
-		Where("id = ?", customerID).
+		Where("id = ? AND organization_id = ?", customerID, organizationID).
 		First(&customer).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch customer: %w", err)
 	}
@@ -630,8 +832,8 @@ func (r *budgetRepositoryImpl) GetCustomerInfo(ctx context.Context, customerID u
 	}, nil
 }
 
-// GetFilamentInfo fetches filament information by ID
-func (r *budgetRepositoryImpl) GetFilamentInfo(ctx context.Context, filamentID uuid.UUID) (*entities.FilamentInfo, error) {
+// GetFilamentInfo fetches filament information by ID, scoped by organization.
+func (r *budgetRepositoryImpl) GetFilamentInfo(ctx context.Context, filamentID uuid.UUID, organizationID string) (*entities.FilamentInfo, error) {
 	var filament struct {
 		ID         uuid.UUID `gorm:"column:id"`
 		Name       string    `gorm:"column:name"`
@@ -644,26 +846,30 @@ func (r *budgetRepositoryImpl) GetFilamentInfo(ctx context.Context, filamentID u
 	if err := r.db.WithContext(ctx).
 		Table("filaments").
 		Select("id, name, color, price_per_kg, brand_id, material_id").
-		Where("id = ?", filamentID).
+		Where("id = ? AND organization_id = ?", filamentID, organizationID).
 		First(&filament).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch filament: %w", err)
 	}
 
 	// Get brand name
 	var brandName string
-	r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Table("brands").
 		Select("name").
 		Where("id = ?", filament.BrandID).
-		Scan(&brandName)
+		Scan(&brandName).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch filament brand: %w", err)
+	}
 
 	// Get material name
 	var materialName string
-	r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Table("materials").
 		Select("name").
 		Where("id = ?", filament.MaterialID).
-		Scan(&materialName)
+		Scan(&materialName).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch filament material: %w", err)
+	}
 
 	return &entities.FilamentInfo{
 		ID:           filament.ID.String(),
@@ -675,8 +881,13 @@ func (r *budgetRepositoryImpl) GetFilamentInfo(ctx context.Context, filamentID u
 	}, nil
 }
 
-// GetPresetInfo fetches preset information by ID
-func (r *budgetRepositoryImpl) GetPresetInfo(ctx context.Context, presetID uuid.UUID, presetType string) (*entities.PresetInfo, error) {
+// GetPresetInfo fetches preset information by ID, scoped by organization and type.
+//
+// Historical consistency: this intentionally does NOT filter on deleted_at, so a
+// preset referenced by an existing budget that was later soft-deleted is still
+// resolvable here (used by CalculateCosts). Freshly provided references are vetted
+// by ValidatePresetInOrg, which does require the preset to be live.
+func (r *budgetRepositoryImpl) GetPresetInfo(ctx context.Context, presetID uuid.UUID, presetType string, organizationID string) (*entities.PresetInfo, error) {
 	// First get the basic preset info from the main presets table
 	var basePreset struct {
 		ID   uuid.UUID `gorm:"column:id"`
@@ -687,9 +898,9 @@ func (r *budgetRepositoryImpl) GetPresetInfo(ctx context.Context, presetID uuid.
 	if err := r.db.WithContext(ctx).
 		Table("presets").
 		Select("id, name, type").
-		Where("id = ?", presetID).
+		Where("id = ? AND organization_id = ? AND type = ?", presetID, organizationID, presetType).
 		First(&basePreset).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch preset: %w", err)
+		return nil, fmt.Errorf("failed to fetch %s preset: %w", presetType, err)
 	}
 
 	return &entities.PresetInfo{

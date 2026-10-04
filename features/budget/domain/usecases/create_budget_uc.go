@@ -9,6 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -92,6 +93,16 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
+	// Validate that every referenced preset/filament belongs to the organization.
+	if err := uc.validateReferences(ctx, organizationID, request.MachinePresetID, request.EnergyPresetID, nil, request.Items); err != nil {
+		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{
+			"error": err.Error(),
+		})
+		appError := coreErrors.BadRequestError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
 	// Create budget entity (without global print time - now calculated from items)
 	budget := &entities.BudgetEntity{
 		ID:                uuid.New(),
@@ -112,16 +123,6 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		UpdatedAt:         time.Now(),
 	}
 
-	// Save budget
-	if err := uc.budgetRepository.Create(ctx, budget); err != nil {
-		uc.logger.Error(ctx, "Failed to create budget", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
 	// Record initial status history for the draft status
 	initialHistory := &entities.BudgetStatusHistoryEntity{
 		ID:             uuid.New(),
@@ -133,86 +134,39 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		CreatedAt:      time.Now(),
 	}
 
-	if err := uc.budgetRepository.AddStatusHistory(ctx, initialHistory); err != nil {
-		uc.logger.Error(ctx, "Failed to save initial status history", map[string]interface{}{
-			"error":     err.Error(),
-			"budget_id": budget.ID,
-		})
-	}
+	// Build items (+ filaments) consistently with OrganizationID and legacy columns.
+	built := buildBudgetItems(budget.ID, organizationID, request.Items)
 
-	// Create budget items (products) with their filaments
-	for _, itemReq := range request.Items {
-		// Use the first filament as the primary filament (for backward compatibility)
-		var primaryFilamentID uuid.UUID
-		if len(itemReq.Filaments) > 0 {
-			primaryFilamentID = itemReq.Filaments[0].FilamentID
+	// Persist everything atomically: budget, status history, items, filaments and
+	// cost calculation all succeed together or roll back together.
+	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		if err := repo.Create(ctx, budget); err != nil {
+			return err
 		}
-
-		item := &entities.BudgetItemEntity{
-			ID:                      uuid.New(),
-			BudgetID:                budget.ID,
-			FilamentID:              primaryFilamentID,
-			OrganizationID:          organizationID,
-			ProductName:             itemReq.ProductName,
-			ProductDescription:      itemReq.ProductDescription,
-			ProductQuantity:         itemReq.ProductQuantity,
-			ProductDimensions:       itemReq.ProductDimensions,
-			PrintTimeHours:          itemReq.PrintTimeHours,
-			PrintTimeMinutes:        itemReq.PrintTimeMinutes,
-			SetupTimeMinutes:        itemReq.SetupTimeMinutes,
-			ManualLaborMinutesTotal: itemReq.ManualLaborMinutesTotal,
-			CostPresetID:            itemReq.CostPresetID,
-			AdditionalNotes:         itemReq.AdditionalNotes,
-			Order:                   itemReq.Order,
-			CreatedAt:               time.Now(),
-			UpdatedAt:               time.Now(),
+		if err := repo.AddStatusHistory(ctx, initialHistory); err != nil {
+			return err
 		}
-
-		// Save item
-		if err := uc.budgetRepository.AddItem(ctx, item); err != nil {
-			uc.logger.Error(ctx, "Failed to create budget item", map[string]interface{}{
-				"error": err.Error(),
-			})
-			// Rollback: delete the budget
-			_ = uc.budgetRepository.Delete(ctx, budget.ID)
-			appError := coreErrors.RepositoryError(err.Error())
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-
-		// Create filaments for this item
-		for _, filReq := range itemReq.Filaments {
-			filament := &entities.BudgetItemFilamentEntity{
-				ID:             uuid.New(),
-				BudgetItemID:   item.ID,
-				FilamentID:     filReq.FilamentID,
-				OrganizationID: organizationID,
-				Quantity:       filReq.Quantity,
-				Order:          filReq.Order,
-				CreatedAt:      time.Now(),
-				UpdatedAt:      time.Now(),
+		for _, b := range built {
+			if err := repo.AddItem(ctx, b.Item); err != nil {
+				return err
 			}
-
-			if err := uc.budgetRepository.AddItemFilament(ctx, filament); err != nil {
-				uc.logger.Error(ctx, "Failed to add filament to item", map[string]interface{}{
-					"error":       err.Error(),
-					"item_id":     item.ID,
-					"filament_id": filReq.FilamentID,
-				})
-				// Rollback: delete the budget
-				_ = uc.budgetRepository.Delete(ctx, budget.ID)
-				appError := coreErrors.RepositoryError("Failed to add filament: " + err.Error())
-				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-				return
+			for _, filament := range b.Filaments {
+				if err := repo.AddItemFilament(ctx, filament); err != nil {
+					return err
+				}
 			}
 		}
-	}
-
-	// Calculate costs
-	if err := uc.budgetRepository.CalculateCosts(ctx, budget.ID); err != nil {
-		uc.logger.Error(ctx, "Failed to calculate budget costs", map[string]interface{}{
+		if err := repo.CalculateCosts(ctx, budget.ID); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		uc.logger.Error(ctx, "Failed to create budget", map[string]interface{}{
 			"error": err.Error(),
 		})
+		appError := coreErrors.RepositoryError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
 	}
 
 	// Retrieve the updated budget with calculated costs
@@ -221,10 +175,13 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to retrieve created budget", map[string]interface{}{
 			"error": err.Error(),
 		})
+		appError := coreErrors.RepositoryError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
 	}
 
 	// Build response
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
 	itemResponses := make([]entities.BudgetItemResponse, len(items))
@@ -232,7 +189,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 
 	for i, item := range items {
 		// Get filament usage info for this item
-		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID, organizationID)
 
 		// Calculate print time display
 		printTimeDisplay := ""

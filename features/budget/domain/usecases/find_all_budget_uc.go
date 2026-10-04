@@ -67,7 +67,7 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	budgetResponses := make([]entities.BudgetResponse, len(budgets))
 	for i, budget := range budgets {
 		// Get customer info
-		customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+		customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 
 		// Get items with filaments
 		items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
@@ -76,7 +76,7 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 
 		for j, item := range items {
 			// Get filament usage info for this item
-			filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+			filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID, organizationID)
 
 			// Calculate print time display
 			printTimeDisplay := ""

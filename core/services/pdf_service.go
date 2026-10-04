@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -237,6 +238,50 @@ func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.
 	pdf.Ln(8)
 }
 
+// distributeMarkup splits a budget's overhead+profit markup across items in
+// proportion to each item's direct cost (itemCosts), returning the final cost
+// (direct cost + markup share) in cents for each item.
+//
+// The markup to distribute is derived as totalCost - sum(itemCosts); allocating
+// it this way and assigning any rounding remainder to the last item guarantees
+// that the returned slice sums EXACTLY to totalCost, so the PDF's per-item
+// subtotals always reconcile with the TOTAL line. math.Round is used (never
+// truncation) so shares are the nearest cent. If the items have no direct cost to
+// weight by (sum <= 0) the whole markup is placed on the last item.
+func distributeMarkup(itemCosts []int64, totalCost int64) []int64 {
+	n := len(itemCosts)
+	result := make([]int64, n)
+	if n == 0 {
+		return result
+	}
+
+	var subtotal int64
+	for _, c := range itemCosts {
+		subtotal += c
+	}
+	markup := totalCost - subtotal
+
+	if subtotal <= 0 {
+		copy(result, itemCosts)
+		result[n-1] += markup
+		return result
+	}
+
+	var allocated int64
+	for i := 0; i < n; i++ {
+		var share int64
+		if i == n-1 {
+			// Last item absorbs the remainder so the total is exact.
+			share = markup - allocated
+		} else {
+			share = int64(math.Round(float64(markup) * float64(itemCosts[i]) / float64(subtotal)))
+			allocated += share
+		}
+		result[i] = itemCosts[i] + share
+	}
+	return result
+}
+
 // addItemsTable adds the items table showing products (customer-facing)
 func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.BudgetItemResponse, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.SetFont("Arial", "B", 10) // Reduced from 11
@@ -258,11 +303,15 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 	pdf.CellFormat(35, 6, s.convertUTF8("Subtotal (R$)"), "1", 0, "C", true, 0, "")
 	pdf.Ln(-1)
 
-	// Calculate total direct costs (subtotal) for proportional distribution
-	var budgetSubtotal int64 = 0
-	for _, item := range items {
-		budgetSubtotal += item.ItemTotalCost
+	// Distribute the budget's overhead+profit markup across items proportionally
+	// to each item's direct cost. The helper guarantees the per-item final costs
+	// sum EXACTLY to budget.TotalCost (any rounding remainder lands on the last
+	// item), so the printed subtotals reconcile with the TOTAL line below.
+	itemCosts := make([]int64, len(items))
+	for i, item := range items {
+		itemCosts[i] = item.ItemTotalCost
 	}
+	itemFinalCosts := distributeMarkup(itemCosts, budget.TotalCost)
 
 	// Table rows - showing products
 	pdf.SetFont("Arial", "", 7) // Reduced from 8
@@ -287,23 +336,16 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 			description = description[:57] + "..."
 		}
 
-		// Calculate final price with overhead and profit distributed proportionally
-		var itemFinalCost int64 = item.ItemTotalCost
-		if budgetSubtotal > 0 {
-			// Calculate item's proportion of total direct costs
-			itemProportion := float64(item.ItemTotalCost) / float64(budgetSubtotal)
+		itemFinalCost := itemFinalCosts[i]
 
-			// Distribute overhead and profit proportionally
-			itemOverhead := int64(float64(budget.OverheadCost) * itemProportion)
-			itemProfit := int64(float64(budget.ProfitAmount) * itemProportion)
-
-			// Final cost includes direct costs + overhead + profit
-			itemFinalCost = item.ItemTotalCost + itemOverhead + itemProfit
+		// The subtotal (in reais) is derived directly from the item's final cost in
+		// cents so the column total reconciles exactly with the TOTAL line. Unit
+		// price is guarded against a non-positive quantity to avoid a div-by-zero.
+		subtotalWithMarkup := float64(itemFinalCost) / 100.0
+		unitPriceWithMarkup := 0.0
+		if item.ProductQuantity > 0 {
+			unitPriceWithMarkup = subtotalWithMarkup / float64(item.ProductQuantity)
 		}
-
-		// Calculate unit price and subtotal with markup
-		unitPriceWithMarkup := float64(itemFinalCost) / 100.0 / float64(item.ProductQuantity)
-		subtotalWithMarkup := float64(item.ProductQuantity) * unitPriceWithMarkup
 
 		pdf.CellFormat(95, 5, s.convertUTF8(description), "1", 0, "L", fillColor, 0, "") // Reduced height from 6 to 5
 		pdf.CellFormat(20, 5, fmt.Sprintf("%d", item.ProductQuantity), "1", 0, "C", fillColor, 0, "")

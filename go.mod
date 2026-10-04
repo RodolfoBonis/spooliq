@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/Nerzal/gocloak/v13 v13.8.0
 	github.com/RodolfoBonis/go-otel-agent v0.4.0
+	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/gin-contrib/cors v1.6.0
 	github.com/gin-gonic/gin v1.11.0
@@ -107,6 +108,7 @@ require (
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelzap v0.15.0 // indirect

@@ -25,7 +25,6 @@ func TestResponseWriterWrite(t *testing.T) {
 			ResponseWriter: c.Writer,
 			body:           make([]byte, 0),
 			statusCode:     http.StatusOK,
-			headers:        make(map[string]string),
 		}
 
 		// Write test data
@@ -59,6 +58,36 @@ func TestResponseWriterWrite(t *testing.T) {
 	})
 }
 
+// TestResponseWriterWriteString tests that c.String-style responses (rendered via
+// WriteString) are both streamed to the client and captured for caching.
+func TestResponseWriterWriteString(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+
+	writer := &responseWriter{
+		ResponseWriter: c.Writer,
+		body:           make([]byte, 0),
+		statusCode:     http.StatusOK,
+	}
+
+	const testData = "plain text body"
+	n, err := writer.WriteString(testData)
+	if err != nil {
+		t.Errorf("WriteString returned error: %v", err)
+	}
+	if n != len(testData) {
+		t.Errorf("WriteString returned wrong byte count: got %d, want %d", n, len(testData))
+	}
+	if string(writer.body) != testData {
+		t.Errorf("WriteString not captured for caching: got %q, want %q", writer.body, testData)
+	}
+	if recorder.Body.String() != testData {
+		t.Errorf("WriteString not streamed to client: got %q, want %q", recorder.Body.String(), testData)
+	}
+}
+
 // TestCacheMiddlewareCacheMiss simulates a full cache miss scenario
 func TestCacheMiddlewareCacheMiss(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -74,7 +103,6 @@ func TestCacheMiddlewareCacheMiss(t *testing.T) {
 			ResponseWriter: originalWriter,
 			body:           make([]byte, 0),
 			statusCode:     http.StatusOK,
-			headers:        make(map[string]string),
 		}
 		c.Writer = writer
 

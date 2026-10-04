@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,9 +27,9 @@ func TestCacheMiddlewareRedisUnavailable(t *testing.T) {
 	// gin.New() has no Recovery middleware, so a nil-pointer panic would
 	// propagate and fail this test instead of being silently swallowed.
 	router := gin.New()
-	router.GET("/v1/brands", cm.Cache5Min(), func(c *gin.Context) {
+	router.GET("/v1/brands", cm.Cache5Min("brands", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"brands": []string{"acme"}})
-	})
+	}))
 
 	recorder := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/brands", nil)
@@ -41,5 +42,16 @@ func TestCacheMiddlewareRedisUnavailable(t *testing.T) {
 	}
 	if recorder.Body.Len() == 0 {
 		t.Fatal("expected handler response to reach the client on cache bypass, got empty body")
+	}
+}
+
+// TestInvalidatePrefixNilRedis ensures invalidation also fails open when Redis is
+// unavailable: it must be a no-op that returns nil rather than panicking.
+func TestInvalidatePrefixNilRedis(t *testing.T) {
+	redisService := services.NewRedisService(&logger.NoopLogger{}, nil)
+	cm := NewCacheMiddleware(redisService, &logger.NoopLogger{})
+
+	if err := cm.InvalidatePrefix(context.TODO(), "org-123", "brands"); err != nil {
+		t.Fatalf("expected nil error on fail-open invalidation, got %v", err)
 	}
 }

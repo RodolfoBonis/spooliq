@@ -26,10 +26,10 @@ func UnauthorizedError(message string) *AppError {
 	}
 }
 
-// ForbiddenError creates a 403 Forbidden error (also maps to 403 via custom handling)
+// ForbiddenError creates a 403 Forbidden error
 func ForbiddenError(message string) *AppError {
 	return &AppError{
-		Type:    entities.ErrUnauthorized,
+		Type:    entities.ErrForbidden,
 		Message: message,
 		Fields:  nil,
 		Cause:   nil,
@@ -69,7 +69,7 @@ func InternalServerError(message string) *AppError {
 // ExternalServiceError creates a 502 Bad Gateway error (for external service failures)
 func ExternalServiceError(message string) *AppError {
 	return &AppError{
-		Type:    entities.ErrService,
+		Type:    entities.ErrExternalService,
 		Message: message,
 		Fields:  nil,
 		Cause:   nil,
@@ -79,7 +79,7 @@ func ExternalServiceError(message string) *AppError {
 // PaymentRequiredError creates a 402 Payment Required error
 func PaymentRequiredError(message string) *AppError {
 	return &AppError{
-		Type:    entities.ErrEntity,
+		Type:    entities.ErrPaymentRequired,
 		Message: message,
 		Fields:  nil,
 		Cause:   nil,

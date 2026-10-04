@@ -21,6 +21,12 @@ const (
 	ErrInvalidCredentials
 	ErrUnauthorized
 	ErrConflict
+	// The types below are appended after ErrConflict on purpose: the constants
+	// use iota and are consumed as stable error codes, so new types must go at
+	// the end to avoid shifting the values of the existing ones.
+	ErrForbidden
+	ErrPaymentRequired
+	ErrExternalService
 )
 
 // AppErrorTypeToString maps AppErrorType to string representations.
@@ -39,6 +45,9 @@ var AppErrorTypeToString = map[AppErrorType]string{
 	ErrInvalidCredentials: "Credenciais inválidas",
 	ErrUnauthorized:       "Não autorizado",
 	ErrConflict:           "Conflito",
+	ErrForbidden:          "Acesso negado",
+	ErrPaymentRequired:    "Pagamento necessário",
+	ErrExternalService:    "Erro em serviço externo",
 }
 
 // AppErrorTypeToHTTP maps AppErrorType to HTTP status codes.
@@ -57,4 +66,7 @@ var AppErrorTypeToHTTP = map[AppErrorType]int{
 	ErrInvalidCredentials: http.StatusUnauthorized,
 	ErrUnauthorized:       http.StatusUnauthorized,
 	ErrConflict:           http.StatusConflict,
+	ErrForbidden:          http.StatusForbidden,
+	ErrPaymentRequired:    http.StatusPaymentRequired,
+	ErrExternalService:    http.StatusBadGateway,
 }

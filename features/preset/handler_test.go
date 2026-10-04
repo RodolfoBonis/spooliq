@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -202,4 +203,22 @@ func TestGetPresets_ScopedToOrganization(t *testing.T) {
 	// Only org A's single preset is visible.
 	require.Len(t, repo.OrgScopes, 1)
 	assert.Equal(t, orgA, repo.OrgScopes[0])
+}
+
+// Updating a preset must not require the ID in the JSON body: it comes from the
+// URL path (the web app only sends the changed fields).
+func TestUpdateMachinePreset_IDFromPathOnly(t *testing.T) {
+	repo := mocks.NewInMemoryPresetRepository()
+	handler := newTestHandler(repo)
+
+	id := seedMachine(repo, orgA, false)
+
+	w, c := newTestContext(http.MethodPut, "/presets/machines/"+id.String(), orgA)
+	c.Request = httptest.NewRequest(http.MethodPut, "/presets/machines/"+id.String(), strings.NewReader(`{"name":"Renamed"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: id.String()}}
+	handler.UpdateMachinePreset(c)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "Renamed", repo.StoredPreset(id).Name)
 }

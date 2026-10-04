@@ -11130,14 +11130,12 @@ const docTemplate = `{
         },
         "usecases.UpdateCostPresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11180,9 +11178,6 @@ const docTemplate = `{
         },
         "usecases.UpdateEnergyPresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "city": {
                     "type": "string"
@@ -11200,6 +11195,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11230,9 +11226,6 @@ const docTemplate = `{
         },
         "usecases.UpdateMachinePresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "bed_temperature_max": {
                     "type": "number"
@@ -11262,6 +11255,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {

@@ -1989,7 +1989,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve presets with optional filters including type, active status, default status, global status, and user ID",
+                "description": "Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2230,6 +2230,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Cost preset not found",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
                         }
@@ -2528,6 +2534,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
+                    "404": {
+                        "description": "Not Found - Energy preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -2765,6 +2777,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
+                    "404": {
+                        "description": "Not Found - Machine preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -2781,7 +2799,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve a specific preset by its unique identifier",
+                "description": "Retrieve a specific preset by its unique identifier within the caller's organization",
                 "consumes": [
                     "application/json"
                 ],
@@ -2828,7 +2846,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a preset by its unique identifier",
+                "description": "Delete a preset by its unique identifier within the caller's organization. Default presets cannot be deleted.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2854,6 +2872,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - Default presets cannot be deleted",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
                         }
@@ -5055,6 +5085,13 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -5132,7 +5169,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Recalculate all costs for a budget",
+                "description": "Deprecated: returns stored budget costs without recalculating. Use POST /v1/budgets/{id}/recalculate to recompute.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5142,7 +5179,7 @@ const docTemplate = `{
                 "tags": [
                     "budgets"
                 ],
-                "summary": "Recalculate budget costs",
+                "summary": "Get budget costs (deprecated)",
                 "parameters": [
                     {
                         "type": "string",
@@ -5352,6 +5389,71 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/budgets/{id}/recalculate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Recalculate all costs for a budget. Only allowed while the budget is a draft.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Recalculate budget costs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -10715,6 +10817,7 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "user_id": {
+                    "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
                 }
             }
@@ -10766,6 +10869,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
                 }
             }
@@ -10837,6 +10941,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "user_id": {
+                    "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
                 }
             }

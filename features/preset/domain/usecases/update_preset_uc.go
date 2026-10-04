@@ -22,7 +22,7 @@ func NewUpdatePresetUseCase(presetRepo repositories.PresetRepository) *UpdatePre
 
 // UpdateMachinePresetRequest represents the request to update a machine preset
 type UpdateMachinePresetRequest struct {
-	ID                     uuid.UUID `json:"id" binding:"required"`
+	ID                     uuid.UUID `json:"id"` // Taken from the URL path; any body value is overridden
 	Name                   string    `json:"name"`
 	Description            string    `json:"description"`
 	IsActive               *bool     `json:"is_active"`
@@ -45,7 +45,7 @@ type UpdateMachinePresetRequest struct {
 
 // UpdateEnergyPresetRequest represents the request to update an energy preset
 type UpdateEnergyPresetRequest struct {
-	ID                    uuid.UUID `json:"id" binding:"required"`
+	ID                    uuid.UUID `json:"id"` // Taken from the URL path; any body value is overridden
 	Name                  string    `json:"name"`
 	Description           string    `json:"description"`
 	IsActive              *bool     `json:"is_active"`
@@ -63,7 +63,7 @@ type UpdateEnergyPresetRequest struct {
 
 // UpdateCostPresetRequest represents the request to update a cost preset
 type UpdateCostPresetRequest struct {
-	ID                        uuid.UUID `json:"id" binding:"required"`
+	ID                        uuid.UUID `json:"id"` // Taken from the URL path; any body value is overridden
 	Name                      string    `json:"name"`
 	Description               string    `json:"description"`
 	IsActive                  *bool     `json:"is_active"`

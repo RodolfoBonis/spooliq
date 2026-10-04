@@ -11119,14 +11119,12 @@
         },
         "usecases.UpdateCostPresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11169,9 +11167,6 @@
         },
         "usecases.UpdateEnergyPresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "city": {
                     "type": "string"
@@ -11189,6 +11184,7 @@
                     "type": "number"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11219,9 +11215,6 @@
         },
         "usecases.UpdateMachinePresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "bed_temperature_max": {
                     "type": "number"
@@ -11251,6 +11244,7 @@
                     "type": "number"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {

@@ -88,7 +88,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	}
 
 	// Get customer info
-	customer, err := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+	customer, err := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to get customer info", map[string]interface{}{
 			"error":       err.Error(),
@@ -117,7 +117,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 
 	for _, item := range items {
 		// Get filament usage info for this item
-		filaments, err := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+		filaments, err := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID, organizationID)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to get filament usage info", map[string]interface{}{
 				"error":   err.Error(),
@@ -238,9 +238,11 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		})
 		// Continue even if CDN upload fails - user can still download the PDF
 	} else {
-		// Save CDN URL to database
+		// Save CDN URL to database via the dedicated pdf_url writer, which is NOT
+		// restricted to drafts (PDFs are generated for approved/sent budgets, and
+		// the generic Update is draft-only).
 		budget.PDFUrl = &cdnURL
-		err = uc.budgetRepository.Update(ctx, budget)
+		err = uc.budgetRepository.UpdatePDFURL(ctx, budgetID, organizationID, &cdnURL)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to save PDF URL to database", map[string]interface{}{
 				"error":     err.Error(),

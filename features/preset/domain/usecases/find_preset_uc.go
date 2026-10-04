@@ -27,40 +27,20 @@ type EnergyPresetResponse = repositories.EnergyPresetResponse
 // CostPresetResponse is a type alias for the repository response type
 type CostPresetResponse = repositories.CostPresetResponse
 
-// FindByID finds a preset by its ID
-func (uc *FindPresetUseCase) FindByID(id uuid.UUID) (*entities.PresetEntity, error) {
-	return uc.presetRepo.GetByID(id)
+// FindByID finds a preset by its ID within the organization scope.
+func (uc *FindPresetUseCase) FindByID(id uuid.UUID, organizationID string) (*entities.PresetEntity, error) {
+	return uc.presetRepo.GetByID(id, organizationID)
 }
 
-// FindByType finds presets by type
-func (uc *FindPresetUseCase) FindByType(presetType entities.PresetType) ([]*entities.PresetEntity, error) {
-	return uc.presetRepo.GetByType(presetType)
+// FindPresets finds presets for an organization applying the given combinable filters.
+func (uc *FindPresetUseCase) FindPresets(organizationID string, filters entities.PresetFilters) ([]*entities.PresetEntity, error) {
+	return uc.presetRepo.ListPresets(organizationID, filters)
 }
 
-// FindByUserID finds presets belonging to a specific user
-func (uc *FindPresetUseCase) FindByUserID(userID uuid.UUID) ([]*entities.PresetEntity, error) {
-	return uc.presetRepo.GetByUserID(userID)
-}
-
-// FindGlobalPresets finds all global presets (not user-specific)
-func (uc *FindPresetUseCase) FindGlobalPresets() ([]*entities.PresetEntity, error) {
-	return uc.presetRepo.GetGlobalPresets()
-}
-
-// FindActivePresets finds all active presets
-func (uc *FindPresetUseCase) FindActivePresets() ([]*entities.PresetEntity, error) {
-	return uc.presetRepo.GetActivePresets()
-}
-
-// FindDefaultPresets finds all default presets
-func (uc *FindPresetUseCase) FindDefaultPresets() ([]*entities.PresetEntity, error) {
-	return uc.presetRepo.GetDefaultPresets()
-}
-
-// FindMachinePresetByID finds a machine preset with full details
-func (uc *FindPresetUseCase) FindMachinePresetByID(id uuid.UUID) (*MachinePresetResponse, error) {
-	// Get base preset
-	preset, err := uc.presetRepo.GetByID(id)
+// FindMachinePresetByID finds a machine preset with full details within the organization scope.
+func (uc *FindPresetUseCase) FindMachinePresetByID(id uuid.UUID, organizationID string) (*MachinePresetResponse, error) {
+	// Get base preset (organization-scoped)
+	preset, err := uc.presetRepo.GetByID(id, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +50,8 @@ func (uc *FindPresetUseCase) FindMachinePresetByID(id uuid.UUID) (*MachinePreset
 		return nil, entities.ErrInvalidPresetType
 	}
 
-	// Get machine-specific data
-	machine, err := uc.presetRepo.GetMachineByID(id)
+	// Get machine-specific data (organization-scoped)
+	machine, err := uc.presetRepo.GetMachineByID(id, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +80,10 @@ func (uc *FindPresetUseCase) FindMachinePresetByID(id uuid.UUID) (*MachinePreset
 	}, nil
 }
 
-// FindEnergyPresetByID finds an energy preset with full details
-func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetResponse, error) {
-	// Get base preset
-	preset, err := uc.presetRepo.GetByID(id)
+// FindEnergyPresetByID finds an energy preset with full details within the organization scope.
+func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID, organizationID string) (*EnergyPresetResponse, error) {
+	// Get base preset (organization-scoped)
+	preset, err := uc.presetRepo.GetByID(id, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +93,8 @@ func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetRe
 		return nil, entities.ErrInvalidPresetType
 	}
 
-	// Get energy-specific data
-	energy, err := uc.presetRepo.GetEnergyByID(id)
+	// Get energy-specific data (organization-scoped)
+	energy, err := uc.presetRepo.GetEnergyByID(id, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +118,10 @@ func (uc *FindPresetUseCase) FindEnergyPresetByID(id uuid.UUID) (*EnergyPresetRe
 	}, nil
 }
 
-// FindCostPresetByID finds a cost preset with full details
-func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID) (*CostPresetResponse, error) {
-	// Get base preset
-	preset, err := uc.presetRepo.GetByID(id)
+// FindCostPresetByID finds a cost preset with full details within the organization scope.
+func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID, organizationID string) (*CostPresetResponse, error) {
+	// Get base preset (organization-scoped)
+	preset, err := uc.presetRepo.GetByID(id, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -151,8 +131,8 @@ func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID) (*CostPresetRespon
 		return nil, entities.ErrInvalidPresetType
 	}
 
-	// Get cost-specific data
-	cost, err := uc.presetRepo.GetCostByID(id)
+	// Get cost-specific data (organization-scoped)
+	cost, err := uc.presetRepo.GetCostByID(id, organizationID)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,7 @@ type IBudgetUseCase interface {
 	UpdateStatus(c *gin.Context)
 	Duplicate(c *gin.Context)
 	Recalculate(c *gin.Context)
+	GetCalculation(c *gin.Context)
 	FindByCustomer(c *gin.Context)
 	GetHistory(c *gin.Context)
 	GeneratePDF(c *gin.Context)

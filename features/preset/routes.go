@@ -1,6 +1,7 @@
 package preset
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // Handler handles HTTP requests for preset operations
@@ -37,6 +39,49 @@ func NewPresetHandler(
 		updateUC:        updateUC,
 		deleteUC:        deleteUC,
 		activityService: activityService,
+	}
+}
+
+// requireOrganizationID extracts the organization_id from context, writing a
+// 400 response and returning ok=false when it is missing.
+func requireOrganizationID(c *gin.Context) (string, bool) {
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		return "", false
+	}
+	return organizationID, true
+}
+
+// authenticatedUserID returns the authenticated user's ID from context as a
+// *uuid.UUID, or nil when it is absent or not a valid UUID. The request body is
+// never trusted for ownership.
+func authenticatedUserID(c *gin.Context) *uuid.UUID {
+	userIDStr := helpers.GetUserID(c)
+	if userIDStr == "" {
+		return nil
+	}
+	parsed, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil
+	}
+	return &parsed
+}
+
+// respondPresetError maps domain/repository errors to appropriate HTTP status
+// codes. Not-found (including cross-organization access) maps to 404 to avoid
+// leaking the existence of other tenants' presets.
+func respondPresetError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, entities.ErrPresetNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "Preset not found"})
+	case errors.Is(err, entities.ErrCannotDeleteDefaultPreset):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, entities.ErrInvalidPresetType):
+		// Requesting a resource of the wrong kind is treated as not found.
+		c.JSON(http.StatusNotFound, gin.H{"error": "Preset not found"})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
 
@@ -83,7 +128,7 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 
 // GetPresets retrieves presets with optional filters
 // @Summary Get presets with filters
-// @Description Retrieve presets with optional filters including type, active status, default status, global status, and user ID
+// @Description Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope.
 // @Tags Presets
 // @Accept json
 // @Produce json
@@ -98,35 +143,44 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 // @Security BearerAuth
 // @Router /presets [get]
 func (h *Handler) GetPresets(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	presetType := c.Query("type")
 	activeOnly := c.Query("active") == "true"
 	defaultOnly := c.Query("default") == "true"
 	globalOnly := c.Query("global") == "true"
 	userIDStr := c.Query("user_id")
 
-	var presets interface{}
-	var err error
+	filters := entities.PresetFilters{
+		ActiveOnly:  activeOnly,
+		DefaultOnly: defaultOnly,
+		GlobalOnly:  globalOnly,
+	}
 
-	switch {
-	case userIDStr != "":
+	if presetType != "" {
+		pt := entities.PresetType(presetType)
+		filters.Type = &pt
+	}
+
+	if userIDStr != "" {
 		userID, parseErr := uuid.Parse(userIDStr)
 		if parseErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
 			return
 		}
-		presets, err = h.findUC.FindByUserID(userID)
-	case globalOnly:
-		presets, err = h.findUC.FindGlobalPresets()
-	case activeOnly:
-		presets, err = h.findUC.FindActivePresets()
-	case defaultOnly:
-		presets, err = h.findUC.FindDefaultPresets()
-	case presetType != "":
-		presets, err = h.findUC.FindByType(entities.PresetType(presetType))
-	default:
-		presets, err = h.findUC.FindActivePresets() // Default to active presets
+		filters.UserID = &userID
 	}
 
+	// Preserve the previous default of returning only active presets when the
+	// caller supplies no filters at all.
+	if !activeOnly && !defaultOnly && !globalOnly && presetType == "" && userIDStr == "" {
+		filters.ActiveOnly = true
+	}
+
+	presets, err := h.findUC.FindPresets(organizationID, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -137,7 +191,7 @@ func (h *Handler) GetPresets(c *gin.Context) {
 
 // GetPresetByID retrieves a preset by ID
 // @Summary Get preset by ID
-// @Description Retrieve a specific preset by its unique identifier
+// @Description Retrieve a specific preset by its unique identifier within the caller's organization
 // @Tags Presets
 // @Accept json
 // @Produce json
@@ -148,6 +202,11 @@ func (h *Handler) GetPresets(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/{id} [get]
 func (h *Handler) GetPresetByID(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -155,9 +214,9 @@ func (h *Handler) GetPresetByID(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.findUC.FindByID(id)
+	preset, err := h.findUC.FindByID(id, organizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Preset not found"})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -166,17 +225,24 @@ func (h *Handler) GetPresetByID(c *gin.Context) {
 
 // DeletePreset deletes a preset by ID
 // @Summary Delete preset
-// @Description Delete a preset by its unique identifier
+// @Description Delete a preset by its unique identifier within the caller's organization. Default presets cannot be deleted.
 // @Tags Presets
 // @Accept json
 // @Produce json
 // @Param id path string true "Preset ID (UUID format)"
 // @Success 204 "Preset deleted successfully"
 // @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Preset not found"
+// @Failure 409 {object} errors.HTTPError "Conflict - Default presets cannot be deleted"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/{id} [delete]
 func (h *Handler) DeletePreset(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -184,11 +250,11 @@ func (h *Handler) DeletePreset(c *gin.Context) {
 		return
 	}
 
-	// Fetch preset before deleting to get name for activity
-	preset, _ := h.findUC.FindByID(id)
+	// Fetch preset before deleting to get name for activity (organization-scoped)
+	preset, _ := h.findUC.FindByID(id, organizationID)
 
-	if err := h.deleteUC.Execute(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.deleteUC.Execute(id, organizationID); err != nil {
+		respondPresetError(c, err)
 		return
 	}
 
@@ -200,7 +266,7 @@ func (h *Handler) DeletePreset(c *gin.Context) {
 		presetName = preset.Name
 	}
 	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
-		OrganizationID: helpers.GetOrganizationID(c),
+		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),
 		Action:         activityEntities.ActionDeleted,
 		EntityType:     activityEntities.EntityPreset,
@@ -229,14 +295,12 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 		return
 	}
 
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	preset, err := h.createUC.CreateMachinePreset(&req, organizationID)
+	preset, err := h.createUC.CreateMachinePreset(&req, organizationID, authenticatedUserID(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -267,10 +331,8 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/machines [get]
 func (h *Handler) GetMachinePresets(c *gin.Context) {
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -296,6 +358,11 @@ func (h *Handler) GetMachinePresets(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/machines/{id} [get]
 func (h *Handler) GetMachinePresetByID(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -303,9 +370,9 @@ func (h *Handler) GetMachinePresetByID(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.findUC.FindMachinePresetByID(id)
+	preset, err := h.findUC.FindMachinePresetByID(id, organizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Machine preset not found"})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -322,10 +389,16 @@ func (h *Handler) GetMachinePresetByID(c *gin.Context) {
 // @Param request body usecases.UpdateMachinePresetRequest true "Machine preset update data"
 // @Success 200 {object} entities.PresetEntity "Machine preset updated successfully"
 // @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format or request data"
+// @Failure 404 {object} errors.HTTPError "Not Found - Machine preset not found"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/machines/{id} [put]
 func (h *Handler) UpdateMachinePreset(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -340,9 +413,9 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 	}
 	req.ID = id
 
-	preset, err := h.updateUC.UpdateMachinePreset(&req)
+	preset, err := h.updateUC.UpdateMachinePreset(&req, organizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -350,7 +423,7 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 
 	// Record activity (fire-and-forget)
 	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
-		OrganizationID: helpers.GetOrganizationID(c),
+		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),
 		Action:         activityEntities.ActionUpdated,
 		EntityType:     activityEntities.EntityPreset,
@@ -374,10 +447,8 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 func (h *Handler) GetMachinePresetsByBrand(c *gin.Context) {
 	brand := c.Param("brand")
 
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -409,14 +480,12 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 		return
 	}
 
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	preset, err := h.createUC.CreateEnergyPreset(&req, organizationID)
+	preset, err := h.createUC.CreateEnergyPreset(&req, organizationID, authenticatedUserID(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -447,10 +516,8 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/energy [get]
 func (h *Handler) GetEnergyPresets(c *gin.Context) {
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -476,6 +543,11 @@ func (h *Handler) GetEnergyPresets(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/energy/{id} [get]
 func (h *Handler) GetEnergyPresetByID(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -483,9 +555,9 @@ func (h *Handler) GetEnergyPresetByID(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.findUC.FindEnergyPresetByID(id)
+	preset, err := h.findUC.FindEnergyPresetByID(id, organizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Energy preset not found"})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -502,10 +574,16 @@ func (h *Handler) GetEnergyPresetByID(c *gin.Context) {
 // @Param request body usecases.UpdateEnergyPresetRequest true "Energy preset update data"
 // @Success 200 {object} entities.PresetEntity "Energy preset updated successfully"
 // @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format or request data"
+// @Failure 404 {object} errors.HTTPError "Not Found - Energy preset not found"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/energy/{id} [put]
 func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -520,9 +598,9 @@ func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 	}
 	req.ID = id
 
-	preset, err := h.updateUC.UpdateEnergyPreset(&req)
+	preset, err := h.updateUC.UpdateEnergyPreset(&req, organizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -530,7 +608,7 @@ func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 
 	// Record activity (fire-and-forget)
 	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
-		OrganizationID: helpers.GetOrganizationID(c),
+		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),
 		Action:         activityEntities.ActionUpdated,
 		EntityType:     activityEntities.EntityPreset,
@@ -558,10 +636,8 @@ func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 	state := c.Query("state")
 	city := c.Query("city")
 
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -588,10 +664,8 @@ func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 func (h *Handler) GetEnergyPresetsByCurrency(c *gin.Context) {
 	currency := c.Param("currency")
 
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -623,14 +697,12 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 		return
 	}
 
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	preset, err := h.createUC.CreateCostPreset(&req, organizationID)
+	preset, err := h.createUC.CreateCostPreset(&req, organizationID, authenticatedUserID(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -661,10 +733,8 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/costs [get]
 func (h *Handler) GetCostPresets(c *gin.Context) {
-	// Extract organization_id from context using helper
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -690,6 +760,11 @@ func (h *Handler) GetCostPresets(c *gin.Context) {
 // @Security BearerAuth
 // @Router /presets/costs/{id} [get]
 func (h *Handler) GetCostPresetByID(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -697,9 +772,9 @@ func (h *Handler) GetCostPresetByID(c *gin.Context) {
 		return
 	}
 
-	preset, err := h.findUC.FindCostPresetByID(id)
+	preset, err := h.findUC.FindCostPresetByID(id, organizationID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Cost preset not found"})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -716,10 +791,16 @@ func (h *Handler) GetCostPresetByID(c *gin.Context) {
 // @Param request body usecases.UpdateCostPresetRequest true "Cost preset update data"
 // @Success 200 {object} entities.PresetEntity "Cost preset updated successfully"
 // @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format or request data"
+// @Failure 404 {object} errors.HTTPError "Not Found - Cost preset not found"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/costs/{id} [put]
 func (h *Handler) UpdateCostPreset(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -734,9 +815,9 @@ func (h *Handler) UpdateCostPreset(c *gin.Context) {
 	}
 	req.ID = id
 
-	preset, err := h.updateUC.UpdateCostPreset(&req)
+	preset, err := h.updateUC.UpdateCostPreset(&req, organizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -744,7 +825,7 @@ func (h *Handler) UpdateCostPreset(c *gin.Context) {
 
 	// Record activity (fire-and-forget)
 	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
-		OrganizationID: helpers.GetOrganizationID(c),
+		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),
 		Action:         activityEntities.ActionUpdated,
 		EntityType:     activityEntities.EntityPreset,

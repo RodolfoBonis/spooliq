@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +10,7 @@ import (
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -57,7 +59,10 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 		return
 	}
 
-	// Create new budget as draft
+	now := time.Now()
+
+	// Create new budget as draft, copying ALL relevant fields (including the
+	// PDF-facing ones that used to be dropped: delivery days, payment terms, notes).
 	newBudget := &entities.BudgetEntity{
 		ID:                uuid.New(),
 		OrganizationID:    organizationID,
@@ -72,68 +77,127 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 		CostPresetID:      originalBudget.CostPresetID,
 		IncludeEnergyCost: originalBudget.IncludeEnergyCost,
 		IncludeWasteCost:  originalBudget.IncludeWasteCost,
+		DeliveryDays:      originalBudget.DeliveryDays,
+		PaymentTerms:      originalBudget.PaymentTerms,
+		Notes:             originalBudget.Notes,
 		OwnerUserID:       userID,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 
-	if err := uc.budgetRepository.Create(ctx, newBudget); err != nil {
+	// Read the original items + filaments and prepare fully-populated copies.
+	originalItems, err := uc.budgetRepository.GetItems(ctx, originalBudget.ID)
+	if err != nil {
 		appError := coreErrors.RepositoryError(err.Error())
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
 
-	// Copy items with filaments
-	originalItems, _ := uc.budgetRepository.GetItems(ctx, originalBudget.ID)
-	for _, originalItem := range originalItems {
-		// Create new item (copy product data)
-		newItem := &entities.BudgetItemEntity{
-			ID:                      uuid.New(),
-			BudgetID:                newBudget.ID,
-			ProductName:             originalItem.ProductName,
-			ProductDescription:      originalItem.ProductDescription,
-			ProductQuantity:         originalItem.ProductQuantity,
-			ProductDimensions:       originalItem.ProductDimensions,
-			PrintTimeHours:          originalItem.PrintTimeHours,
-			PrintTimeMinutes:        originalItem.PrintTimeMinutes,
-			SetupTimeMinutes:        originalItem.SetupTimeMinutes,
-			ManualLaborMinutesTotal: originalItem.ManualLaborMinutesTotal,
-			CostPresetID:            originalItem.CostPresetID,
-			AdditionalNotes:         originalItem.AdditionalNotes,
-			Order:                   originalItem.Order,
-			CreatedAt:               time.Now(),
-			UpdatedAt:               time.Now(),
-		}
-		_ = uc.budgetRepository.AddItem(ctx, newItem)
-
-		// Copy filaments
-		originalFilaments, _ := uc.budgetRepository.GetItemFilaments(ctx, originalItem.ID)
-		for _, originalFil := range originalFilaments {
-			newFil := &entities.BudgetItemFilamentEntity{
-				ID:           uuid.New(),
-				BudgetItemID: newItem.ID,
-				FilamentID:   originalFil.FilamentID,
-				Quantity:     originalFil.Quantity,
-				Order:        originalFil.Order,
-				CreatedAt:    time.Now(),
-				UpdatedAt:    time.Now(),
-			}
-			_ = uc.budgetRepository.AddItemFilament(ctx, newFil)
-		}
+	type itemBundle struct {
+		item      *entities.BudgetItemEntity
+		filaments []*entities.BudgetItemFilamentEntity
 	}
 
-	// Calculate costs
-	_ = uc.budgetRepository.CalculateCosts(ctx, newBudget.ID)
+	bundles := make([]itemBundle, 0, len(originalItems))
+	for _, original := range originalItems {
+		originalFilaments, err := uc.budgetRepository.GetItemFilaments(ctx, original.ID)
+		if err != nil {
+			appError := coreErrors.RepositoryError(err.Error())
+			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			return
+		}
+
+		newItemID := uuid.New()
+		newItem := &entities.BudgetItemEntity{
+			ID:                      newItemID,
+			BudgetID:                newBudget.ID,
+			FilamentID:              original.FilamentID,
+			OrganizationID:          organizationID,
+			Quantity:                original.Quantity,
+			Order:                   original.Order,
+			ProductName:             original.ProductName,
+			ProductDescription:      original.ProductDescription,
+			ProductQuantity:         original.ProductQuantity,
+			ProductDimensions:       original.ProductDimensions,
+			PrintTimeHours:          original.PrintTimeHours,
+			PrintTimeMinutes:        original.PrintTimeMinutes,
+			SetupTimeMinutes:        original.SetupTimeMinutes,
+			ManualLaborMinutesTotal: original.ManualLaborMinutesTotal,
+			CostPresetID:            original.CostPresetID,
+			AdditionalNotes:         original.AdditionalNotes,
+			CreatedAt:               now,
+			UpdatedAt:               now,
+		}
+
+		newFilaments := make([]*entities.BudgetItemFilamentEntity, 0, len(originalFilaments))
+		for _, original := range originalFilaments {
+			newFilaments = append(newFilaments, &entities.BudgetItemFilamentEntity{
+				ID:             uuid.New(),
+				BudgetItemID:   newItemID,
+				FilamentID:     original.FilamentID,
+				OrganizationID: organizationID,
+				Quantity:       original.Quantity,
+				Order:          original.Order,
+				CreatedAt:      now,
+				UpdatedAt:      now,
+			})
+		}
+
+		bundles = append(bundles, itemBundle{item: newItem, filaments: newFilaments})
+	}
+
+	initialHistory := &entities.BudgetStatusHistoryEntity{
+		ID:             uuid.New(),
+		BudgetID:       newBudget.ID,
+		OrganizationID: organizationID,
+		PreviousStatus: "",
+		NewStatus:      entities.StatusDraft,
+		ChangedBy:      userID,
+		CreatedAt:      now,
+	}
+
+	// Persist the whole copy atomically.
+	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		if err := repo.Create(ctx, newBudget); err != nil {
+			return err
+		}
+		if err := repo.AddStatusHistory(ctx, initialHistory); err != nil {
+			return err
+		}
+		for _, b := range bundles {
+			if err := repo.AddItem(ctx, b.item); err != nil {
+				return err
+			}
+			for _, filament := range b.filaments {
+				if err := repo.AddItemFilament(ctx, filament); err != nil {
+					return err
+				}
+			}
+		}
+		return repo.CalculateCosts(ctx, newBudget.ID)
+	}); err != nil {
+		uc.logger.Error(ctx, "Failed to duplicate budget", map[string]interface{}{
+			"error": err.Error(),
+		})
+		appError := coreErrors.RepositoryError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
 
 	// Return new budget
-	response, _ := uc.buildBudgetResponse(ctx, newBudget.ID, organizationID)
+	response, err := uc.buildBudgetResponse(ctx, newBudget.ID, organizationID)
+	if err != nil {
+		appError := coreErrors.RepositoryError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
 
 	c.JSON(http.StatusCreated, response)
 }
 
-// Recalculate recalculates all costs for a budget
+// Recalculate recalculates all costs for a draft budget.
 // @Summary Recalculate budget costs
-// @Description Recalculate all costs for a budget
+// @Description Recalculate all costs for a budget. Only allowed while the budget is a draft.
 // @Tags budgets
 // @Accept json
 // @Produce json
@@ -141,8 +205,9 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 // @Success 200 {object} entities.BudgetResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/calculate [get]
+// @Router /v1/budgets/{id}/recalculate [post]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -162,21 +227,97 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	}
 
 	// Verify budget exists and user has permission
-	_, err = uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
+	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
 	}
 
-	// Recalculate costs
-	if err := uc.budgetRepository.CalculateCosts(ctx, budgetID); err != nil {
+	// Recalculation mutates stored costs, so it is only allowed for drafts.
+	if budget.Status != entities.StatusDraft {
+		uc.logger.Error(ctx, "Cannot recalculate non-draft budget", map[string]interface{}{
+			"budget_id": budgetID,
+			"status":    budget.Status,
+		})
+		appError := coreErrors.ConflictError("Only draft budgets can be recalculated")
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	// A recalculation invalidates any previously generated PDF.
+	budget.PDFUrl = nil
+	budget.UpdatedAt = time.Now()
+
+	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		if err := repo.Update(ctx, budget); err != nil {
+			return err
+		}
+		return repo.CalculateCosts(ctx, budgetID)
+	}); err != nil {
+		// A concurrent status change (e.g. approval) makes the draft no longer
+		// recalculable; surface that as a conflict rather than a 500.
+		if errors.Is(err, entities.ErrBudgetNotEditable) {
+			appError := coreErrors.ConflictError("Only draft budgets can be recalculated")
+			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			return
+		}
 		appError := coreErrors.RepositoryError(err.Error())
 		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
 		return
 	}
 
 	// Return updated budget
-	response, _ := uc.buildBudgetResponse(ctx, budgetID, organizationID)
+	response, err := uc.buildBudgetResponse(ctx, budgetID, organizationID)
+	if err != nil {
+		appError := coreErrors.RepositoryError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetCalculation returns the currently stored costs for a budget without
+// recalculating. It is read-only and safe to call on budgets in any status.
+//
+// Deprecated: use POST /v1/budgets/{id}/recalculate to recompute costs. This GET
+// endpoint previously recalculated on read, which mutated already-approved
+// budgets; it now only returns the stored values and is kept for backward
+// compatibility.
+// @Summary Get budget costs (deprecated)
+// @Description Deprecated: returns stored budget costs without recalculating. Use POST /v1/budgets/{id}/recalculate to recompute.
+// @Tags budgets
+// @Accept json
+// @Produce json
+// @Param id path string true "Budget ID"
+// @Success 200 {object} entities.BudgetResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /v1/budgets/{id}/calculate [get]
+// @Security BearerAuth
+func (uc *BudgetUseCase) GetCalculation(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		uc.logger.Error(ctx, "Organization ID not found", nil)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		return
+	}
+
+	budgetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		appError := coreErrors.UsecaseError("Invalid budget ID")
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	response, err := uc.buildBudgetResponse(ctx, budgetID, organizationID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		return
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -294,7 +435,7 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 		return nil, err
 	}
 
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
 	itemResponses := make([]entities.BudgetItemResponse, len(items))
@@ -302,7 +443,7 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 
 	for i, item := range items {
 		// Get filament usage info for this item
-		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
+		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID, organizationID)
 
 		// Calculate print time display
 		printTimeDisplay := ""

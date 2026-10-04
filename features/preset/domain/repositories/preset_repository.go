@@ -67,34 +67,43 @@ type CostPresetResponse struct {
 	QualityControlCostPerItem float32 `json:"quality_control_cost_per_item"`
 }
 
-// PresetRepository defines the contract for preset data operations
+// PresetRepository defines the contract for preset data operations.
+//
+// Every read, update and delete operation is scoped by organizationID to
+// guarantee tenant isolation. Cross-organization access must surface as a
+// "record not found" error so callers can map it to HTTP 404 (never 403),
+// avoiding leaking the existence of other tenants' presets.
 type PresetRepository interface {
 	// Base preset operations
 	Create(preset *entities.PresetEntity) error
-	GetByID(id uuid.UUID) (*entities.PresetEntity, error)
-	GetByType(presetType entities.PresetType) ([]*entities.PresetEntity, error)
-	GetByUserID(userID uuid.UUID) ([]*entities.PresetEntity, error)
-	GetGlobalPresets() ([]*entities.PresetEntity, error)
-	GetActivePresets() ([]*entities.PresetEntity, error)
-	GetDefaultPresets() ([]*entities.PresetEntity, error)
+	GetByID(id uuid.UUID, organizationID string) (*entities.PresetEntity, error)
+	// ListPresets returns presets for an organization, applying the given
+	// combinable filters (type, active, default, global, user) in a single query.
+	ListPresets(organizationID string, filters entities.PresetFilters) ([]*entities.PresetEntity, error)
 	Update(preset *entities.PresetEntity) error
-	Delete(id uuid.UUID) error
+	Delete(id uuid.UUID, organizationID string) error
 
 	// Machine preset operations
 	CreateMachine(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error
-	GetMachineByID(id uuid.UUID) (*entities.MachinePresetEntity, error)
-	GetMachinesByBrand(brand string) ([]*entities.MachinePresetEntity, error)
+	GetMachineByID(id uuid.UUID, organizationID string) (*entities.MachinePresetEntity, error)
+	GetMachinesByBrand(brand, organizationID string) ([]*entities.MachinePresetEntity, error)
 	UpdateMachine(machine *entities.MachinePresetEntity) error
+	// UpdateMachineWithPreset atomically updates the base preset and its machine
+	// child in a single, organization-scoped transaction.
+	UpdateMachineWithPreset(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error
 	// Optimized methods with organization filtering - return ready-to-use responses
 	GetMachinePresets(organizationID string) ([]*MachinePresetResponse, error)
 	GetMachinePresetsByBrand(brand, organizationID string) ([]*MachinePresetResponse, error)
 
 	// Energy preset operations
 	CreateEnergy(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error
-	GetEnergyByID(id uuid.UUID) (*entities.EnergyPresetEntity, error)
-	GetEnergyByLocation(country, state, city string) ([]*entities.EnergyPresetEntity, error)
-	GetEnergyByCurrency(currency string) ([]*entities.EnergyPresetEntity, error)
+	GetEnergyByID(id uuid.UUID, organizationID string) (*entities.EnergyPresetEntity, error)
+	GetEnergyByLocation(country, state, city, organizationID string) ([]*entities.EnergyPresetEntity, error)
+	GetEnergyByCurrency(currency, organizationID string) ([]*entities.EnergyPresetEntity, error)
 	UpdateEnergy(energy *entities.EnergyPresetEntity) error
+	// UpdateEnergyWithPreset atomically updates the base preset and its energy
+	// child in a single, organization-scoped transaction.
+	UpdateEnergyWithPreset(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error
 	// Optimized methods with organization filtering - return ready-to-use responses
 	GetEnergyPresets(organizationID string) ([]*EnergyPresetResponse, error)
 	GetEnergyPresetsByLocation(country, state, city, organizationID string) ([]*EnergyPresetResponse, error)
@@ -102,8 +111,11 @@ type PresetRepository interface {
 
 	// Cost preset operations
 	CreateCost(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error
-	GetCostByID(id uuid.UUID) (*entities.CostPresetEntity, error)
+	GetCostByID(id uuid.UUID, organizationID string) (*entities.CostPresetEntity, error)
 	UpdateCost(cost *entities.CostPresetEntity) error
+	// UpdateCostWithPreset atomically updates the base preset and its cost child
+	// in a single, organization-scoped transaction.
+	UpdateCostWithPreset(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error
 	// Optimized methods with organization filtering - return ready-to-use responses
 	GetCostPresets(organizationID string) ([]*CostPresetResponse, error)
 }

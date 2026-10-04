@@ -127,11 +127,12 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		})
 	}
 
-	// Update budget status
+	// Update budget status via the dedicated, status-only writer. Status is owned
+	// exclusively by this path so a concurrent full Update (PUT) cannot revert it.
 	budget.Status = request.Status
 	budget.UpdatedAt = time.Now()
 
-	if err := uc.budgetRepository.Update(ctx, budget); err != nil {
+	if err := uc.budgetRepository.UpdateStatus(ctx, budget.ID, organizationID, request.Status); err != nil {
 		uc.logger.Error(ctx, "Failed to update budget status", map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -173,7 +174,7 @@ func buildBudgetResponse(ctx context.Context, repo repositories.BudgetRepository
 		return nil, err
 	}
 
-	customerInfo, _ := repo.GetCustomerInfo(ctx, budget.CustomerID)
+	customerInfo, _ := repo.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 	items, _ := repo.GetItems(ctx, budget.ID)
 
 	itemResponses := make([]entities.BudgetItemResponse, len(items))
@@ -181,7 +182,7 @@ func buildBudgetResponse(ctx context.Context, repo repositories.BudgetRepository
 
 	for i, item := range items {
 		// Get filament usage info for this item
-		filaments, _ := repo.GetFilamentUsageInfo(ctx, item.ID)
+		filaments, _ := repo.GetFilamentUsageInfo(ctx, item.ID, organizationID)
 
 		// Calculate print time display
 		printTimeDisplay := ""

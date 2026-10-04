@@ -74,7 +74,7 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 	}
 
 	// Delete budget
-	if err := uc.budgetRepository.Delete(ctx, budgetID); err != nil {
+	if err := uc.budgetRepository.Delete(ctx, budgetID, organizationID); err != nil {
 		uc.logger.Error(ctx, "Failed to delete budget", map[string]interface{}{
 			"error": err.Error(),
 		})

@@ -5570,6 +5570,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/budgets/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Calculate a budget's full cost breakdown without saving it. Useful for live quoting in the UI.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Preview budget costs",
+                "parameters": [
+                    {
+                        "description": "Budget preview request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.PreviewBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/v1/budgets/{id}": {
             "get": {
                 "security": [
@@ -6133,6 +6186,13 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -8058,6 +8118,14 @@ const docTemplate = `{
                 "budget_id": {
                     "type": "string"
                 },
+                "cost_preset": {
+                    "description": "{id, name} resolved from CostPresetID",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.CostPresetRef"
+                        }
+                    ]
+                },
                 "cost_preset_id": {
                     "description": "Cost preset and additional notes",
                     "type": "string"
@@ -8122,6 +8190,14 @@ const docTemplate = `{
                 "product_quantity": {
                     "type": "integer"
                 },
+                "sale_total": {
+                    "description": "cents (with markup)",
+                    "type": "integer"
+                },
+                "sale_unit_price": {
+                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY\nto the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may\ndiffer from SaleTotal by a few cents.",
+                    "type": "integer"
+                },
                 "setup_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -8131,7 +8207,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "unit_price": {
-                    "description": "cents per unit",
+                    "description": "cents per unit (COST, no markup) - kept for compatibility",
                     "type": "integer"
                 },
                 "updated_at": {
@@ -8808,6 +8884,17 @@ const docTemplate = `{
                 },
                 "support_removal_cost_per_hour": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.CostPresetRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -10659,6 +10746,60 @@ const docTemplate = `{
                 "PresetTypeEnergy",
                 "PresetTypeCost"
             ]
+        },
+        "entities.PreviewBudgetRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "customer_id": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "description": "Additional fields (echoed back on the preview response for convenience)",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "include_energy_cost": {
+                    "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_waste_cost": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "Items (products) - required",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemRequest"
+                    }
+                },
+                "machine_preset_id": {
+                    "description": "Global presets (apply to all items unless overridden)",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "payment_terms": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
         },
         "entities.ProfileResponse": {
             "type": "object",

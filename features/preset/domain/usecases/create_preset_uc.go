@@ -21,10 +21,11 @@ func NewCreatePresetUseCase(presetRepo repositories.PresetRepository) *CreatePre
 }
 
 // CreateMachinePresetRequest represents the request to create a machine preset.
-// UserID is kept for backwards compatibility but is NOT trusted: the owning
-// user is always derived from the authenticated context.
+// Name is optional: when empty it is auto-generated from the brand, model and
+// nozzle. UserID is kept for backwards compatibility but is NOT trusted: the
+// owning user is always derived from the authenticated context.
 type CreateMachinePresetRequest struct {
-	Name                   string     `json:"name" binding:"required"`
+	Name                   string     `json:"name"`
 	Description            string     `json:"description"`
 	IsDefault              bool       `json:"is_default"`
 	UserID                 *uuid.UUID `json:"user_id"` // Deprecated: ignored; derived from the authenticated user.
@@ -45,10 +46,12 @@ type CreateMachinePresetRequest struct {
 }
 
 // CreateEnergyPresetRequest represents the request to create an energy preset.
-// UserID is kept for backwards compatibility but is NOT trusted: the owning
-// user is always derived from the authenticated context.
+// Name is optional (auto-generated from provider/city/state and tariff when
+// empty). Peak/off-peak multipliers default to 1.0 when omitted. UserID is kept
+// for backwards compatibility but is NOT trusted: the owning user is always
+// derived from the authenticated context.
 type CreateEnergyPresetRequest struct {
-	Name                  string     `json:"name" binding:"required"`
+	Name                  string     `json:"name"`
 	Description           string     `json:"description"`
 	IsDefault             bool       `json:"is_default"`
 	UserID                *uuid.UUID `json:"user_id"` // Deprecated: ignored; derived from the authenticated user.
@@ -59,15 +62,16 @@ type CreateEnergyPresetRequest struct {
 	Currency              string     `json:"currency" binding:"required,len=3"`
 	Provider              string     `json:"provider"`
 	TariffType            string     `json:"tariff_type"`
-	PeakHourMultiplier    float32    `json:"peak_hour_multiplier" binding:"required,gt=0"`
-	OffPeakHourMultiplier float32    `json:"off_peak_hour_multiplier" binding:"required,gt=0"`
+	PeakHourMultiplier    float32    `json:"peak_hour_multiplier" binding:"omitempty,gt=0"`
+	OffPeakHourMultiplier float32    `json:"off_peak_hour_multiplier" binding:"omitempty,gt=0"`
 }
 
 // CreateCostPresetRequest represents the request to create a cost preset.
-// UserID is kept for backwards compatibility but is NOT trusted: the owning
-// user is always derived from the authenticated context.
+// Name is optional (auto-generated from labor rate and profit margin when empty).
+// UserID is kept for backwards compatibility but is NOT trusted: the owning user
+// is always derived from the authenticated context.
 type CreateCostPresetRequest struct {
-	Name                      string     `json:"name" binding:"required"`
+	Name                      string     `json:"name"`
 	Description               string     `json:"description"`
 	IsDefault                 bool       `json:"is_default"`
 	UserID                    *uuid.UUID `json:"user_id"` // Deprecated: ignored; derived from the authenticated user.
@@ -76,19 +80,24 @@ type CreateCostPresetRequest struct {
 	ShippingCostBase          float32    `json:"shipping_cost_base" binding:"min=0"`
 	ShippingCostPerGram       float32    `json:"shipping_cost_per_gram" binding:"min=0"`
 	OverheadPercentage        float32    `json:"overhead_percentage" binding:"min=0,max=100"`
-	ProfitMarginPercentage    float32    `json:"profit_margin_percentage" binding:"min=0,max=100"`
+	ProfitMarginPercentage    float32    `json:"profit_margin_percentage" binding:"min=0,max=1000"`
 	PostProcessingCostPerHour float32    `json:"post_processing_cost_per_hour" binding:"min=0"`
 	SupportRemovalCostPerHour float32    `json:"support_removal_cost_per_hour" binding:"min=0"`
 	QualityControlCostPerItem float32    `json:"quality_control_cost_per_item" binding:"min=0"`
 }
 
 // CreateMachinePreset creates a new machine preset. The owning user is taken
-// from the authenticated context (userID), never from the request body.
+// from the authenticated context (userID), never from the request body. When the
+// name is empty it is auto-generated from the brand, model and nozzle.
 func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetRequest, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
-	// Create base preset entity
+	name := req.Name
+	if name == "" {
+		name = entities.GenerateMachineName(req.Brand, req.Model, req.NozzleDiameter)
+	}
+
 	preset := &entities.PresetEntity{
 		ID:             uuid.New(),
-		Name:           req.Name,
+		Name:           name,
 		Description:    req.Description,
 		Type:           entities.PresetTypeMachine,
 		IsActive:       true,
@@ -99,12 +108,10 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 		UpdatedAt:      time.Now(),
 	}
 
-	// Validate base preset
 	if err := preset.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Create machine-specific entity
 	machine := &entities.MachinePresetEntity{
 		ID:                     preset.ID,
 		OrganizationID:         organizationID,
@@ -124,12 +131,10 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 		CostPerHour:            req.CostPerHour,
 	}
 
-	// Validate machine preset
 	if err := machine.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Save to repository
 	if err := uc.presetRepo.CreateMachine(preset, machine); err != nil {
 		return nil, err
 	}
@@ -137,13 +142,18 @@ func (uc *CreatePresetUseCase) CreateMachinePreset(req *CreateMachinePresetReque
 	return preset, nil
 }
 
-// CreateEnergyPreset creates a new energy preset. The owning user is taken
-// from the authenticated context (userID), never from the request body.
+// CreateEnergyPreset creates a new energy preset. The owning user is taken from
+// the authenticated context (userID), never from the request body. Name is
+// auto-generated when empty and the peak/off-peak multipliers default to 1.0.
 func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
-	// Create base preset entity
+	name := req.Name
+	if name == "" {
+		name = entities.GenerateEnergyName(req.Provider, req.City, req.State, req.EnergyCostPerKwh)
+	}
+
 	preset := &entities.PresetEntity{
 		ID:             uuid.New(),
-		Name:           req.Name,
+		Name:           name,
 		Description:    req.Description,
 		Type:           entities.PresetTypeEnergy,
 		IsActive:       true,
@@ -154,12 +164,21 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 		UpdatedAt:      time.Now(),
 	}
 
-	// Validate base preset
 	if err := preset.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Create energy-specific entity
+	// Peak/off-peak multipliers default to 1.0 (no peak/off-peak pricing) when
+	// omitted, so a simple flat tariff needs no extra fields.
+	peak := req.PeakHourMultiplier
+	if peak == 0 {
+		peak = 1.0
+	}
+	offPeak := req.OffPeakHourMultiplier
+	if offPeak == 0 {
+		offPeak = 1.0
+	}
+
 	energy := &entities.EnergyPresetEntity{
 		ID:                    preset.ID,
 		OrganizationID:        organizationID,
@@ -170,16 +189,14 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 		Currency:              req.Currency,
 		Provider:              req.Provider,
 		TariffType:            req.TariffType,
-		PeakHourMultiplier:    req.PeakHourMultiplier,
-		OffPeakHourMultiplier: req.OffPeakHourMultiplier,
+		PeakHourMultiplier:    peak,
+		OffPeakHourMultiplier: offPeak,
 	}
 
-	// Validate energy preset
 	if err := energy.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Save to repository
 	if err := uc.presetRepo.CreateEnergy(preset, energy); err != nil {
 		return nil, err
 	}
@@ -187,13 +204,18 @@ func (uc *CreatePresetUseCase) CreateEnergyPreset(req *CreateEnergyPresetRequest
 	return preset, nil
 }
 
-// CreateCostPreset creates a new cost preset. The owning user is taken
-// from the authenticated context (userID), never from the request body.
+// CreateCostPreset creates a new cost preset. The owning user is taken from the
+// authenticated context (userID), never from the request body. Name is
+// auto-generated from the labor rate and profit margin when empty.
 func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
-	// Create base preset entity
+	name := req.Name
+	if name == "" {
+		name = entities.GenerateCostName(req.LaborCostPerHour, req.ProfitMarginPercentage)
+	}
+
 	preset := &entities.PresetEntity{
 		ID:             uuid.New(),
-		Name:           req.Name,
+		Name:           name,
 		Description:    req.Description,
 		Type:           entities.PresetTypeCost,
 		IsActive:       true,
@@ -204,12 +226,10 @@ func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, or
 		UpdatedAt:      time.Now(),
 	}
 
-	// Validate base preset
 	if err := preset.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Create cost-specific entity
 	cost := &entities.CostPresetEntity{
 		ID:                        preset.ID,
 		OrganizationID:            organizationID,
@@ -224,15 +244,79 @@ func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, or
 		QualityControlCostPerItem: req.QualityControlCostPerItem,
 	}
 
-	// Validate cost preset
 	if err := cost.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Save to repository
 	if err := uc.presetRepo.CreateCost(preset, cost); err != nil {
 		return nil, err
 	}
 
 	return preset, nil
+}
+
+// FromTemplateOverrides holds the optional fields a caller may override when
+// instantiating a preset from a template.
+type FromTemplateOverrides struct {
+	Name      string `json:"name"`
+	IsDefault bool   `json:"is_default"`
+}
+
+// CreateFromTemplate instantiates a preset in the organization from a static
+// template, applying optional overrides (name and is_default). The owning user
+// is taken from the authenticated context. Returns entities.ErrTemplateNotFound
+// when the key is unknown.
+func (uc *CreatePresetUseCase) CreateFromTemplate(key string, overrides FromTemplateOverrides, organizationID string, userID *uuid.UUID) (*entities.PresetEntity, error) {
+	tmpl, ok := entities.TemplateByKey(key)
+	if !ok {
+		return nil, entities.ErrTemplateNotFound
+	}
+
+	name := overrides.Name
+	if name == "" {
+		name = tmpl.Name
+	}
+
+	switch tmpl.Type {
+	case entities.PresetTypeMachine:
+		m := tmpl.Machine
+		return uc.CreateMachinePreset(&CreateMachinePresetRequest{
+			Name:             name,
+			Description:      tmpl.Description,
+			IsDefault:        overrides.IsDefault,
+			Brand:            m.Brand,
+			Model:            m.Model,
+			BuildVolumeX:     m.BuildVolumeX,
+			BuildVolumeY:     m.BuildVolumeY,
+			BuildVolumeZ:     m.BuildVolumeZ,
+			NozzleDiameter:   m.NozzleDiameter,
+			LayerHeightMin:   0.1,
+			LayerHeightMax:   0.3,
+			PrintSpeedMax:    100,
+			PowerConsumption: m.PowerConsumption,
+			FilamentDiameter: m.FilamentDiameter,
+		}, organizationID, userID)
+	case entities.PresetTypeEnergy:
+		e := tmpl.Energy
+		return uc.CreateEnergyPreset(&CreateEnergyPresetRequest{
+			Name:             name,
+			Description:      tmpl.Description,
+			IsDefault:        overrides.IsDefault,
+			Country:          e.Country,
+			EnergyCostPerKwh: e.EnergyCostPerKwh,
+			Currency:         e.Currency,
+		}, organizationID, userID)
+	case entities.PresetTypeCost:
+		c := tmpl.Cost
+		return uc.CreateCostPreset(&CreateCostPresetRequest{
+			Name:                   name,
+			Description:            tmpl.Description,
+			IsDefault:              overrides.IsDefault,
+			LaborCostPerHour:       c.LaborCostPerHour,
+			OverheadPercentage:     c.OverheadPercentage,
+			ProfitMarginPercentage: c.ProfitMarginPercentage,
+		}, organizationID, userID)
+	default:
+		return nil, entities.ErrInvalidPresetType
+	}
 }

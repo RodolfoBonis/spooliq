@@ -23,6 +23,7 @@ var Module = fx.Module("preset",
 		usecases.NewFindPresetUseCase,
 		usecases.NewUpdatePresetUseCase,
 		usecases.NewDeletePresetUseCase,
+		usecases.NewManagePresetUseCase,
 	),
 
 	// Handlers

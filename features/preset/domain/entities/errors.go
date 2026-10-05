@@ -11,4 +11,6 @@ var (
 	ErrCannotDeleteDefaultPreset = errors.New("default presets cannot be deleted")
 	// ErrPresetNotFound error message when a preset does not exist within the organization scope
 	ErrPresetNotFound = errors.New("preset not found")
+	// ErrTemplateNotFound error message when a preset template key is unknown
+	ErrTemplateNotFound = errors.New("preset template not found")
 )

@@ -22,6 +22,7 @@ type Handler struct {
 	findUC          *usecases.FindPresetUseCase
 	updateUC        *usecases.UpdatePresetUseCase
 	deleteUC        *usecases.DeletePresetUseCase
+	manageUC        *usecases.ManagePresetUseCase
 	activityService activityUc.IActivityService
 }
 
@@ -31,6 +32,7 @@ func NewPresetHandler(
 	findUC *usecases.FindPresetUseCase,
 	updateUC *usecases.UpdatePresetUseCase,
 	deleteUC *usecases.DeletePresetUseCase,
+	manageUC *usecases.ManagePresetUseCase,
 	activityService activityUc.IActivityService,
 ) *Handler {
 	return &Handler{
@@ -38,6 +40,7 @@ func NewPresetHandler(
 		findUC:          findUC,
 		updateUC:        updateUC,
 		deleteUC:        deleteUC,
+		manageUC:        manageUC,
 		activityService: activityService,
 	}
 }
@@ -93,6 +96,17 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 		presets.GET("", protectFactory(handler.GetPresets, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		presets.GET("/:id", protectFactory(handler.GetPresetByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		presets.DELETE("/:id", protectFactory(handler.DeletePreset, roles.OwnerRole, roles.OrgAdminRole))
+
+		// Name suggestion (pure helper so the web app can prefill the name field).
+		presets.POST("/suggest-name", protectFactory(handler.SuggestName, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+
+		// Templates catalog (static) and instantiation.
+		presets.GET("/templates", protectFactory(handler.GetTemplates, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		presets.POST("/from-template/:key", protectFactory(handler.CreateFromTemplate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+
+		// Default and duplicate actions.
+		presets.POST("/:id/default", protectFactory(handler.SetDefault, roles.OwnerRole, roles.OrgAdminRole))
+		presets.POST("/:id/duplicate", protectFactory(handler.Duplicate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 
 		// Machine preset routes
 		machines := presets.Group("/machines")
@@ -828,6 +842,185 @@ func (h *Handler) UpdateCostPreset(c *gin.Context) {
 		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),
 		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
+}
+
+// SuggestName returns an auto-generated preset name for the given type and fields.
+// @Summary Suggest preset name
+// @Description Generate a preset name from its type and fields so the web app can prefill the name input. Pure helper; does not persist anything.
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param request body usecases.SuggestNameRequest true "Type and fields"
+// @Success 200 {object} map[string]string "Suggested name"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid request data"
+// @Security BearerAuth
+// @Router /presets/suggest-name [post]
+func (h *Handler) SuggestName(c *gin.Context) {
+	var req usecases.SuggestNameRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	name, err := h.manageUC.SuggestName(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"name": name})
+}
+
+// GetTemplates returns the static preset templates catalog.
+// @Summary List preset templates
+// @Description Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type.
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param type query string false "Template type filter (machine, energy, cost)"
+// @Success 200 {array} entities.PresetTemplate "Templates"
+// @Security BearerAuth
+// @Router /presets/templates [get]
+func (h *Handler) GetTemplates(c *gin.Context) {
+	presetType := entities.PresetType(c.Query("type"))
+	c.JSON(http.StatusOK, entities.TemplatesByType(presetType))
+}
+
+// CreateFromTemplate creates an organization preset from a template.
+// @Summary Create preset from template
+// @Description Instantiate a preset in the caller's organization from a template, with optional overrides (name, is_default).
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param key path string true "Template key"
+// @Param request body usecases.FromTemplateOverrides false "Optional overrides"
+// @Success 201 {object} entities.PresetEntity "Preset created from template"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid request data"
+// @Failure 404 {object} errors.HTTPError "Not Found - Unknown template key"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security BearerAuth
+// @Router /presets/from-template/{key} [post]
+func (h *Handler) CreateFromTemplate(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
+	key := c.Param("key")
+
+	var overrides usecases.FromTemplateOverrides
+	// Body is optional; ignore EOF/empty-body bind errors.
+	_ = c.ShouldBindJSON(&overrides)
+
+	preset, err := h.createUC.CreateFromTemplate(key, overrides, organizationID, authenticatedUserID(c))
+	if err != nil {
+		if errors.Is(err, entities.ErrTemplateNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, preset)
+
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
+}
+
+// SetDefault marks a preset as the default for its type.
+// @Summary Set preset as default
+// @Description Mark the preset as the single default for its (organization, type); clears any other default of the same type.
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Preset ID (UUID format)"
+// @Success 200 {object} entities.PresetEntity "Preset set as default"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Preset not found"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security BearerAuth
+// @Router /presets/{id}/default [post]
+func (h *Handler) SetDefault(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	preset, err := h.manageUC.SetDefault(id, organizationID)
+	if err != nil {
+		respondPresetError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, preset)
+
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityPreset,
+		EntityID:       preset.ID.String(),
+		EntityName:     preset.Name,
+		CreatedAt:      time.Now(),
+	})
+}
+
+// Duplicate copies a preset within the organization.
+// @Summary Duplicate preset
+// @Description Copy a preset (base + type-specific data) within the caller's organization. The copy is named "<name> (cópia)" and is not a default.
+// @Tags Presets
+// @Accept json
+// @Produce json
+// @Param id path string true "Preset ID (UUID format)"
+// @Success 201 {object} entities.PresetEntity "Preset duplicated"
+// @Failure 400 {object} errors.HTTPError "Bad Request - Invalid ID format"
+// @Failure 404 {object} errors.HTTPError "Not Found - Preset not found"
+// @Failure 500 {object} errors.HTTPError "Internal Server Error"
+// @Security BearerAuth
+// @Router /presets/{id}/duplicate [post]
+func (h *Handler) Duplicate(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	preset, err := h.manageUC.Duplicate(id, organizationID)
+	if err != nil {
+		respondPresetError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, preset)
+
+	h.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionCreated,
 		EntityType:     activityEntities.EntityPreset,
 		EntityID:       preset.ID.String(),
 		EntityName:     preset.Name,

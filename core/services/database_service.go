@@ -19,6 +19,7 @@ import (
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
+	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"gorm.io/driver/postgres"
@@ -320,6 +321,12 @@ func RunMigrations() {
 
 	if err := Connector.AutoMigrate(&presets.CostPresetModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
+	}
+
+	// Enforce a single default preset per (organization, type): dedupe existing
+	// data then create the partial unique index. Safe and idempotent.
+	if err := presetRepos.MigrateDefaults(Connector); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRESET DEFAULT CONSTRAINT MIGRATION: %s", err.Error()))
 	}
 
 	// ========================================

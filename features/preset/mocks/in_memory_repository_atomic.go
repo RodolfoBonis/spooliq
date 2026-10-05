@@ -1,7 +1,10 @@
 package mocks
 
 import (
+	"time"
+
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -58,4 +61,83 @@ func (r *InMemoryPresetRepository) UpdateCostWithPreset(preset *entities.PresetE
 	costClone := *cost
 	r.costs[cost.ID] = &costClone
 	return nil
+}
+
+// clearOtherDefaults unsets is_default on every other live preset of the same
+// (organization, type), mirroring the real repository's transactional clearing.
+func (r *InMemoryPresetRepository) clearOtherDefaults(organizationID string, presetType entities.PresetType, exceptID uuid.UUID) {
+	for id, preset := range r.presets {
+		if id == exceptID || preset.DeletedAt != nil {
+			continue
+		}
+		if preset.OrganizationID == organizationID && preset.Type == presetType {
+			preset.IsDefault = false
+		}
+	}
+}
+
+// SetDefault marks the preset as the single default for its (organization, type)
+// pair, clearing any sibling default in the same organization.
+func (r *InMemoryPresetRepository) SetDefault(id uuid.UUID, organizationID string) (*entities.PresetEntity, error) {
+	r.record(organizationID)
+	preset := r.liveInOrg(id, organizationID)
+	if preset == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	r.clearOtherDefaults(organizationID, preset.Type, id)
+	preset.IsDefault = true
+	preset.UpdatedAt = time.Now()
+	clone := *preset
+	return &clone, nil
+}
+
+// Duplicate copies a preset (base + child) within the same organization. The
+// copy is never a default and takes the given name.
+func (r *InMemoryPresetRepository) Duplicate(id uuid.UUID, organizationID string, newName string) (*entities.PresetEntity, error) {
+	r.record(organizationID)
+	preset := r.liveInOrg(id, organizationID)
+	if preset == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	now := time.Now()
+	newID := uuid.New()
+	newPreset := *preset
+	newPreset.ID = newID
+	newPreset.Name = newName
+	newPreset.IsDefault = false
+	newPreset.CreatedAt = now
+	newPreset.UpdatedAt = now
+	newPreset.DeletedAt = nil
+
+	switch preset.Type {
+	case entities.PresetTypeMachine:
+		child, ok := r.machines[id]
+		if !ok {
+			return nil, gorm.ErrRecordNotFound
+		}
+		cc := *child
+		cc.ID = newID
+		r.Seed(&newPreset, &cc)
+	case entities.PresetTypeEnergy:
+		child, ok := r.energies[id]
+		if !ok {
+			return nil, gorm.ErrRecordNotFound
+		}
+		cc := *child
+		cc.ID = newID
+		r.Seed(&newPreset, &cc)
+	case entities.PresetTypeCost:
+		child, ok := r.costs[id]
+		if !ok {
+			return nil, gorm.ErrRecordNotFound
+		}
+		cc := *child
+		cc.ID = newID
+		r.Seed(&newPreset, &cc)
+	default:
+		return nil, entities.ErrInvalidPresetType
+	}
+
+	clone := newPreset
+	return &clone, nil
 }

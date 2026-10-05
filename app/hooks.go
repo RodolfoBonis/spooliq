@@ -43,6 +43,10 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activ
 
 	config.SentryConfig()
 
+	// CORS must run first so preflight (OPTIONS) requests are answered before
+	// routing; without it they fall through to 404.
+	router.Use(middlewares.Cors())
+
 	// Observability middleware (tracing + metrics + enrichment)
 	router.Use(ginmiddleware.New(agent, "spooliq-api"))
 

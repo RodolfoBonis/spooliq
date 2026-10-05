@@ -12,6 +12,8 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 	{
 		// All users can manage budgets
 		budgetRoutes.POST("", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Stateless cost preview (never persists). Same roles as create.
+		budgetRoutes.POST("/preview", protectFactory(useCase.Preview, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))

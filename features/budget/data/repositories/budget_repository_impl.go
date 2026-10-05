@@ -122,22 +122,27 @@ func (r *budgetRepositoryImpl) Update(ctx context.Context, budget *entities.Budg
 }
 
 // UpdateStatus writes only the status column (and updated_at), scoped by
-// organization. It is the single owner of the status column; keeping status
-// writes out of the generic Update prevents a concurrent full edit from
-// reverting a status transition.
-func (r *budgetRepositoryImpl) UpdateStatus(ctx context.Context, budgetID uuid.UUID, organizationID string, status entities.BudgetStatus) error {
+// organization AND guarded by the expected current status. It is the single owner
+// of the status column; keeping status writes out of the generic Update prevents a
+// concurrent full edit from reverting a status transition.
+//
+// The expectedCurrent guard (WHERE status = expectedCurrent) makes the write
+// optimistic: if another request already moved the budget off that status, no row
+// matches and this returns entities.ErrBudgetStatusConflict so the caller can
+// surface a 409 Conflict instead of silently applying a stale transition.
+func (r *budgetRepositoryImpl) UpdateStatus(ctx context.Context, budgetID uuid.UUID, organizationID string, expectedCurrent, newStatus entities.BudgetStatus) error {
 	result := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).
-		Where("id = ? AND organization_id = ?", budgetID, organizationID).
+		Where("id = ? AND organization_id = ? AND status = ?", budgetID, organizationID, string(expectedCurrent)).
 		Updates(map[string]interface{}{
-			"status":     string(status),
+			"status":     string(newStatus),
 			"updated_at": time.Now(),
 		})
 	if result.Error != nil {
 		return fmt.Errorf("failed to update budget status: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return entities.ErrBudgetNotFound
+		return entities.ErrBudgetStatusConflict
 	}
 	return nil
 }
@@ -498,254 +503,317 @@ func (r *budgetRepositoryImpl) GetStatusHistory(ctx context.Context, budgetID uu
 	return entities, nil
 }
 
-// CalculateCosts calculates all costs for a budget (multi-filament aware).
+// CalculateCosts recomputes and persists all costs for a stored budget.
 //
-// All monetary results are stored in CENTS; filament price_per_kg comes in CENTS,
-// energy/labor preset rates come in REAIS. Every conversion rounds to the nearest cent via
-// the pure helpers in the budget domain services package. All lookups are scoped
-// by the budget's organization so cross-tenant references cannot leak into the
-// calculation, and every error is propagated instead of being silently ignored.
+// It loads everything org-scoped (the budget itself, its items, every item's
+// filaments in ONE batched query and each distinct preset once), delegates the
+// arithmetic to the pure pricing engine via ComputeBudgetPricing, and then
+// persists the per-item cost columns and the budget totals using explicit column
+// maps inside the caller's transaction. All monetary results are in CENTS.
 //
-// Historical consistency: presets are resolved by (id, organization) WITHOUT a
-// deleted_at filter, so a preset that was referenced by this budget and later
-// soft-deleted is still usable here. Rejecting soft-deleted presets would make an
-// already-saved budget impossible to recalculate (or even rename). New references
-// are validated separately (see ValidatePresetInOrg, which does require the preset
-// to be live). If a referenced preset ID is set but its typed child row cannot be
-// found, this returns an error instead of silently charging 0.
-func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid.UUID) error {
-	// Get budget
+// The initial budget fetch is scoped by organization (defense-in-depth against a
+// cross-tenant budget ID). Historical consistency for presets/filaments is handled
+// inside ComputeBudgetPricing (references are resolved by (id, organization) so a
+// since-soft-deleted preset referenced by this budget is still usable).
+func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid.UUID, organizationID string) error {
 	var budget models.BudgetModel
-	if err := r.db.WithContext(ctx).First(&budget, "id = ?", budgetID).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Where("organization_id = ?", organizationID).
+		First(&budget, "id = ?", budgetID).Error; err != nil {
 		return fmt.Errorf("failed to get budget: %w", err)
 	}
 
-	organizationID := budget.OrganizationID
-
-	// Get items
 	items, err := r.GetItems(ctx, budgetID)
 	if err != nil {
 		return err
 	}
 
-	// Get machine and energy presets (scoped by organization)
-	var machinePreset *entities.PresetInfo
-	var energyPreset *entities.PresetInfo
-
-	if budget.MachinePresetID != nil {
-		machinePreset, err = r.GetPresetInfo(ctx, *budget.MachinePresetID, "machine", organizationID)
-		if err != nil {
-			return fmt.Errorf("failed to load machine preset: %w", err)
-		}
-	}
-	if budget.EnergyPresetID != nil {
-		energyPreset, err = r.GetPresetInfo(ctx, *budget.EnergyPresetID, "energy", organizationID)
-		if err != nil {
-			return fmt.Errorf("failed to load energy preset: %w", err)
-		}
+	// Batch-load every item's filaments (grams) in ONE query, grouped by item.
+	gramsByItem, err := r.loadItemFilamentSpecs(ctx, items, organizationID)
+	if err != nil {
+		return err
 	}
 
-	// Hoist the energy inputs out of the per-item loop: the machine power draw and
-	// the energy price per kWh are budget-level and constant across items, so they
-	// are loaded once (if energy is enabled) instead of once per item.
-	var powerConsumption float64
-	var energyPrice float64
-	energyEnabled := budget.IncludeEnergyCost && machinePreset != nil && energyPreset != nil
-	if energyEnabled {
-		res := r.db.WithContext(ctx).
-			Table("machine_presets").
-			Select("power_consumption").
-			Where("id = ? AND organization_id = ?", *budget.MachinePresetID, organizationID).
-			Scan(&powerConsumption)
-		if res.Error != nil {
-			return fmt.Errorf("failed to load machine power consumption: %w", res.Error)
-		}
-		if res.RowsAffected == 0 {
-			return fmt.Errorf("machine preset %s not found for organization", *budget.MachinePresetID)
-		}
-
-		res = r.db.WithContext(ctx).
-			Table("energy_presets").
-			Select("energy_cost_per_kwh").
-			Where("id = ? AND organization_id = ?", *budget.EnergyPresetID, organizationID).
-			Scan(&energyPrice)
-		if res.Error != nil {
-			return fmt.Errorf("failed to load energy price: %w", res.Error)
-		}
-		if res.RowsAffected == 0 {
-			return fmt.Errorf("energy preset %s not found for organization", *budget.EnergyPresetID)
+	specs := make([]entities.PricingItemSpec, len(items))
+	for i, item := range items {
+		specs[i] = entities.PricingItemSpec{
+			ProductQuantity:         item.ProductQuantity,
+			PrintTimeHours:          item.PrintTimeHours,
+			PrintTimeMinutes:        item.PrintTimeMinutes,
+			SetupTimeMinutes:        item.SetupTimeMinutes,
+			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+			CostPresetID:            item.CostPresetID,
+			Filaments:               gramsByItem[item.ID],
 		}
 	}
 
-	// Cache cost-preset labor rates so each distinct preset is loaded at most once
-	// across all items (and the budget-level fallback) instead of once per item.
-	laborRateCache := make(map[uuid.UUID]float64)
-	laborRateFor := func(presetID uuid.UUID) (float64, error) {
-		if rate, ok := laborRateCache[presetID]; ok {
-			return rate, nil
-		}
-		var rate float64
-		res := r.db.WithContext(ctx).
-			Table("cost_presets").
-			Select("labor_cost_per_hour").
-			Where("id = ? AND organization_id = ?", presetID, organizationID).
-			Scan(&rate)
-		if res.Error != nil {
-			return 0, fmt.Errorf("failed to load labor rate: %w", res.Error)
-		}
-		if res.RowsAffected == 0 {
-			return 0, fmt.Errorf("cost preset %s not found for organization", presetID)
-		}
-		laborRateCache[presetID] = rate
-		return rate, nil
+	result, err := r.ComputeBudgetPricing(ctx, entities.PricingComputationInput{
+		OrganizationID:     organizationID,
+		IncludeEnergyCost:  budget.IncludeEnergyCost,
+		IncludeWasteCost:   budget.IncludeWasteCost,
+		MachinePresetID:    budget.MachinePresetID,
+		EnergyPresetID:     budget.EnergyPresetID,
+		BudgetCostPresetID: budget.CostPresetID,
+		Items:              specs,
+	})
+	if err != nil {
+		return err
 	}
 
-	var totalFilamentCost, totalWasteCost, totalEnergyCost, totalSetupCost, totalManualLaborCost int64
-
-	// Process each item (product)
-	for _, item := range items {
-		var itemFilamentCost, itemWasteCost, itemEnergyCost, itemSetupCost, itemManualLaborCost int64
-
-		// 1. Get filaments for this item
-		itemFilaments, err := r.GetItemFilaments(ctx, item.ID)
-		if err != nil {
-			return fmt.Errorf("failed to get item filaments: %w", err)
-		}
-
-		// 2. Calculate filament cost (sum of all filaments in this item)
-		var avgPrice float64
-		var totalPrice float64
-
-		for _, itemFil := range itemFilaments {
-			filament, err := r.GetFilamentInfo(ctx, itemFil.FilamentID, organizationID)
-			if err != nil {
-				return fmt.Errorf("failed to load filament %s: %w", itemFil.FilamentID, err)
-			}
-
-			itemFilamentCost += pricing.FilamentCostCents(itemFil.Quantity, filament.PricePerKg)
-			totalPrice += filament.PricePerKg
-		}
-
-		if len(itemFilaments) > 0 {
-			avgPrice = totalPrice / float64(len(itemFilaments))
-		}
-
-		// 3. Calculate waste cost (AMS multi-color)
-		if budget.IncludeWasteCost && len(itemFilaments) > 1 {
-			wastePerChange := 15.0 // grams
-			numChanges := len(itemFilaments) - 1
-			totalWaste := wastePerChange * float64(numChanges)
-			itemWasteCost = pricing.WasteCostCents(totalWaste, avgPrice)
-		}
-
-		// 4. Calculate energy cost (proportional to this item's print time)
-		if energyEnabled {
-			itemHours := float64(item.PrintTimeHours) + float64(item.PrintTimeMinutes)/60.0
-			itemEnergyCost = pricing.EnergyCostCents(powerConsumption, itemHours, energyPrice)
-		}
-
-		// 5 & 6. Calculate setup cost and manual labor cost
-		var laborRate float64
-		if item.CostPresetID != nil {
-			laborRate, err = laborRateFor(*item.CostPresetID)
-			if err != nil {
-				return err
-			}
-		}
-
-		itemSetupCost = pricing.LaborCostCents(item.SetupTimeMinutes, laborRate)
-		itemManualLaborCost = pricing.LaborCostCents(item.ManualLaborMinutesTotal, laborRate)
-
-		// 7. Calculate item total cost
-		item.FilamentCost = itemFilamentCost
-		item.WasteCost = itemWasteCost
-		item.EnergyCost = itemEnergyCost
-		item.SetupCost = itemSetupCost
-		item.ManualLaborCost = itemManualLaborCost
-		item.ItemTotalCost = itemFilamentCost + itemWasteCost + itemEnergyCost + itemSetupCost + itemManualLaborCost
-
-		// 8. Calculate unit price
-		item.UnitPrice = pricing.UnitPriceCents(item.ItemTotalCost, item.ProductQuantity)
-
-		// 9. Update item in database
+	// Persist per-item costs (UpdateItem uses an explicit column set so zero-valued
+	// costs are written back).
+	for i, item := range items {
+		res := result.Items[i]
+		item.FilamentCost = res.FilamentCost
+		item.WasteCost = res.WasteCost
+		item.EnergyCost = res.EnergyCost
+		item.SetupCost = res.SetupCost
+		item.ManualLaborCost = res.ManualLaborCost
+		item.ItemTotalCost = res.ItemTotalCost
+		item.UnitPrice = res.UnitCost
 		if err := r.UpdateItem(ctx, item); err != nil {
 			return fmt.Errorf("failed to update item costs: %w", err)
 		}
-
-		// 10. Sum to budget totals
-		totalFilamentCost += itemFilamentCost
-		totalWasteCost += itemWasteCost
-		totalEnergyCost += itemEnergyCost
-		totalSetupCost += itemSetupCost
-		totalManualLaborCost += itemManualLaborCost
 	}
 
-	// Calculate budget subtotal (before overhead and profit)
-	budgetSubtotal := totalFilamentCost + totalWasteCost + totalEnergyCost + totalSetupCost + totalManualLaborCost
-
-	// Calculate overhead and profit
-	var overheadCost, profitAmount int64
-
-	var costPreset struct {
-		OverheadPercentage     float64
-		ProfitMarginPercentage float64
-	}
-
-	// Try to get from budget-level CostPreset first, fall back to first item's CostPreset.
-	var costPresetID *uuid.UUID
-	if budget.CostPresetID != nil {
-		costPresetID = budget.CostPresetID
-	} else if len(items) > 0 && items[0].CostPresetID != nil {
-		costPresetID = items[0].CostPresetID
-	}
-
-	if costPresetID != nil {
-		res := r.db.WithContext(ctx).
-			Table("cost_presets").
-			Select("overhead_percentage, profit_margin_percentage").
-			Where("id = ? AND organization_id = ?", *costPresetID, organizationID).
-			Scan(&costPreset)
-		if res.Error != nil {
-			return fmt.Errorf("failed to load cost preset percentages: %w", res.Error)
-		}
-		if res.RowsAffected == 0 {
-			return fmt.Errorf("cost preset %s not found for organization", *costPresetID)
-		}
-	}
-
-	// Overhead: Subtotal * (OverheadPercentage / 100)
-	overheadCost = pricing.PercentageCents(budgetSubtotal, costPreset.OverheadPercentage)
-
-	// Profit: (Subtotal + Overhead) * (ProfitMarginPercentage / 100)
-	profitAmount = pricing.PercentageCents(budgetSubtotal+overheadCost, costPreset.ProfitMarginPercentage)
-
-	// Update budget totals
-	budget.FilamentCost = totalFilamentCost
-	budget.WasteCost = totalWasteCost
-	budget.EnergyCost = totalEnergyCost
-	budget.SetupCost = totalSetupCost
-	budget.LaborCost = totalManualLaborCost
-	budget.OverheadCost = overheadCost
-	budget.ProfitAmount = profitAmount
-	budget.TotalCost = budgetSubtotal + overheadCost + profitAmount
-
+	// Persist budget totals (explicit column map, org-scoped).
 	if err := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).
 		Where("id = ? AND organization_id = ?", budgetID, organizationID).
 		Updates(map[string]interface{}{
-			"filament_cost": budget.FilamentCost,
-			"waste_cost":    budget.WasteCost,
-			"energy_cost":   budget.EnergyCost,
-			"setup_cost":    budget.SetupCost,
-			"labor_cost":    budget.LaborCost,
-			"overhead_cost": budget.OverheadCost,
-			"profit_amount": budget.ProfitAmount,
-			"total_cost":    budget.TotalCost,
+			"filament_cost": result.FilamentCost,
+			"waste_cost":    result.WasteCost,
+			"energy_cost":   result.EnergyCost,
+			"setup_cost":    result.SetupCost,
+			"labor_cost":    result.LaborCost,
+			"overhead_cost": result.Overhead,
+			"profit_amount": result.Profit,
+			"total_cost":    result.Total,
 		}).Error; err != nil {
 		return fmt.Errorf("failed to update budget costs: %w", err)
 	}
 
 	return nil
+}
+
+// ComputeBudgetPricing loads the org-scoped rates for the given input (filament
+// prices in ONE batched query, distinct cost presets in ONE batched query, and the
+// machine/energy presets once) and runs the pure pricing engine WITHOUT persisting
+// anything. It is shared by CalculateCosts (which persists afterwards) and the
+// stateless preview endpoint.
+//
+// All lookups are scoped by organization so cross-tenant references cannot leak in;
+// a referenced filament or cost preset that does not resolve inside the org is an
+// error rather than a silent zero. Presets/filaments are resolved WITHOUT a
+// deleted_at filter for historical consistency with already-saved budgets.
+func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in entities.PricingComputationInput) (pricing.PricingResult, error) {
+	var zero pricing.PricingResult
+
+	priceByFilament, err := r.loadFilamentPrices(ctx, in.Items, in.OrganizationID)
+	if err != nil {
+		return zero, err
+	}
+
+	costPresetByID, err := r.loadCostPresets(ctx, in)
+	if err != nil {
+		return zero, err
+	}
+
+	// Energy inputs are budget-level and constant across items; load them once.
+	energyEnabled := in.IncludeEnergyCost && in.MachinePresetID != nil && in.EnergyPresetID != nil
+	var powerWatts, energyPrice float64
+	if energyEnabled {
+		res := r.db.WithContext(ctx).
+			Table("machine_presets").
+			Select("power_consumption").
+			Where("id = ? AND organization_id = ?", *in.MachinePresetID, in.OrganizationID).
+			Scan(&powerWatts)
+		if res.Error != nil {
+			return zero, fmt.Errorf("failed to load machine power consumption: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return zero, fmt.Errorf("machine preset %s not found for organization", *in.MachinePresetID)
+		}
+
+		res = r.db.WithContext(ctx).
+			Table("energy_presets").
+			Select("energy_cost_per_kwh").
+			Where("id = ? AND organization_id = ?", *in.EnergyPresetID, in.OrganizationID).
+			Scan(&energyPrice)
+		if res.Error != nil {
+			return zero, fmt.Errorf("failed to load energy price: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return zero, fmt.Errorf("energy preset %s not found for organization", *in.EnergyPresetID)
+		}
+	}
+
+	pin := pricing.PricingInput{
+		IncludeWasteCost:  in.IncludeWasteCost,
+		EnergyEnabled:     energyEnabled,
+		MachinePowerWatts: powerWatts,
+		EnergyPricePerKwh: energyPrice,
+	}
+	if in.BudgetCostPresetID != nil {
+		cp := costPresetByID[*in.BudgetCostPresetID]
+		pin.BudgetCostPreset = &cp
+	}
+	pin.Items = make([]pricing.PricingItemInput, len(in.Items))
+	for i, item := range in.Items {
+		filaments := make([]pricing.PricingFilamentInput, len(item.Filaments))
+		for j, f := range item.Filaments {
+			filaments[j] = pricing.PricingFilamentInput{
+				Grams:           f.Quantity,
+				PricePerKgCents: priceByFilament[f.FilamentID],
+			}
+		}
+		var cp *pricing.CostPresetInput
+		if item.CostPresetID != nil {
+			v := costPresetByID[*item.CostPresetID]
+			cp = &v
+		}
+		pin.Items[i] = pricing.PricingItemInput{
+			Quantity:                item.ProductQuantity,
+			PrintTimeHours:          item.PrintTimeHours,
+			PrintTimeMinutes:        item.PrintTimeMinutes,
+			SetupTimeMinutes:        item.SetupTimeMinutes,
+			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+			CostPreset:              cp,
+			Filaments:               filaments,
+		}
+	}
+
+	return pricing.Calculate(pin)
+}
+
+// loadItemFilamentSpecs batch-loads the filaments (grams) of every given item in a
+// single org-scoped query, grouped by item ID and ordered by the color-change order.
+func (r *budgetRepositoryImpl) loadItemFilamentSpecs(ctx context.Context, items []*entities.BudgetItemEntity, organizationID string) (map[uuid.UUID][]entities.PricingFilamentSpec, error) {
+	out := make(map[uuid.UUID][]entities.PricingFilamentSpec, len(items))
+	if len(items) == 0 {
+		return out, nil
+	}
+
+	itemIDs := make([]uuid.UUID, len(items))
+	for i, it := range items {
+		itemIDs[i] = it.ID
+	}
+
+	var rows []struct {
+		BudgetItemID uuid.UUID
+		FilamentID   uuid.UUID
+		Quantity     float64
+	}
+	if err := r.db.WithContext(ctx).
+		Table("budget_item_filaments").
+		Select("budget_item_id, filament_id, quantity").
+		Where("budget_item_id IN ? AND organization_id = ?", itemIDs, organizationID).
+		Order("\"order\" ASC").
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load item filaments: %w", err)
+	}
+
+	for _, row := range rows {
+		out[row.BudgetItemID] = append(out[row.BudgetItemID], entities.PricingFilamentSpec{
+			FilamentID: row.FilamentID,
+			Quantity:   row.Quantity,
+		})
+	}
+	return out, nil
+}
+
+// loadFilamentPrices batch-loads the price (CENTS/kg) of every distinct filament
+// referenced by the items in a single org-scoped query. A referenced filament that
+// does not resolve inside the organization is an error (not a silent zero cost).
+func (r *budgetRepositoryImpl) loadFilamentPrices(ctx context.Context, items []entities.PricingItemSpec, organizationID string) (map[uuid.UUID]float64, error) {
+	seen := make(map[uuid.UUID]struct{})
+	ids := make([]uuid.UUID, 0)
+	for _, item := range items {
+		for _, f := range item.Filaments {
+			if _, ok := seen[f.FilamentID]; ok {
+				continue
+			}
+			seen[f.FilamentID] = struct{}{}
+			ids = append(ids, f.FilamentID)
+		}
+	}
+
+	out := make(map[uuid.UUID]float64, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var rows []struct {
+		ID         uuid.UUID
+		PricePerKg float64
+	}
+	if err := r.db.WithContext(ctx).
+		Table("filaments").
+		Select("id, price_per_kg").
+		Where("id IN ? AND organization_id = ?", ids, organizationID).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load filament prices: %w", err)
+	}
+	for _, row := range rows {
+		out[row.ID] = row.PricePerKg
+	}
+	if len(out) != len(ids) {
+		return nil, fmt.Errorf("one or more referenced filaments do not belong to your organization")
+	}
+	return out, nil
+}
+
+// loadCostPresets batch-loads the labor rate and overhead/profit percentages of
+// every distinct cost preset referenced by the input (budget-level + each item) in
+// a single org-scoped query. A referenced preset that does not resolve inside the
+// organization is an error (not a silent zero).
+func (r *budgetRepositoryImpl) loadCostPresets(ctx context.Context, in entities.PricingComputationInput) (map[uuid.UUID]pricing.CostPresetInput, error) {
+	seen := make(map[uuid.UUID]struct{})
+	ids := make([]uuid.UUID, 0)
+	add := func(id *uuid.UUID) {
+		if id == nil {
+			return
+		}
+		if _, ok := seen[*id]; ok {
+			return
+		}
+		seen[*id] = struct{}{}
+		ids = append(ids, *id)
+	}
+	add(in.BudgetCostPresetID)
+	for _, item := range in.Items {
+		add(item.CostPresetID)
+	}
+
+	out := make(map[uuid.UUID]pricing.CostPresetInput, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var rows []struct {
+		ID                     uuid.UUID
+		LaborCostPerHour       float64
+		OverheadPercentage     float64
+		ProfitMarginPercentage float64
+	}
+	if err := r.db.WithContext(ctx).
+		Table("cost_presets").
+		Select("id, labor_cost_per_hour, overhead_percentage, profit_margin_percentage").
+		Where("id IN ? AND organization_id = ?", ids, in.OrganizationID).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load cost presets: %w", err)
+	}
+	for _, row := range rows {
+		out[row.ID] = pricing.CostPresetInput{
+			LaborRatePerHour:       row.LaborCostPerHour,
+			OverheadPercentage:     row.OverheadPercentage,
+			ProfitMarginPercentage: row.ProfitMarginPercentage,
+		}
+	}
+	if len(out) != len(ids) {
+		return nil, fmt.Errorf("one or more referenced cost presets do not belong to your organization")
+	}
+	return out, nil
 }
 
 // ValidateFilamentsInOrg ensures every filament ID belongs to the given

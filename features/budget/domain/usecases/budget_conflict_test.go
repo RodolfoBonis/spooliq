@@ -11,6 +11,7 @@ import (
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	customerEntities "github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -76,6 +77,13 @@ type fakeBudgetRepo struct {
 	updateErr error // returned by Update (inside the transaction)
 
 	validatedPresets []presetValidation
+
+	// Preview support: canned pricing result and persistence-call counters so
+	// tests can assert a preview never writes anything.
+	pricingResult pricing.PricingResult
+	createCalls   int
+	addItemCalls  int
+	calcCalls     int
 }
 
 var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
@@ -83,7 +91,10 @@ var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
 func (f *fakeBudgetRepo) WithTransaction(ctx context.Context, fn func(repo budgetRepo.BudgetRepository) error) error {
 	return fn(f)
 }
-func (f *fakeBudgetRepo) Create(_ context.Context, _ *entities.BudgetEntity) error { return nil }
+func (f *fakeBudgetRepo) Create(_ context.Context, _ *entities.BudgetEntity) error {
+	f.createCalls++
+	return nil
+}
 func (f *fakeBudgetRepo) FindByID(_ context.Context, id uuid.UUID, org string) (*entities.BudgetEntity, error) {
 	if f.budget != nil {
 		return f.budget, nil
@@ -93,7 +104,7 @@ func (f *fakeBudgetRepo) FindByID(_ context.Context, id uuid.UUID, org string) (
 func (f *fakeBudgetRepo) Update(_ context.Context, _ *entities.BudgetEntity) error {
 	return f.updateErr
 }
-func (f *fakeBudgetRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ string, _ entities.BudgetStatus) error {
+func (f *fakeBudgetRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ string, _, _ entities.BudgetStatus) error {
 	return nil
 }
 func (f *fakeBudgetRepo) UpdatePDFURL(_ context.Context, _ uuid.UUID, _ string, _ *string) error {
@@ -109,8 +120,11 @@ func (f *fakeBudgetRepo) FindByCustomer(_ context.Context, _ uuid.UUID, _ string
 func (f *fakeBudgetRepo) SearchBudgets(_ context.Context, _ string, _ map[string]interface{}, _, _ int) ([]*entities.BudgetEntity, int, error) {
 	return nil, 0, nil
 }
-func (f *fakeBudgetRepo) AddItem(_ context.Context, _ *entities.BudgetItemEntity) error { return nil }
-func (f *fakeBudgetRepo) RemoveItem(_ context.Context, _ uuid.UUID) error               { return nil }
+func (f *fakeBudgetRepo) AddItem(_ context.Context, _ *entities.BudgetItemEntity) error {
+	f.addItemCalls++
+	return nil
+}
+func (f *fakeBudgetRepo) RemoveItem(_ context.Context, _ uuid.UUID) error { return nil }
 func (f *fakeBudgetRepo) UpdateItem(_ context.Context, _ *entities.BudgetItemEntity) error {
 	return nil
 }
@@ -135,7 +149,13 @@ func (f *fakeBudgetRepo) AddStatusHistory(_ context.Context, _ *entities.BudgetS
 func (f *fakeBudgetRepo) GetStatusHistory(_ context.Context, _ uuid.UUID) ([]entities.BudgetStatusHistoryEntity, error) {
 	return nil, nil
 }
-func (f *fakeBudgetRepo) CalculateCosts(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeBudgetRepo) CalculateCosts(_ context.Context, _ uuid.UUID, _ string) error {
+	f.calcCalls++
+	return nil
+}
+func (f *fakeBudgetRepo) ComputeBudgetPricing(_ context.Context, _ entities.PricingComputationInput) (pricing.PricingResult, error) {
+	return f.pricingResult, nil
+}
 func (f *fakeBudgetRepo) ValidateFilamentsInOrg(_ context.Context, _ []uuid.UUID, _ string) error {
 	return nil
 }

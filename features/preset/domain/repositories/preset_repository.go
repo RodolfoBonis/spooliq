@@ -100,6 +100,10 @@ type PresetRepository interface {
 	// organization in a single transaction. The copy is never a default and
 	// takes the given name. Returns the new base preset.
 	Duplicate(id uuid.UUID, organizationID string, newName string) (*entities.PresetEntity, error)
+	// IsReferencedByProfile reports whether any non-deleted print profile in the
+	// organization references the preset (as machine, energy or cost). Used to
+	// block deletion of a preset still in use by a profile.
+	IsReferencedByProfile(presetID uuid.UUID, organizationID string) (bool, error)
 
 	// Machine preset operations
 	CreateMachine(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error

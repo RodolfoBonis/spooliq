@@ -33,8 +33,11 @@ func clearOtherDefaults(db *gorm.DB, organizationID string, exceptID uuid.UUID) 
 
 // Create inserts a new profile, clearing a sibling default first when needed.
 func (r *PrintProfileRepositoryImpl) Create(profile *entities.ProfileEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if profile.IsDefault {
+			if err := lockDefaults(tx, profile.OrganizationID); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, profile.OrganizationID, profile.ID); err != nil {
 				return err
 			}
@@ -42,7 +45,7 @@ func (r *PrintProfileRepositoryImpl) Create(profile *entities.ProfileEntity) err
 		model := &models.PrintProfileModel{}
 		model.FromEntity(profile)
 		return tx.Create(model).Error
-	})
+	}))
 }
 
 // GetByID retrieves a profile scoped to the organization (soft-deleted excluded).
@@ -79,8 +82,11 @@ func (r *PrintProfileRepositoryImpl) List(organizationID string) ([]*entities.Pr
 // default first when the profile is being set as default. Returns
 // gorm.ErrRecordNotFound when no row matches the id+organization pair.
 func (r *PrintProfileRepositoryImpl) Update(profile *entities.ProfileEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if profile.IsDefault {
+			if err := lockDefaults(tx, profile.OrganizationID); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, profile.OrganizationID, profile.ID); err != nil {
 				return err
 			}
@@ -98,7 +104,7 @@ func (r *PrintProfileRepositoryImpl) Update(profile *entities.ProfileEntity) err
 			return gorm.ErrRecordNotFound
 		}
 		return nil
-	})
+	}))
 }
 
 // Delete soft deletes a profile, scoped to its organization.
@@ -123,6 +129,9 @@ func (r *PrintProfileRepositoryImpl) SetDefault(id uuid.UUID, organizationID str
 		if err := tx.Where("id = ? AND organization_id = ?", id, organizationID).First(&model).Error; err != nil {
 			return err
 		}
+		if err := lockDefaults(tx, organizationID); err != nil {
+			return err
+		}
 		if err := clearOtherDefaults(tx, organizationID, id); err != nil {
 			return err
 		}
@@ -139,7 +148,7 @@ func (r *PrintProfileRepositoryImpl) SetDefault(id uuid.UUID, organizationID str
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, translateDefaultErr(err)
 	}
 	return result, nil
 }

@@ -6,43 +6,50 @@ import "gorm.io/gorm"
 // default preset per (organization, type) among non-deleted rows.
 const presetDefaultIndexName = "uniq_presets_org_type_default"
 
+// presetDefaultMigrationLockKey is a fixed advisory-lock key serializing this
+// migration across concurrently-starting replicas, so two instances never race
+// on the dedupe + index creation.
+const presetDefaultMigrationLockKey = 918273645
+
 // MigrateDefaults makes the "single default per (organization, type)" invariant
 // durable at the database level.
 //
-// It is safe to run on existing data and idempotent:
-//  1. It first DEDUPES: for every (organization_id, type) that currently has more
-//     than one default, it keeps only the most recently updated one and clears
-//     is_default on the rest. Without this, creating the unique index below would
-//     fail on legacy data that predates the invariant.
-//  2. It then creates a PARTIAL UNIQUE INDEX on (organization_id, type) WHERE
-//     is_default AND deleted_at IS NULL, so the database itself rejects a second
-//     live default for the same pair.
-//
-// Both statements use IF NOT EXISTS / idempotent patterns so repeated startups
-// are no-ops.
+// It is safe to run on existing data, idempotent, and safe to run concurrently
+// from multiple replicas: the whole operation runs inside a transaction holding
+// a fixed advisory lock, and the index is created with IF NOT EXISTS.
+//  1. DEDUPE: for every (organization_id, type) with more than one default, keep
+//     only the most recently updated one and clear is_default on the rest.
+//     Without this, creating the unique index would fail on legacy data.
+//  2. Create a PARTIAL UNIQUE INDEX on (organization_id, type) WHERE is_default
+//     AND deleted_at IS NULL.
 func MigrateDefaults(db *gorm.DB) error {
-	// 1. Dedupe: keep the most recently updated default per (organization, type).
-	dedupe := `
-		UPDATE presets
-		SET is_default = false
-		WHERE is_default = true
-		  AND deleted_at IS NULL
-		  AND id NOT IN (
-			SELECT DISTINCT ON (organization_id, type) id
-			FROM presets
-			WHERE is_default = true AND deleted_at IS NULL
-			ORDER BY organization_id, type, updated_at DESC, id
-		  )
-	`
-	if err := db.Exec(dedupe).Error; err != nil {
-		return err
-	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		// Serialize concurrent replicas running this migration.
+		if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", presetDefaultMigrationLockKey).Error; err != nil {
+			return err
+		}
 
-	// 2. Partial unique index enforcing a single live default per (org, type).
-	createIndex := `
-		CREATE UNIQUE INDEX IF NOT EXISTS ` + presetDefaultIndexName + `
-		ON presets (organization_id, type)
-		WHERE is_default AND deleted_at IS NULL
-	`
-	return db.Exec(createIndex).Error
+		dedupe := `
+			UPDATE presets
+			SET is_default = false
+			WHERE is_default = true
+			  AND deleted_at IS NULL
+			  AND id NOT IN (
+				SELECT DISTINCT ON (organization_id, type) id
+				FROM presets
+				WHERE is_default = true AND deleted_at IS NULL
+				ORDER BY organization_id, type, updated_at DESC, id
+			  )
+		`
+		if err := tx.Exec(dedupe).Error; err != nil {
+			return err
+		}
+
+		createIndex := `
+			CREATE UNIQUE INDEX IF NOT EXISTS ` + presetDefaultIndexName + `
+			ON presets (organization_id, type)
+			WHERE is_default AND deleted_at IS NULL
+		`
+		return tx.Exec(createIndex).Error
+	})
 }

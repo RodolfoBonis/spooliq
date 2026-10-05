@@ -31,6 +31,29 @@ func clearOtherDefaults(db *gorm.DB, organizationID string, presetType entities.
 		Update("is_default", false).Error
 }
 
+// defaultLockKey builds the advisory-lock key serializing default mutations for
+// a given (organization, type) pair.
+func defaultLockKey(organizationID string, presetType entities.PresetType) string {
+	return organizationID + ":" + string(presetType)
+}
+
+// lockDefaults takes a transaction-scoped PostgreSQL advisory lock so concurrent
+// default mutations for the same (organization, type) serialize instead of
+// racing on the partial unique index. Released automatically at transaction end.
+func lockDefaults(tx *gorm.DB, organizationID string, presetType entities.PresetType) error {
+	return tx.Exec("SELECT pg_advisory_xact_lock(hashtext(?))", defaultLockKey(organizationID, presetType)).Error
+}
+
+// translateDefaultErr maps a partial-unique-index violation (a losing race that
+// the advisory lock did not cover) to the domain ErrDefaultConflict so callers
+// return HTTP 409 with a friendly message instead of a raw DB error / 500.
+func translateDefaultErr(err error) error {
+	if isUniqueViolation(err) {
+		return entities.ErrDefaultConflict
+	}
+	return err
+}
+
 // Create creates a new preset
 func (r *PresetRepositoryImpl) Create(preset *entities.PresetEntity) error {
 	model := &models.PresetModel{}
@@ -141,6 +164,11 @@ func (r *PresetRepositoryImpl) SetDefault(id uuid.UUID, organizationID string) (
 			return err
 		}
 
+		// Serialize concurrent default mutations for this (org, type).
+		if err := lockDefaults(tx, organizationID, entities.PresetType(model.Type)); err != nil {
+			return err
+		}
+
 		// Clear sibling defaults first so the partial unique index never sees two.
 		if err := clearOtherDefaults(tx, organizationID, entities.PresetType(model.Type), id); err != nil {
 			return err
@@ -160,7 +188,7 @@ func (r *PresetRepositoryImpl) SetDefault(id uuid.UUID, organizationID string) (
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, translateDefaultErr(err)
 	}
 	return result, nil
 }
@@ -234,9 +262,12 @@ func (r *PresetRepositoryImpl) Duplicate(id uuid.UUID, organizationID string, ne
 
 // CreateMachine creates a new machine preset with base preset
 func (r *PresetRepositoryImpl) CreateMachine(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		// Enforce a single default per (organization, type): clear siblings first.
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
+		// Enforce a single default per (organization, type): serialize then clear.
 		if preset.IsDefault {
+			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeMachine); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeMachine, preset.ID); err != nil {
 				return err
 			}
@@ -255,7 +286,7 @@ func (r *PresetRepositoryImpl) CreateMachine(preset *entities.PresetEntity, mach
 		machineModel.ID = presetModel.ID // Use same ID as base preset
 
 		return tx.Create(machineModel).Error
-	})
+	}))
 }
 
 // GetMachineByID retrieves a machine preset by ID, verifying the base preset
@@ -327,8 +358,11 @@ func (r *PresetRepositoryImpl) UpdateMachine(machine *entities.MachinePresetEnti
 // neither is: if either the base preset or the machine child does not match the
 // id+organization pair, the transaction rolls back with gorm.ErrRecordNotFound.
 func (r *PresetRepositoryImpl) UpdateMachineWithPreset(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if preset.IsDefault {
+			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeMachine); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeMachine, preset.ID); err != nil {
 				return err
 			}
@@ -337,13 +371,16 @@ func (r *PresetRepositoryImpl) UpdateMachineWithPreset(preset *entities.PresetEn
 			return err
 		}
 		return updateMachineChild(tx, machine)
-	})
+	}))
 }
 
 // CreateEnergy creates a new energy preset with base preset
 func (r *PresetRepositoryImpl) CreateEnergy(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if preset.IsDefault {
+			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeEnergy); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeEnergy, preset.ID); err != nil {
 				return err
 			}
@@ -362,7 +399,7 @@ func (r *PresetRepositoryImpl) CreateEnergy(preset *entities.PresetEntity, energ
 		energyModel.ID = presetModel.ID // Use same ID as base preset
 
 		return tx.Create(energyModel).Error
-	})
+	}))
 }
 
 // GetEnergyByID retrieves an energy preset by ID, verifying the base preset
@@ -465,8 +502,11 @@ func (r *PresetRepositoryImpl) UpdateEnergy(energy *entities.EnergyPresetEntity)
 // in a single, organization-scoped transaction. Either both rows are updated or
 // neither is.
 func (r *PresetRepositoryImpl) UpdateEnergyWithPreset(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if preset.IsDefault {
+			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeEnergy); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeEnergy, preset.ID); err != nil {
 				return err
 			}
@@ -475,13 +515,16 @@ func (r *PresetRepositoryImpl) UpdateEnergyWithPreset(preset *entities.PresetEnt
 			return err
 		}
 		return updateEnergyChild(tx, energy)
-	})
+	}))
 }
 
 // CreateCost creates a new cost preset with base preset
 func (r *PresetRepositoryImpl) CreateCost(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if preset.IsDefault {
+			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeCost); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeCost, preset.ID); err != nil {
 				return err
 			}
@@ -500,7 +543,7 @@ func (r *PresetRepositoryImpl) CreateCost(preset *entities.PresetEntity, cost *e
 		costModel.ID = presetModel.ID // Use same ID as base preset
 
 		return tx.Create(costModel).Error
-	})
+	}))
 }
 
 // GetCostByID retrieves a cost preset by ID, verifying the base preset
@@ -549,8 +592,11 @@ func (r *PresetRepositoryImpl) UpdateCost(cost *entities.CostPresetEntity) error
 // single, organization-scoped transaction. Either both rows are updated or
 // neither is.
 func (r *PresetRepositoryImpl) UpdateCostWithPreset(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
 		if preset.IsDefault {
+			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeCost); err != nil {
+				return err
+			}
 			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeCost, preset.ID); err != nil {
 				return err
 			}
@@ -559,7 +605,7 @@ func (r *PresetRepositoryImpl) UpdateCostWithPreset(preset *entities.PresetEntit
 			return err
 		}
 		return updateCostChild(tx, cost)
-	})
+	}))
 }
 
 // OPTIMIZED METHODS WITH ORGANIZATION FILTERING AND JOINS
@@ -768,4 +814,23 @@ func (r *PresetRepositoryImpl) GetCostPresets(organizationID string) ([]*reposit
 		Scan(&results).Error
 
 	return results, err
+}
+
+// IsReferencedByProfile reports whether any non-deleted print profile in the
+// organization references the given preset (as machine, energy or cost). It
+// queries the print_profiles table by name to avoid a preset -> profile import
+// cycle.
+func (r *PresetRepositoryImpl) IsReferencedByProfile(presetID uuid.UUID, organizationID string) (bool, error) {
+	var exists bool
+	err := r.db.Raw(`
+		SELECT EXISTS(
+			SELECT 1 FROM print_profiles
+			WHERE organization_id = ? AND deleted_at IS NULL
+			  AND (machine_preset_id = ? OR energy_preset_id = ? OR cost_preset_id = ?)
+		)
+	`, organizationID, presetID, presetID, presetID).Scan(&exists).Error
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }

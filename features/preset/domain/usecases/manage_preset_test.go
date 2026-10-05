@@ -79,3 +79,23 @@ func TestManageSetDefaultAndDuplicate(t *testing.T) {
 	_, err = manageUC.Duplicate(uuid.New(), "org-a")
 	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
+
+func TestDelete_BlockedWhenReferencedByProfile(t *testing.T) {
+	repo := mocks.NewInMemoryPresetRepository()
+	repo.ProfileReferenced = map[uuid.UUID]bool{}
+	createUC := usecases.NewCreatePresetUseCase(repo)
+	deleteUC := usecases.NewDeletePresetUseCase(repo)
+
+	preset, err := createUC.CreateFromTemplate("bambu-p1s", usecases.FromTemplateOverrides{}, "org-a", nil)
+	require.NoError(t, err)
+
+	// Not referenced yet: delete succeeds.
+	other, err := createUC.CreateFromTemplate("bambu-a1", usecases.FromTemplateOverrides{}, "org-a", nil)
+	require.NoError(t, err)
+	require.NoError(t, deleteUC.Execute(other.ID, "org-a"))
+
+	// Referenced by a live profile: delete is blocked with the domain error.
+	repo.ProfileReferenced[preset.ID] = true
+	err = deleteUC.Execute(preset.ID, "org-a")
+	assert.ErrorIs(t, err, entities.ErrPresetInUseByProfile)
+}

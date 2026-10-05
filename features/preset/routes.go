@@ -78,7 +78,9 @@ func respondPresetError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, entities.ErrPresetNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "Preset not found"})
-	case errors.Is(err, entities.ErrCannotDeleteDefaultPreset):
+	case errors.Is(err, entities.ErrCannotDeleteDefaultPreset),
+		errors.Is(err, entities.ErrPresetInUseByProfile),
+		errors.Is(err, entities.ErrDefaultConflict):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	case errors.Is(err, entities.ErrInvalidPresetType):
 		// Requesting a resource of the wrong kind is treated as not found.

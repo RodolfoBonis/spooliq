@@ -25,6 +25,10 @@ type InMemoryPresetRepository struct {
 	// OrgScopes records every organizationID the repository was asked to scope
 	// a read/update/delete by. Tests use it to assert pass-through.
 	OrgScopes []string
+
+	// ProfileReferenced lets tests mark preset IDs as referenced by a live
+	// profile, so IsReferencedByProfile returns true for them.
+	ProfileReferenced map[uuid.UUID]bool
 }
 
 // NewInMemoryPresetRepository creates an empty in-memory repository.

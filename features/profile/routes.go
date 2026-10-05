@@ -41,7 +41,8 @@ func respondError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, entities.ErrProfileNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
-	case errors.Is(err, entities.ErrCannotDeleteDefaultProfile):
+	case errors.Is(err, entities.ErrCannotDeleteDefaultProfile),
+		errors.Is(err, entities.ErrDefaultConflict):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	case errors.Is(err, entities.ErrInvalidMachinePreset),
 		errors.Is(err, entities.ErrInvalidEnergyPreset),

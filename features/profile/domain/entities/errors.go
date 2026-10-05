@@ -13,6 +13,9 @@ var (
 	ErrInvalidEnergyPreset = errors.New("energy_preset_id must reference an energy preset in your organization")
 	// ErrInvalidCostPreset is returned when the referenced cost preset is missing or of the wrong type.
 	ErrInvalidCostPreset = errors.New("cost_preset_id must reference a cost preset in your organization")
+	// ErrDefaultConflict is returned when a concurrent mutation would create a
+	// second default profile for the same organization.
+	ErrDefaultConflict = errors.New("já existe um perfil padrão para esta organização; tente novamente")
 )
 
 // Fallback names used when auto-generating a profile name with incomplete data.

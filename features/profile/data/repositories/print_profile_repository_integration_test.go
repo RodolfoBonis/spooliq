@@ -10,6 +10,7 @@ import (
 	presetRepoImpl "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
 	presetEntities "github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/domain/repositories"
+	presetUsecases "github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	profileModels "github.com/RodolfoBonis/spooliq/features/profile/data/models"
 	profileRepoImpl "github.com/RodolfoBonis/spooliq/features/profile/data/repositories"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/entities"
@@ -167,4 +168,31 @@ func TestIntegration_Profile_DuplicateAndDelete(t *testing.T) {
 
 	// The duplicate (non-default) can be deleted.
 	require.NoError(t, uc.Delete(uuid.MustParse(dup.ID), orgA))
+}
+
+// Deleting a preset still referenced by a live profile must be blocked, so the
+// profile never points at a deleted preset.
+func TestIntegration_Profile_BlocksPresetDeleteWhenReferenced(t *testing.T) {
+	uc, _, presetRepo, db := setup(t)
+
+	machine := seedBasePreset(t, db, orgA, "M", presetEntities.PresetTypeMachine)
+	energy := seedBasePreset(t, db, orgA, "E", presetEntities.PresetTypeEnergy)
+	_, err := uc.Create(&entities.CreateProfileRequest{MachinePresetID: machine, EnergyPresetID: energy}, orgA, "u")
+	require.NoError(t, err)
+
+	// The repository reports the preset as referenced.
+	referenced, err := presetRepo.IsReferencedByProfile(machine, orgA)
+	require.NoError(t, err)
+	assert.True(t, referenced)
+
+	// The preset delete use case surfaces the domain error (-> HTTP 409).
+	deleteUC := presetUsecases.NewDeletePresetUseCase(presetRepo)
+	err = deleteUC.Execute(machine, orgA)
+	assert.ErrorIs(t, err, presetEntities.ErrPresetInUseByProfile)
+
+	// An unreferenced preset is not blocked by this check.
+	unused := seedBasePreset(t, db, orgA, "Unused", presetEntities.PresetTypeMachine)
+	referenced, err = presetRepo.IsReferencedByProfile(unused, orgA)
+	require.NoError(t, err)
+	assert.False(t, referenced)
 }

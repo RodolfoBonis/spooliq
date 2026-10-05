@@ -141,3 +141,10 @@ func (r *InMemoryPresetRepository) Duplicate(id uuid.UUID, organizationID string
 	clone := newPreset
 	return &clone, nil
 }
+
+// IsReferencedByProfile reports whether the preset id is flagged as referenced by
+// a live profile via the ProfileReferenced map (default false).
+func (r *InMemoryPresetRepository) IsReferencedByProfile(presetID uuid.UUID, organizationID string) (bool, error) {
+	r.record(organizationID)
+	return r.ProfileReferenced[presetID], nil
+}

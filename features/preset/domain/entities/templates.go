@@ -171,32 +171,53 @@ var presetTemplates = []PresetTemplate{
 	},
 }
 
-// Templates returns the full static catalog (a copy of the backing slice so
-// callers cannot mutate it).
+// cloneTemplate returns a deep copy of a template, so the shared pointer fields
+// (Machine/Energy/Cost) in the global catalog can never be mutated by callers.
+func cloneTemplate(t PresetTemplate) PresetTemplate {
+	clone := t
+	if t.Machine != nil {
+		m := *t.Machine
+		clone.Machine = &m
+	}
+	if t.Energy != nil {
+		e := *t.Energy
+		clone.Energy = &e
+	}
+	if t.Cost != nil {
+		c := *t.Cost
+		clone.Cost = &c
+	}
+	return clone
+}
+
+// Templates returns a deep copy of the full static catalog so callers cannot
+// mutate the shared backing data.
 func Templates() []PresetTemplate {
-	out := make([]PresetTemplate, len(presetTemplates))
-	copy(out, presetTemplates)
+	out := make([]PresetTemplate, 0, len(presetTemplates))
+	for _, tmpl := range presetTemplates {
+		out = append(out, cloneTemplate(tmpl))
+	}
 	return out
 }
 
-// TemplatesByType returns the catalog entries matching the given type. When
-// presetType is empty, all templates are returned.
+// TemplatesByType returns deep copies of the catalog entries matching the given
+// type. When presetType is empty, all templates are returned.
 func TemplatesByType(presetType PresetType) []PresetTemplate {
 	out := make([]PresetTemplate, 0, len(presetTemplates))
 	for _, tmpl := range presetTemplates {
 		if presetType == "" || tmpl.Type == presetType {
-			out = append(out, tmpl)
+			out = append(out, cloneTemplate(tmpl))
 		}
 	}
 	return out
 }
 
-// TemplateByKey returns the template with the given key, or (zero, false) when
-// no template matches.
+// TemplateByKey returns a deep copy of the template with the given key, or
+// (zero, false) when no template matches.
 func TemplateByKey(key string) (PresetTemplate, bool) {
 	for _, tmpl := range presetTemplates {
 		if tmpl.Key == key {
-			return tmpl, true
+			return cloneTemplate(tmpl), true
 		}
 	}
 	return PresetTemplate{}, false

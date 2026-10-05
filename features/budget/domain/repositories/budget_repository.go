@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/google/uuid"
 )
 
@@ -23,9 +24,12 @@ type BudgetRepository interface {
 	// the PDF URL may be cleared here but is otherwise owned by UpdatePDFURL.
 	Update(ctx context.Context, budget *entities.BudgetEntity) error
 	// UpdateStatus writes only the status column (and updated_at), scoped by
-	// organization. It is the sole owner of the status column so a concurrent
-	// full Update cannot revert an approval.
-	UpdateStatus(ctx context.Context, budgetID uuid.UUID, organizationID string, status entities.BudgetStatus) error
+	// organization and guarded by the expected current status. It is the sole owner
+	// of the status column so a concurrent full Update cannot revert an approval.
+	// It returns entities.ErrBudgetStatusConflict when no row matches (the budget
+	// changed status concurrently or does not belong to the organization), so the
+	// caller can surface a 409.
+	UpdateStatus(ctx context.Context, budgetID uuid.UUID, organizationID string, expectedCurrent, newStatus entities.BudgetStatus) error
 	// UpdatePDFURL writes only the pdf_url column (and updated_at), scoped by
 	// organization and allowed in any status (PDFs are generated for approved
 	// budgets, not only drafts).
@@ -58,7 +62,14 @@ type BudgetRepository interface {
 	GetStatusHistory(ctx context.Context, budgetID uuid.UUID) ([]entities.BudgetStatusHistoryEntity, error)
 
 	// Calculation operations
-	CalculateCosts(ctx context.Context, budgetID uuid.UUID) error
+	// CalculateCosts recomputes and PERSISTS all costs for a stored budget. The
+	// initial budget fetch is scoped by organization (defense-in-depth against a
+	// cross-tenant budget ID).
+	CalculateCosts(ctx context.Context, budgetID uuid.UUID, organizationID string) error
+	// ComputeBudgetPricing loads the org-scoped rates for the given input and runs
+	// the pure pricing engine WITHOUT persisting anything. It is shared by
+	// CalculateCosts (which then persists) and the stateless preview endpoint.
+	ComputeBudgetPricing(ctx context.Context, in entities.PricingComputationInput) (pricing.PricingResult, error)
 
 	// Ownership validation (multi-tenant guards)
 	ValidateFilamentsInOrg(ctx context.Context, filamentIDs []uuid.UUID, organizationID string) error

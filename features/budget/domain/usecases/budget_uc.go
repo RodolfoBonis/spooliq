@@ -14,6 +14,7 @@ import (
 // IBudgetUseCase defines the interface for budget use cases
 type IBudgetUseCase interface {
 	Create(c *gin.Context)
+	Preview(c *gin.Context)
 	FindAll(c *gin.Context)
 	FindByID(c *gin.Context)
 	Update(c *gin.Context)

@@ -9,7 +9,6 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
-	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -111,69 +110,10 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		return
 	}
 
-	// Build items response with filaments and calculate total print time
-	itemsResponse := make([]entities.BudgetItemResponse, 0, len(items))
-	var totalPrintMinutes int
-
-	for _, item := range items {
-		// Get filament usage info for this item
-		filaments, err := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID, organizationID)
-		if err != nil {
-			uc.logger.Error(ctx, "Failed to get filament usage info", map[string]interface{}{
-				"error":   err.Error(),
-				"item_id": item.ID,
-			})
-		}
-
-		// Calculate print time display
-		printTimeDisplay := ""
-		if item.PrintTimeHours > 0 {
-			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
-		} else {
-			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
-		}
-
-		// Sum total print time
-		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
-
-		// Convert CostPresetID to string pointer
-		var costPresetIDStr *string
-		if item.CostPresetID != nil {
-			s := item.CostPresetID.String()
-			costPresetIDStr = &s
-		}
-
-		itemsResponse = append(itemsResponse, entities.BudgetItemResponse{
-			ID:                      item.ID.String(),
-			BudgetID:                item.BudgetID.String(),
-			ProductName:             item.ProductName,
-			ProductDescription:      item.ProductDescription,
-			ProductQuantity:         item.ProductQuantity,
-			ProductDimensions:       item.ProductDimensions,
-			PrintTimeHours:          item.PrintTimeHours,
-			PrintTimeMinutes:        item.PrintTimeMinutes,
-			PrintTimeDisplay:        printTimeDisplay,
-			SetupTimeMinutes:        item.SetupTimeMinutes,
-			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-			CostPresetID:            costPresetIDStr,
-			AdditionalNotes:         item.AdditionalNotes,
-			FilamentCost:            item.FilamentCost,
-			WasteCost:               item.WasteCost,
-			EnergyCost:              item.EnergyCost,
-			SetupCost:               item.SetupCost,
-			ManualLaborCost:         item.ManualLaborCost,
-			ItemTotalCost:           item.ItemTotalCost,
-			UnitPrice:               item.UnitPrice,
-			Filaments:               filaments,
-			Order:                   item.Order,
-			CreatedAt:               item.CreatedAt,
-			UpdatedAt:               item.UpdatedAt,
-		})
-	}
-
-	// Calculate total print time
-	totalHours := totalPrintMinutes / 60
-	totalMins := totalPrintMinutes % 60
+	// Build items response (with the shared per-item sale distribution) plus the
+	// total print time. Using the same builder as the API guarantees the PDF shows
+	// identical per-item sale values.
+	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
 
 	// Get company info
 	company, err := uc.budgetRepository.GetCompanyByOrganizationID(ctx, organizationID)

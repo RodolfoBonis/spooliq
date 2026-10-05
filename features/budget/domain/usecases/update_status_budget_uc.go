@@ -1,8 +1,7 @@
 package usecases
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
-	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -27,6 +26,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /v1/budgets/{id}/status [patch]
 // @Security BearerAuth
@@ -94,7 +94,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	// Check if transition is valid
+	// Check if transition is valid (allowed-transition validation is preserved).
 	if !budget.IsValidTransition(request.Status) {
 		uc.logger.Error(ctx, "Invalid status transition", map[string]interface{}{
 			"budget_id":        budgetID,
@@ -106,10 +106,10 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	// Capture previous status before changing
+	// Capture the status we transitioned from; it is the optimistic guard for the
+	// write (UpdateStatus only matches rows still in this status).
 	previousStatus := budget.Status
 
-	// Save status history
 	history := &entities.BudgetStatusHistoryEntity{
 		ID:             uuid.New(),
 		BudgetID:       budget.ID,
@@ -121,18 +121,26 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		CreatedAt:      time.Now(),
 	}
 
-	if err := uc.budgetRepository.AddStatusHistory(ctx, history); err != nil {
-		uc.logger.Error(ctx, "Failed to save status history", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	// Update budget status via the dedicated, status-only writer. Status is owned
-	// exclusively by this path so a concurrent full Update (PUT) cannot revert it.
-	budget.Status = request.Status
-	budget.UpdatedAt = time.Now()
-
-	if err := uc.budgetRepository.UpdateStatus(ctx, budget.ID, organizationID, request.Status); err != nil {
+	// Do the status update and the history insert atomically in ONE transaction so
+	// a history row is never recorded for a transition that didn't actually apply
+	// (and vice-versa). The status write is guarded by the expected current status;
+	// if a concurrent change already moved the budget off previousStatus the write
+	// matches no row and we surface a 409 Conflict.
+	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		if err := repo.UpdateStatus(ctx, budget.ID, organizationID, previousStatus, request.Status); err != nil {
+			return err
+		}
+		return repo.AddStatusHistory(ctx, history)
+	}); err != nil {
+		if errors.Is(err, entities.ErrBudgetStatusConflict) {
+			uc.logger.Warning(ctx, "Budget status changed concurrently", map[string]interface{}{
+				"budget_id":       budgetID,
+				"expected_status": previousStatus,
+			})
+			appError := coreErrors.ConflictError("O status do orçamento foi alterado por outra requisição. Recarregue e tente novamente.")
+			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			return
+		}
 		uc.logger.Error(ctx, "Failed to update budget status", map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -141,12 +149,12 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	// Build response
+	// Build response from the freshly stored state.
 	response, _ := buildBudgetResponse(ctx, uc.budgetRepository, budgetID, organizationID)
 
 	uc.logger.Info(ctx, "Budget status updated successfully", map[string]interface{}{
 		"budget_id":  budget.ID,
-		"new_status": budget.Status,
+		"new_status": request.Status,
 	})
 
 	c.JSON(http.StatusOK, response)
@@ -165,87 +173,4 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		},
 		CreatedAt: time.Now(),
 	})
-}
-
-// buildBudgetResponse builds a complete budget response with items and filaments (helper function)
-func buildBudgetResponse(ctx context.Context, repo repositories.BudgetRepository, budgetID uuid.UUID, organizationID string) (*entities.BudgetResponse, error) {
-	budget, err := repo.FindByID(ctx, budgetID, organizationID)
-	if err != nil {
-		return nil, err
-	}
-
-	customerInfo, _ := repo.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
-	items, _ := repo.GetItems(ctx, budget.ID)
-
-	itemResponses := make([]entities.BudgetItemResponse, len(items))
-	var totalPrintMinutes int
-
-	for i, item := range items {
-		// Get filament usage info for this item
-		filaments, _ := repo.GetFilamentUsageInfo(ctx, item.ID, organizationID)
-
-		// Calculate print time display
-		printTimeDisplay := ""
-		if item.PrintTimeHours > 0 {
-			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
-		} else {
-			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
-		}
-
-		// Sum total print time
-		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
-
-		// Convert CostPresetID to string pointer
-		var costPresetIDStr *string
-		if item.CostPresetID != nil {
-			s := item.CostPresetID.String()
-			costPresetIDStr = &s
-		}
-
-		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                      item.ID.String(),
-			BudgetID:                item.BudgetID.String(),
-			ProductName:             item.ProductName,
-			ProductDescription:      item.ProductDescription,
-			ProductQuantity:         item.ProductQuantity,
-			ProductDimensions:       item.ProductDimensions,
-			PrintTimeHours:          item.PrintTimeHours,
-			PrintTimeMinutes:        item.PrintTimeMinutes,
-			PrintTimeDisplay:        printTimeDisplay,
-			CostPresetID:            costPresetIDStr,
-			SetupTimeMinutes:        item.SetupTimeMinutes,
-			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-			AdditionalNotes:         item.AdditionalNotes,
-			FilamentCost:            item.FilamentCost,
-			WasteCost:               item.WasteCost,
-			EnergyCost:              item.EnergyCost,
-			SetupCost:               item.SetupCost,
-			ManualLaborCost:         item.ManualLaborCost,
-			ItemTotalCost:           item.ItemTotalCost,
-			UnitPrice:               item.UnitPrice,
-			Filaments:               filaments,
-			Order:                   item.Order,
-			CreatedAt:               item.CreatedAt,
-			UpdatedAt:               item.UpdatedAt,
-		}
-	}
-
-	// Calculate total print time
-	totalHours := totalPrintMinutes / 60
-	totalMins := totalPrintMinutes % 60
-	totalPrintTimeDisplay := ""
-	if totalHours > 0 {
-		totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
-	} else {
-		totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
-	}
-
-	return &entities.BudgetResponse{
-		BudgetEntity:          budget,
-		Customer:              customerInfo,
-		Items:                 itemResponses,
-		TotalPrintTimeHours:   totalHours,
-		TotalPrintTimeMinutes: totalMins,
-		TotalPrintTimeDisplay: totalPrintTimeDisplay,
-	}, nil
 }

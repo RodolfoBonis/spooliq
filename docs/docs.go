@@ -8054,7 +8054,7 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "cost_preset_id": {
-                    "description": "Optional: specific cost preset for this item",
+                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor rates — see the pricing input mapping.",
                     "type": "string"
                 },
                 "filaments": {
@@ -8222,6 +8222,9 @@ const docTemplate = `{
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "cost_preset": {
+                    "$ref": "#/definitions/entities.CostPresetRef"
+                },
                 "cost_preset_id": {
                     "description": "For overhead/profit percentages",
                     "type": "string"
@@ -8320,6 +8323,18 @@ const docTemplate = `{
                 },
                 "print_time_minutes": {
                     "type": "integer"
+                },
+                "profile": {
+                    "description": "Profile is the {id, name} of the print profile the presets were resolved from\n(null when none was used). CostPreset is the {id, name} of the budget-level\ncost preset driving overhead/profit (null when none). Both are additive.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ProfileRef"
+                        }
+                    ]
+                },
+                "profile_id": {
+                    "description": "Print profile the presets were resolved from (nil when none was used).",
+                    "type": "string"
                 },
                 "profit_amount": {
                     "description": "cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)",
@@ -8920,6 +8935,10 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "cost_preset_id": {
+                    "description": "CostPresetID is the budget-level cost preset driving overhead/profit (and the\nsetup/labor rate fallback for items without their own cost preset).",
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -8951,7 +8970,7 @@ const docTemplate = `{
                     }
                 },
                 "machine_preset_id": {
-                    "description": "Global presets (apply to all items unless overridden)",
+                    "description": "Global presets (apply to all items unless overridden). An explicit value here\nalways wins over the profile and org defaults for that slot.",
                     "type": "string"
                 },
                 "name": {
@@ -8966,6 +8985,10 @@ const docTemplate = `{
                 "payment_terms": {
                     "type": "string",
                     "maxLength": 1000
+                },
+                "profile_id": {
+                    "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
+                    "type": "string"
                 }
             }
         },
@@ -10753,6 +10776,10 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "cost_preset_id": {
+                    "description": "CostPresetID is the budget-level cost preset driving overhead/profit (and the\nsetup/labor rate fallback for items without their own cost preset).",
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -10784,7 +10811,7 @@ const docTemplate = `{
                     }
                 },
                 "machine_preset_id": {
-                    "description": "Global presets (apply to all items unless overridden)",
+                    "description": "Global presets (apply to all items unless overridden). An explicit value here\nalways wins over the profile and org defaults for that slot.",
                     "type": "string"
                 },
                 "name": {
@@ -10798,6 +10825,21 @@ const docTemplate = `{
                 "payment_terms": {
                     "type": "string",
                     "maxLength": 1000
+                },
+                "profile_id": {
+                    "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ProfileRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -11288,6 +11330,10 @@ const docTemplate = `{
         "entities.UpdateBudgetRequest": {
             "type": "object",
             "properties": {
+                "cost_preset_id": {
+                    "description": "CostPresetID is the budget-level cost preset driving overhead/profit.",
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -11334,6 +11380,10 @@ const docTemplate = `{
                 "payment_terms": {
                     "type": "string",
                     "maxLength": 1000
+                },
+                "profile_id": {
+                    "description": "Optional print profile. Presets are ONLY re-resolved from the profile/org\ndefaults when profile_id is explicitly provided in the update; otherwise the\nstored preset values are kept (partial-update semantics).",
+                    "type": "string"
                 }
             }
         },

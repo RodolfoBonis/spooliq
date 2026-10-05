@@ -121,11 +121,43 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		}
 		budget.CustomerID = *request.CustomerID
 	}
-	if request.MachinePresetID != nil {
-		budget.MachinePresetID = request.MachinePresetID
-	}
-	if request.EnergyPresetID != nil {
-		budget.EnergyPresetID = request.EnergyPresetID
+	// Preset resolution on update is conditional: only when the request explicitly
+	// sends profile_id do we re-resolve every slot from the profile/org defaults
+	// (explicit IDs in the same request still win per slot). Otherwise we keep the
+	// stored presets and apply only the explicit per-slot overrides, preserving the
+	// existing partial-update semantics. presetsValidatedByResolver tracks whether
+	// the resolver already validated the budget-level presets.
+	presetsValidatedByResolver := false
+	if request.ProfileID != nil {
+		resolved, rerr := uc.resolvePresets(c, organizationID, PresetResolutionInput{
+			ProfileID:       request.ProfileID,
+			MachinePresetID: request.MachinePresetID,
+			EnergyPresetID:  request.EnergyPresetID,
+			CostPresetID:    request.CostPresetID,
+		})
+		if rerr != nil {
+			uc.logger.Error(ctx, "Failed to resolve budget presets", map[string]interface{}{
+				"error": rerr.Error(),
+			})
+			appError := coreErrors.BadRequestError(rerr.Error())
+			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			return
+		}
+		budget.ProfileID = resolved.ProfileID
+		budget.MachinePresetID = resolved.MachinePresetID
+		budget.EnergyPresetID = resolved.EnergyPresetID
+		budget.CostPresetID = resolved.CostPresetID
+		presetsValidatedByResolver = true
+	} else {
+		if request.MachinePresetID != nil {
+			budget.MachinePresetID = request.MachinePresetID
+		}
+		if request.EnergyPresetID != nil {
+			budget.EnergyPresetID = request.EnergyPresetID
+		}
+		if request.CostPresetID != nil {
+			budget.CostPresetID = request.CostPresetID
+		}
 	}
 	if request.IncludeEnergyCost != nil {
 		budget.IncludeEnergyCost = *request.IncludeEnergyCost
@@ -156,7 +188,11 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.Items != nil {
 		itemsForValidation = *request.Items
 	}
-	if err := uc.validateReferences(ctx, organizationID, request.MachinePresetID, request.EnergyPresetID, nil, itemsForValidation); err != nil {
+	var vMachine, vEnergy, vCost *uuid.UUID
+	if !presetsValidatedByResolver {
+		vMachine, vEnergy, vCost = request.MachinePresetID, request.EnergyPresetID, request.CostPresetID
+	}
+	if err := uc.validateReferences(ctx, organizationID, vMachine, vEnergy, vCost, itemsForValidation); err != nil {
 		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -227,7 +263,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 
 	// Build the response from the freshly stored (and recosted) budget.
-	response, err := buildBudgetResponse(ctx, uc.budgetRepository, budget.ID, organizationID)
+	response, err := uc.buildBudgetResponse(ctx, budget.ID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve updated budget", map[string]interface{}{
 			"error": err.Error(),

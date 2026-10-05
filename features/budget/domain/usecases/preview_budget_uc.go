@@ -66,9 +66,26 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		}
 	}
 
-	// Validate every referenced preset (org + type) and filament (org) exactly as
-	// Create does. A failure here is user input, surfaced as a 400.
-	if err := uc.validateReferences(ctx, organizationID, request.MachinePresetID, request.EnergyPresetID, nil, request.Items); err != nil {
+	// Resolve the machine/energy/cost presets exactly as Create does (request >
+	// profile > default profile > org default preset). The resolver validates the
+	// profile and every resolved preset against the organization.
+	resolved, err := uc.resolvePresets(c, organizationID, PresetResolutionInput{
+		ProfileID:       request.ProfileID,
+		MachinePresetID: request.MachinePresetID,
+		EnergyPresetID:  request.EnergyPresetID,
+		CostPresetID:    request.CostPresetID,
+	})
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to resolve preview presets", map[string]interface{}{
+			"error": err.Error(),
+		})
+		appError := coreErrors.BadRequestError("Referências inválidas no orçamento: " + err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	// Validate the remaining references (item-level cost presets + filaments).
+	if err := uc.validateReferences(ctx, organizationID, nil, nil, nil, request.Items); err != nil {
 		uc.logger.Error(ctx, "Invalid preview references", map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -96,12 +113,13 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 	}
 
 	result, err := uc.budgetRepository.ComputeBudgetPricing(ctx, entities.PricingComputationInput{
-		OrganizationID:    organizationID,
-		IncludeEnergyCost: request.IncludeEnergyCost,
-		IncludeWasteCost:  request.IncludeWasteCost,
-		MachinePresetID:   request.MachinePresetID,
-		EnergyPresetID:    request.EnergyPresetID,
-		Items:             specs,
+		OrganizationID:     organizationID,
+		IncludeEnergyCost:  request.IncludeEnergyCost,
+		IncludeWasteCost:   request.IncludeWasteCost,
+		MachinePresetID:    resolved.MachinePresetID,
+		EnergyPresetID:     resolved.EnergyPresetID,
+		BudgetCostPresetID: resolved.CostPresetID,
+		Items:              specs,
 	})
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to compute budget preview", map[string]interface{}{
@@ -114,11 +132,14 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 
 	// Build the transient (never-persisted) budget + item responses.
 	previewBudget := &entities.BudgetEntity{
+		OrganizationID:    organizationID,
 		Name:              request.Name,
 		Description:       request.Description,
 		Status:            entities.StatusDraft,
-		MachinePresetID:   request.MachinePresetID,
-		EnergyPresetID:    request.EnergyPresetID,
+		ProfileID:         resolved.ProfileID,
+		MachinePresetID:   resolved.MachinePresetID,
+		EnergyPresetID:    resolved.EnergyPresetID,
+		CostPresetID:      resolved.CostPresetID,
 		IncludeEnergyCost: request.IncludeEnergyCost,
 		IncludeWasteCost:  request.IncludeWasteCost,
 		DeliveryDays:      request.DeliveryDays,
@@ -203,10 +224,14 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 	totalHours := totalPrintMinutes / 60
 	totalMins := totalPrintMinutes % 60
 
+	profileRef, costRef := uc.budgetLevelRefs(ctx, previewBudget)
+
 	response := entities.BudgetResponse{
 		BudgetEntity:          previewBudget,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
+		Profile:               profileRef,
+		CostPreset:            costRef,
 		TotalPrintTimeHours:   totalHours,
 		TotalPrintTimeMinutes: totalMins,
 		TotalPrintTimeDisplay: formatPrintTime(totalHours, totalMins),

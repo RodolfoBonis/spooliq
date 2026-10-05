@@ -40,6 +40,11 @@ var (
 	// ErrPresetNotFound is returned when a preset is not found
 	ErrPresetNotFound = errors.New("preset not found")
 
+	// ErrProfileNotFound is returned when a budget references a print profile that
+	// does not exist within the caller's organization (another tenant's profile, or
+	// a soft-deleted one). It is safe to surface as a 400 (bad request).
+	ErrProfileNotFound = errors.New("requested print profile does not belong to your organization")
+
 	// ErrUnauthorizedAccess is returned when user tries to access a budget they don't own
 	ErrUnauthorizedAccess = errors.New("unauthorized access to budget")
 )

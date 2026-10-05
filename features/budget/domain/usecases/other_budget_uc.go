@@ -1,7 +1,6 @@
 package usecases
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -71,6 +70,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 		Status:            entities.StatusDraft,
 		PrintTimeHours:    originalBudget.PrintTimeHours,
 		PrintTimeMinutes:  originalBudget.PrintTimeMinutes,
+		ProfileID:         originalBudget.ProfileID,
 		MachinePresetID:   originalBudget.MachinePresetID,
 		EnergyPresetID:    originalBudget.EnergyPresetID,
 		CostPresetID:      originalBudget.CostPresetID,
@@ -425,11 +425,4 @@ func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, history)
-}
-
-// buildBudgetResponse builds a complete budget response with items and filaments.
-// It delegates to the shared package-level builder (response_builder.go) so the
-// sale distribution and cost-preset resolution live in exactly one place.
-func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.UUID, organizationID string) (*entities.BudgetResponse, error) {
-	return buildBudgetResponse(ctx, uc.budgetRepository, budgetID, organizationID)
 }

@@ -179,3 +179,18 @@ func TestIntegration_CreateFromTemplate_Persists(t *testing.T) {
 	_, err = createUC.CreateFromTemplate("does-not-exist", usecases.FromTemplateOverrides{}, itOrgA, nil)
 	assert.ErrorIs(t, err, entities.ErrTemplateNotFound)
 }
+
+// The first preset of a type becomes the default automatically, so every type
+// always has a default to fall back to; later non-default presets don't take it.
+func TestIntegration_CreateFirstOfType_BecomesDefault(t *testing.T) {
+	repo, db := setupRepo(t)
+	require.NoError(t, repoimpl.MigrateDefaults(db))
+
+	first := seedEnergy(t, repo, itOrgA, false)
+	second := seedEnergy(t, repo, itOrgA, false)
+	otherOrg := seedEnergy(t, repo, itOrgB, false)
+
+	assert.True(t, isDefault(t, repo, first, itOrgA), "first preset of the type must become the default")
+	assert.False(t, isDefault(t, repo, second, itOrgA), "later presets must not steal the default")
+	assert.True(t, isDefault(t, repo, otherOrg, itOrgB), "defaults are per organization")
+}

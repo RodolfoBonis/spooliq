@@ -44,6 +44,30 @@ func lockDefaults(tx *gorm.DB, organizationID string, presetType entities.Preset
 	return tx.Exec("SELECT pg_advisory_xact_lock(hashtext(?))", defaultLockKey(organizationID, presetType)).Error
 }
 
+// prepareDefaultOnCreate runs inside a create transaction. It serializes default
+// mutations for the (organization, type) pair and then either clears the other
+// defaults (when the new preset is the default) or, when the organization has
+// no live default of that type yet, promotes the new preset to default so every
+// type always has one to fall back to.
+func prepareDefaultOnCreate(tx *gorm.DB, preset *entities.PresetEntity, presetType entities.PresetType) error {
+	if err := lockDefaults(tx, preset.OrganizationID, presetType); err != nil {
+		return err
+	}
+	if preset.IsDefault {
+		return clearOtherDefaults(tx, preset.OrganizationID, presetType, preset.ID)
+	}
+	var count int64
+	if err := tx.Model(&models.PresetModel{}).
+		Where("organization_id = ? AND type = ? AND is_default = ?", preset.OrganizationID, string(presetType), true).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		preset.IsDefault = true
+	}
+	return nil
+}
+
 // translateDefaultErr maps a partial-unique-index violation (a losing race that
 // the advisory lock did not cover) to the domain ErrDefaultConflict so callers
 // return HTTP 409 with a friendly message instead of a raw DB error / 500.
@@ -263,14 +287,8 @@ func (r *PresetRepositoryImpl) Duplicate(id uuid.UUID, organizationID string, ne
 // CreateMachine creates a new machine preset with base preset
 func (r *PresetRepositoryImpl) CreateMachine(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error {
 	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
-		// Enforce a single default per (organization, type): serialize then clear.
-		if preset.IsDefault {
-			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeMachine); err != nil {
-				return err
-			}
-			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeMachine, preset.ID); err != nil {
-				return err
-			}
+		if err := prepareDefaultOnCreate(tx, preset, entities.PresetTypeMachine); err != nil {
+			return err
 		}
 
 		// Create base preset
@@ -377,13 +395,8 @@ func (r *PresetRepositoryImpl) UpdateMachineWithPreset(preset *entities.PresetEn
 // CreateEnergy creates a new energy preset with base preset
 func (r *PresetRepositoryImpl) CreateEnergy(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error {
 	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
-		if preset.IsDefault {
-			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeEnergy); err != nil {
-				return err
-			}
-			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeEnergy, preset.ID); err != nil {
-				return err
-			}
+		if err := prepareDefaultOnCreate(tx, preset, entities.PresetTypeEnergy); err != nil {
+			return err
 		}
 
 		// Create base preset
@@ -521,13 +534,8 @@ func (r *PresetRepositoryImpl) UpdateEnergyWithPreset(preset *entities.PresetEnt
 // CreateCost creates a new cost preset with base preset
 func (r *PresetRepositoryImpl) CreateCost(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error {
 	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
-		if preset.IsDefault {
-			if err := lockDefaults(tx, preset.OrganizationID, entities.PresetTypeCost); err != nil {
-				return err
-			}
-			if err := clearOtherDefaults(tx, preset.OrganizationID, entities.PresetTypeCost, preset.ID); err != nil {
-				return err
-			}
+		if err := prepareDefaultOnCreate(tx, preset, entities.PresetTypeCost); err != nil {
+			return err
 		}
 
 		// Create base preset

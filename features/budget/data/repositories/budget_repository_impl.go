@@ -55,6 +55,7 @@ func (r *budgetRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, organ
 		Preload("MachinePreset").
 		Preload("EnergyPreset").
 		Preload("CostPreset").
+		Preload("Profile").
 		Preload("Items").
 		Preload("Items.Filament").
 		Preload("Items.Filament.Brand").
@@ -95,6 +96,7 @@ func (r *budgetRepositoryImpl) Update(ctx context.Context, budget *entities.Budg
 		"name":                model.Name,
 		"description":         model.Description,
 		"customer_id":         model.CustomerID,
+		"profile_id":          model.ProfileID,
 		"machine_preset_id":   model.MachinePresetID,
 		"energy_preset_id":    model.EnergyPresetID,
 		"cost_preset_id":      model.CostPresetID,
@@ -667,9 +669,19 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 				PricePerKgCents: priceByFilament[f.FilamentID],
 			}
 		}
+		// Item cost preset fallback: when an item has no cost preset of its own, it
+		// uses the budget-level cost preset (resolved from the request/profile/org
+		// defaults) for its setup + manual labor rates. This is applied here, in the
+		// pricing input mapping, so stored items are never mutated — an item row with
+		// a NULL cost_preset_id keeps that NULL while still being priced with the
+		// budget-level labor rate.
 		var cp *pricing.CostPresetInput
-		if item.CostPresetID != nil {
-			v := costPresetByID[*item.CostPresetID]
+		effectiveCostPresetID := item.CostPresetID
+		if effectiveCostPresetID == nil {
+			effectiveCostPresetID = in.BudgetCostPresetID
+		}
+		if effectiveCostPresetID != nil {
+			v := costPresetByID[*effectiveCostPresetID]
 			cp = &v
 		}
 		pin.Items[i] = pricing.PricingItemInput{

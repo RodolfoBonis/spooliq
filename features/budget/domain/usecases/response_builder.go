@@ -108,24 +108,53 @@ func formatPrintTime(hours, minutes int) string {
 	return fmt.Sprintf("%dm", minutes)
 }
 
+// budgetLevelRefs resolves the budget's {id, name} references to its print profile
+// and its budget-level cost preset. Both are best-effort (a missing name degrades
+// to empty rather than failing the response) and either may be nil.
+func (uc *BudgetUseCase) budgetLevelRefs(ctx context.Context, budget *entities.BudgetEntity) (*entities.ProfileRef, *entities.CostPresetRef) {
+	var profileRef *entities.ProfileRef
+	if budget.ProfileID != nil {
+		profileRef = &entities.ProfileRef{ID: budget.ProfileID.String()}
+		if uc.profileProvider != nil {
+			if p, err := uc.profileProvider.ProfileByID(ctx, *budget.ProfileID, budget.OrganizationID); err == nil && p != nil {
+				profileRef.Name = p.Name
+			}
+		}
+	}
+
+	var costRef *entities.CostPresetRef
+	if budget.CostPresetID != nil {
+		costRef = &entities.CostPresetRef{ID: budget.CostPresetID.String()}
+		if info, err := uc.budgetRepository.GetPresetInfo(ctx, *budget.CostPresetID, "cost", budget.OrganizationID); err == nil && info != nil {
+			costRef.Name = info.Name
+		}
+	}
+
+	return profileRef, costRef
+}
+
 // buildBudgetResponse builds a complete budget response (budget + customer + items
-// with sale values + print-time totals) for the given stored budget. It is the
-// single builder used by every read/mutation endpoint that returns a BudgetResponse.
-func buildBudgetResponse(ctx context.Context, repo repositories.BudgetRepository, budgetID uuid.UUID, organizationID string) (*entities.BudgetResponse, error) {
-	budget, err := repo.FindByID(ctx, budgetID, organizationID)
+// with sale values + print-time totals + budget-level profile/cost refs) for the
+// given stored budget. It is the single builder used by every read/mutation
+// endpoint that returns a BudgetResponse.
+func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.UUID, organizationID string) (*entities.BudgetResponse, error) {
+	budget, err := uc.budgetRepository.FindByID(ctx, budgetID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 
-	customerInfo, _ := repo.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
-	items, _ := repo.GetItems(ctx, budget.ID)
+	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
+	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
-	itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, repo, items, budget.TotalCost, organizationID)
+	itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
+	profileRef, costRef := uc.budgetLevelRefs(ctx, budget)
 
 	return &entities.BudgetResponse{
 		BudgetEntity:          budget,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
+		Profile:               profileRef,
+		CostPreset:            costRef,
 		TotalPrintTimeHours:   totalHours,
 		TotalPrintTimeMinutes: totalMins,
 		TotalPrintTimeDisplay: formatPrintTime(totalHours, totalMins),

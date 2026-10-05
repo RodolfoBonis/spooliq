@@ -49,7 +49,7 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 	}
 
 	// Build the full response (budget + customer + items with sale values).
-	response, err := buildBudgetResponse(ctx, uc.budgetRepository, budgetID, organizationID)
+	response, err := uc.buildBudgetResponse(ctx, budgetID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve budget", map[string]interface{}{
 			"error":     err.Error(),

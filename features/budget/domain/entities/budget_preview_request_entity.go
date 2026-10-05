@@ -11,9 +11,17 @@ type PreviewBudgetRequest struct {
 	Description string     `json:"description,omitempty" validate:"omitempty,max=1000"`
 	CustomerID  *uuid.UUID `json:"customer_id,omitempty"`
 
-	// Global presets (apply to all items unless overridden)
+	// Optional print profile. When provided it supplies the machine/energy/cost
+	// presets for any slot not explicitly set below (see the budget preset resolver).
+	ProfileID *uuid.UUID `json:"profile_id,omitempty"`
+
+	// Global presets (apply to all items unless overridden). An explicit value here
+	// always wins over the profile and org defaults for that slot.
 	MachinePresetID *uuid.UUID `json:"machine_preset_id,omitempty"`
 	EnergyPresetID  *uuid.UUID `json:"energy_preset_id,omitempty"`
+	// CostPresetID is the budget-level cost preset driving overhead/profit (and the
+	// setup/labor rate fallback for items without their own cost preset).
+	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
 	// Configuration flags
 	IncludeEnergyCost bool `json:"include_energy_cost"`

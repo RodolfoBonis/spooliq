@@ -52,6 +52,14 @@ type PresetInfo struct {
 	Type string `json:"type"` // "machine", "energy", "cost"
 }
 
+// CostPresetRef is a lightweight {id, name} reference to a cost preset, returned
+// alongside the raw cost_preset_id so clients can display the preset name without
+// a second lookup. It is nil when the item has no cost preset.
+type CostPresetRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // BudgetItemResponse represents a budget item (product) with all filaments and costs
 type BudgetItemResponse struct {
 	ID       string `json:"id"`
@@ -73,8 +81,9 @@ type BudgetItemResponse struct {
 	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
 
 	// Cost preset and additional notes
-	CostPresetID    *string `json:"cost_preset_id,omitempty"`
-	AdditionalNotes *string `json:"additional_notes,omitempty"`
+	CostPresetID    *string        `json:"cost_preset_id,omitempty"`
+	CostPreset      *CostPresetRef `json:"cost_preset,omitempty"` // {id, name} resolved from CostPresetID
+	AdditionalNotes *string        `json:"additional_notes,omitempty"`
 
 	// Calculated costs for this item
 	FilamentCost    int64 `json:"filament_cost"`     // cents
@@ -83,7 +92,14 @@ type BudgetItemResponse struct {
 	SetupCost       int64 `json:"setup_cost"`        // cents
 	ManualLaborCost int64 `json:"manual_labor_cost"` // cents
 	ItemTotalCost   int64 `json:"item_total_cost"`   // cents (sum of all)
-	UnitPrice       int64 `json:"unit_price"`        // cents per unit
+	UnitPrice       int64 `json:"unit_price"`        // cents per unit (COST, no markup) - kept for compatibility
+
+	// Customer-facing SALE values: the item cost plus its proportional share of the
+	// budget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY
+	// to the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may
+	// differ from SaleTotal by a few cents.
+	SaleUnitPrice int64 `json:"sale_unit_price"` // cents per unit (with markup)
+	SaleTotal     int64 `json:"sale_total"`      // cents (with markup)
 
 	// Filaments used in this item
 	Filaments []FilamentUsageInfo `json:"filaments"`

@@ -12,6 +12,10 @@ var (
 	// ErrInvalidTransition is returned when trying to perform an invalid status transition
 	ErrInvalidTransition = errors.New("invalid status transition")
 
+	// ErrBudgetStatusConflict is returned when a status update finds no matching row
+	// because the budget's current status changed concurrently (optimistic guard).
+	ErrBudgetStatusConflict = errors.New("budget status changed concurrently")
+
 	// ErrCustomerNotFound is returned when the customer for a budget is not found
 	ErrCustomerNotFound = errors.New("customer not found")
 

@@ -92,8 +92,28 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Validate that every referenced preset/filament belongs to the organization.
-	if err := uc.validateReferences(ctx, organizationID, request.MachinePresetID, request.EnergyPresetID, nil, request.Items); err != nil {
+	// Resolve the machine/energy/cost presets from the request, the requested
+	// profile, the org's default profile and the org's default presets (in that
+	// precedence). The resolver validates the profile and every resolved preset ID
+	// against the organization, so a bad reference surfaces as a 400 here.
+	resolved, err := uc.resolvePresets(c, organizationID, PresetResolutionInput{
+		ProfileID:       request.ProfileID,
+		MachinePresetID: request.MachinePresetID,
+		EnergyPresetID:  request.EnergyPresetID,
+		CostPresetID:    request.CostPresetID,
+	})
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to resolve budget presets", map[string]interface{}{
+			"error": err.Error(),
+		})
+		appError := coreErrors.BadRequestError(err.Error())
+		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		return
+	}
+
+	// Validate the remaining references (item-level cost presets + filaments). The
+	// budget-level machine/energy/cost presets were already validated by the resolver.
+	if err := uc.validateReferences(ctx, organizationID, nil, nil, nil, request.Items); err != nil {
 		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -110,8 +130,10 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		Description:       request.Description,
 		CustomerID:        request.CustomerID,
 		Status:            entities.StatusDraft,
-		MachinePresetID:   request.MachinePresetID,
-		EnergyPresetID:    request.EnergyPresetID,
+		ProfileID:         resolved.ProfileID,
+		MachinePresetID:   resolved.MachinePresetID,
+		EnergyPresetID:    resolved.EnergyPresetID,
+		CostPresetID:      resolved.CostPresetID,
 		IncludeEnergyCost: request.IncludeEnergyCost,
 		IncludeWasteCost:  request.IncludeWasteCost,
 		DeliveryDays:      request.DeliveryDays,
@@ -166,7 +188,7 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	}
 
 	// Build the response from the freshly stored (and costed) budget.
-	response, err := buildBudgetResponse(ctx, uc.budgetRepository, budget.ID, organizationID)
+	response, err := uc.buildBudgetResponse(ctx, budget.ID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to retrieve created budget", map[string]interface{}{
 			"error": err.Error(),

@@ -64,6 +64,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			status varchar(20) NOT NULL,
 			print_time_hours integer NOT NULL DEFAULT 0,
 			print_time_minutes integer NOT NULL DEFAULT 0,
+			profile_id uuid,
 			machine_preset_id uuid,
 			energy_preset_id uuid,
 			cost_preset_id uuid,
@@ -322,4 +323,100 @@ func TestIntegration_ComputeBudgetPricing_DoesNotPersist(t *testing.T) {
 	require.Equal(t, int64(0), budgetCount, "preview must not create budgets")
 	require.Equal(t, int64(0), itemCount, "preview must not create budget items")
 	require.Equal(t, int64(0), filamentLinkCount, "preview must not create item filaments")
+}
+
+// TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback proves two Phase-2b
+// behaviours end-to-end against a real PostgreSQL:
+//
+//  1. the budget-level cost preset (stored on the budget) drives overhead/profit; and
+//  2. an item WITHOUT its own cost_preset_id falls back to the budget-level cost
+//     preset for its setup/labor rates — without that NULL being mutated on the row.
+//
+// The persisted costs must match the pure engine fed the same budget-level preset as
+// BOTH the overhead/profit source and the (fallback) item cost preset.
+func TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback(t *testing.T) {
+	db := openTestDB(t, "budget_costfallback")
+	createPricingSchema(t, db)
+
+	const org = "org-a"
+	ctx := context.Background()
+	repo := repoimpl.NewBudgetRepository(db)
+	now := time.Now()
+
+	fil := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO filaments (id, organization_id, price_per_kg) VALUES (?,?,?)`, fil, org, 10000.0).Error)
+
+	// Budget-level cost preset: labor R$90/h, 15% overhead, 25% profit.
+	budgetCostPreset := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO cost_presets (id, organization_id, labor_cost_per_hour, overhead_percentage, profit_margin_percentage) VALUES (?,?,?,?,?)`,
+		budgetCostPreset, org, 90.0, 15.0, 25.0).Error)
+
+	budgetID := uuid.New()
+	require.NoError(t, repo.Create(ctx, &entities.BudgetEntity{
+		ID:             budgetID,
+		OrganizationID: org,
+		Name:           "Cost fallback",
+		CustomerID:     uuid.New(),
+		Status:         entities.StatusDraft,
+		CostPresetID:   &budgetCostPreset, // budget-level cost preset
+		OwnerUserID:    "user-1",
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}))
+
+	// Single item with NO cost_preset_id but with setup + manual labor minutes.
+	itemID := uuid.New()
+	require.NoError(t, repo.AddItem(ctx, &entities.BudgetItemEntity{
+		ID:                      itemID,
+		BudgetID:                budgetID,
+		FilamentID:              fil,
+		OrganizationID:          org,
+		Quantity:                100,
+		Order:                   1,
+		ProductName:             "A",
+		ProductQuantity:         1,
+		SetupTimeMinutes:        40,
+		ManualLaborMinutesTotal: 20,
+		CostPresetID:            nil, // must fall back to the budget-level preset
+		CreatedAt:               now,
+		UpdatedAt:               now,
+	}))
+	require.NoError(t, repo.AddItemFilament(ctx, &entities.BudgetItemFilamentEntity{
+		ID: uuid.New(), BudgetItemID: itemID, FilamentID: fil, OrganizationID: org, Quantity: 100, Order: 1, CreatedAt: now, UpdatedAt: now,
+	}))
+
+	require.NoError(t, repo.CalculateCosts(ctx, budgetID, org))
+
+	// Expected: the pure engine with the budget preset as BOTH the overhead/profit
+	// source and the item's (fallback) cost preset.
+	cp := &pricing.CostPresetInput{LaborRatePerHour: 90, OverheadPercentage: 15, ProfitMarginPercentage: 25}
+	want, err := pricing.Calculate(pricing.PricingInput{
+		BudgetCostPreset: cp,
+		Items: []pricing.PricingItemInput{
+			{
+				Quantity: 1, SetupTimeMinutes: 40, ManualLaborMinutesTotal: 20, CostPreset: cp,
+				Filaments: []pricing.PricingFilamentInput{{Grams: 100, PricePerKgCents: 10000}},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	// The fallback must have produced non-zero setup/labor (proving it was applied).
+	require.Greater(t, want.SetupCost, int64(0))
+	require.Greater(t, want.LaborCost, int64(0))
+
+	var gotBudget struct {
+		SetupCost, LaborCost, OverheadCost, ProfitAmount, TotalCost int64
+	}
+	require.NoError(t, db.Raw(`SELECT setup_cost, labor_cost, overhead_cost, profit_amount, total_cost FROM budgets WHERE id = ?`, budgetID).Scan(&gotBudget).Error)
+	require.Equal(t, want.SetupCost, gotBudget.SetupCost, "item setup uses budget-level labor rate")
+	require.Equal(t, want.LaborCost, gotBudget.LaborCost, "item labor uses budget-level labor rate")
+	require.Equal(t, want.Overhead, gotBudget.OverheadCost, "overhead from budget-level cost preset")
+	require.Equal(t, want.Profit, gotBudget.ProfitAmount, "profit from budget-level cost preset")
+	require.Equal(t, want.Total, gotBudget.TotalCost)
+
+	// The stored item cost_preset_id must remain NULL (fallback never mutates the row).
+	var nullCount int64
+	require.NoError(t, db.Raw(`SELECT COUNT(*) FROM budget_items WHERE id = ? AND cost_preset_id IS NULL`, itemID).Scan(&nullCount).Error)
+	require.Equal(t, int64(1), nullCount, "fallback must not persist a cost_preset_id on the item")
 }

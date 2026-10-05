@@ -359,6 +359,40 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING BUDGET MIGRATION: %s", err.Error()))
 	}
 
+	// 15.1. Budgets.profile_id FK -> print_profiles (ON DELETE SET NULL). AutoMigrate
+	// adds the nullable profile_id column from the model; FK creation is disabled
+	// during AutoMigrate (see newGormConfig), so add it here, idempotently: only
+	// when the budgets table exists and the constraint is not already present. ON
+	// DELETE SET NULL means deleting a profile simply detaches it from past budgets.
+	{
+		var budgetsExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budgets')").Scan(&budgetsExists)
+		if budgetsExists {
+			var fkExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'budgets' AND constraint_name = 'fk_budgets_profile'
+				)
+			`).Scan(&fkExists)
+			if !fkExists {
+				sql := `
+					ALTER TABLE budgets
+					ADD CONSTRAINT fk_budgets_profile
+					FOREIGN KEY (profile_id)
+					REFERENCES print_profiles(id)
+					ON UPDATE CASCADE
+					ON DELETE SET NULL
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for budgets.profile_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for budgets.profile_id")
+				}
+			}
+		}
+	}
+
 	// 16. BudgetStatusHistory (FK: OrganizationID -> Companies, BudgetID -> Budgets) CASCADE
 	if err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING BUDGET_STATUS_HISTORY MIGRATION: %s", err.Error()))

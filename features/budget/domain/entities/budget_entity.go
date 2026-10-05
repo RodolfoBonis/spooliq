@@ -32,6 +32,9 @@ type BudgetEntity struct {
 	PrintTimeHours   int `json:"print_time_hours"`
 	PrintTimeMinutes int `json:"print_time_minutes"`
 
+	// Print profile the presets were resolved from (nil when none was used).
+	ProfileID *uuid.UUID `json:"profile_id,omitempty"`
+
 	// Presets used for calculations
 	MachinePresetID *uuid.UUID `json:"machine_preset_id,omitempty"`
 	EnergyPresetID  *uuid.UUID `json:"energy_preset_id,omitempty"`

@@ -60,6 +60,14 @@ type CostPresetRef struct {
 	Name string `json:"name"`
 }
 
+// ProfileRef is a lightweight {id, name} reference to a print profile, returned on
+// the budget so clients can display the profile the presets were resolved from. It
+// is nil when the budget was not created from a profile.
+type ProfileRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // BudgetItemResponse represents a budget item (product) with all filaments and costs
 type BudgetItemResponse struct {
 	ID       string `json:"id"`
@@ -115,10 +123,15 @@ type BudgetResponse struct {
 	// Embed all BudgetEntity fields directly
 	*BudgetEntity
 
-	Customer      *CustomerInfo               `json:"customer"`
-	Items         []BudgetItemResponse        `json:"items"`
-	MachinePreset *PresetInfo                 `json:"machine_preset,omitempty"`
-	EnergyPreset  *PresetInfo                 `json:"energy_preset,omitempty"`
+	Customer      *CustomerInfo        `json:"customer"`
+	Items         []BudgetItemResponse `json:"items"`
+	MachinePreset *PresetInfo          `json:"machine_preset,omitempty"`
+	EnergyPreset  *PresetInfo          `json:"energy_preset,omitempty"`
+	// Profile is the {id, name} of the print profile the presets were resolved from
+	// (null when none was used). CostPreset is the {id, name} of the budget-level
+	// cost preset driving overhead/profit (null when none). Both are additive.
+	Profile       *ProfileRef                 `json:"profile"`
+	CostPreset    *CostPresetRef              `json:"cost_preset"`
 	StatusHistory []BudgetStatusHistoryEntity `json:"status_history,omitempty"`
 
 	// Total print time (sum of all items)

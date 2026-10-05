@@ -84,6 +84,10 @@ type fakeBudgetRepo struct {
 	createCalls   int
 	addItemCalls  int
 	calcCalls     int
+
+	// Capture hooks for resolution assertions.
+	lastCreated      *entities.BudgetEntity
+	lastPricingInput entities.PricingComputationInput
 }
 
 var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
@@ -91,8 +95,9 @@ var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
 func (f *fakeBudgetRepo) WithTransaction(ctx context.Context, fn func(repo budgetRepo.BudgetRepository) error) error {
 	return fn(f)
 }
-func (f *fakeBudgetRepo) Create(_ context.Context, _ *entities.BudgetEntity) error {
+func (f *fakeBudgetRepo) Create(_ context.Context, b *entities.BudgetEntity) error {
 	f.createCalls++
+	f.lastCreated = b
 	return nil
 }
 func (f *fakeBudgetRepo) FindByID(_ context.Context, id uuid.UUID, org string) (*entities.BudgetEntity, error) {
@@ -153,7 +158,8 @@ func (f *fakeBudgetRepo) CalculateCosts(_ context.Context, _ uuid.UUID, _ string
 	f.calcCalls++
 	return nil
 }
-func (f *fakeBudgetRepo) ComputeBudgetPricing(_ context.Context, _ entities.PricingComputationInput) (pricing.PricingResult, error) {
+func (f *fakeBudgetRepo) ComputeBudgetPricing(_ context.Context, in entities.PricingComputationInput) (pricing.PricingResult, error) {
+	f.lastPricingInput = in
 	return f.pricingResult, nil
 }
 func (f *fakeBudgetRepo) ValidateFilamentsInOrg(_ context.Context, _ []uuid.UUID, _ string) error {
@@ -183,6 +189,53 @@ func (f *fakeBudgetRepo) FindItemsByBudgetID(_ context.Context, _ uuid.UUID) ([]
 // Helpers
 // ---------------------------------------------------------------------------
 
+// fakeProfileProvider is a configurable stand-in for ProfilePresetProvider.
+type fakeProfileProvider struct {
+	byID    map[uuid.UUID]*ProfilePresets
+	missing map[uuid.UUID]bool // profiles that resolve to "not found" (nil,nil)
+	def     *ProfilePresets
+	err     error
+}
+
+func (f *fakeProfileProvider) ProfileByID(_ context.Context, id uuid.UUID, _ string) (*ProfilePresets, error) {
+	if f == nil {
+		return nil, nil
+	}
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.missing[id] {
+		return nil, nil
+	}
+	if p, ok := f.byID[id]; ok {
+		return p, nil
+	}
+	return nil, nil
+}
+
+func (f *fakeProfileProvider) DefaultProfile(_ context.Context, _ string) (*ProfilePresets, error) {
+	if f == nil {
+		return nil, nil
+	}
+	return f.def, f.err
+}
+
+// fakeDefaultPresetProvider is a configurable stand-in for DefaultPresetProvider.
+type fakeDefaultPresetProvider struct {
+	byType map[string]*uuid.UUID
+	err    error
+}
+
+func (f *fakeDefaultPresetProvider) DefaultPresetID(_ context.Context, _ string, presetType string) (*uuid.UUID, error) {
+	if f == nil {
+		return nil, nil
+	}
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.byType[presetType], nil
+}
+
 func newUseCaseWith(repo budgetRepo.BudgetRepository) *BudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   repo,
@@ -190,6 +243,8 @@ func newUseCaseWith(repo budgetRepo.BudgetRepository) *BudgetUseCase {
 		validator:          validator.New(),
 		logger:             logger.NewLogger("test"),
 		activityService:    noopActivity{},
+		profileProvider:    &fakeProfileProvider{},
+		presetProvider:     &fakeDefaultPresetProvider{},
 	}
 }
 

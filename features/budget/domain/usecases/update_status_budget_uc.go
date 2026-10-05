@@ -150,7 +150,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	}
 
 	// Build response from the freshly stored state.
-	response, _ := buildBudgetResponse(ctx, uc.budgetRepository, budgetID, organizationID)
+	response, _ := uc.buildBudgetResponse(ctx, budgetID, organizationID)
 
 	uc.logger.Info(ctx, "Budget status updated successfully", map[string]interface{}{
 		"budget_id":  budget.ID,

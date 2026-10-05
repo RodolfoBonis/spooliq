@@ -7,6 +7,7 @@ import (
 	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	customerModels "github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	presetModels "github.com/RodolfoBonis/spooliq/features/preset/data/models"
+	profileModels "github.com/RodolfoBonis/spooliq/features/profile/data/models"
 	userModels "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -34,6 +35,10 @@ type BudgetModel struct {
 	MachinePresetID *uuid.UUID `gorm:"type:uuid" json:"machine_preset_id"`
 	EnergyPresetID  *uuid.UUID `gorm:"type:uuid" json:"energy_preset_id"`
 	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id"` // For overhead/profit percentages
+
+	// Print profile the presets were resolved from. FK added idempotently in
+	// RunMigrations (ON DELETE SET NULL) so deleting a profile never blocks/deletes budgets.
+	ProfileID *uuid.UUID `gorm:"type:uuid;index" json:"profile_id"`
 
 	// Configuration flags
 	IncludeEnergyCost bool `gorm:"default:false" json:"include_energy_cost"`
@@ -70,6 +75,7 @@ type BudgetModel struct {
 	MachinePreset *presetModels.MachinePresetModel `gorm:"foreignKey:MachinePresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"machine_preset,omitempty"`
 	EnergyPreset  *presetModels.EnergyPresetModel  `gorm:"foreignKey:EnergyPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"energy_preset,omitempty"`
 	CostPreset    *presetModels.CostPresetModel    `gorm:"foreignKey:CostPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"cost_preset,omitempty"`
+	Profile       *profileModels.PrintProfileModel `gorm:"foreignKey:ProfileID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"profile,omitempty"`
 	Items         []BudgetItemModel                `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"items,omitempty"`
 	StatusHistory []BudgetStatusHistoryModel       `gorm:"foreignKey:BudgetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"status_history,omitempty"`
 }
@@ -101,6 +107,7 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		Status:            entities.BudgetStatus(b.Status),
 		PrintTimeHours:    b.PrintTimeHours,
 		PrintTimeMinutes:  b.PrintTimeMinutes,
+		ProfileID:         b.ProfileID,
 		MachinePresetID:   b.MachinePresetID,
 		EnergyPresetID:    b.EnergyPresetID,
 		CostPresetID:      b.CostPresetID,
@@ -143,6 +150,7 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.Status = string(entity.Status)
 	b.PrintTimeHours = entity.PrintTimeHours
 	b.PrintTimeMinutes = entity.PrintTimeMinutes
+	b.ProfileID = entity.ProfileID
 	b.MachinePresetID = entity.MachinePresetID
 	b.EnergyPresetID = entity.EnergyPresetID
 	b.CostPresetID = entity.CostPresetID

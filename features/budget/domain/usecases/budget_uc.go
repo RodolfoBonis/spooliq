@@ -38,6 +38,11 @@ type BudgetUseCase struct {
 	validator          *validator.Validate
 	logger             logger.Logger
 	activityService    activityUc.IActivityService
+	// profileProvider / presetProvider back the preset resolver. They are narrow
+	// interfaces (defined in this package) implemented by FX-wired adapters over the
+	// profile and preset repositories, keeping the dependency one-directional.
+	profileProvider ProfilePresetProvider
+	presetProvider  DefaultPresetProvider
 }
 
 // NewBudgetUseCase creates a new instance of BudgetUseCase
@@ -49,6 +54,8 @@ func NewBudgetUseCase(
 	cdnService *services.CDNService,
 	logger logger.Logger,
 	activityService activityUc.IActivityService,
+	profileProvider ProfilePresetProvider,
+	presetProvider DefaultPresetProvider,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
@@ -59,7 +66,18 @@ func NewBudgetUseCase(
 		validator:          validator.New(),
 		logger:             logger,
 		activityService:    activityService,
+		profileProvider:    profileProvider,
+		presetProvider:     presetProvider,
 	}
+}
+
+// resolvePresets runs the budget preset resolver with this use case's collaborators.
+// It is the single entry point the create/preview/update flows use to turn a
+// request's optional profile_id + explicit preset IDs into the concrete, validated
+// machine/energy/cost preset IDs (and the profile that was used).
+func (uc *BudgetUseCase) resolvePresets(c *gin.Context, organizationID string, in PresetResolutionInput) (ResolvedPresets, error) {
+	resolver := newPresetResolver(uc.profileProvider, uc.presetProvider, uc.budgetRepository.ValidatePresetInOrg)
+	return resolver.Resolve(c.Request.Context(), organizationID, in)
 }
 
 // Note: isAdmin and getUserID have been replaced by helpers.GetOrganizationID and helpers.GetUserID

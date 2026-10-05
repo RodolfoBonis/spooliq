@@ -2538,6 +2538,69 @@
                 }
             }
         },
+        "/presets/from-template/{key}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Instantiate a preset in the caller's organization from a template, with optional overrides (name, is_default).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Create preset from template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional overrides",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.FromTemplateOverrides"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Preset created from template",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Unknown template key",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/presets/machines": {
             "get": {
                 "security": [
@@ -2781,6 +2844,93 @@
                 }
             }
         },
+        "/presets/suggest-name": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generate a preset name from its type and fields so the web app can prefill the name input. Pure helper; does not persist anything.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Suggest preset name",
+                "parameters": [
+                    {
+                        "description": "Type and fields",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.SuggestNameRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Suggested name",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "List preset templates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template type filter (machine, energy, cost)",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Templates",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.PresetTemplate"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/presets/{id}": {
             "get": {
                 "security": [
@@ -2879,6 +3029,461 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/{id}/default": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark the preset as the single default for its (organization, type); clears any other default of the same type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Set preset as default",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Preset set as default",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Copy a preset (base + type-specific data) within the caller's organization. The copy is named \"\u003cname\u003e (cópia)\" and is not a default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Duplicate preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Preset duplicated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all print profiles for the caller's organization, each embedding the referenced presets' {id, name}.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "List print profiles",
+                "responses": {
+                    "200": {
+                        "description": "Profiles",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.ProfileResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a print profile referencing a machine, an energy and an optional cost preset. The referenced presets must belong to the organization and match their type. Name is auto-generated when empty.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Create print profile",
+                "parameters": [
+                    {
+                        "description": "Profile data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Profile created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request or preset reference",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific print profile by its ID within the caller's organization.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Get print profile by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a print profile. Only provided fields are applied; changed preset references are re-validated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Update print profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Profile update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request or preset reference",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a print profile. The default profile cannot be deleted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Delete print profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Profile deleted"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - Default profiles cannot be deleted",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles/{id}/default": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark the profile as the single default for the organization; clears any other default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Set print profile as default",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile set as default",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Copy a print profile within the caller's organization. The copy is named \"\u003cname\u003e (cópia)\" and is not a default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Duplicate print profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Profile duplicated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
                         }
@@ -8282,6 +8887,20 @@
                 }
             }
         },
+        "entities.CostTemplateFields": {
+            "type": "object",
+            "properties": {
+                "labor_cost_per_hour": {
+                    "type": "number"
+                },
+                "overhead_percentage": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.CreateBudgetRequest": {
             "type": "object",
             "required": [
@@ -8539,6 +9158,33 @@
                 }
             }
         },
+        "entities.CreateProfileRequest": {
+            "type": "object",
+            "required": [
+                "energy_preset_id",
+                "machine_preset_id"
+            ],
+            "properties": {
+                "cost_preset_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "machine_preset_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.CreateUserRequest": {
             "type": "object",
             "required": [
@@ -8700,6 +9346,20 @@
                 },
                 "tariff_type": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.EnergyTemplateFields": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
                 }
             }
         },
@@ -9186,6 +9846,35 @@
                     "type": "number"
                 },
                 "print_speed_max": {
+                    "type": "number"
+                }
+            }
+        },
+        "entities.MachineTemplateFields": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "build_volume_x": {
+                    "type": "number"
+                },
+                "build_volume_y": {
+                    "type": "number"
+                },
+                "build_volume_z": {
+                    "type": "number"
+                },
+                "filament_diameter": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "power_consumption": {
                     "type": "number"
                 }
             }
@@ -9997,6 +10686,43 @@
                 }
             }
         },
+        "entities.PresetRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PresetTemplate": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "$ref": "#/definitions/entities.CostTemplateFields"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy": {
+                    "$ref": "#/definitions/entities.EnergyTemplateFields"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "machine": {
+                    "$ref": "#/definitions/entities.MachineTemplateFields"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.PresetType"
+                }
+            }
+        },
         "entities.PresetType": {
             "type": "string",
             "enum": [
@@ -10061,6 +10787,41 @@
                 "payment_terms": {
                     "type": "string",
                     "maxLength": 1000
+                }
+            }
+        },
+        "entities.ProfileResponse": {
+            "type": "object",
+            "properties": {
+                "cost_preset": {
+                    "$ref": "#/definitions/entities.PresetRef"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_preset": {
+                    "$ref": "#/definitions/entities.PresetRef"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "machine_preset": {
+                    "$ref": "#/definitions/entities.PresetRef"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -10734,6 +11495,29 @@
                 }
             }
         },
+        "entities.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "cost_preset_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "machine_preset_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -10895,9 +11679,6 @@
         },
         "usecases.CreateCostPresetRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
@@ -10927,7 +11708,7 @@
                 },
                 "profit_margin_percentage": {
                     "type": "number",
-                    "maximum": 100,
+                    "maximum": 1000,
                     "minimum": 0
                 },
                 "quality_control_cost_per_item": {
@@ -10956,10 +11737,7 @@
             "type": "object",
             "required": [
                 "currency",
-                "energy_cost_per_kwh",
-                "name",
-                "off_peak_hour_multiplier",
-                "peak_hour_multiplier"
+                "energy_cost_per_kwh"
             ],
             "properties": {
                 "city": {
@@ -11013,7 +11791,6 @@
                 "filament_diameter",
                 "layer_height_max",
                 "layer_height_min",
-                "name",
                 "nozzle_diameter",
                 "power_consumption",
                 "print_speed_max"
@@ -11076,6 +11853,17 @@
                 }
             }
         },
+        "usecases.FromTemplateOverrides": {
+            "type": "object",
+            "properties": {
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "usecases.MachinePresetResponse": {
             "type": "object",
             "properties": {
@@ -11096,6 +11884,9 @@
                 },
                 "cost_per_hour": {
                     "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
@@ -11137,6 +11928,9 @@
                     "type": "number"
                 },
                 "type": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -11193,6 +11987,47 @@
                 },
                 "value": {
                     "type": "number"
+                }
+            }
+        },
+        "usecases.SuggestNameRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "brand": {
+                    "description": "Machine",
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "labor_cost_per_hour": {
+                    "description": "Cost",
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                },
+                "provider": {
+                    "description": "Energy",
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.PresetType"
                 }
             }
         },

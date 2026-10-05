@@ -19,6 +19,9 @@ import (
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
+	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
+	profiles "github.com/RodolfoBonis/spooliq/features/profile/data/models"
+	profileRepos "github.com/RodolfoBonis/spooliq/features/profile/data/repositories"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"gorm.io/driver/postgres"
@@ -322,6 +325,22 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
 	}
 
+	// Enforce a single default preset per (organization, type): dedupe existing
+	// data then create the partial unique index. Safe and idempotent.
+	if err := presetRepos.MigrateDefaults(Connector); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRESET DEFAULT CONSTRAINT MIGRATION: %s", err.Error()))
+	}
+
+	// 13.1. Print Profiles (FK: OrganizationID -> Companies; references presets by id)
+	if err := Connector.AutoMigrate(&profiles.PrintProfileModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRINT_PROFILE MIGRATION: %s", err.Error()))
+	}
+
+	// Enforce a single default print profile per organization (dedupe + index).
+	if err := profileRepos.MigrateDefaults(Connector); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRINT_PROFILE DEFAULT CONSTRAINT MIGRATION: %s", err.Error()))
+	}
+
 	// ========================================
 	// LEVEL 3 (continued): Payment Methods (depends on Companies only)
 	// ========================================
@@ -374,6 +393,7 @@ func RunMigrations() {
 		"customers": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
+		"print_profiles": true,
 	}
 
 	for table := range orgFKTables {

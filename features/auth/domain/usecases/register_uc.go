@@ -13,6 +13,7 @@ import (
 	authEntities "github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	presetUsecases "github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	userEntities "github.com/RodolfoBonis/spooliq/features/users/domain/entities"
@@ -29,6 +30,7 @@ type RegisterUseCase struct {
 	companyRepository companyRepositories.CompanyRepository
 	userRepository    userRepositories.UserRepository
 	gatewayLinkRepo   subscriptionRepositories.PaymentGatewayLinkRepository
+	presetCreateUC    *presetUsecases.CreatePresetUseCase
 	logger            logger.Logger
 	validator         *validator.Validate
 }
@@ -40,6 +42,7 @@ func NewRegisterUseCase(
 	companyRepository companyRepositories.CompanyRepository,
 	userRepository userRepositories.UserRepository,
 	gatewayLinkRepo subscriptionRepositories.PaymentGatewayLinkRepository,
+	presetCreateUC *presetUsecases.CreatePresetUseCase,
 	logger logger.Logger,
 ) *RegisterUseCase {
 	return &RegisterUseCase{
@@ -48,6 +51,7 @@ func NewRegisterUseCase(
 		companyRepository: companyRepository,
 		userRepository:    userRepository,
 		gatewayLinkRepo:   gatewayLinkRepo,
+		presetCreateUC:    presetCreateUC,
 		logger:            logger,
 		validator:         validator.New(),
 	}
@@ -242,6 +246,10 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		return
 	}
 
+	// Seed starter default presets (energy + cost) for the new organization.
+	// Best-effort: any failure is logged but never blocks registration.
+	uc.seedDefaultPresets(ctx, organizationID, &user.ID)
+
 	// Note: For trial users, we don't create subscription in Asaas yet
 	// Subscriptions will be created when user upgrades to Starter+ plans
 	uc.logger.Info(ctx, "Trial user registered - Asaas subscription will be created on plan upgrade", map[string]interface{}{
@@ -412,4 +420,34 @@ func (uc *RegisterUseCase) createAsaasCustomer(ctx context.Context, request auth
 	})
 
 	return customer, nil
+}
+
+// seedDefaultPresets creates the starter default energy and cost presets for a
+// freshly registered organization from the static template catalog. It is
+// best-effort: errors are logged and never propagated, so a seeding hiccup can
+// never fail an otherwise successful registration. No machine preset is created
+// because the organization's printer is unknown at registration time.
+func (uc *RegisterUseCase) seedDefaultPresets(ctx context.Context, organizationID string, userID *uuid.UUID) {
+	if uc.presetCreateUC == nil {
+		return
+	}
+
+	seeds := []struct {
+		label string
+		key   string
+	}{
+		{"energy", "energia-residencial-br"},
+		{"cost", "custo-hobby"},
+	}
+
+	for _, seed := range seeds {
+		if _, err := uc.presetCreateUC.CreateFromTemplate(seed.key, presetUsecases.FromTemplateOverrides{IsDefault: true}, organizationID, userID); err != nil {
+			uc.logger.Error(ctx, "Failed to seed default preset", map[string]interface{}{
+				"error":           err.Error(),
+				"organization_id": organizationID,
+				"preset":          seed.label,
+				"template_key":    seed.key,
+			})
+		}
+	}
 }

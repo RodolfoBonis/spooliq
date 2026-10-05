@@ -6,6 +6,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	presetUsecases "github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	userRepositories "github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
 	"go.uber.org/fx"
@@ -23,9 +24,10 @@ var AuthModule = fx.Module("auth",
 			companyRepository companyRepositories.CompanyRepository,
 			userRepository userRepositories.UserRepository,
 			gatewayLinkRepo subscriptionRepositories.PaymentGatewayLinkRepository,
+			presetCreateUC *presetUsecases.CreatePresetUseCase,
 			logger logger.Logger,
 		) *usecases.RegisterUseCase {
-			return usecases.NewRegisterUseCase(keycloakService, asaasService, companyRepository, userRepository, gatewayLinkRepo, logger)
+			return usecases.NewRegisterUseCase(keycloakService, asaasService, companyRepository, userRepository, gatewayLinkRepo, presetCreateUC, logger)
 		},
 	),
 )

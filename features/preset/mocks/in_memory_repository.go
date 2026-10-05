@@ -25,6 +25,10 @@ type InMemoryPresetRepository struct {
 	// OrgScopes records every organizationID the repository was asked to scope
 	// a read/update/delete by. Tests use it to assert pass-through.
 	OrgScopes []string
+
+	// ProfileReferenced lets tests mark preset IDs as referenced by a live
+	// profile, so IsReferencedByProfile returns true for them.
+	ProfileReferenced map[uuid.UUID]bool
 }
 
 // NewInMemoryPresetRepository creates an empty in-memory repository.
@@ -156,6 +160,9 @@ func (r *InMemoryPresetRepository) Delete(id uuid.UUID, organizationID string) e
 
 // CreateMachine stores a base preset and its machine child.
 func (r *InMemoryPresetRepository) CreateMachine(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error {
+	if preset.IsDefault {
+		r.clearOtherDefaults(preset.OrganizationID, entities.PresetTypeMachine, preset.ID)
+	}
 	r.Seed(preset, machine)
 	return nil
 }
@@ -201,6 +208,9 @@ func (r *InMemoryPresetRepository) UpdateMachine(machine *entities.MachinePreset
 
 // CreateEnergy stores a base preset and its energy child.
 func (r *InMemoryPresetRepository) CreateEnergy(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error {
+	if preset.IsDefault {
+		r.clearOtherDefaults(preset.OrganizationID, entities.PresetTypeEnergy, preset.ID)
+	}
 	r.Seed(preset, energy)
 	return nil
 }
@@ -269,6 +279,9 @@ func (r *InMemoryPresetRepository) UpdateEnergy(energy *entities.EnergyPresetEnt
 
 // CreateCost stores a base preset and its cost child.
 func (r *InMemoryPresetRepository) CreateCost(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error {
+	if preset.IsDefault {
+		r.clearOtherDefaults(preset.OrganizationID, entities.PresetTypeCost, preset.ID)
+	}
 	r.Seed(preset, cost)
 	return nil
 }
@@ -308,6 +321,8 @@ func (r *InMemoryPresetRepository) machineResponse(id uuid.UUID) *repositories.M
 		Type:                   string(preset.Type),
 		IsActive:               preset.IsActive,
 		IsDefault:              preset.IsDefault,
+		CreatedAt:              preset.CreatedAt,
+		UpdatedAt:              preset.UpdatedAt,
 		Brand:                  machine.Brand,
 		Model:                  machine.Model,
 		BuildVolumeX:           machine.BuildVolumeX,
@@ -363,6 +378,8 @@ func (r *InMemoryPresetRepository) energyResponse(id uuid.UUID) *repositories.En
 		Type:                  string(preset.Type),
 		IsActive:              preset.IsActive,
 		IsDefault:             preset.IsDefault,
+		CreatedAt:             preset.CreatedAt,
+		UpdatedAt:             preset.UpdatedAt,
 		Country:               energy.Country,
 		State:                 energy.State,
 		City:                  energy.City,
@@ -443,6 +460,8 @@ func (r *InMemoryPresetRepository) GetCostPresets(organizationID string) ([]*rep
 			Type:                      string(preset.Type),
 			IsActive:                  preset.IsActive,
 			IsDefault:                 preset.IsDefault,
+			CreatedAt:                 preset.CreatedAt,
+			UpdatedAt:                 preset.UpdatedAt,
 			LaborCostPerHour:          cost.LaborCostPerHour,
 			PackagingCostPerItem:      cost.PackagingCostPerItem,
 			ShippingCostBase:          cost.ShippingCostBase,

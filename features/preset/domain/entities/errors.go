@@ -11,4 +11,12 @@ var (
 	ErrCannotDeleteDefaultPreset = errors.New("default presets cannot be deleted")
 	// ErrPresetNotFound error message when a preset does not exist within the organization scope
 	ErrPresetNotFound = errors.New("preset not found")
+	// ErrTemplateNotFound error message when a preset template key is unknown
+	ErrTemplateNotFound = errors.New("preset template not found")
+	// ErrDefaultConflict is returned when a concurrent mutation would create a
+	// second default preset for the same (organization, type).
+	ErrDefaultConflict = errors.New("já existe um preset padrão para este tipo; tente novamente")
+	// ErrPresetInUseByProfile is returned when deleting a preset still referenced
+	// by a live print profile in the same organization.
+	ErrPresetInUseByProfile = errors.New("este preset está em uso por um perfil de impressão e não pode ser excluído")
 )

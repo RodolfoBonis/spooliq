@@ -38,6 +38,7 @@ func newTestHandler(repo *mocks.InMemoryPresetRepository) *Handler {
 		usecases.NewFindPresetUseCase(repo),
 		usecases.NewUpdatePresetUseCase(repo),
 		usecases.NewDeletePresetUseCase(repo),
+		usecases.NewManagePresetUseCase(repo),
 		noopActivityService{},
 	)
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/material"
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
+	"github.com/RodolfoBonis/spooliq/features/profile"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
@@ -53,6 +54,7 @@ func InitializeRoutes(
 	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
 	manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase,
 	presetHandler *preset.Handler,
+	profileHandler *profile.Handler,
 	dashboardHandler *dashboard.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
@@ -78,6 +80,7 @@ func InitializeRoutes(
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	preset.SetupRoutes(root, presetHandler, protectFactory)
+	profile.Routes(root, profileHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
 	users.SetupRoutes(root, userHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)

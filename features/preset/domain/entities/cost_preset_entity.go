@@ -38,8 +38,10 @@ func (c *CostPresetEntity) Validate() error {
 	if c.OverheadPercentage < 0 || c.OverheadPercentage > 100 {
 		return errors.New("overhead percentage must be between 0 and 100")
 	}
-	if c.ProfitMarginPercentage < 0 || c.ProfitMarginPercentage > 100 {
-		return errors.New("profit margin percentage must be between 0 and 100")
+	// Profit margin is allowed to exceed 100% (e.g. keystone pricing and up),
+	// but is capped to guard against obvious data-entry mistakes.
+	if c.ProfitMarginPercentage < 0 || c.ProfitMarginPercentage > 1000 {
+		return errors.New("profit margin percentage must be between 0 and 1000")
 	}
 	if c.PostProcessingCostPerHour < 0 {
 		return errors.New("post processing cost per hour cannot be negative")

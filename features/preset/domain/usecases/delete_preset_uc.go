@@ -22,7 +22,8 @@ func NewDeletePresetUseCase(presetRepo repositories.PresetRepository) *DeletePre
 // Returns:
 //   - gorm.ErrRecordNotFound when the preset does not exist for the organization
 //     (cross-organization access is indistinguishable from "not found" by design);
-//   - entities.ErrCannotDeleteDefaultPreset when the preset is marked as default.
+//   - entities.ErrCannotDeleteDefaultPreset when the preset is marked as default;
+//   - entities.ErrPresetInUseByProfile when a live print profile still references it.
 func (uc *DeletePresetUseCase) Execute(id uuid.UUID, organizationID string) error {
 	// Check if preset exists within the organization scope
 	preset, err := uc.presetRepo.GetByID(id, organizationID)
@@ -33,6 +34,16 @@ func (uc *DeletePresetUseCase) Execute(id uuid.UUID, organizationID string) erro
 	// Default presets cannot be deleted
 	if preset.IsDefault {
 		return entities.ErrCannotDeleteDefaultPreset
+	}
+
+	// A preset still referenced by a live print profile cannot be deleted,
+	// otherwise the profile would point at a non-existent preset.
+	referenced, err := uc.presetRepo.IsReferencedByProfile(id, organizationID)
+	if err != nil {
+		return err
+	}
+	if referenced {
+		return entities.ErrPresetInUseByProfile
 	}
 
 	// Perform soft delete (organization-scoped)

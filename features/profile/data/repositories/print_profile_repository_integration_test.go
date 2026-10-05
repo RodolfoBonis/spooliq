@@ -196,3 +196,23 @@ func TestIntegration_Profile_BlocksPresetDeleteWhenReferenced(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, referenced)
 }
+
+// The organization's first profile becomes the default automatically.
+func TestIntegration_Profile_FirstBecomesDefault(t *testing.T) {
+	uc, profileRepo, _, db := setup(t)
+
+	machine := seedBasePreset(t, db, orgA, "M", presetEntities.PresetTypeMachine)
+	energy := seedBasePreset(t, db, orgA, "E", presetEntities.PresetTypeEnergy)
+
+	first, err := uc.Create(&entities.CreateProfileRequest{MachinePresetID: machine, EnergyPresetID: energy}, orgA, "u")
+	require.NoError(t, err)
+	second, err := uc.Create(&entities.CreateProfileRequest{MachinePresetID: machine, EnergyPresetID: energy}, orgA, "u")
+	require.NoError(t, err)
+
+	gotFirst, err := profileRepo.GetByID(uuid.MustParse(first.ID), orgA)
+	require.NoError(t, err)
+	gotSecond, err := profileRepo.GetByID(uuid.MustParse(second.ID), orgA)
+	require.NoError(t, err)
+	assert.True(t, gotFirst.IsDefault, "first profile must become the default")
+	assert.False(t, gotSecond.IsDefault)
+}

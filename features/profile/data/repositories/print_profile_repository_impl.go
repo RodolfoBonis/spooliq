@@ -31,15 +31,27 @@ func clearOtherDefaults(db *gorm.DB, organizationID string, exceptID uuid.UUID) 
 		Update("is_default", false).Error
 }
 
-// Create inserts a new profile, clearing a sibling default first when needed.
+// Create inserts a new profile. It clears sibling defaults when the new profile
+// is the default; when the organization has no live default profile yet, the
+// new one is promoted to default so budgets always have a profile to fall back to.
 func (r *PrintProfileRepositoryImpl) Create(profile *entities.ProfileEntity) error {
 	return translateDefaultErr(r.db.Transaction(func(tx *gorm.DB) error {
+		if err := lockDefaults(tx, profile.OrganizationID); err != nil {
+			return err
+		}
 		if profile.IsDefault {
-			if err := lockDefaults(tx, profile.OrganizationID); err != nil {
-				return err
-			}
 			if err := clearOtherDefaults(tx, profile.OrganizationID, profile.ID); err != nil {
 				return err
+			}
+		} else {
+			var count int64
+			if err := tx.Model(&models.PrintProfileModel{}).
+				Where("organization_id = ? AND is_default = ?", profile.OrganizationID, true).
+				Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				profile.IsDefault = true
 			}
 		}
 		model := &models.PrintProfileModel{}

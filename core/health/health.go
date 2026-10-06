@@ -16,7 +16,9 @@ import (
 
 // readyTimeout bounds each dependency probe so a hung dependency cannot stall
 // the readiness endpoint.
-const readyTimeout = 2 * time.Second
+// Kept below the k8s probe timeout (1s) so a slow dependency still yields a
+// proper 503 body inside the probe window.
+const readyTimeout = 800 * time.Millisecond
 
 const (
 	statusOK      = "ok"
@@ -39,26 +41,43 @@ func (r redisPinger) PingContext(ctx context.Context) error {
 	return r.client.Ping(ctx).Err()
 }
 
-// Handler serves the health endpoints. redis may be nil, which means Redis is
-// disabled and is reported as "skipped" (never a failure), matching the
-// fail-open cache layer.
+// Handler serves the health endpoints. Redis is informational only: the cache
+// layer fails open, so a Redis outage is reported ("error" / "skipped") but never
+// makes the API unready — only the database does.
 type Handler struct {
-	db     Pinger
-	redis  Pinger
-	logger logger.Logger
+	db    Pinger
+	redis Pinger
+	// redisClient resolves the client at probe time: the Redis service is
+	// initialized after the handler is built, so capturing it eagerly would
+	// always yield nil.
+	redisClient func() *redis.Client
+	logger      logger.Logger
 }
 
-// NewHandler builds a health Handler from a *sql.DB and an optional
-// *redis.Client (pass a nil client when Redis is disabled).
-func NewHandler(db *sql.DB, redisClient *redis.Client, log logger.Logger) *Handler {
-	h := &Handler{logger: log}
+// NewHandler builds a health Handler from a *sql.DB and a resolver for the
+// optional Redis client (the resolver may return nil when Redis is disabled or
+// not initialized yet).
+func NewHandler(db *sql.DB, redisClient func() *redis.Client, log logger.Logger) *Handler {
+	h := &Handler{logger: log, redisClient: redisClient}
 	if db != nil {
 		h.db = db
 	}
-	if redisClient != nil {
-		h.redis = redisPinger{client: redisClient}
-	}
 	return h
+}
+
+// redisProbe returns the Redis pinger to use for this probe, or nil when Redis
+// is disabled or not initialized.
+func (h *Handler) redisProbe() Pinger {
+	if h.redis != nil {
+		return h.redis
+	}
+	if h.redisClient == nil {
+		return nil
+	}
+	if client := h.redisClient(); client != nil {
+		return redisPinger{client: client}
+	}
+	return nil
 }
 
 // Register wires the health routes onto the provided /v1 router group.
@@ -90,12 +109,11 @@ func (h *Handler) Live(c *gin.Context) {
 }
 
 // Ready reports readiness by pinging Postgres and, when configured, Redis. It
-// returns 200 with per-check status when all required checks pass, or 503 when
-// any required check fails. Redis is optional: when disabled it reports
-// "skipped" and never fails the probe.
+// returns 503 only when the database is down. A Redis outage returns 200 with
+// status "degraded" (the cache fails open); disabled Redis reports "skipped".
 //
 // @Summary Readiness probe
-// @Description Pings Postgres and (when enabled) Redis. Returns 503 if a required dependency is down.
+// @Description Pings Postgres and (when enabled) Redis. Returns 503 only if the database is down; a Redis outage is reported as degraded.
 // @Tags Health
 // @Produce json
 // @Success 200 {object} map[string]interface{}
@@ -118,21 +136,26 @@ func (h *Handler) Ready(c *gin.Context) {
 		checks["database"] = statusOK
 	}
 
-	// Redis is optional (fail-open). A nil client means disabled -> skipped.
-	if h.redis == nil {
+	// Redis is informational (the cache fails open): an outage degrades the
+	// service but must not take it out of rotation.
+	degraded := false
+	if redisPinger := h.redisProbe(); redisPinger == nil {
 		checks["redis"] = statusSkipped
-	} else if err := h.ping(c.Request.Context(), h.redis); err != nil {
+	} else if err := h.ping(c.Request.Context(), redisPinger); err != nil {
 		checks["redis"] = "error"
-		healthy = false
+		degraded = true
 	} else {
 		checks["redis"] = statusOK
 	}
 
 	status := http.StatusOK
 	body := gin.H{"status": statusOK, "checks": checks}
-	if !healthy {
+	switch {
+	case !healthy:
 		status = http.StatusServiceUnavailable
 		body["status"] = "unavailable"
+	case degraded:
+		body["status"] = "degraded"
 	}
 	c.JSON(status, body)
 }

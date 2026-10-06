@@ -62,11 +62,12 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activ
 	// Observability middleware (tracing + metrics + enrichment)
 	router.Use(ginmiddleware.New(agent, "spooliq-api"))
 
-	// Register other middlewares
+	// Recovery wraps Sentry so sentrygin (Repanic) captures the panic first and
+	// re-panics into Recovery, which logs it and returns the 500 envelope.
+	router.Use(middlewares.Recovery(logger))
 	router.Use(monitoring.SentryMiddleware())
 	router.Use(monitoring.LogMiddleware)
 	router.Use(gin.Logger())
-	router.Use(middlewares.Recovery(logger))
 	router.Use(gin.ErrorLogger())
 
 	routes.InitializeRoutes(router, activityService, authUc, registerUc, brandUc, budgetUc, companyUc, brandingUc, customerUc, filamentUc, materialUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, profileHandler, dashboardHandler, webhookHandler, userHandler, adminHandler, healthHandler, protectFactory, cacheMiddleware, logger)

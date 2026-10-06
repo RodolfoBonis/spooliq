@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -93,12 +95,35 @@ func TestReadyDatabaseDown(t *testing.T) {
 	}
 }
 
-func TestReadyRedisDownFails(t *testing.T) {
+// A Redis outage degrades the service but must not make it unready: the cache
+// layer fails open, so taking the pod out of rotation would cause an outage.
+func TestReadyRedisDownIsDegradedNotUnready(t *testing.T) {
 	h := &Handler{db: fakePinger{}, redis: fakePinger{err: errors.New("down")}}
 	c, w := newTestContext("GET", "/v1/health/ready")
 	h.Ready(c)
-	if w.Code != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want 503 when configured redis is down", w.Code)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 when only redis is down", w.Code)
+	}
+	if checks := decodeChecks(t, w.Body.Bytes()); checks["redis"] != "error" {
+		t.Errorf("redis = %q, want error", checks["redis"])
+	}
+	var body struct {
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil || body.Status != "degraded" {
+		t.Errorf("status = %q (err %v), want degraded", body.Status, err)
+	}
+}
+
+// The Redis client is resolved at probe time (it is initialized after the
+// handler is built); a resolver returning nil reports "skipped".
+func TestReadyResolvesRedisLazily(t *testing.T) {
+	h := NewHandler(nil, func() *redis.Client { return nil }, nil)
+	h.db = fakePinger{}
+	c, w := newTestContext("GET", "/v1/health/ready")
+	h.Ready(c)
+	if checks := decodeChecks(t, w.Body.Bytes()); checks["redis"] != "skipped" {
+		t.Errorf("redis = %q, want skipped when the client is not initialized", checks["redis"])
 	}
 }
 

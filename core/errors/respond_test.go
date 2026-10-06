@@ -3,6 +3,7 @@ package errors
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,6 +60,13 @@ func TestRespondMapping(t *testing.T) {
 		{
 			name:       "gorm record not found",
 			err:        gorm.ErrRecordNotFound,
+			wantStatus: http.StatusNotFound,
+			wantCode:   CodeNotFound,
+			wantMsg:    "não encontrado",
+		},
+		{
+			name:       "wrapped gorm record not found",
+			err:        fmt.Errorf("load budget: %w", gorm.ErrRecordNotFound),
 			wantStatus: http.StatusNotFound,
 			wantCode:   CodeNotFound,
 			wantMsg:    "não encontrado",

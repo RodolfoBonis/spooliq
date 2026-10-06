@@ -93,8 +93,8 @@ func NewFxApp() *fx.App {
 				if db != nil {
 					sqlDB, _ = db.DB()
 				}
-				var redisClient = redisService.GetClient()
-				return health.NewHandler(sqlDB, redisClient, log)
+				// Resolve lazily: Redis is initialized later, in fx.Invoke.
+				return health.NewHandler(sqlDB, redisService.GetClient, log)
 			},
 		),
 		fx.Invoke(

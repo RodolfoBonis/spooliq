@@ -62,7 +62,7 @@ jobs:
           PR_STATE=$(gh pr view ${{ github.event.pull_request.number }} --json state -q '.state')
           PR_MERGEABLE=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable -q '.mergeable')
           PR_CHECKS=$(gh pr checks ${{ github.event.pull_request.number }} --json status -q '[.[] | .status] | all(. == "COMPLETED")')
-          
+
           echo "state=$PR_STATE" >> $GITHUB_OUTPUT
           echo "mergeable=$PR_MERGEABLE" >> $GITHUB_OUTPUT
           echo "checks=$PR_CHECKS" >> $GITHUB_OUTPUT
@@ -93,5 +93,6 @@ jobs:
           !contains(github.event.pull_request.head.ref, 'develop')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          git push origin --delete "${{ github.event.pull_request.head.ref }}" || echo "Branch already deleted or protected"
+          git push origin --delete "$HEAD_REF" || echo "Branch already deleted or protected"

@@ -78,7 +78,7 @@ func (r *stubUserRepo) FindByKeycloakUserID(context.Context, string) (*entities.
 func (r *stubUserRepo) FindOwner(context.Context, string) (*entities.UserEntity, error) {
 	return nil, nil
 }
-func (r *stubUserRepo) Create(context.Context, *entities.UserEntity) error             { return nil }
+func (r *stubUserRepo) Create(context.Context, *entities.UserEntity) error { return nil }
 func (r *stubUserRepo) Update(context.Context, uuid.UUID, string, *entities.UserEntity) error {
 	return nil
 }

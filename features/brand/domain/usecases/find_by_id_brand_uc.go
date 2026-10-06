@@ -28,7 +28,7 @@ import (
 // @Failure 404 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /brands/{id} [get]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *BrandUseCase) FindByID(c *gin.Context) {
 	ctx := c.Request.Context()
 

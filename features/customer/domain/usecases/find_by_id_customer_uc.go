@@ -21,7 +21,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/customers/{id} [get]
+// @Router /customers/{id} [get]
 // @Security BearerAuth
 func (uc *CustomerUseCase) FindByID(c *gin.Context) {
 	ctx := c.Request.Context()

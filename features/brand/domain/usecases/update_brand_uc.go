@@ -30,7 +30,7 @@ import (
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /brands/{id} [put]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *BrandUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 

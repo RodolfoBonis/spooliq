@@ -24,7 +24,7 @@ import (
 // @Success 200 {object} entities.BudgetResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/preview [post]
+// @Router /budgets/preview [post]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Preview(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -27,7 +27,7 @@ import (
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments [post]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *FilamentUseCase) Create(c *gin.Context) {
 	ctx := c.Request.Context()
 

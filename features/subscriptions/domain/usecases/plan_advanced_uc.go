@@ -37,7 +37,7 @@ func NewPlanAdvancedUseCase(
 // @Success 200 {array} adminEntities.PlanTemplate "Plan templates"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/templates [get]
+// @Router /admin/subscription-plans/templates [get]
 func (uc *PlanAdvancedUseCase) GetPlanTemplates(c *gin.Context) {
 	ctx := c.Request.Context()
 	category := c.Query("category")
@@ -66,7 +66,7 @@ func (uc *PlanAdvancedUseCase) GetPlanTemplates(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Template not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/from-template [post]
+// @Router /admin/subscription-plans/from-template [post]
 func (uc *PlanAdvancedUseCase) CreatePlanFromTemplate(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -108,7 +108,7 @@ func (uc *PlanAdvancedUseCase) CreatePlanFromTemplate(c *gin.Context) {
 // @Success 200 {array} adminEntities.AvailableFeature "Available features"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/features/available [get]
+// @Router /admin/features/available [get]
 func (uc *PlanAdvancedUseCase) GetAvailableFeatures(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -135,7 +135,7 @@ func (uc *PlanAdvancedUseCase) GetAvailableFeatures(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/features/validate [post]
+// @Router /admin/features/validate [post]
 func (uc *PlanAdvancedUseCase) ValidateFeatures(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -168,7 +168,7 @@ func (uc *PlanAdvancedUseCase) ValidateFeatures(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/migrate [post]
+// @Router /admin/subscription-plans/migrate [post]
 func (uc *PlanAdvancedUseCase) CreatePlanMigration(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -207,7 +207,7 @@ func (uc *PlanAdvancedUseCase) CreatePlanMigration(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Migration not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/migrations/{migration_id} [get]
+// @Router /admin/subscription-plans/migrations/{migration_id} [get]
 func (uc *PlanAdvancedUseCase) GetMigrationStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	migrationIDStr := c.Param("migration_id")
@@ -246,7 +246,7 @@ func (uc *PlanAdvancedUseCase) GetMigrationStatus(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Migration not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/migrations/{migration_id}/execute [post]
+// @Router /admin/subscription-plans/migrations/{migration_id}/execute [post]
 func (uc *PlanAdvancedUseCase) ExecutePlanMigration(c *gin.Context) {
 	ctx := c.Request.Context()
 	migrationIDStr := c.Param("migration_id")

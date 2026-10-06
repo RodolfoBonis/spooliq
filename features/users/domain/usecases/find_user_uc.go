@@ -42,7 +42,7 @@ func NewFindUserUseCase(
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "User not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [get]
+// @Router /users/{id} [get]
 func (uc *FindUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Finding user by ID", map[string]interface{}{
 		"user_id":         userID,

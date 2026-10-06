@@ -23,7 +23,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 409 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/customers [post]
+// @Router /customers [post]
 // @Security BearerAuth
 func (uc *CustomerUseCase) Create(c *gin.Context) {
 	ctx := c.Request.Context()

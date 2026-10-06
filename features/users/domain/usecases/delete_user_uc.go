@@ -41,7 +41,7 @@ func NewDeleteUserUseCase(
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "User not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [delete]
+// @Router /users/{id} [delete]
 func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string) error {
 	uc.logger.Info(ctx, "Deleting user", map[string]interface{}{
 		"user_id":         userID,

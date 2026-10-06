@@ -21,7 +21,7 @@ import (
 // @Success 200 {object} entities.ListBudgetsResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets [get]
+// @Router /budgets [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -38,7 +38,7 @@ func NewListUsersUseCase(
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users [get]
+// @Router /users [get]
 func (uc *ListUsersUseCase) Execute(ctx context.Context, organizationID string, userRoles []string) ([]*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Listing users", map[string]interface{}{
 		"organization_id": organizationID,

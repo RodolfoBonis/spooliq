@@ -23,7 +23,7 @@ import (
 // @Failure 403 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id} [delete]
+// @Router /budgets/{id} [delete]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()

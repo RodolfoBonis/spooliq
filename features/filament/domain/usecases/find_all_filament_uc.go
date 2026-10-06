@@ -26,7 +26,7 @@ import (
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments [get]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *FilamentUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
 

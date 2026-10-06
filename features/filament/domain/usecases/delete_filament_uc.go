@@ -31,7 +31,7 @@ import (
 // @Failure 404 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments/{id} [delete]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 

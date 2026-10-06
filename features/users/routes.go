@@ -71,7 +71,7 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 409 {object} map[string]string "User already exists"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users [post]
+// @Router /users [post]
 func (h *Handler) CreateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -120,7 +120,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users [get]
+// @Router /users [get]
 func (h *Handler) ListUsers(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -164,7 +164,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "User not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [get]
+// @Router /users/{id} [get]
 func (h *Handler) GetUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -219,7 +219,7 @@ func (h *Handler) GetUser(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "User not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [put]
+// @Router /users/{id} [put]
 func (h *Handler) UpdateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -281,7 +281,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "User not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [delete]
+// @Router /users/{id} [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	ctx := c.Request.Context()
 

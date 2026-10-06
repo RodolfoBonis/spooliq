@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/company [put]
+// @Router /company [put]
 // @Security BearerAuth
 func (uc *CompanyUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()

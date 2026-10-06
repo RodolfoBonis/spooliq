@@ -50,7 +50,7 @@ func NewCreateUserUseCase(
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 409 {object} map[string]string "User already exists"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users [post]
+// @Router /users [post]
 func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string, userRoles []string, req *entities.CreateUserRequest) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Creating user", map[string]interface{}{
 		"organization_id": organizationID,

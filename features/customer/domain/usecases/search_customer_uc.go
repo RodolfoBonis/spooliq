@@ -29,7 +29,7 @@ import (
 // @Success 200 {object} entities.ListCustomersResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/customers/search [get]
+// @Router /customers/search [get]
 // @Security BearerAuth
 func (uc *CustomerUseCase) Search(c *gin.Context) {
 	ctx := c.Request.Context()

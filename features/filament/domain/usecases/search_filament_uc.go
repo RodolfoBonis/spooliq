@@ -33,7 +33,7 @@ import (
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /filaments/search [get]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *FilamentUseCase) Search(c *gin.Context) {
 	ctx := c.Request.Context()
 

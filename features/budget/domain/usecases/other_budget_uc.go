@@ -24,7 +24,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/duplicate [post]
+// @Router /budgets/{id}/duplicate [post]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -206,7 +206,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{}
 // @Failure 409 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/recalculate [post]
+// @Router /budgets/{id}/recalculate [post]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -292,7 +292,7 @@ func (uc *BudgetUseCase) Recalculate(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/calculate [get]
+// @Router /budgets/{id}/calculate [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) GetCalculation(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -333,7 +333,7 @@ func (uc *BudgetUseCase) GetCalculation(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/by-customer/{customer_id} [get]
+// @Router /budgets/by-customer/{customer_id} [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -390,7 +390,7 @@ func (uc *BudgetUseCase) FindByCustomer(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/history [get]
+// @Router /budgets/{id}/history [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) GetHistory(c *gin.Context) {
 	ctx := c.Request.Context()

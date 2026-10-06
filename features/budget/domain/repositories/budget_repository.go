@@ -100,6 +100,9 @@ type BudgetRepository interface {
 	// of the expected type (machine/energy/cost). It only accepts live presets
 	// (deleted_at IS NULL) because it validates freshly provided references.
 	ValidatePresetInOrg(ctx context.Context, presetID uuid.UUID, presetType string, organizationID string) error
+	// ValidateModel3DsInOrg ensures every referenced 3D model belongs to the
+	// organization (live rows only). Empty input is a no-op.
+	ValidateModel3DsInOrg(ctx context.Context, model3dIDs []uuid.UUID, organizationID string) error
 
 	// Relationship helpers
 	GetCustomerInfo(ctx context.Context, customerID uuid.UUID, organizationID string) (*entities.CustomerInfo, error)

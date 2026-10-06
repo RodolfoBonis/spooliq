@@ -36,6 +36,9 @@ type BudgetItemRequest struct {
 	// Optional: notes specific to this item
 	AdditionalNotes *string `json:"additional_notes,omitempty" validate:"omitempty,max=500"`
 
+	// Optional: link this item to a 3D model (must belong to the organization)
+	Model3DID *uuid.UUID `json:"model_3d_id,omitempty"`
+
 	// Order in the budget
 	Order int `json:"order" validate:"gte=0"`
 }

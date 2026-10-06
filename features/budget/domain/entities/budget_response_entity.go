@@ -93,6 +93,9 @@ type BudgetItemResponse struct {
 	CostPreset      *CostPresetRef `json:"cost_preset,omitempty"` // {id, name} resolved from CostPresetID
 	AdditionalNotes *string        `json:"additional_notes,omitempty"`
 
+	// Optional link to a 3D model
+	Model3DID *string `json:"model_3d_id,omitempty"`
+
 	// Calculated costs for this item
 	FilamentCost    int64 `json:"filament_cost"`     // cents
 	WasteCost       int64 `json:"waste_cost"`        // cents

@@ -34,6 +34,12 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 		filaments = []entities.FilamentUsageInfo{}
 	}
 
+	var model3dIDStr *string
+	if item.Model3DID != nil {
+		s := item.Model3DID.String()
+		model3dIDStr = &s
+	}
+
 	return entities.BudgetItemResponse{
 		ID:                      item.ID.String(),
 		BudgetID:                item.BudgetID.String(),
@@ -46,6 +52,7 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 		PrintTimeDisplay:        printTimeDisplay,
 		CostPresetID:            costPresetIDStr,
 		CostPreset:              costPresetRef,
+		Model3DID:               model3dIDStr,
 		SetupTimeMinutes:        item.SetupTimeMinutes,
 		ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
 		AdditionalNotes:         item.AdditionalNotes,

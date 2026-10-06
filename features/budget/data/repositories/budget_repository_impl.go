@@ -1050,6 +1050,46 @@ func (r *budgetRepositoryImpl) ValidatePresetInOrg(ctx context.Context, presetID
 	return nil
 }
 
+// ValidateModel3DsInOrg ensures every referenced 3D model belongs to the given
+// organization. Models are strictly tenant-scoped (models_3d.organization_id is
+// NOT NULL), so any model outside the caller's organization is rejected. Only live
+// rows (deleted_at IS NULL) count, since this validates freshly provided references.
+func (r *budgetRepositoryImpl) ValidateModel3DsInOrg(ctx context.Context, model3dIDs []uuid.UUID, organizationID string) error {
+	if len(model3dIDs) == 0 {
+		return nil
+	}
+
+	seen := make(map[uuid.UUID]struct{}, len(model3dIDs))
+	unique := make([]uuid.UUID, 0, len(model3dIDs))
+	for _, id := range model3dIDs {
+		if id == uuid.Nil {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	if len(unique) == 0 {
+		return nil
+	}
+
+	var count int64
+	if err := r.db.WithContext(ctx).
+		Table("models_3d").
+		Where("id IN ? AND organization_id = ? AND deleted_at IS NULL", unique, organizationID).
+		Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to validate 3D models: %w", err)
+	}
+
+	if int(count) != len(unique) {
+		return fmt.Errorf("%w: one or more referenced 3D models do not belong to your organization", entities.ErrInvalidModel3DReference)
+	}
+
+	return nil
+}
+
 // GetCustomerInfo fetches customer information by ID, scoped by organization.
 func (r *budgetRepositoryImpl) GetCustomerInfo(ctx context.Context, customerID uuid.UUID, organizationID string) (*entities.CustomerInfo, error) {
 	var customer struct {

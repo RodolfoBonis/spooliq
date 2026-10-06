@@ -32,7 +32,14 @@ func ParseGCode(ra io.ReaderAt, size int64) (*entities.Analysis, error) {
 		scanComments(io.NewSectionReader(ra, headLen, size-headLen), g.process)
 	}
 
-	return g.build(), nil
+	a := g.build()
+	sanitizeAnalysis(a)
+	// An empty .gcode, or one with no recognized slicing metadata (no time AND no
+	// filament usage), is treated as not sliced — consistent with 3MF.
+	if !hasSlicingData(a) {
+		return nil, ErrNotSliced
+	}
+	return a, nil
 }
 
 // gcodeGatherer accumulates metadata seen across the head and tail passes. Later

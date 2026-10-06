@@ -7,12 +7,13 @@ package color
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
 )
 
-// ErrInvalidHex is returned when a string is not a parseable #RGB/#RRGGBB color.
+// ErrInvalidHex is returned when a string is not a parseable hex color.
 var ErrInvalidHex = errors.New("invalid hex color")
 
 // RGB is an 8-bit-per-channel sRGB color.
@@ -25,17 +26,29 @@ type Lab struct {
 	L, A, B float64
 }
 
-// ParseHex parses "#RGB", "#RRGGBB", "RGB" or "RRGGBB" (case-insensitive) into an
-// RGB. A leading '#' is optional. Any other form returns ErrInvalidHex.
+// ParseHex parses a hex color into an RGB, ignoring any alpha channel. A leading
+// '#' is optional and parsing is case-insensitive. Accepted forms:
+//
+//	#RGB / RGB        (shorthand, each nibble doubled)
+//	#RGBA / RGBA      (shorthand with alpha — alpha dropped)
+//	#RRGGBB / RRGGBB
+//	#RRGGBBAA / RRGGBBAA   (alpha dropped; emitted by Bambu/Orca)
+//
+// Any other form returns ErrInvalidHex.
 func ParseHex(s string) (RGB, error) {
 	s = strings.TrimSpace(s)
 	s = strings.TrimPrefix(s, "#")
 	switch len(s) {
 	case 3:
-		// Expand shorthand (e.g. "f80" -> "ff8800").
+		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
+	case 4:
+		// Shorthand with alpha; expand RGB nibbles and drop the alpha nibble.
 		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
 	case 6:
 		// ok
+	case 8:
+		// RRGGBBAA; keep RGB, drop the AA alpha pair.
+		s = s[:6]
 	default:
 		return RGB{}, ErrInvalidHex
 	}
@@ -44,6 +57,16 @@ func ParseHex(s string) (RGB, error) {
 		return RGB{}, ErrInvalidHex
 	}
 	return RGB{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v)}, nil
+}
+
+// Normalize parses any accepted hex form and returns it as canonical uppercase
+// "#RRGGBB" (alpha dropped). ok is false when the input is not a valid hex color.
+func Normalize(s string) (string, bool) {
+	c, err := ParseHex(s)
+	if err != nil {
+		return "", false
+	}
+	return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B), true
 }
 
 // ToLab converts an sRGB color to CIE L*a*b* (D65).

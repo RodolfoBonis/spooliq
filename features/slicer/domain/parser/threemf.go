@@ -66,35 +66,50 @@ func Parse3MF(ra io.ReaderAt, size int64) (*entities.Analysis, error) {
 
 	warnings := []string{}
 
-	// Color/type fallback from project_settings.config (best-effort).
-	fbColors, fbTypes := readProjectSettings(index)
-	slicer := detectSlicer3MF(index)
-
-	// 1. slice_info.config.
+	// Read the two small config entries ONCE and reuse the bytes for detection,
+	// the color/type fallback and slice_info parsing.
+	var sliceInfoData, projectSettingsData []byte
 	if f, ok := index[sliceInfoPath]; ok {
 		data, rerr := readZipEntry(f)
 		if rerr != nil {
 			return nil, rerr
 		}
-		plates := parseSliceInfo(data, fbColors, fbTypes)
+		sliceInfoData = data
+	}
+	if f, ok := index[projectSettingPath]; ok {
+		if data, rerr := readZipEntry(f); rerr == nil {
+			projectSettingsData = data
+		}
+	}
+
+	fbColors, fbTypes := parseProjectSettings(projectSettingsData)
+	slicer := detectSlicer3MF(sliceInfoData, projectSettingsData)
+
+	// 1. slice_info.config.
+	if len(sliceInfoData) > 0 {
+		plates := parseSliceInfo(sliceInfoData, fbColors, fbTypes)
 		if len(plates) > 0 {
-			return &entities.Analysis{
+			a := &entities.Analysis{
 				Source:   entities.Source3MF,
 				Slicer:   slicer,
 				Plates:   plates,
 				Warnings: warnings,
-			}, nil
+			}
+			sanitizeAnalysis(a)
+			return a, nil
 		}
 	}
 
 	// 2. Embedded plate_N.gcode files.
 	if plates := parseEmbeddedGCode(index); len(plates) > 0 {
-		return &entities.Analysis{
+		a := &entities.Analysis{
 			Source:   entities.Source3MF,
 			Slicer:   slicer,
 			Plates:   plates,
 			Warnings: warnings,
-		}, nil
+		}
+		sanitizeAnalysis(a)
+		return a, nil
 	}
 
 	// 3. No slicing data at all.
@@ -246,13 +261,8 @@ func parseEmbeddedGCode(index map[string]*zip.File) []entities.Plate {
 
 // --- project_settings.config (JSON) fallback ---
 
-func readProjectSettings(index map[string]*zip.File) (colors, types []string) {
-	f, ok := index[projectSettingPath]
-	if !ok {
-		return nil, nil
-	}
-	data, err := readZipEntry(f)
-	if err != nil {
+func parseProjectSettings(data []byte) (colors, types []string) {
+	if len(data) == 0 {
 		return nil, nil
 	}
 	var settings struct {
@@ -266,15 +276,10 @@ func readProjectSettings(index map[string]*zip.File) (colors, types []string) {
 }
 
 // detectSlicer3MF is a best-effort slicer identification from the archive text.
-func detectSlicer3MF(index map[string]*zip.File) entities.Slicer {
+func detectSlicer3MF(sliceInfoData, projectSettingsData []byte) entities.Slicer {
 	var blob strings.Builder
-	for _, name := range []string{sliceInfoPath, projectSettingPath} {
-		if f, ok := index[name]; ok {
-			if data, err := readZipEntry(f); err == nil {
-				blob.Write(data)
-			}
-		}
-	}
+	blob.Write(sliceInfoData)
+	blob.Write(projectSettingsData)
 	text := strings.ToLower(blob.String())
 	switch {
 	case strings.Contains(text, "bambustudio"):

@@ -14,9 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// maxFileSize is the hard cap on an uploaded sliced file.
-// 95MB: Cloudflare (which fronts the API) rejects request bodies over 100MB, so
-// the limit leaves room for multipart overhead and keeps our pt-BR 413.
+// maxFileSize is the hard cap on an uploaded sliced file. It is kept below the
+// 100MB Cloudflare body limit that fronts the API.
 const maxFileSize = 95 * 1024 * 1024 // 95MB
 
 // uploadBodyLimit caps the whole request body so an oversized upload is rejected
@@ -87,9 +86,12 @@ func (uc *SlicerUseCase) Analyze(c *gin.Context) {
 		return
 	}
 
-	// Stream the upload to a temp file (removed on return) so the parser has a
-	// stable io.ReaderAt + size without holding the whole file in memory.
-	tmp, size, terr := streamToTempFile(fileHeader)
+	// Stream the upload to a temp file so the parser has a stable io.ReaderAt
+	// without holding the whole file in memory. Ownership is then handed to the
+	// service (AnalyzeFile), whose worker closes and removes it when it finishes —
+	// even if we give up on a timeout — so the file is never removed while the
+	// detached worker still reads it.
+	tmp, terr := streamToTempFile(fileHeader)
 	if terr != nil {
 		if isRequestTooLarge(terr) {
 			coreErrors.Respond(c, errFileTooLarge())
@@ -99,13 +101,10 @@ func (uc *SlicerUseCase) Analyze(c *gin.Context) {
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
-	defer func() {
-		_ = tmp.Close()
-		_ = os.Remove(tmp.Name())
-	}()
 
-	// Analyze (bounded: timeout, recover, concurrency gate inside the service).
-	analysis, aerr := uc.service.Analyze(ctx, tmp, size, fileHeader.Filename)
+	// Analyze (bounded: timeout, recover, concurrency gate inside the service;
+	// temp-file lifecycle owned by the service from here on).
+	analysis, aerr := uc.service.AnalyzeFile(ctx, tmp, fileHeader.Filename)
 	if aerr != nil {
 		switch {
 		case service.IsNotSliced(aerr):
@@ -132,31 +131,31 @@ func (uc *SlicerUseCase) Analyze(c *gin.Context) {
 }
 
 // streamToTempFile copies the uploaded file to a new temp file and returns it
-// (seeked to start) with its size. The caller owns closing and removing it.
-func streamToTempFile(fileHeader *multipart.FileHeader) (*os.File, int64, error) {
+// seeked to start. On any failure it cleans up the temp file itself; on success
+// the caller must transfer ownership (e.g. to Service.AnalyzeFile).
+func streamToTempFile(fileHeader *multipart.FileHeader) (*os.File, error) {
 	src, err := fileHeader.Open()
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	defer func() { _ = src.Close() }()
 
 	tmp, err := os.CreateTemp("", "slicer-*"+tmpSuffix(fileHeader.Filename))
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	size, err := io.Copy(tmp, src)
-	if err != nil {
+	if _, err := io.Copy(tmp, src); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
-		return nil, 0, err
+		return nil, err
 	}
 	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
-		return nil, 0, err
+		return nil, err
 	}
-	return tmp, size, nil
+	return tmp, nil
 }
 
 // tmpSuffix preserves the extension so the parser can classify the temp file.

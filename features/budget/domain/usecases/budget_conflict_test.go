@@ -15,7 +15,6 @@ import (
 	customerEntities "github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -88,6 +87,12 @@ type fakeBudgetRepo struct {
 	// Capture hooks for resolution assertions.
 	lastCreated      *entities.BudgetEntity
 	lastPricingInput entities.PricingComputationInput
+
+	// SearchBudgets canned result + captured args (used by list endpoint tests).
+	searchResult      []*entities.BudgetEntity
+	searchTotal       int
+	lastSearchFilters map[string]interface{}
+	lastSearchOrderBy string
 }
 
 var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
@@ -116,14 +121,29 @@ func (f *fakeBudgetRepo) UpdatePDFURL(_ context.Context, _ uuid.UUID, _ string, 
 	return nil
 }
 func (f *fakeBudgetRepo) Delete(_ context.Context, _ uuid.UUID, _ string) error { return nil }
-func (f *fakeBudgetRepo) FindAll(_ context.Context, _ string, _, _ int) ([]*entities.BudgetEntity, int, error) {
-	return nil, 0, nil
+func (f *fakeBudgetRepo) SearchBudgets(_ context.Context, _ string, filters map[string]interface{}, orderBy string, _, _ int) ([]*entities.BudgetEntity, int, error) {
+	f.lastSearchFilters = filters
+	f.lastSearchOrderBy = orderBy
+	return f.searchResult, f.searchTotal, nil
 }
-func (f *fakeBudgetRepo) FindByCustomer(_ context.Context, _ uuid.UUID, _ string) ([]*entities.BudgetEntity, error) {
-	return nil, nil
+func (f *fakeBudgetRepo) GetCustomersInfo(_ context.Context, ids []uuid.UUID, _ string) (map[uuid.UUID]*entities.CustomerInfo, error) {
+	out := make(map[uuid.UUID]*entities.CustomerInfo, len(ids))
+	for _, id := range ids {
+		out[id] = &entities.CustomerInfo{ID: id.String(), Name: "Test"}
+	}
+	return out, nil
 }
-func (f *fakeBudgetRepo) SearchBudgets(_ context.Context, _ string, _ map[string]interface{}, _, _ int) ([]*entities.BudgetEntity, int, error) {
-	return nil, 0, nil
+func (f *fakeBudgetRepo) GetItemsByBudgetIDs(_ context.Context, _ []uuid.UUID) (map[uuid.UUID][]*entities.BudgetItemEntity, error) {
+	return map[uuid.UUID][]*entities.BudgetItemEntity{}, nil
+}
+func (f *fakeBudgetRepo) GetFilamentUsageInfoByItemIDs(_ context.Context, _ []uuid.UUID, _ string) (map[uuid.UUID][]entities.FilamentUsageInfo, error) {
+	return map[uuid.UUID][]entities.FilamentUsageInfo{}, nil
+}
+func (f *fakeBudgetRepo) GetCostPresetNames(_ context.Context, _ []uuid.UUID, _ string) (map[uuid.UUID]string, error) {
+	return map[uuid.UUID]string{}, nil
+}
+func (f *fakeBudgetRepo) GetProfileNames(_ context.Context, _ []uuid.UUID, _ string) (map[uuid.UUID]string, error) {
+	return map[uuid.UUID]string{}, nil
 }
 func (f *fakeBudgetRepo) AddItem(_ context.Context, _ *entities.BudgetItemEntity) error {
 	f.addItemCalls++
@@ -151,8 +171,8 @@ func (f *fakeBudgetRepo) GetFilamentUsageInfo(_ context.Context, _ uuid.UUID, _ 
 func (f *fakeBudgetRepo) AddStatusHistory(_ context.Context, _ *entities.BudgetStatusHistoryEntity) error {
 	return nil
 }
-func (f *fakeBudgetRepo) GetStatusHistory(_ context.Context, _ uuid.UUID) ([]entities.BudgetStatusHistoryEntity, error) {
-	return nil, nil
+func (f *fakeBudgetRepo) GetStatusHistory(_ context.Context, _ uuid.UUID, _, _ int) ([]entities.BudgetStatusHistoryEntity, int64, error) {
+	return nil, 0, nil
 }
 func (f *fakeBudgetRepo) CalculateCosts(_ context.Context, _ uuid.UUID, _ string) error {
 	f.calcCalls++
@@ -240,7 +260,6 @@ func newUseCaseWith(repo budgetRepo.BudgetRepository) *BudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   repo,
 		customerRepository: fakeCustomerRepo{},
-		validator:          validator.New(),
 		logger:             logger.NewLogger("test"),
 		activityService:    noopActivity{},
 		profileProvider:    &fakeProfileProvider{},

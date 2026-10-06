@@ -178,64 +178,10 @@ func (r *budgetRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organiz
 	return nil
 }
 
-func (r *budgetRepositoryImpl) FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.BudgetEntity, int, error) {
-	var budgets []*models.BudgetModel
-	var total int64
-
-	query := r.db.WithContext(ctx).Model(&models.BudgetModel{})
-
-	// Filter by organization
-	query = query.Where("organization_id = ?", organizationID)
-
-	// Get total count
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to count budgets: %w", err)
-	}
-
-	// Get paginated results with relationships
-	// Note: For list views, we preload only essential relationships to avoid performance issues
-	// For detailed view, use FindByID which loads everything
-	if err := query.
-		Preload("Customer").
-		Preload("Items").
-		Limit(limit).
-		Offset(offset).
-		Order("created_at DESC").
-		Find(&budgets).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to find budgets: %w", err)
-	}
-
-	// Convert to entities
-	entities := make([]*entities.BudgetEntity, len(budgets))
-	for i, model := range budgets {
-		entities[i] = model.ToEntity()
-	}
-
-	return entities, int(total), nil
-}
-
-func (r *budgetRepositoryImpl) FindByCustomer(ctx context.Context, customerID uuid.UUID, organizationID string) ([]*entities.BudgetEntity, error) {
-	var budgets []*models.BudgetModel
-
-	query := r.db.WithContext(ctx).Model(&models.BudgetModel{}).Where("customer_id = ? AND organization_id = ?", customerID, organizationID)
-
-	// Get results
-	if err := query.
-		Order("created_at DESC").
-		Find(&budgets).Error; err != nil {
-		return nil, fmt.Errorf("failed to find budgets: %w", err)
-	}
-
-	// Convert to entities
-	entities := make([]*entities.BudgetEntity, len(budgets))
-	for i, model := range budgets {
-		entities[i] = model.ToEntity()
-	}
-
-	return entities, nil
-}
-
-func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.BudgetEntity, int, error) {
+// SearchBudgets returns a filtered, sorted, org-scoped page of budgets WITHOUT any
+// relationship preloads. The list response is assembled by the use case from the
+// batch loaders below, so a page of N budgets costs a constant number of queries.
+func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, organizationID string, filters map[string]interface{}, orderBy string, limit, offset int) ([]*entities.BudgetEntity, int, error) {
 	var budgets []*models.BudgetModel
 	var total int64
 
@@ -261,27 +207,235 @@ func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, organizationID
 		query = query.Where("created_at <= ?", endDate)
 	}
 
-	// Get total count
+	// Get total count (before ordering/pagination).
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count budgets: %w", err)
 	}
 
-	// Get paginated results
+	// orderBy comes from the sort whitelist (injection-safe); fall back to a stable
+	// default when empty.
+	if strings.TrimSpace(orderBy) == "" {
+		orderBy = "created_at DESC"
+	}
+
 	if err := query.
 		Limit(limit).
 		Offset(offset).
-		Order("created_at DESC").
+		Order(orderBy).
 		Find(&budgets).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to search budgets: %w", err)
 	}
 
-	// Convert to entities
-	entities := make([]*entities.BudgetEntity, len(budgets))
+	result := make([]*entities.BudgetEntity, len(budgets))
 	for i, model := range budgets {
-		entities[i] = model.ToEntity()
+		result[i] = model.ToEntity()
 	}
 
-	return entities, int(total), nil
+	return result, int(total), nil
+}
+
+// GetCustomersInfo loads the {id, name, ...} of every given customer in ONE
+// org-scoped query, returned as a map keyed by customer ID.
+func (r *budgetRepositoryImpl) GetCustomersInfo(ctx context.Context, customerIDs []uuid.UUID, organizationID string) (map[uuid.UUID]*entities.CustomerInfo, error) {
+	out := make(map[uuid.UUID]*entities.CustomerInfo)
+	ids := uniqueIDs(customerIDs)
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var rows []struct {
+		ID       uuid.UUID `gorm:"column:id"`
+		Name     string    `gorm:"column:name"`
+		Email    *string   `gorm:"column:email"`
+		Phone    *string   `gorm:"column:phone"`
+		Document *string   `gorm:"column:document"`
+	}
+	if err := r.db.WithContext(ctx).
+		Table("customers").
+		Select("id, name, email, phone, document").
+		Where("id IN ? AND organization_id = ?", ids, organizationID).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load customers: %w", err)
+	}
+
+	for _, row := range rows {
+		out[row.ID] = &entities.CustomerInfo{
+			ID:       row.ID.String(),
+			Name:     row.Name,
+			Email:    row.Email,
+			Phone:    row.Phone,
+			Document: row.Document,
+		}
+	}
+	return out, nil
+}
+
+// GetItemsByBudgetIDs loads the items of every given budget in ONE query, grouped
+// by budget ID and ordered by item "order" within each budget.
+func (r *budgetRepositoryImpl) GetItemsByBudgetIDs(ctx context.Context, budgetIDs []uuid.UUID) (map[uuid.UUID][]*entities.BudgetItemEntity, error) {
+	out := make(map[uuid.UUID][]*entities.BudgetItemEntity)
+	ids := uniqueIDs(budgetIDs)
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var items []*models.BudgetItemModel
+	if err := r.db.WithContext(ctx).
+		Where("budget_id IN ?", ids).
+		Order("budget_id ASC, \"order\" ASC").
+		Find(&items).Error; err != nil {
+		return nil, fmt.Errorf("failed to load budget items: %w", err)
+	}
+
+	for _, item := range items {
+		out[item.BudgetID] = append(out[item.BudgetID], item.ToEntity())
+	}
+	return out, nil
+}
+
+// GetFilamentUsageInfoByItemIDs loads the filament usage of every given item in ONE
+// org-scoped JOIN query, grouped by item ID and ordered by the color-change order.
+func (r *budgetRepositoryImpl) GetFilamentUsageInfoByItemIDs(ctx context.Context, itemIDs []uuid.UUID, organizationID string) (map[uuid.UUID][]entities.FilamentUsageInfo, error) {
+	out := make(map[uuid.UUID][]entities.FilamentUsageInfo)
+	ids := uniqueIDs(itemIDs)
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var results []struct {
+		BudgetItemID uuid.UUID
+		FilamentID   uuid.UUID
+		Quantity     float64
+		Order        int
+		FilamentName string
+		BrandName    string
+		MaterialName string
+		Color        string
+		ColorType    string
+		ColorData    []byte
+		ColorHex     string
+		ColorPreview string
+		PricePerKg   float64
+	}
+
+	err := r.db.WithContext(ctx).
+		Table("budget_item_filaments bif").
+		Select(`
+			bif.budget_item_id,
+			bif.filament_id,
+			bif.quantity,
+			bif."order",
+			f.name as filament_name,
+			b.name as brand_name,
+			m.name as material_name,
+			f.color,
+			f.color_type,
+			f.color_data,
+			f.color_hex,
+			f.color_preview,
+			f.price_per_kg
+		`).
+		Joins("JOIN filaments f ON f.id = bif.filament_id").
+		Joins("JOIN brands b ON b.id = f.brand_id").
+		Joins("JOIN materials m ON m.id = f.material_id").
+		Where("bif.budget_item_id IN ? AND bif.organization_id = ?", ids, organizationID).
+		Order("bif.budget_item_id ASC, bif.\"order\" ASC").
+		Scan(&results).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get filament usage info: %w", err)
+	}
+
+	for _, res := range results {
+		// Quantity is the total grams for the item. price_per_kg is in CENTS/kg,
+		// costs are stored in CENTS => convert and round to the nearest cent.
+		cost := pricing.FilamentCostCents(res.Quantity, res.PricePerKg)
+		out[res.BudgetItemID] = append(out[res.BudgetItemID], entities.FilamentUsageInfo{
+			FilamentID:   res.FilamentID.String(),
+			FilamentName: res.FilamentName,
+			BrandName:    res.BrandName,
+			MaterialName: res.MaterialName,
+			Color:        res.Color,
+			ColorType:    res.ColorType,
+			ColorData:    json.RawMessage(res.ColorData),
+			ColorHex:     res.ColorHex,
+			ColorPreview: res.ColorPreview,
+			Quantity:     res.Quantity,
+			Cost:         cost,
+			Order:        res.Order,
+		})
+	}
+	return out, nil
+}
+
+// GetCostPresetNames loads the display name of every given cost preset in ONE
+// org-scoped query. Names are resolved WITHOUT a deleted_at filter for historical
+// consistency with budgets referencing a since-soft-deleted preset.
+func (r *budgetRepositoryImpl) GetCostPresetNames(ctx context.Context, presetIDs []uuid.UUID, organizationID string) (map[uuid.UUID]string, error) {
+	out := make(map[uuid.UUID]string)
+	ids := uniqueIDs(presetIDs)
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var rows []struct {
+		ID   uuid.UUID `gorm:"column:id"`
+		Name string    `gorm:"column:name"`
+	}
+	if err := r.db.WithContext(ctx).
+		Table("presets").
+		Select("id, name").
+		Where("id IN ? AND organization_id = ? AND type = ?", ids, organizationID, "cost").
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load cost preset names: %w", err)
+	}
+	for _, row := range rows {
+		out[row.ID] = row.Name
+	}
+	return out, nil
+}
+
+// GetProfileNames loads the display name of every given live print profile in ONE
+// org-scoped query (soft-deleted profiles are excluded so the list matches the
+// detail response, which leaves the name empty for a soft-deleted profile).
+func (r *budgetRepositoryImpl) GetProfileNames(ctx context.Context, profileIDs []uuid.UUID, organizationID string) (map[uuid.UUID]string, error) {
+	out := make(map[uuid.UUID]string)
+	ids := uniqueIDs(profileIDs)
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	var rows []struct {
+		ID   uuid.UUID `gorm:"column:id"`
+		Name string    `gorm:"column:name"`
+	}
+	if err := r.db.WithContext(ctx).
+		Table("print_profiles").
+		Select("id, name").
+		Where("id IN ? AND organization_id = ? AND deleted_at IS NULL", ids, organizationID).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load profile names: %w", err)
+	}
+	for _, row := range rows {
+		out[row.ID] = row.Name
+	}
+	return out, nil
+}
+
+// uniqueIDs returns the distinct, non-nil UUIDs from ids, preserving first-seen order.
+func uniqueIDs(ids []uuid.UUID) []uuid.UUID {
+	seen := make(map[uuid.UUID]struct{}, len(ids))
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if id == uuid.Nil {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
 }
 
 func (r *budgetRepositoryImpl) AddItem(ctx context.Context, item *entities.BudgetItemEntity) error {
@@ -339,12 +493,12 @@ func (r *budgetRepositoryImpl) GetItems(ctx context.Context, budgetID uuid.UUID)
 		return nil, fmt.Errorf("failed to get budget items: %w", err)
 	}
 
-	entities := make([]*entities.BudgetItemEntity, len(items))
+	entitiesOut := make([]*entities.BudgetItemEntity, len(items))
 	for i, model := range items {
-		entities[i] = model.ToEntity()
+		entitiesOut[i] = model.ToEntity()
 	}
 
-	return entities, nil
+	return entitiesOut, nil
 }
 
 func (r *budgetRepositoryImpl) DeleteAllItems(ctx context.Context, budgetID uuid.UUID, organizationID string) error {
@@ -386,12 +540,12 @@ func (r *budgetRepositoryImpl) GetItemFilaments(ctx context.Context, itemID uuid
 		return nil, fmt.Errorf("failed to get item filaments: %w", err)
 	}
 
-	entities := make([]*entities.BudgetItemFilamentEntity, len(filaments))
+	entitiesOut := make([]*entities.BudgetItemFilamentEntity, len(filaments))
 	for i, f := range filaments {
-		entities[i] = f.ToEntity()
+		entitiesOut[i] = f.ToEntity()
 	}
 
-	return entities, nil
+	return entitiesOut, nil
 }
 
 func (r *budgetRepositoryImpl) DeleteAllItemFilaments(ctx context.Context, itemID uuid.UUID) error {
@@ -487,22 +641,33 @@ func (r *budgetRepositoryImpl) AddStatusHistory(ctx context.Context, history *en
 	return nil
 }
 
-func (r *budgetRepositoryImpl) GetStatusHistory(ctx context.Context, budgetID uuid.UUID) ([]entities.BudgetStatusHistoryEntity, error) {
-	var history []*models.BudgetStatusHistoryModel
+// GetStatusHistory returns a page of a budget's status history (newest first) plus
+// the total row count, so the handler can build a paginated envelope.
+func (r *budgetRepositoryImpl) GetStatusHistory(ctx context.Context, budgetID uuid.UUID, limit, offset int) ([]entities.BudgetStatusHistoryEntity, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).
+		Model(&models.BudgetStatusHistoryModel{}).
+		Where("budget_id = ?", budgetID).
+		Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count status history: %w", err)
+	}
 
+	var history []*models.BudgetStatusHistoryModel
 	if err := r.db.WithContext(ctx).
 		Where("budget_id = ?", budgetID).
 		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
 		Find(&history).Error; err != nil {
-		return nil, fmt.Errorf("failed to get status history: %w", err)
+		return nil, 0, fmt.Errorf("failed to get status history: %w", err)
 	}
 
-	entities := make([]entities.BudgetStatusHistoryEntity, len(history))
+	out := make([]entities.BudgetStatusHistoryEntity, len(history))
 	for i, model := range history {
-		entities[i] = *model.ToEntity()
+		out[i] = *model.ToEntity()
 	}
 
-	return entities, nil
+	return out, total, nil
 }
 
 // CalculateCosts recomputes and persists all costs for a stored budget.
@@ -634,7 +799,7 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 			return zero, fmt.Errorf("failed to load machine power consumption: %w", res.Error)
 		}
 		if res.RowsAffected == 0 {
-			return zero, fmt.Errorf("machine preset %s not found for organization", *in.MachinePresetID)
+			return zero, fmt.Errorf("%w: machine preset %s not found for organization", entities.ErrInvalidPresetReference, *in.MachinePresetID)
 		}
 
 		res = r.db.WithContext(ctx).
@@ -646,7 +811,7 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 			return zero, fmt.Errorf("failed to load energy price: %w", res.Error)
 		}
 		if res.RowsAffected == 0 {
-			return zero, fmt.Errorf("energy preset %s not found for organization", *in.EnergyPresetID)
+			return zero, fmt.Errorf("%w: energy preset %s not found for organization", entities.ErrInvalidPresetReference, *in.EnergyPresetID)
 		}
 	}
 
@@ -770,7 +935,7 @@ func (r *budgetRepositoryImpl) loadFilamentPrices(ctx context.Context, items []e
 		out[row.ID] = row.PricePerKg
 	}
 	if len(out) != len(ids) {
-		return nil, fmt.Errorf("one or more referenced filaments do not belong to your organization")
+		return nil, fmt.Errorf("%w: one or more referenced filaments do not belong to your organization", entities.ErrFilamentNotFound)
 	}
 	return out, nil
 }
@@ -823,7 +988,7 @@ func (r *budgetRepositoryImpl) loadCostPresets(ctx context.Context, in entities.
 		}
 	}
 	if len(out) != len(ids) {
-		return nil, fmt.Errorf("one or more referenced cost presets do not belong to your organization")
+		return nil, fmt.Errorf("%w: one or more referenced cost presets do not belong to your organization", entities.ErrInvalidPresetReference)
 	}
 	return out, nil
 }
@@ -857,7 +1022,7 @@ func (r *budgetRepositoryImpl) ValidateFilamentsInOrg(ctx context.Context, filam
 	}
 
 	if int(count) != len(unique) {
-		return fmt.Errorf("one or more referenced filaments do not belong to your organization")
+		return fmt.Errorf("%w: one or more referenced filaments do not belong to your organization", entities.ErrFilamentNotFound)
 	}
 
 	return nil
@@ -879,7 +1044,7 @@ func (r *budgetRepositoryImpl) ValidatePresetInOrg(ctx context.Context, presetID
 	}
 
 	if count == 0 {
-		return fmt.Errorf("referenced %s preset %s does not belong to your organization", presetType, presetID)
+		return fmt.Errorf("%w: referenced %s preset %s does not belong to your organization", entities.ErrInvalidPresetReference, presetType, presetID)
 	}
 
 	return nil
@@ -1038,10 +1203,10 @@ func (r *budgetRepositoryImpl) FindItemsByBudgetID(ctx context.Context, budgetID
 		return nil, fmt.Errorf("failed to fetch budget items: %w", err)
 	}
 
-	entities := make([]*entities.BudgetItemEntity, 0, len(items))
+	entitiesOut := make([]*entities.BudgetItemEntity, 0, len(items))
 	for _, item := range items {
-		entities = append(entities, item.ToEntity())
+		entitiesOut = append(entitiesOut, item.ToEntity())
 	}
 
-	return entities, nil
+	return entitiesOut, nil
 }

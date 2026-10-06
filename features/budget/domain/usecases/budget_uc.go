@@ -8,7 +8,6 @@ import (
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 )
 
 // IBudgetUseCase defines the interface for budget use cases
@@ -35,7 +34,6 @@ type BudgetUseCase struct {
 	brandingRepository companyRepo.BrandingRepository
 	pdfService         *services.PDFService
 	cdnService         *services.CDNService
-	validator          *validator.Validate
 	logger             logger.Logger
 	activityService    activityUc.IActivityService
 	// profileProvider / presetProvider back the preset resolver. They are narrow
@@ -63,7 +61,6 @@ func NewBudgetUseCase(
 		brandingRepository: brandingRepository,
 		pdfService:         pdfService,
 		cdnService:         cdnService,
-		validator:          validator.New(),
 		logger:             logger,
 		activityService:    activityService,
 		profileProvider:    profileProvider,

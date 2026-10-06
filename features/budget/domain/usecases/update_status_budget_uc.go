@@ -7,6 +7,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
@@ -23,11 +24,10 @@ import (
 // @Param id path string true "Budget ID"
 // @Param request body entities.UpdateStatusRequest true "Update status request"
 // @Success 200 {object} entities.BudgetResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 409 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /budgets/{id}/status [patch]
 // @Security BearerAuth
 func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
@@ -36,50 +36,35 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
 
 	userID := helpers.GetUserID(c)
 	if userID == "" {
 		uc.logger.Error(ctx, "User ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeUserRequired, "Usuário não identificado"))
 		return
 	}
-
-	uc.logger.Info(ctx, "Budget status update attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Parse budget ID
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
 	var request entities.UpdateStatusRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid request format")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
-		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := validation.Validate(&request); err != nil {
+		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -90,7 +75,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -101,8 +86,7 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 			"current_status":   budget.Status,
 			"requested_status": request.Status,
 		})
-		appError := coreErrors.UsecaseError("Invalid status transition")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidStatusTransition, "Transição de status inválida"))
 		return
 	}
 
@@ -137,20 +121,20 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 				"budget_id":       budgetID,
 				"expected_status": previousStatus,
 			})
-			appError := coreErrors.ConflictError("O status do orçamento foi alterado por outra requisição. Recarregue e tente novamente.")
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			coreErrors.Respond(c, coreErrors.Conflict(CodeBudgetStatusConflict, "O status do orçamento foi alterado por outra requisição. Recarregue e tente novamente."))
 			return
 		}
-		uc.logger.Error(ctx, "Failed to update budget status", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to update budget status", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
 	// Build response from the freshly stored state.
-	response, _ := uc.buildBudgetResponse(ctx, budgetID, organizationID)
+	response, err := uc.buildBudgetResponse(ctx, budgetID, organizationID)
+	if err != nil {
+		respondBudgetError(c, err)
+		return
+	}
 
 	uc.logger.Info(ctx, "Budget status updated successfully", map[string]interface{}{
 		"budget_id":  budget.ID,

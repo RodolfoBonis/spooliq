@@ -6,7 +6,6 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +15,6 @@ func newUseCaseWithProviders(repo *fakeBudgetRepo, profiles ProfilePresetProvide
 	return &BudgetUseCase{
 		budgetRepository:   repo,
 		customerRepository: fakeCustomerRepo{},
-		validator:          validator.New(),
 		logger:             logger.NewLogger("test"),
 		activityService:    noopActivity{},
 		profileProvider:    profiles,

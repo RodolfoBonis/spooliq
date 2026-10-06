@@ -43,7 +43,7 @@ func (uc *GetSubscriptionDetailsUseCase) Execute(ctx context.Context, userRoles 
 		uc.logger.Error(ctx, "Non-admin user attempted to view subscription details", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("Only PlatformAdmin can view subscription details")
+		return nil, errors.Forbidden("platform_admin_required", "Apenas administradores da plataforma podem visualizar detalhes da assinatura")
 	}
 
 	// Fetch company from database
@@ -54,14 +54,14 @@ func (uc *GetSubscriptionDetailsUseCase) Execute(ctx context.Context, userRoles 
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		return nil, errors.InternalServerError("Failed to fetch company")
+		return nil, err
 	}
 
 	if company == nil {
 		uc.logger.Info(ctx, "Company not found", map[string]interface{}{
 			"organization_id": organizationID,
 		})
-		return nil, errors.NotFound("Company not found")
+		return nil, errors.NotFoundErr("company_not_found", "Empresa não encontrada")
 	}
 
 	// Fetch recent payments

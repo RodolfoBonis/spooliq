@@ -75,7 +75,7 @@ func NewManageSubscriptionUseCase(
 // @Failure 404 {object} map[string]string "Plan or payment method not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/subscriptions/subscribe [post]
+// @Router /subscriptions/subscribe [post]
 func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -328,7 +328,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 // @Failure 400 {object} map[string]string "No active subscription"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/subscriptions/cancel [delete]
+// @Router /subscriptions/cancel [delete]
 func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -424,7 +424,7 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 // @Failure 404 {object} map[string]string "No active subscription"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/subscriptions/status [get]
+// @Router /subscriptions/status [get]
 func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)

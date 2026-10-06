@@ -28,7 +28,7 @@ import (
 // @Failure 404 {object} map[string]interface{}
 // @Failure 409 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id} [put]
+// @Router /budgets/{id} [put]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()

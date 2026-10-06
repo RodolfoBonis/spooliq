@@ -25,7 +25,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/pdf [get]
+// @Router /budgets/{id}/pdf [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	ctx := c.Request.Context()

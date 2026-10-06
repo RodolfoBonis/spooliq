@@ -41,7 +41,7 @@ func NewUploadUseCase(cdnService *services.CDNService, logger logger.Logger) IUp
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/uploads/logo [post]
+// @Router /uploads/logo [post]
 // @Security BearerAuth
 func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -131,7 +131,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/uploads/file [post]
+// @Router /uploads/file [post]
 // @Security BearerAuth
 func (uc *UploadUseCase) UploadFile(c *gin.Context) {
 	ctx := c.Request.Context()

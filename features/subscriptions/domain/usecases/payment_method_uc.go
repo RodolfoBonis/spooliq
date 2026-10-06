@@ -51,7 +51,7 @@ func NewPaymentMethodUseCase(
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/payment-methods [post]
+// @Router /payment-methods [post]
 func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -214,7 +214,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 // @Success 200 {array} entities.PaymentMethodResponse "Payment methods list"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/payment-methods [get]
+// @Router /payment-methods [get]
 func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -247,7 +247,7 @@ func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Payment method not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/payment-methods/{id}/set-primary [put]
+// @Router /payment-methods/{id}/set-primary [put]
 func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -308,7 +308,7 @@ func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Payment method not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/payment-methods/{id} [delete]
+// @Router /payment-methods/{id} [delete]
 func (uc *PaymentMethodUseCase) DeletePaymentMethod(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)

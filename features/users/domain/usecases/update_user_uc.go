@@ -46,7 +46,7 @@ func NewUpdateUserUseCase(
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "User not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [put]
+// @Router /users/{id} [put]
 func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string, req *entities.UpdateUserRequest) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Updating user", map[string]interface{}{
 		"user_id":         userID,

@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id} [get]
+// @Router /budgets/{id} [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 	ctx := c.Request.Context()

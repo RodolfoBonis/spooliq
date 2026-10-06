@@ -21,7 +21,7 @@ import (
 // @Success 200 {object} entities.ListCustomersResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/customers [get]
+// @Router /customers [get]
 // @Security BearerAuth
 func (uc *CustomerUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()

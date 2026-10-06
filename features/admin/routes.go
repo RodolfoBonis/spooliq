@@ -130,7 +130,7 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies [get]
+// @Router /admin/companies [get]
 func (h *Handler) ListCompanies(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -171,7 +171,7 @@ func (h *Handler) ListCompanies(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies/{organization_id} [get]
+// @Router /admin/companies/{organization_id} [get]
 func (h *Handler) GetCompanyDetails(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -217,7 +217,7 @@ func (h *Handler) GetCompanyDetails(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies/{organization_id}/status [patch]
+// @Router /admin/companies/{organization_id}/status [patch]
 func (h *Handler) UpdateCompanyStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -270,7 +270,7 @@ func (h *Handler) UpdateCompanyStatus(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions [get]
+// @Router /admin/subscriptions [get]
 func (h *Handler) ListSubscriptions(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -311,7 +311,7 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions/{organization_id} [get]
+// @Router /admin/subscriptions/{organization_id} [get]
 func (h *Handler) GetSubscriptionDetails(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -358,7 +358,7 @@ func (h *Handler) GetSubscriptionDetails(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions/{organization_id}/payments [get]
+// @Router /admin/subscriptions/{organization_id}/payments [get]
 func (h *Handler) GetPaymentHistory(c *gin.Context) {
 	ctx := c.Request.Context()
 

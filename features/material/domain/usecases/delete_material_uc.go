@@ -26,7 +26,7 @@ import (
 // @Failure 404 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /materials/{id} [delete]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *MaterialUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 

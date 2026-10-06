@@ -24,7 +24,7 @@ import (
 // @Failure 409 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
 // @Router /brands [get]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *BrandUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
 

@@ -42,7 +42,7 @@ func NewSubscriptionPlanUseCase(
 // @Failure 409 {object} map[string]string "Plan with this name already exists"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/plans [post]
+// @Router /admin/subscription-plans [post]
 func (uc *SubscriptionPlanUseCase) CreatePlan(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -119,7 +119,7 @@ func (uc *SubscriptionPlanUseCase) CreatePlan(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/plans/{id} [put]
+// @Router /admin/subscription-plans/{id} [put]
 func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -208,7 +208,7 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 // @Success 200 {array} entities.SubscriptionPlanResponse "Plans list"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/plans [get]
+// @Router /admin/subscription-plans [get]
 func (uc *SubscriptionPlanUseCase) ListAllPlans(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -236,7 +236,7 @@ func (uc *SubscriptionPlanUseCase) ListAllPlans(c *gin.Context) {
 // @Produce json
 // @Success 200 {array} entities.SubscriptionPlanResponse "Plans list"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/plans [get]
+// @Router /plans [get]
 func (uc *SubscriptionPlanUseCase) ListActivePlans(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -268,7 +268,7 @@ func (uc *SubscriptionPlanUseCase) ListActivePlans(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/{id} [get]
+// @Router /admin/subscription-plans/{id} [get]
 func (uc *SubscriptionPlanUseCase) GetPlanByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -307,7 +307,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanByID(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/plans/{id} [delete]
+// @Router /admin/subscription-plans/{id} [delete]
 func (uc *SubscriptionPlanUseCase) DeletePlan(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -362,7 +362,7 @@ func (uc *SubscriptionPlanUseCase) DeletePlan(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/{id}/stats [get]
+// @Router /admin/subscription-plans/{id}/stats [get]
 func (uc *SubscriptionPlanUseCase) GetPlanStats(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -416,7 +416,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanStats(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/{id}/companies [get]
+// @Router /admin/subscription-plans/{id}/companies [get]
 func (uc *SubscriptionPlanUseCase) GetPlanCompanies(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -485,7 +485,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanCompanies(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/{id}/financial-report [get]
+// @Router /admin/subscription-plans/{id}/financial-report [get]
 func (uc *SubscriptionPlanUseCase) GetPlanFinancialReport(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -542,7 +542,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanFinancialReport(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/{id}/can-delete [get]
+// @Router /admin/subscription-plans/{id}/can-delete [get]
 func (uc *SubscriptionPlanUseCase) CanDeletePlan(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")
@@ -593,7 +593,7 @@ func (uc *SubscriptionPlanUseCase) CanDeletePlan(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/bulk-update [post]
+// @Router /admin/subscription-plans/bulk-update [post]
 func (uc *SubscriptionPlanUseCase) BulkUpdatePlans(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -641,7 +641,7 @@ func (uc *SubscriptionPlanUseCase) BulkUpdatePlans(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/bulk-activate [put]
+// @Router /admin/subscription-plans/bulk-activate [put]
 func (uc *SubscriptionPlanUseCase) BulkActivatePlans(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -689,7 +689,7 @@ func (uc *SubscriptionPlanUseCase) BulkActivatePlans(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/bulk-deactivate [put]
+// @Router /admin/subscription-plans/bulk-deactivate [put]
 func (uc *SubscriptionPlanUseCase) BulkDeactivatePlans(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -739,7 +739,7 @@ func (uc *SubscriptionPlanUseCase) BulkDeactivatePlans(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Plan not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/{id}/history [get]
+// @Router /admin/subscription-plans/{id}/history [get]
 func (uc *SubscriptionPlanUseCase) GetPlanHistory(c *gin.Context) {
 	ctx := c.Request.Context()
 	idStr := c.Param("id")

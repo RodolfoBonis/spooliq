@@ -25,22 +25,18 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			authHeader := c.GetHeader("Authorization")
 
 			if len(authHeader) < 1 {
-				err := errors.NewAppError(entities.ErrInvalidToken, "Token ausente", nil, nil)
-				httpError := err.ToHTTPError()
-				logger.LogError(ctx, "Auth failed: missing token", err)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				appErr := errors.NewAppError(entities.ErrInvalidToken, "Token ausente", nil, nil)
+				logger.LogError(ctx, "Auth failed: missing token", appErr)
+				errors.AbortWith(c, appErr)
 				return
 			}
 
 			// Verificar se o header contém "Bearer " e extrair o token
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
-				err := errors.NewAppError(entities.ErrInvalidToken, "Formato de token inválido", nil, nil)
-				httpError := err.ToHTTPError()
-				logger.LogError(ctx, "Auth failed: invalid token format", err)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				appErr := errors.NewAppError(entities.ErrInvalidToken, "Formato de token inválido", nil, nil)
+				logger.LogError(ctx, "Auth failed: invalid token format", appErr)
+				errors.AbortWith(c, appErr)
 				return
 			}
 
@@ -56,21 +52,17 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 
 			if err != nil {
 				appError := errors.NewAppError(entities.ErrMiddleware, err.Error(), nil, err)
-				httpError := appError.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: token introspection error", appError)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				errors.AbortWith(c, appError)
 				return
 			}
 
 			isTokenValid := *rptResult.Active
 
 			if !isTokenValid {
-				err := errors.NewAppError(entities.ErrInvalidToken, "Token inválido", nil, nil)
-				httpError := err.ToHTTPError()
-				logger.LogError(ctx, "Auth failed: token invalid", err)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				appErr := errors.NewAppError(entities.ErrInvalidToken, "Token inválido", nil, nil)
+				logger.LogError(ctx, "Auth failed: token invalid", appErr)
+				errors.AbortWith(c, appErr)
 				return
 			}
 
@@ -82,10 +74,8 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 
 			if err != nil {
 				appError := errors.NewAppError(entities.ErrMiddleware, err.Error(), nil, err)
-				httpError := appError.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: decode token error", appError)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				errors.AbortWith(c, appError)
 				return
 			}
 
@@ -98,10 +88,8 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			err = json.Unmarshal(jsonData, &userClaim)
 			if err != nil {
 				appError := errors.NewAppError(entities.ErrMiddleware, err.Error(), nil, err)
-				httpError := appError.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: unmarshal claims error", appError)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				errors.AbortWith(c, appError)
 				return
 			}
 
@@ -113,10 +101,8 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 					err = json.Unmarshal(rolesBytes, &userClaim.Roles)
 					if err != nil {
 						appError := errors.NewAppError(entities.ErrMiddleware, err.Error(), nil, err)
-						httpError := appError.ToHTTPError()
 						logger.LogError(ctx, "Auth failed: unmarshal roles error", appError)
-						c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-						c.Abort()
+						errors.AbortWith(c, appError)
 						return
 					}
 				}
@@ -139,10 +125,8 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 					"user_roles":     userClaim.Roles,
 				})
 				appError := errors.NewAppError(entities.ErrUnauthorized, "Perfil de acesso necessário ausente", nil, nil)
-				httpError := appError.ToHTTPError()
 				logger.LogError(ctx, "Auth failed: missing required role", appError)
-				c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-				c.Abort()
+				errors.AbortWith(c, appError)
 				return
 			}
 

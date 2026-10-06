@@ -19,7 +19,7 @@ import (
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/stats [get]
+// @Router /admin/stats [get]
 func (h *Handler) GetStats(c *gin.Context) {
 	ctx := c.Request.Context()
 

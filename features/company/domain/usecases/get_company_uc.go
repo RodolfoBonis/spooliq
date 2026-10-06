@@ -19,7 +19,7 @@ import (
 // @Success 200 {object} entities.CompanyResponse
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/company [get]
+// @Router /company [get]
 // @Security BearerAuth
 func (uc *CompanyUseCase) Get(c *gin.Context) {
 	ctx := c.Request.Context()

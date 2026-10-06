@@ -36,7 +36,7 @@ func NewDashboardHandler(repo repositories.DashboardRepository, activityService 
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/overview [get]
 func (h *Handler) GetOverview(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -69,7 +69,7 @@ func (h *Handler) GetOverview(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/revenue-trend [get]
 func (h *Handler) GetRevenueTrend(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -102,7 +102,7 @@ func (h *Handler) GetRevenueTrend(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/conversion-funnel [get]
 func (h *Handler) GetConversionFunnel(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -135,7 +135,7 @@ func (h *Handler) GetConversionFunnel(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/recent-activity [get]
 func (h *Handler) GetRecentActivity(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -193,7 +193,7 @@ func (h *Handler) GetRecentActivity(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/top-customers [get]
 func (h *Handler) GetTopCustomers(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -233,7 +233,7 @@ func (h *Handler) GetTopCustomers(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/operational-insights [get]
 func (h *Handler) GetOperationalInsights(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -267,7 +267,7 @@ func (h *Handler) GetOperationalInsights(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/top-filaments [get]
 func (h *Handler) GetTopFilaments(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -308,7 +308,7 @@ func (h *Handler) GetTopFilaments(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/top-materials [get]
 func (h *Handler) GetTopMaterials(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
@@ -347,7 +347,7 @@ func (h *Handler) GetTopMaterials(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/goals-alerts [get]
 func (h *Handler) GetGoalsAlerts(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)

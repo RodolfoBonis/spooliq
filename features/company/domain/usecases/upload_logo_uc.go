@@ -21,7 +21,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/company/logo [post]
+// @Router /company/logo [post]
 // @Security BearerAuth
 func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -5,6 +5,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/services"
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/repositories"
+	slicerservice "github.com/RodolfoBonis/spooliq/features/slicer/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,6 +18,7 @@ type IModel3DUseCase interface {
 	StreamFile(c *gin.Context)
 	Update(c *gin.Context)
 	Delete(c *gin.Context)
+	GetSliceAnalysis(c *gin.Context)
 }
 
 // Model3DUseCase implements 3D model business logic operations.
@@ -24,6 +26,7 @@ type Model3DUseCase struct {
 	repository       repositories.Model3DRepository
 	cdnService       *services.CDNService
 	thumbnailService *services.ThumbnailService
+	slicerService    slicerservice.Service
 	logger           log.Logger
 	activityService  activityUc.IActivityService
 }
@@ -33,6 +36,7 @@ func NewModel3DUseCase(
 	repository repositories.Model3DRepository,
 	cdnService *services.CDNService,
 	thumbnailService *services.ThumbnailService,
+	slicerService slicerservice.Service,
 	logger log.Logger,
 	activityService activityUc.IActivityService,
 ) IModel3DUseCase {
@@ -40,6 +44,7 @@ func NewModel3DUseCase(
 		repository:       repository,
 		cdnService:       cdnService,
 		thumbnailService: thumbnailService,
+		slicerService:    slicerService,
 		logger:           logger,
 		activityService:  activityService,
 	}

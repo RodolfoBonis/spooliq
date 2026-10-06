@@ -32,6 +32,8 @@ const (
 	CodeInvalidCustomerID = "invalid_customer_id"
 	// CodeInvalidFormat (400) — the format filter is not a known file format.
 	CodeInvalidFormat = "invalid_format"
+	// CodeSliceAnalysisNotFound (404) — the model has no stored slice analysis.
+	CodeSliceAnalysisNotFound = "slice_analysis_not_found"
 )
 
 func errInvalidModel3DID() *coreErrors.APIError {
@@ -69,6 +71,10 @@ func errInvalidCustomerID() *coreErrors.APIError {
 
 func errInvalidFormat() *coreErrors.APIError {
 	return coreErrors.BadRequest(CodeInvalidFormat, "Formato inválido. Use .stl ou .3mf")
+}
+
+func errSliceAnalysisNotFound() *coreErrors.APIError {
+	return coreErrors.NotFoundErr(CodeSliceAnalysisNotFound, "Análise de fatiamento não encontrada para este modelo")
 }
 
 // respondDuplicate writes the 409 duplicate envelope. It keeps the standard

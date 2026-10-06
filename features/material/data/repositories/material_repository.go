@@ -33,20 +33,40 @@ func (m *materialRepository) FindByID(id uuid.UUID, organizationID string) (*ent
 	return &entity, nil
 }
 
-func (m *materialRepository) FindAll(organizationID string) ([]entities.MaterialEntity, error) {
+// FindAll returns a page of materials scoped to the organization, filtered by an
+// optional case-insensitive name search and ordered by a pre-validated clause.
+func (m *materialRepository) FindAll(organizationID, search, order string, limit, offset int) ([]entities.MaterialEntity, int64, error) {
+	query := m.db.Model(&models.MaterialModel{}).
+		Where("organization_id = ?", organizationID)
+
+	if search != "" {
+		query = query.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if order == "" {
+		order = "name asc"
+	}
+
 	var materialsData []models.MaterialModel
-	err := m.db.Where("organization_id = ?", organizationID).Order("name ASC").Find(&materialsData).Error
-	if err != nil {
-		return nil, err
+	if err := query.
+		Order(order).
+		Limit(limit).
+		Offset(offset).
+		Find(&materialsData).Error; err != nil {
+		return nil, 0, err
 	}
 
 	materials := make([]entities.MaterialEntity, 0, len(materialsData))
-
 	for _, material := range materialsData {
 		materials = append(materials, material.ToEntity())
 	}
 
-	return materials, nil
+	return materials, total, nil
 }
 
 func (m *materialRepository) Create(entity *entities.MaterialEntity) error {
@@ -64,7 +84,7 @@ func (m *materialRepository) Create(entity *entities.MaterialEntity) error {
 }
 
 func (m *materialRepository) Delete(id uuid.UUID) error {
-	return m.db.Model(models.MaterialModel{}).Delete("id = ?", id).Error
+	return m.db.Delete(&models.MaterialModel{}, "id = ?", id).Error
 }
 
 func (m *materialRepository) Update(entity *entities.MaterialEntity) error {

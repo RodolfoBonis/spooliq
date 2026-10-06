@@ -4,34 +4,36 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RodolfoBonis/spooliq/core/helpers"
-
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-// Search handles searching filaments with filters
+// Search handles searching filaments with structured filters plus free-text
+// search, pagination and whitelisted sorting.
 // @Summary Search Filaments
-// @Schemes
-// @Description Search 3D printing filaments with various filters
+// @Description Search 3D printing filaments with filters, pagination and sorting.
 // @Tags Filaments
 // @Accept json
 // @Produce json
-// @Param name query string false "Filter by name (partial match)"
+// @Param q query string false "Case-insensitive search on filament/brand/material name"
+// @Param name query string false "Alias of q (case-insensitive name search)"
 // @Param brand_id query string false "Filter by brand ID (UUID)"
 // @Param material_id query string false "Filter by material ID (UUID)"
-// @Param color_type query string false "Filter by color type (solid, gradient, duo, rainbow)"
+// @Param color_type query string false "Filter by color type (solid, gradient, duo, rainbow, ...)"
 // @Param diameter query number false "Filter by diameter (exact match)"
 // @Param min_price query number false "Minimum price per kg"
 // @Param max_price query number false "Maximum price per kg"
-// @Param page query int false "Page number" default(1)
-// @Param limit query int false "Items per page" default(20)
-// @Success 200 {object} filamentEntities.FindAllFilamentsResponse "Successfully retrieved filaments"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Param page query int false "Page number (1-based)" default(1)
+// @Param page_size query int false "Items per page (max 100)" default(20)
+// @Param sort_by query string false "Sort field" Enums(name, created_at, price_per_kg) default(created_at)
+// @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(desc)
+// @Success 200 {object} entities.FindAllFilamentsResponse "Paginated list of filaments"
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /filaments/search [get]
 // @Security BearerAuth
 func (uc *FilamentUseCase) Search(c *gin.Context) {
@@ -40,181 +42,94 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log filament search attempt
-	uc.logger.Info(ctx, "Filament search attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{
+		DefaultPageSize: 20,
+		SortWhitelist:   filamentSortWhitelist,
+		DefaultSort:     "created_at",
 	})
 
-	// Extract user data from context
-	userID, _ := c.Get("user_id")
-	_, ok := userID.(string)
-	if !ok {
-		appError := coreErrors.UsecaseError("Invalid user ID in context")
-		httpError := appError.ToHTTPError()
-		uc.logger.Error(ctx, "Invalid user ID in context", map[string]interface{}{
-			"error": "user_id not found or invalid type",
-		})
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	// `name` is a legacy alias of `q`; q wins when both are present.
+	search := q.Search
+	if search == "" {
+		search = c.Query("name")
+	}
+
+	filters, apiErr := parseFilamentFilters(c)
+	if apiErr != nil {
+		uc.logger.Error(ctx, "Invalid filament search filter", map[string]interface{}{"code": apiErr.Code})
+		coreErrors.Respond(c, apiErr)
 		return
 	}
 
-	// Parse pagination parameters
-	page := 1
-	limit := 20
-
-	if pageParam := c.Query("page"); pageParam != "" {
-		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
-			page = p
-		}
+	filaments, total, err := uc.repository.SearchFilaments(ctx, organizationID, filters, search, q.OrderClause(), q.Limit(), q.Offset())
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to search filaments", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
 	}
 
-	if limitParam := c.Query("limit"); limitParam != "" {
-		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 100 {
-			limit = l
-		}
-	}
+	responses := uc.buildFilamentResponses(ctx, filaments)
 
-	offset := (page - 1) * limit
+	uc.logger.Info(ctx, "Filaments search completed successfully", map[string]interface{}{"total_found": total, "returned": len(responses)})
 
-	// Build search filters
+	c.JSON(http.StatusOK, helpers.NewPage(responses, total, q))
+}
+
+// parseFilamentFilters reads the structured search filters from the query
+// string, validating each and returning a stable APIError code on bad input.
+func parseFilamentFilters(c *gin.Context) (map[string]interface{}, *coreErrors.APIError) {
 	filters := make(map[string]interface{})
 
-	if name := c.Query("name"); name != "" {
-		filters["name"] = name
-	}
-
 	if brandIDStr := c.Query("brand_id"); brandIDStr != "" {
-		if brandID, err := uuid.Parse(brandIDStr); err == nil {
-			filters["brand_id"] = brandID
-		} else {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid brand_id format")
-			uc.logger.Error(ctx, "Invalid brand_id in search", map[string]interface{}{
-				"brand_id": brandIDStr,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
+		brandID, err := uuid.Parse(brandIDStr)
+		if err != nil {
+			return nil, coreErrors.BadRequest("invalid_brand_id", "ID de marca inválido")
 		}
+		filters["brand_id"] = brandID
 	}
 
 	if materialIDStr := c.Query("material_id"); materialIDStr != "" {
-		if materialID, err := uuid.Parse(materialIDStr); err == nil {
-			filters["material_id"] = materialID
-		} else {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid material_id format")
-			uc.logger.Error(ctx, "Invalid material_id in search", map[string]interface{}{
-				"material_id": materialIDStr,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
+		materialID, err := uuid.Parse(materialIDStr)
+		if err != nil {
+			return nil, coreErrors.BadRequest("invalid_material_id", "ID de material inválido")
 		}
+		filters["material_id"] = materialID
 	}
 
 	if colorType := c.Query("color_type"); colorType != "" {
-		colorTypeEnum := filamentEntities.ColorType(colorType)
-		if !colorTypeEnum.IsValid() {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid color_type value")
-			uc.logger.Error(ctx, "Invalid color_type in search", map[string]interface{}{
-				"color_type": colorType,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
+		if !filamentEntities.ColorType(colorType).IsValid() {
+			return nil, coreErrors.BadRequest("invalid_color_type", "Tipo de cor inválido")
 		}
 		filters["color_type"] = colorType
 	}
 
 	if diameterStr := c.Query("diameter"); diameterStr != "" {
-		if diameter, err := strconv.ParseFloat(diameterStr, 64); err == nil {
-			filters["diameter"] = diameter
-		} else {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid diameter format")
-			uc.logger.Error(ctx, "Invalid diameter in search", map[string]interface{}{
-				"diameter": diameterStr,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
+		diameter, err := strconv.ParseFloat(diameterStr, 64)
+		if err != nil {
+			return nil, coreErrors.BadRequest("invalid_diameter", "Diâmetro inválido")
 		}
+		filters["diameter"] = diameter
 	}
 
 	if minPriceStr := c.Query("min_price"); minPriceStr != "" {
-		if minPrice, err := strconv.ParseFloat(minPriceStr, 64); err == nil {
-			filters["min_price"] = minPrice
-		} else {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid min_price format")
-			uc.logger.Error(ctx, "Invalid min_price in search", map[string]interface{}{
-				"min_price": minPriceStr,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
+		minPrice, err := strconv.ParseFloat(minPriceStr, 64)
+		if err != nil {
+			return nil, coreErrors.BadRequest("invalid_min_price", "Preço mínimo inválido")
 		}
+		filters["min_price"] = minPrice
 	}
 
 	if maxPriceStr := c.Query("max_price"); maxPriceStr != "" {
-		if maxPrice, err := strconv.ParseFloat(maxPriceStr, 64); err == nil {
-			filters["max_price"] = maxPrice
-		} else {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid max_price format")
-			uc.logger.Error(ctx, "Invalid max_price in search", map[string]interface{}{
-				"max_price": maxPriceStr,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
+		maxPrice, err := strconv.ParseFloat(maxPriceStr, 64)
+		if err != nil {
+			return nil, coreErrors.BadRequest("invalid_max_price", "Preço máximo inválido")
 		}
+		filters["max_price"] = maxPrice
 	}
 
-	// Search filaments
-	filaments, total, err := uc.repository.SearchFilaments(ctx, organizationID, filters, limit, offset)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to search filaments", map[string]interface{}{
-			"error":   err.Error(),
-			"filters": filters,
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-
-	// Log successful search
-	uc.logger.Info(ctx, "Filaments search completed successfully", map[string]interface{}{
-		"total_found": total,
-		"returned":    len(filaments),
-		"page":        page,
-		"limit":       limit,
-		"filters":     filters,
-	})
-
-	// Build response with related data
-	responses := make([]filamentEntities.FilamentResponse, len(filaments))
-	for i, filament := range filaments {
-		responses[i] = filamentEntities.FilamentResponse{
-			FilamentEntity: filament,
-		}
-
-		// Fetch brand information
-		if brandInfo, err := uc.repository.GetBrandInfo(ctx, filament.BrandID); err == nil {
-			responses[i].Brand = brandInfo
-		}
-
-		// Fetch material information
-		if materialInfo, err := uc.repository.GetMaterialInfo(ctx, filament.MaterialID); err == nil {
-			responses[i].Material = materialInfo
-		}
-	}
-
-	totalPages := (total + limit - 1) / limit
-	response := filamentEntities.FindAllFilamentsResponse{
-		Data:       responses,
-		Total:      total,
-		Page:       page,
-		Limit:      limit,
-		TotalPages: totalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	return filters, nil
 }

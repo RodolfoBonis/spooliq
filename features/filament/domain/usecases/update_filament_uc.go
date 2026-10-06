@@ -3,13 +3,12 @@ package usecases
 import (
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
-
-	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -17,9 +16,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Update handles updating an existing filament
+// Update handles updating an existing filament.
 // @Summary Update Filament
-// @Schemes
 // @Description Update an existing 3D printing filament
 // @Tags Filaments
 // @Accept json
@@ -27,12 +25,12 @@ import (
 // @Param id path string true "Filament ID (UUID)"
 // @Param request body filamentEntities.UpdateFilamentRequest true "Filament update data"
 // @Success 200 {object} filamentEntities.FilamentResponse "Successfully updated filament"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 403 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 409 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 403 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 409 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /filaments/{id} [put]
 // @Security BearerAuth
 func (uc *FilamentUseCase) Update(c *gin.Context) {
@@ -41,278 +39,128 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log filament update attempt
-	uc.logger.Info(ctx, "Filament update attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
-	})
-
-	// Extract user data from context
-	userID, _ := c.Get("user_id")
-	userIDStr, ok := userID.(string)
-	if !ok {
-		appError := coreErrors.UsecaseError("Invalid user ID in context")
-		httpError := appError.ToHTTPError()
-		uc.logger.Error(ctx, "Invalid user ID in context", map[string]interface{}{
-			"error": "user_id not found or invalid type",
-		})
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	userIDStr := helpers.GetUserID(c)
+	if userIDStr == "" {
+		uc.logger.Error(ctx, "User ID not found in context", nil)
+		coreErrors.Respond(c, coreErrors.BadRequest("user_required", "Usuário não encontrado no contexto"))
 		return
 	}
 
-	// Check if user is admin
 	userRole, _ := c.Get("user_role")
 	userRoleStr, _ := userRole.(string)
 	isAdmin := userRoleStr == roles.OrgAdminRole
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
-
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid filament ID", map[string]interface{}{
-			"filament_id": idParam,
-			"error":       err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError("Invalid filament ID format")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Invalid filament ID", map[string]interface{}{"filament_id": c.Param("id")})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_filament_id", "ID de filamento inválido"))
 		return
 	}
 
 	var request filamentEntities.UpdateFilamentRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-
-		uc.logger.Error(ctx, "Invalid filament update payload", map[string]interface{}{
-			"error": err.Error(),
-		})
-
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Invalid filament update payload", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.validator.Struct(request); err != nil {
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-
-		uc.logger.Error(ctx, "Filament validation failed", map[string]interface{}{
-			"error":             err.Error(),
-			"validation_failed": true,
-		})
-
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	if err := validation.Validate(request); err != nil {
+		uc.logger.Error(ctx, "Filament validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
 	// Validate color data if provided
 	if request.ColorType != nil && *request.ColorType != "" && request.ColorData != nil && len(*request.ColorData) > 0 {
 		if !request.ColorType.IsValid() {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid color type")
-			uc.logger.Error(ctx, "Invalid color type", map[string]interface{}{
-				"color_type": *request.ColorType,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+			uc.logger.Error(ctx, "Invalid color type", map[string]interface{}{"color_type": *request.ColorType})
+			coreErrors.Respond(c, coreErrors.BadRequest("invalid_color_type", "Tipo de cor inválido"))
 			return
 		}
-
-		// Parse and validate color data
-		_, err := filamentEntities.ParseColorData(*request.ColorType, *request.ColorData)
-		if err != nil {
-			httpError := coreErrors.NewHTTPError(http.StatusBadRequest, "Invalid color data: "+err.Error())
-			uc.logger.Error(ctx, "Invalid color data", map[string]interface{}{
-				"error":      err.Error(),
-				"color_type": *request.ColorType,
-			})
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		if _, err := filamentEntities.ParseColorData(*request.ColorType, *request.ColorData); err != nil {
+			uc.logger.Error(ctx, "Invalid color data", map[string]interface{}{"error": err.Error(), "color_type": *request.ColorType})
+			coreErrors.Respond(c, coreErrors.BadRequest("invalid_color_data", "Dados de cor inválidos"))
 			return
 		}
 	}
 
-	// Fetch existing filament to check ownership
 	existingFilament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
-			appError := coreErrors.UsecaseError("Filament not found")
-			httpError := appError.ToHTTPError()
-
-			uc.logger.Error(ctx, "Filament not found", map[string]interface{}{
-				"filament_id": id,
-				"error":       err.Error(),
-			})
-
-			c.AbortWithStatusJSON(http.StatusNotFound, httpError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uc.logger.Error(ctx, "Filament not found", map[string]interface{}{"filament_id": id})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("filament_not_found", "Filamento não encontrado"))
 			return
 		}
-
-		uc.logger.Error(ctx, "Failed to retrieve filament", map[string]interface{}{
-			"filament_id": id,
-			"error":       err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to retrieve filament", map[string]interface{}{"filament_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Check permissions - only owner or admin can update
+	// Only the owner or an admin may update a filament.
 	if !isAdmin && (existingFilament.OwnerUserID == nil || *existingFilament.OwnerUserID != userIDStr) {
-		appError := coreErrors.UsecaseError("Access denied: you can only update your own filaments")
-		httpError := appError.ToHTTPError()
-
-		uc.logger.Error(ctx, "Access denied to update filament", map[string]interface{}{
-			"filament_id": id,
-			"user_id":     userIDStr,
-		})
-
-		c.AbortWithStatusJSON(http.StatusForbidden, httpError)
+		uc.logger.Warning(ctx, "Access denied to update filament", map[string]interface{}{"filament_id": id, "user_id": userIDStr})
+		coreErrors.Respond(c, coreErrors.Forbidden("filament_access_denied", "Você só pode alterar seus próprios filamentos"))
 		return
 	}
 
-	// Check if new name conflicts with another filament
+	// Enforce unique name within the brand when the name changes.
 	if request.Name != nil && *request.Name != existingFilament.Name {
 		brandID := existingFilament.BrandID
 		if request.BrandID != nil {
 			brandID = *request.BrandID
 		}
-
 		exists, err := uc.repository.ExistsByNameAndBrand(ctx, *request.Name, brandID, &id)
 		if err != nil {
-			uc.logger.Error(ctx, "Failed to check filament existence", map[string]interface{}{
-				"name":      *request.Name,
-				"brand_id":  brandID,
-				"error":     err.Error(),
-				"operation": "check_filament_existence",
-			})
-
-			appError := coreErrors.UsecaseError(err.Error())
-			httpError := appError.ToHTTPError()
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+			uc.logger.Error(ctx, "Failed to check filament existence", map[string]interface{}{"name": *request.Name, "error": err.Error()})
+			coreErrors.Respond(c, err)
 			return
 		}
-
 		if exists {
-			httpError := coreErrors.NewHTTPError(http.StatusConflict, "Filament with this name and brand already exists")
-
-			uc.logger.Warning(ctx, "Filament update failed: name already exists", map[string]interface{}{
-				"name":     *request.Name,
-				"brand_id": brandID,
-				"conflict": true,
-			})
-
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+			uc.logger.Warning(ctx, "Filament update failed: name already exists", map[string]interface{}{"name": *request.Name})
+			coreErrors.Respond(c, coreErrors.Conflict("filament_name_taken", "Já existe um filamento com este nome para esta marca"))
 			return
 		}
 	}
 
-	// Apply updates
-	if request.Name != nil {
-		existingFilament.Name = *request.Name
-	}
-	if request.Description != nil {
-		existingFilament.Description = *request.Description
-	}
-	if request.BrandID != nil {
-		existingFilament.BrandID = *request.BrandID
-	}
-	if request.MaterialID != nil {
-		existingFilament.MaterialID = *request.MaterialID
-	}
-	if request.Color != nil {
-		existingFilament.Color = *request.Color
-	}
-	if request.ColorHex != nil {
-		existingFilament.ColorHex = *request.ColorHex
-	}
-	if request.ColorType != nil {
-		existingFilament.ColorType = *request.ColorType
-	}
-	if request.ColorData != nil {
-		existingFilament.ColorData = *request.ColorData
-	}
-	if request.Diameter != nil {
-		existingFilament.Diameter = *request.Diameter
-	}
-	if request.Weight != nil {
-		existingFilament.Weight = request.Weight
-	}
-	if request.PricePerKg != nil {
-		existingFilament.PricePerKg = *request.PricePerKg
-	}
-	if request.URL != nil {
-		existingFilament.URL = *request.URL
-	}
-	if request.PrintTemperature != nil {
-		existingFilament.PrintTemperature = request.PrintTemperature
-	}
-	if request.BedTemperature != nil {
-		existingFilament.BedTemperature = request.BedTemperature
-	}
+	applyFilamentUpdate(existingFilament, &request)
 
-	// Regenerate color preview if color data changed
+	// Regenerate color preview if color data changed.
 	if request.ColorType != nil && request.ColorData != nil && len(*request.ColorData) > 0 {
-		colorData, err := filamentEntities.ParseColorData(*request.ColorType, *request.ColorData)
-		if err == nil {
+		if colorData, err := filamentEntities.ParseColorData(*request.ColorType, *request.ColorData); err == nil {
 			existingFilament.ColorPreview = colorData.GenerateCSS()
 			existingFilament.ColorHex = filamentEntities.GenerateLegacyColorHex(*request.ColorType, colorData)
 		}
 	}
 
-	// Update in database
 	if err := uc.repository.Update(ctx, existingFilament); err != nil {
-		uc.logger.Error(ctx, "Failed to update filament", map[string]interface{}{
-			"filament_id": id,
-			"error":       err.Error(),
-			"operation":   "update_filament",
-		})
-
-		httpError := coreErrors.NewHTTPError(http.StatusInternalServerError, "Failed to update filament")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to update filament", map[string]interface{}{"filament_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Fetch updated filament with relationships
 	updatedFilament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to fetch updated filament", map[string]interface{}{
-			"filament_id": id,
-			"error":       err.Error(),
-		})
-
-		httpError := coreErrors.NewHTTPError(http.StatusInternalServerError, "Filament updated but failed to fetch details")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to fetch updated filament", map[string]interface{}{"filament_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	uc.logger.Info(ctx, "Filament updated successfully", map[string]interface{}{
-		"filament_id":   id,
-		"filament_name": updatedFilament.Name,
-	})
+	uc.logger.Info(ctx, "Filament updated successfully", map[string]interface{}{"filament_id": id})
 
-	// Build response with related data
-	response := &filamentEntities.FilamentResponse{
-		FilamentEntity: updatedFilament,
-	}
-
-	// Fetch brand information
+	response := &filamentEntities.FilamentResponse{FilamentEntity: updatedFilament}
 	if brandInfo, err := uc.repository.GetBrandInfo(ctx, updatedFilament.BrandID); err == nil {
 		response.Brand = brandInfo
 	}
-
-	// Fetch material information
 	if materialInfo, err := uc.repository.GetMaterialInfo(ctx, updatedFilament.MaterialID); err == nil {
 		response.Material = materialInfo
 	}
 
 	c.JSON(http.StatusOK, response)
 
-	// Record activity (fire-and-forget)
 	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
 		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),
@@ -322,4 +170,50 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 		EntityName:     updatedFilament.Name,
 		CreatedAt:      time.Now(),
 	})
+}
+
+// applyFilamentUpdate copies the non-nil fields of the request onto the entity.
+func applyFilamentUpdate(f *filamentEntities.FilamentEntity, request *filamentEntities.UpdateFilamentRequest) {
+	if request.Name != nil {
+		f.Name = *request.Name
+	}
+	if request.Description != nil {
+		f.Description = *request.Description
+	}
+	if request.BrandID != nil {
+		f.BrandID = *request.BrandID
+	}
+	if request.MaterialID != nil {
+		f.MaterialID = *request.MaterialID
+	}
+	if request.Color != nil {
+		f.Color = *request.Color
+	}
+	if request.ColorHex != nil {
+		f.ColorHex = *request.ColorHex
+	}
+	if request.ColorType != nil {
+		f.ColorType = *request.ColorType
+	}
+	if request.ColorData != nil {
+		f.ColorData = *request.ColorData
+	}
+	if request.Diameter != nil {
+		f.Diameter = *request.Diameter
+	}
+	if request.Weight != nil {
+		f.Weight = request.Weight
+	}
+	if request.PricePerKg != nil {
+		f.PricePerKg = *request.PricePerKg
+	}
+	if request.URL != nil {
+		f.URL = *request.URL
+	}
+	if request.PrintTemperature != nil {
+		f.PrintTemperature = request.PrintTemperature
+	}
+	if request.BedTemperature != nil {
+		f.BedTemperature = request.BedTemperature
+	}
 }

@@ -5,26 +5,25 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/RodolfoBonis/spooliq/core/helpers"
-
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// Delete handles deleting a brand by ID
+// Delete handles deleting a brand by ID.
 // @Summary Delete Brand
-// @Schemes
 // @Description Delete a filament brand by its ID
 // @Tags Brands
 // @Param id path string true "Brand ID" format(uuid)
 // @Success 204 "Successfully deleted brand"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 409 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /brands/{id} [delete]
 // @Security BearerAuth
 func (uc *BrandUseCase) Delete(c *gin.Context) {
@@ -33,81 +32,43 @@ func (uc *BrandUseCase) Delete(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log brand deletion attempt (automatic trace correlation via enhanced observability)
-	uc.logger.Info(ctx, "Brand deletion attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
-	})
-
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
-
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Invalid brand ID", map[string]interface{}{
-			"brand_id": idParam,
-			"error":    err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError("Invalid brand ID format")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Invalid brand ID", map[string]interface{}{"brand_id": c.Param("id")})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_brand_id", "ID de marca inválido"))
 		return
 	}
 
-	// Check if brand exists before deletion
 	brand, err := uc.repository.FindByID(id, organizationID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
-			appError := coreErrors.UsecaseError("Brand not found")
-			httpError := appError.ToHTTPError()
-
-			// Enhanced logging with automatic trace correlation
-			uc.logger.Error(ctx, "Brand not found for deletion", map[string]interface{}{
-				"brand_id": id,
-				"error":    err.Error(),
-			})
-
-			c.AbortWithStatusJSON(http.StatusNotFound, httpError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uc.logger.Error(ctx, "Brand not found for deletion", map[string]interface{}{"brand_id": id})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("brand_not_found", "Marca não encontrada"))
 			return
 		}
-
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Failed to check brand existence for deletion", map[string]interface{}{
-			"brand_id": id,
-			"error":    err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to check brand existence for deletion", map[string]interface{}{"brand_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Perform the deletion
 	if err := uc.repository.Delete(id); err != nil {
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Failed to delete brand", map[string]interface{}{
-			"brand_id":   id,
-			"brand_name": brand.Name,
-			"error":      err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError("Failed to delete brand")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		// A RESTRICT foreign key (filaments reference the brand) surfaces as a
+		// 23503 violation; report it as a clean 409 instead of a 500.
+		if isForeignKeyViolation(err) {
+			uc.logger.Warning(ctx, "Brand deletion blocked: brand in use", map[string]interface{}{"brand_id": id})
+			coreErrors.Respond(c, coreErrors.Conflict("brand_in_use", "Marca em uso e não pode ser removida"))
+			return
+		}
+		uc.logger.Error(ctx, "Failed to delete brand", map[string]interface{}{"brand_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Log successful deletion with automatic trace correlation
-	uc.logger.Info(ctx, "Brand deleted successfully", map[string]interface{}{
-		"brand_id":   brand.ID,
-		"brand_name": brand.Name,
-	})
+	uc.logger.Info(ctx, "Brand deleted successfully", map[string]interface{}{"brand_id": brand.ID})
 
 	c.Status(http.StatusNoContent)
 
@@ -120,4 +81,16 @@ func (uc *BrandUseCase) Delete(c *gin.Context) {
 		EntityName:     brand.Name,
 		Description:    "Brand deleted: " + brand.Name,
 	})
+}
+
+// isForeignKeyViolation reports whether err is a PostgreSQL foreign key
+// constraint violation (SQLSTATE 23503). It matches on the SQLSTATE string the
+// pgx driver embeds in its error text, avoiding a hard dependency on the driver
+// error type in the domain layer.
+func isForeignKeyViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "SQLSTATE 23503") || strings.Contains(strings.ToLower(msg), "violates foreign key constraint")
 }

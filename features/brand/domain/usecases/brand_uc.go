@@ -5,13 +5,11 @@ import (
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 )
 
 // BrandUseCase implements brand business logic operations.
 type BrandUseCase struct {
 	repository      repositories.BrandRepository
-	validator       *validator.Validate
 	logger          log.Logger
 	activityService activityUc.IActivityService
 }
@@ -29,8 +27,15 @@ type IBrandUseCase interface {
 func NewBrandUseCase(repository repositories.BrandRepository, logger log.Logger, activityService activityUc.IActivityService) IBrandUseCase {
 	return &BrandUseCase{
 		repository:      repository,
-		validator:       validator.New(),
 		logger:          logger,
 		activityService: activityService,
 	}
+}
+
+// brandSortWhitelist maps public sort names to safe SQL column expressions.
+// Only these names are ever honored, which keeps the ORDER BY clause free of
+// raw user input.
+var brandSortWhitelist = map[string]string{
+	"name":       "lower(name)",
+	"created_at": "created_at",
 }

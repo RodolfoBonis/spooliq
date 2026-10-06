@@ -1,18 +1,21 @@
 package usecases
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
-// Update updates an existing customer
+// Update updates an existing customer.
 // @Summary Update customer
 // @Description Update an existing customer
 // @Tags customers
@@ -21,95 +24,100 @@ import (
 // @Param id path string true "Customer ID"
 // @Param request body entities.UpdateCustomerRequest true "Update customer request"
 // @Success 200 {object} entities.CustomerResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 409 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /customers/{id} [put]
 // @Security BearerAuth
 func (uc *CustomerUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	uc.logger.Info(ctx, "Customer update attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
-
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		appError := coreErrors.UsecaseError("Organization ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Parse customer ID
 	customerID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid customer ID", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid customer ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid customer ID", map[string]interface{}{"customer_id": c.Param("id")})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_customer_id", "ID de cliente inválido"))
 		return
 	}
 
 	var request entities.UpdateCustomerRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid request format")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
-		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := validation.Validate(request); err != nil {
+		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Get existing customer
 	customer, err := uc.repository.FindByID(ctx, customerID, organizationID)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to retrieve customer", map[string]interface{}{
-			"error":       err.Error(),
-			"customer_id": customerID,
-		})
-		c.JSON(http.StatusNotFound, gin.H{"error": "Customer not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uc.logger.Error(ctx, "Customer not found", map[string]interface{}{"customer_id": customerID})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("customer_not_found", "Cliente não encontrado"))
+			return
+		}
+		uc.logger.Error(ctx, "Failed to retrieve customer", map[string]interface{}{"customer_id": customerID, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Check if email is being changed and if it already exists
+	// Enforce unique email within the organization when it changes.
 	if request.Email != nil && *request.Email != "" {
 		if customer.Email == nil || *customer.Email != *request.Email {
 			exists, err := uc.repository.ExistsByEmail(ctx, *request.Email, organizationID, &customerID)
 			if err != nil {
-				uc.logger.Error(ctx, "Failed to check email existence", map[string]interface{}{
-					"error": err.Error(),
-				})
-				appError := coreErrors.RepositoryError(err.Error())
-				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+				uc.logger.Error(ctx, "Failed to check email existence", map[string]interface{}{"error": err.Error()})
+				coreErrors.Respond(c, err)
 				return
 			}
-
 			if exists {
-				uc.logger.Error(ctx, "Customer with email already exists", map[string]interface{}{
-					"email": *request.Email,
-				})
-				appError := coreErrors.UsecaseError("Customer with this email already exists")
-				c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+				uc.logger.Warning(ctx, "Customer with email already exists", map[string]interface{}{"email": *request.Email})
+				coreErrors.Respond(c, coreErrors.Conflict("customer_email_taken", "Já existe um cliente com este e-mail"))
 				return
 			}
 		}
 	}
 
-	// Update fields
+	applyCustomerUpdate(customer, &request)
+	customer.UpdatedAt = time.Now()
+
+	if err := uc.repository.Update(ctx, customer); err != nil {
+		uc.logger.Error(ctx, "Failed to update customer", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
+
+	uc.logger.Info(ctx, "Customer updated successfully", map[string]interface{}{"customer_id": customer.ID})
+
+	budgetCount, _ := uc.repository.CountBudgetsByCustomer(ctx, customer.ID)
+
+	c.JSON(http.StatusOK, entities.CustomerResponse{Customer: customer, BudgetCount: int(budgetCount)})
+
+	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
+		OrganizationID: organizationID,
+		UserID:         helpers.GetUserID(c),
+		Action:         activityEntities.ActionUpdated,
+		EntityType:     activityEntities.EntityCustomer,
+		EntityID:       customer.ID.String(),
+		EntityName:     customer.Name,
+		Description:    "Customer updated: " + customer.Name,
+	})
+}
+
+// applyCustomerUpdate copies the non-nil fields of the request onto the entity.
+func applyCustomerUpdate(customer *entities.CustomerEntity, request *entities.UpdateCustomerRequest) {
 	if request.Name != nil {
 		customer.Name = *request.Name
 	}
@@ -140,40 +148,4 @@ func (uc *CustomerUseCase) Update(c *gin.Context) {
 	if request.IsActive != nil {
 		customer.IsActive = *request.IsActive
 	}
-
-	customer.UpdatedAt = time.Now()
-
-	// Save to repository
-	if err := uc.repository.Update(ctx, customer); err != nil {
-		uc.logger.Error(ctx, "Failed to update customer", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-		return
-	}
-
-	uc.logger.Info(ctx, "Customer updated successfully", map[string]interface{}{
-		"customer_id": customer.ID,
-	})
-
-	// Get budget count
-	budgetCount, _ := uc.repository.CountBudgetsByCustomer(ctx, customer.ID)
-
-	response := entities.CustomerResponse{
-		Customer:    customer,
-		BudgetCount: int(budgetCount),
-	}
-
-	c.JSON(http.StatusOK, response)
-
-	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
-		OrganizationID: organizationID,
-		UserID:         helpers.GetUserID(c),
-		Action:         activityEntities.ActionUpdated,
-		EntityType:     activityEntities.EntityCustomer,
-		EntityID:       customer.ID.String(),
-		EntityName:     customer.Name,
-		Description:    "Customer updated: " + customer.Name,
-	})
 }

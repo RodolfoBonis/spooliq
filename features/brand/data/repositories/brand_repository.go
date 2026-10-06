@@ -35,23 +35,40 @@ func (b *brandRepository) FindByID(id uuid.UUID, organizationID string) (*entiti
 	return &entity, nil
 }
 
-func (b *brandRepository) FindAll(organizationID string) ([]entities.BrandEntity, error) {
+// FindAll returns a page of brands scoped to the organization, filtered by an
+// optional case-insensitive name search and ordered by a pre-validated clause.
+func (b *brandRepository) FindAll(organizationID, search, order string, limit, offset int) ([]entities.BrandEntity, int64, error) {
+	query := b.db.Model(&models.BrandModel{}).
+		Where("organization_id = ?", organizationID)
+
+	if search != "" {
+		query = query.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if order == "" {
+		order = "name asc"
+	}
+
 	var brandsData []models.BrandModel
-	err := b.db.
-		Where("organization_id = ?", organizationID).
-		Order("name ASC").
-		Find(&brandsData).Error
-	if err != nil {
-		return nil, err
+	if err := query.
+		Order(order).
+		Limit(limit).
+		Offset(offset).
+		Find(&brandsData).Error; err != nil {
+		return nil, 0, err
 	}
 
 	brands := make([]entities.BrandEntity, 0, len(brandsData))
-
 	for _, brand := range brandsData {
 		brands = append(brands, brand.ToEntity())
 	}
 
-	return brands, nil
+	return brands, total, nil
 }
 
 func (b *brandRepository) Create(entity *entities.BrandEntity) error {
@@ -69,7 +86,7 @@ func (b *brandRepository) Create(entity *entities.BrandEntity) error {
 }
 
 func (b *brandRepository) Delete(id uuid.UUID) error {
-	return b.db.Model(models.BrandModel{}).Delete("id = ?", id).Error
+	return b.db.Delete(&models.BrandModel{}, "id = ?", id).Error
 }
 
 func (b *brandRepository) Update(entity *entities.BrandEntity) error {

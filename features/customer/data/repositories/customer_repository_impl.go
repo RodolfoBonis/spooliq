@@ -37,7 +37,7 @@ func (r *customerRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, org
 	if err := r.db.WithContext(ctx).
 		Where("id = ? AND organization_id = ?", id, organizationID).
 		First(model).Error; err != nil {
-		return nil, fmt.Errorf("customer not found: %w", err)
+		return nil, err
 	}
 
 	return model.ToEntity(), nil
@@ -65,47 +65,69 @@ func (r *customerRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-func (r *customerRepositoryImpl) FindAll(ctx context.Context, organizationID string, limit, offset int) ([]*entities.CustomerEntity, int, error) {
-	var customers []*models.CustomerModel
-	var total int64
+// FindAll returns a page of customers for the organization.
+func (r *customerRepositoryImpl) FindAll(ctx context.Context, organizationID, search, order string, limit, offset int) ([]*entities.CustomerEntity, int64, error) {
+	return r.list(ctx, organizationID, nil, search, order, limit, offset)
+}
 
+// SearchCustomers returns a page of customers matching the structured filters
+// and the free-text search.
+func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, organizationID string, filters map[string]interface{}, search, order string, limit, offset int) ([]*entities.CustomerEntity, int64, error) {
+	return r.list(ctx, organizationID, filters, search, order, limit, offset)
+}
+
+// list is the shared query builder behind FindAll and SearchCustomers. All
+// queries are organization-scoped. search is a broad case-insensitive term
+// matched against name/email/phone/document; filters add column-specific
+// clauses. order is trusted (whitelisted by the caller) and defaults to
+// newest-first.
+func (r *customerRepositoryImpl) list(ctx context.Context, organizationID string, filters map[string]interface{}, search, order string, limit, offset int) ([]*entities.CustomerEntity, int64, error) {
 	query := r.db.WithContext(ctx).
 		Model(&models.CustomerModel{}).
 		Where("organization_id = ?", organizationID)
 
-	// Get total count
+	if search != "" {
+		like := "%" + strings.ToLower(search) + "%"
+		query = query.Where(
+			"LOWER(name) LIKE ? OR LOWER(email) LIKE ? OR LOWER(phone) LIKE ? OR LOWER(document) LIKE ?",
+			like, like, like, like,
+		)
+	}
+
+	query = applyCustomerFilters(query, filters)
+
+	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count customers: %w", err)
 	}
 
-	// Get paginated results
+	if order == "" {
+		order = "created_at desc"
+	}
+
+	var customers []*models.CustomerModel
 	if err := query.
-		// For list views, we don't preload relationships to keep queries lightweight
+		Order(order).
 		Limit(limit).
 		Offset(offset).
-		Order("created_at DESC").
 		Find(&customers).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to find customers: %w", err)
 	}
 
-	// Convert to entities
-	entities := make([]*entities.CustomerEntity, len(customers))
+	result := make([]*entities.CustomerEntity, len(customers))
 	for i, model := range customers {
-		entities[i] = model.ToEntity()
+		result[i] = model.ToEntity()
 	}
 
-	return entities, int(total), nil
+	return result, total, nil
 }
 
-func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, organizationID string, filters map[string]interface{}, limit, offset int) ([]*entities.CustomerEntity, int, error) {
-	var customers []*models.CustomerModel
-	var total int64
-
-	query := r.db.WithContext(ctx).
-		Model(&models.CustomerModel{}).
-		Where("organization_id = ?", organizationID)
-
-	// Apply filters
+// applyCustomerFilters adds the column-specific WHERE clauses for the supported
+// structured filters.
+func applyCustomerFilters(query *gorm.DB, filters map[string]interface{}) *gorm.DB {
+	if filters == nil {
+		return query
+	}
 	if name, ok := filters["name"].(string); ok && name != "" {
 		query = query.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(name)+"%")
 	}
@@ -130,39 +152,7 @@ func (r *customerRepositoryImpl) SearchCustomers(ctx context.Context, organizati
 	if id, ok := filters["id"].(uuid.UUID); ok && id != uuid.Nil {
 		query = query.Where("id = ?", id)
 	}
-
-	// Apply sorting
-	sortBy := "created_at"
-	sortDir := "DESC"
-	if sort, ok := filters["sort_by"].(string); ok && sort != "" {
-		sortBy = sort
-	}
-	if dir, ok := filters["sort_dir"].(string); ok && strings.ToUpper(dir) == "ASC" {
-		sortDir = "ASC"
-	}
-
-	// Get total count
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to count customers: %w", err)
-	}
-
-	// Get paginated results
-	if err := query.
-		// For search/list views, we don't preload relationships to keep queries lightweight
-		Limit(limit).
-		Offset(offset).
-		Order(fmt.Sprintf("%s %s", sortBy, sortDir)).
-		Find(&customers).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to search customers: %w", err)
-	}
-
-	// Convert to entities
-	entities := make([]*entities.CustomerEntity, len(customers))
-	for i, model := range customers {
-		entities[i] = model.ToEntity()
-	}
-
-	return entities, int(total), nil
+	return query
 }
 
 func (r *customerRepositoryImpl) ExistsByEmail(ctx context.Context, email string, organizationID string, excludeID *uuid.UUID) (bool, error) {
@@ -243,4 +233,58 @@ func (r *customerRepositoryImpl) SumBudgetTotalsByCustomerAndStatus(ctx context.
 	}
 
 	return totalSum, nil
+}
+
+// GetBudgetStatsByCustomers computes the budget count and status-filtered total
+// for many customers in a single grouped query, avoiding the per-row N+1 the
+// list endpoints used to perform.
+func (r *customerRepositoryImpl) GetBudgetStatsByCustomers(ctx context.Context, customerIDs []uuid.UUID, totalStatuses []string) (map[uuid.UUID]entities.CustomerBudgetStats, error) {
+	result := make(map[uuid.UUID]entities.CustomerBudgetStats)
+
+	ids := make([]uuid.UUID, 0, len(customerIDs))
+	seen := make(map[uuid.UUID]struct{}, len(customerIDs))
+	for _, id := range customerIDs {
+		if id == uuid.Nil {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	var rows []struct {
+		CustomerID uuid.UUID `gorm:"column:customer_id"`
+		Count      int64     `gorm:"column:count"`
+		Total      int64     `gorm:"column:total"`
+	}
+
+	if err := r.db.WithContext(ctx).
+		Table("budgets").
+		Select(
+			"customer_id, COUNT(*) AS count, COALESCE(SUM(CASE WHEN status IN (?) THEN total_cost ELSE 0 END), 0) AS total",
+			totalStatuses,
+		).
+		Where("customer_id IN ?", ids).
+		Where("budgets.deleted_at IS NULL").
+		Group("customer_id").
+		Scan(&rows).Error; err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return result, nil
+		}
+		return nil, fmt.Errorf("failed to aggregate budget stats: %w", err)
+	}
+
+	for _, row := range rows {
+		result[row.CustomerID] = entities.CustomerBudgetStats{
+			Count: row.Count,
+			Total: row.Total,
+		}
+	}
+
+	return result, nil
 }

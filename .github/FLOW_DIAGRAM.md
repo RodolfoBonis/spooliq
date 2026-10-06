@@ -40,14 +40,7 @@
                     │    approval)             │
                     └──────────────────────────┘
                                    │
-                                   │ Automatic: staging deploy
-                                   ▼
-                    ┌──────────────────────────┐
-                    │   Staging Environment    │
-                    │   QA validates (2-4h)    │
-                    └──────────────────────────┘
-                                   │
-                                   │ Manual: Approve & Merge PR
+                                   │ Manual: Review, Approve & Merge PR (2-4h)
                                    ▼
                     ┌──────────────────────────┐
                     │   main branch updated    │
@@ -175,8 +168,7 @@ Developer/PM triggers prepare-release.yaml
 │                                                                     │
 │  Timeline:                                                          │
 │  - [x] Snapshot created & tag pushed                               │
-│  - [x] Staging deployment                                          │
-│  - [ ] QA validation (2-4h)                                        │
+│  - [ ] Release PR review (2-4h)                                    │
 │  - [ ] PR approval & merge                                         │
 │  - [ ] Production deployment (automatic)                           │
 │  - [ ] Backport to develop (automatic)                             │
@@ -184,14 +176,7 @@ Developer/PM triggers prepare-release.yaml
 │  Expected completion: 2025-01-18 18:00:00 UTC (8h)                │
 └────────────────────────────────────────────────────────────────────┘
                              │
-                             │ Step 9: Trigger staging
-                             ▼
-                ┌────────────────────────────┐
-                │  gh workflow run           │
-                │    release-staging.yaml    │
-                └────────────────────────────┘
-                             │
-                             │ Step 10: Notify team
+                             │ Step 9: Notify team
                              ▼
 ┌────────────────────────────────────────────────────────────────────┐
 │  📱 Telegram Notification                                          │
@@ -200,7 +185,6 @@ Developer/PM triggers prepare-release.yaml
 │                                                                     │
 │  ⚠️ FEATURE CUTOFF: New features → next release                   │
 │  ⏱️ Target: 8h                                                     │
-│  🧪 Staging: deploying                                             │
 │  📋 PR: https://github.com/.../pull/123                           │
 └────────────────────────────────────────────────────────────────────┘
 
@@ -223,83 +207,24 @@ MEANWHILE: notify-release-cutoff.yaml also triggered
 └────────────────────────────────────────────────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════════════
-T+0h to T+4h: STAGING DEPLOYMENT & QA (Parallel, 2-4h)
+T+0h to T+4h: RELEASE PR REVIEW (2-4h)
 ═══════════════════════════════════════════════════════════════════════════
 
-Staging deployment triggered automatically
-
-┌─────────────────────────────────────────────────────────────────┐
-│  release-staging.yaml (Auto-triggered on push)                  │
-│                                                                  │
-│  Condition:                                                      │
-│  ✅ Push to release/** branch                                   │
-│  ✅ NOT a backport commit (blocked!)                            │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             │ Step 1: Generate staging version
-                             ▼
-                ┌────────────────────────────┐
-                │  Branch: release/v2.2.0    │
-                │  Version: 2.2.0-rc.        │
-                │           1737204000       │
-                │  (timestamp suffix)        │
-                └────────────────────────────┘
-                             │
-                             │ Step 2: Build & Deploy
-                             ▼
-┌────────────────────────────────────────────────────────────────────┐
-│  Build Process:                                                    │
-│  1. Setup Go                                                       │
-│  2. Configure AWS/ECR                                             │
-│  3. Build Docker image                                            │
-│  4. Push to ECR: spooliq:2.2.0-rc.1737204000                     │
-│  5. Update K8s manifests (values-staging.yaml)                    │
-│  6. Sync ArgoCD to staging cluster                               │
-└────────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-                ┌────────────────────────────┐
-                │  🧪 Staging Environment    │
-                │     DEPLOYED               │
-                │                            │
-                │  URL: staging.example.com  │
-                │  Version: 2.2.0-rc.xxx     │
-                └────────────────────────────┘
-
-───────────────────────────────────────────────────────────────────────────
-
-QA Team starts validation
+Reviewer checks the release PR
 
 ┌────────────────────────────────────────────────────────────────────┐
-│  QA Validation Checklist                                           │
+│  Release Validation Checklist                                      │
 │                                                                     │
-│  Functionality:                                                     │
-│  ☐ All new features work                                          │
-│  ☐ No regressions in existing features                            │
-│  ☐ Error handling correct                                         │
-│                                                                     │
-│  Performance:                                                       │
-│  ☐ Page load times acceptable                                     │
-│  ☐ API response times normal                                      │
-│                                                                     │
-│  UI/UX:                                                            │
-│  ☐ Desktop rendering correct                                      │
-│  ☐ Mobile rendering correct                                       │
-│  ☐ No console errors                                              │
-│                                                                     │
-│  Integration:                                                       │
-│  ☐ External APIs functional                                       │
-│  ☐ Auth works correctly                                           │
-│                                                                     │
-│  Security:                                                          │
-│  ☐ No sensitive data exposed                                      │
-│  ☐ CORS configured                                                │
+│  ☐ CHANGELOG reviewed                                              │
+│  ☐ All CI checks passing                                           │
+│  ☐ Breaking changes documented (if any)                            │
+│  ☐ No sensitive data included                                      │
 └────────────────────────────────────────────────────────────────────┘
                              │
-                             │ After 2-4h of testing
+                             │ After review
                              ▼
                 ┌────────────────────────────┐
-                │  ✅ QA approves PR         │
+                │  ✅ Reviewer approves PR   │
                 │     on GitHub              │
                 └────────────────────────────┘
 
@@ -313,10 +238,9 @@ Developer/PM merges PR manually (NO auto-merge!)
 │  GitHub PR: "🚀 Release v2.2.0"                                    │
 │                                                                     │
 │  Checks:                                                            │
-│  ✅ QA approved                                                    │
+│  ✅ PR approved                                                    │
 │  ✅ CI passed                                                      │
 │  ✅ No merge conflicts                                             │
-│  ✅ Staging validated                                              │
 │                                                                     │
 │  ⚠️  This is a MANUAL step!                                        │
 │  Click "Merge pull request"                                        │
@@ -542,22 +466,6 @@ auto-merge.yaml detects backport PR
 │  • Ready for next release!                                         │
 └────────────────────────────────────────────────────────────────────┘
 
-───────────────────────────────────────────────────────────────────────────
-
-IMPORTANT: Backport does NOT trigger staging!
-
-┌────────────────────────────────────────────────────────────────────┐
-│  release-staging.yaml has this condition:                          │
-│                                                                     │
-│  if: |                                                             │
-│    !contains(github.event.head_commit.message, 'backport') &&     │
-│    !contains(github.event.head_commit.message, 'Backport')        │
-│                                                                     │
-│  Backport commit message contains "backport"                       │
-│  → Staging deployment BLOCKED ✅                                   │
-│  → No duplicate staging deploy!                                    │
-└────────────────────────────────────────────────────────────────────┘
-
 ═══════════════════════════════════════════════════════════════════════════
 T+6h to T+8h: POST-DEPLOYMENT (Monitoring & Verification)
 ═══════════════════════════════════════════════════════════════════════════
@@ -601,7 +509,7 @@ Team communication
 │                                                                     │
 │  Timeline:                                                          │
 │  T+0h: Release prepared                                            │
-│  T+4h: QA validated & merged                                       │
+│  T+4h: Reviewed & merged                                         │
 │  T+5h: Production deployed                                         │
 │  T+6h: Backport completed                                          │
 │                                                                     │
@@ -630,9 +538,6 @@ Final state:
 │  release/v2.2.0 branch:                                            │
 │  • Can be deleted (cleanup automatic)                              │
 │                                                                     │
-│  Staging:                                                           │
-│  • Still running 2.2.0-rc.xxx                                      │
-│  • Will update on next develop push                                │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -756,7 +661,7 @@ Result: ❌ Same release runs 3 times! Race conditions!
 Tag Creation:
 PR created (no tag yet)
      ↓
-QA validates
+PR reviewed
      ↓
 PR merged
      ↓
@@ -798,13 +703,13 @@ Tag pushed to GitHub
      ↓
 PR created (tag already exists!)
      ↓
-QA validates (can checkout tag directly)
+Reviewer can checkout tag directly
      ↓
 PR merged
      ↓
 release.yaml validates tag == version.txt
      ↓
-Result: ✅ Tag exists before QA even starts!
+Result: ✅ Tag exists before review even starts!
         ✅ Validation ensures consistency
 ```
 
@@ -825,7 +730,6 @@ Result: ✅ Tag exists before QA even starts!
 │  ✓ Push branch + tag                                             │
 │  ✓ Create labels                                                  │
 │  ✓ Create PR to main                                             │
-│  ✓ Trigger staging deployment                                    │
 │  ✓ Notify team (feature cutoff!)                                │
 └──────────────────────────────────────────────────────────────────┘
 
@@ -857,16 +761,6 @@ Result: ✅ Tag exists before QA even starts!
 │  ✗ Increment version                                             │
 │  ✗ Create tags                                                    │
 │  ✗ Have multiple triggers                                        │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│  release-staging.yaml (The Validator)                            │
-├──────────────────────────────────────────────────────────────────┤
-│  Responsibilities:                                                │
-│  ✓ Deploy to staging on develop/release/** push                 │
-│  ✓ Generate staging-specific version (rc.timestamp)             │
-│  ✓ BLOCK backport commits (no duplicate deploys)                │
-│  ✓ Provide QA environment                                        │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────┐
@@ -1033,7 +927,6 @@ T+0h: Release prepared
 │                                                                     │
 │  ⚠️  FEATURE CUTOFF: New features → next release                  │
 │  ⏱️  Target: 8h                                                    │
-│  🧪 Staging: deploying                                             │
 │  📋 PR: https://github.com/.../pull/123                           │
 └────────────────────────────────────────────────────────────────────┘
 

@@ -1,28 +1,35 @@
 package usecases
 
 import (
-	"fmt"
 	"net/http"
-	"strconv"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 )
 
-// FindAll retrieves all budgets with pagination
+// FindAll lists budgets for the organization with pagination, filtering and sorting.
 // @Summary List budgets
-// @Description Get all budgets with pagination
+// @Description List budgets (paginated). Supports free-text name search (q), and
+// @Description filtering by status, customer_id and a created_at range (from/to,
+// @Description YYYY-MM-DD or RFC3339, inclusive). Sortable by created_at, name,
+// @Description total_cost and status (default created_at desc).
 // @Tags budgets
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} entities.ListBudgetsResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets [get]
+// @Param page_size query int false "Page size (max 100)" default(20)
+// @Param q query string false "Free-text search on budget name (case-insensitive)"
+// @Param status query string false "Filter by status" Enums(draft, sent, approved, rejected, printing, completed)
+// @Param customer_id query string false "Filter by customer UUID"
+// @Param from query string false "Created-at lower bound (YYYY-MM-DD or RFC3339, inclusive)"
+// @Param to query string false "Created-at upper bound (YYYY-MM-DD or RFC3339, inclusive)"
+// @Param sort_by query string false "Sort field" Enums(created_at, name, total_cost, status) default(created_at)
+// @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(desc)
+// @Success 200 {object} helpers.Page[entities.BudgetResponse]
+// @Failure 400 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /budgets [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -30,135 +37,39 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
 
-	uc.logger.Info(ctx, "Budgets retrieval attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
+	listQuery := budgetListQuery(c)
 
-	// Parse pagination parameters
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
+	filters, apiErr := parseBudgetFilters(c, listQuery.Search)
+	if apiErr != nil {
+		coreErrors.Respond(c, apiErr)
+		return
 	}
 
-	offset := (page - 1) * pageSize
-
-	// Get budgets from repository
-	budgets, total, err := uc.budgetRepository.FindAll(ctx, organizationID, pageSize, offset)
+	budgets, total, err := uc.budgetRepository.SearchBudgets(ctx, organizationID, filters, listQuery.OrderClause(), listQuery.Limit(), listQuery.Offset())
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to retrieve budgets", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to retrieve budgets", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
-	// Build response
-	budgetResponses := make([]entities.BudgetResponse, len(budgets))
-	for i, budget := range budgets {
-		// Get customer info
-		customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
-
-		// Get items with filaments
-		items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
-		itemResponses := make([]entities.BudgetItemResponse, len(items))
-		var totalPrintMinutes int
-
-		for j, item := range items {
-			// Get filament usage info for this item
-			filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
-
-			// Calculate print time display
-			printTimeDisplay := ""
-			if item.PrintTimeHours > 0 {
-				printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
-			} else {
-				printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
-			}
-
-			// Sum total print time
-			totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
-
-			// Convert CostPresetID to string pointer
-			var costPresetIDStr *string
-			if item.CostPresetID != nil {
-				s := item.CostPresetID.String()
-				costPresetIDStr = &s
-			}
-
-			itemResponses[j] = entities.BudgetItemResponse{
-				ID:                      item.ID.String(),
-				BudgetID:                item.BudgetID.String(),
-				ProductName:             item.ProductName,
-				ProductDescription:      item.ProductDescription,
-				ProductQuantity:         item.ProductQuantity,
-				ProductDimensions:       item.ProductDimensions,
-				PrintTimeHours:          item.PrintTimeHours,
-				PrintTimeMinutes:        item.PrintTimeMinutes,
-				PrintTimeDisplay:        printTimeDisplay,
-				CostPresetID:            costPresetIDStr,
-				SetupTimeMinutes:        item.SetupTimeMinutes,
-				ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-				AdditionalNotes:         item.AdditionalNotes,
-				FilamentCost:            item.FilamentCost,
-				WasteCost:               item.WasteCost,
-				EnergyCost:              item.EnergyCost,
-				SetupCost:               item.SetupCost,
-				ManualLaborCost:         item.ManualLaborCost,
-				ItemTotalCost:           item.ItemTotalCost,
-				UnitPrice:               item.UnitPrice,
-				Filaments:               filaments,
-				Order:                   item.Order,
-				CreatedAt:               item.CreatedAt,
-				UpdatedAt:               item.UpdatedAt,
-			}
-		}
-
-		// Calculate total print time
-		totalHours := totalPrintMinutes / 60
-		totalMins := totalPrintMinutes % 60
-		totalPrintTimeDisplay := ""
-		if totalHours > 0 {
-			totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
-		} else {
-			totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
-		}
-
-		budgetResponses[i] = entities.BudgetResponse{
-			BudgetEntity:          budget,
-			Customer:              customerInfo,
-			Items:                 itemResponses,
-			TotalPrintTimeHours:   totalHours,
-			TotalPrintTimeMinutes: totalMins,
-			TotalPrintTimeDisplay: totalPrintTimeDisplay,
-		}
+	budgetResponses, err := uc.buildBudgetListResponses(ctx, budgets, organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to build budget list response", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
 	}
 
-	totalPages := (total + pageSize - 1) / pageSize
-
-	response := entities.ListBudgetsResponse{
-		Data:       budgetResponses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: totalPages,
-	}
+	page := helpers.NewPage(budgetResponses, int64(total), listQuery)
 
 	uc.logger.Info(ctx, "Budgets retrieved successfully", map[string]interface{}{
-		"count": len(budgets),
+		"count": len(budgetResponses),
 		"total": total,
-		"page":  page,
+		"page":  listQuery.Page,
 	})
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, page)
 }

@@ -1,10 +1,9 @@
 name: Notify Release Cutoff
 
 on:
+  # The `create` event does not support a `branches` filter, so we subscribe to
+  # all branch/tag creations and narrow down with the job-level `if` below.
   create:
-    branches:
-      - 'release/**'
-      - 'hotfix/**'
 
 permissions:
   contents: read
@@ -16,9 +15,9 @@ jobs:
     steps:
       - name: Extract version from branch
         id: extract-version
+        env:
+          BRANCH: ${{ github.event.ref }}
         run: |
-          BRANCH="${{ github.event.ref }}"
-
           # Remove release/ or hotfix/ prefix
           VERSION=${BRANCH#release/}
           VERSION=${VERSION#hotfix/}
@@ -32,11 +31,15 @@ jobs:
             URGENCY="critical"
           fi
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-          echo "urgency=$URGENCY" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "type=$TYPE"
+            echo "urgency=$URGENCY"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Notify team of feature cutoff
+        env:
+          BRANCH: ${{ github.event.ref }}
         run: |
           TYPE="${{ steps.extract-version.outputs.type }}"
           VERSION="${{ steps.extract-version.outputs.version }}"
@@ -45,7 +48,7 @@ jobs:
           if [ "$URGENCY" == "critical" ]; then
             MESSAGE=$(printf "HOTFIX %s created!\n\nCRITICAL: Production issue detected\nFEATURE CUTOFF ACTIVE\n\nNew features merged to develop will go to NEXT release.\nThis hotfix takes priority.\n\nPriority: CRITICAL\nTimeline: 1-2 hours\nPR will be created shortly" "$VERSION")
           else
-            MESSAGE=$(printf "Release %s created!\n\nSnapshot of develop taken\nFEATURE CUTOFF ACTIVE\n\nFeatures merged to develop AFTER this point will go to NEXT release.\n\nFeatures IN this release: Everything in develop NOW\nFeatures NOT in this release: Anything merged after this\n\nQuick Release Timeline: 2-8 hours\nStaging deployment: Will trigger automatically\nPR to main: Will be created shortly\n\nTip: Check the release PR for full changelog" "$VERSION")
+            MESSAGE=$(printf "Release %s created!\n\nSnapshot of develop taken\nFEATURE CUTOFF ACTIVE\n\nFeatures merged to develop AFTER this point will go to NEXT release.\n\nFeatures IN this release: Everything in develop NOW\nFeatures NOT in this release: Anything merged after this\n\nQuick Release Timeline: 2-8 hours\nPR to main: Will be created shortly\n\nTip: Check the release PR for full changelog" "$VERSION")
           fi
 
           MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)
@@ -57,7 +60,7 @@ jobs:
               \"event_type\": \"feature_cutoff_announced\",
               \"repository\": \"${{ github.repository }}\",
               \"version\": \"$VERSION\",
-              \"branch\": \"${{ github.event.ref }}\",
+              \"branch\": \"$BRANCH\",
               \"type\": \"$TYPE\",
               \"urgency\": \"$URGENCY\",
               \"actor\": \"${{ github.actor }}\",

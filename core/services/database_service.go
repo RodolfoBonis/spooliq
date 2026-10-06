@@ -20,6 +20,9 @@ import (
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	models3d "github.com/RodolfoBonis/spooliq/features/model3d/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
+	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
+	profiles "github.com/RodolfoBonis/spooliq/features/profile/data/models"
+	profileRepos "github.com/RodolfoBonis/spooliq/features/profile/data/repositories"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"gorm.io/driver/postgres"
@@ -301,9 +304,45 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING CUSTOMER MIGRATION: %s", err.Error()))
 	}
 
-	// 3D Models (FK: OrganizationID -> Companies, CustomerID -> Customers)
+	// 9.1. Models 3D (FK: OrganizationID -> Companies, CustomerID -> Customers SET NULL,
+	// OwnerUserID -> Users). Migrated right after customers so the customer FK below
+	// has both tables available.
 	if err := Connector.AutoMigrate(&models3d.Model3DModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING MODEL3D MIGRATION: %s", err.Error()))
+	}
+
+	// 9.2. models_3d.customer_id FK -> customers(id) ON DELETE SET NULL. FK creation
+	// is disabled during AutoMigrate (see newGormConfig), so add it here idempotently:
+	// only when both tables exist and the constraint is not already present. ON DELETE
+	// SET NULL detaches the customer from its models when the customer is deleted.
+	{
+		var customersExists, models3dExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'customers')").Scan(&customersExists)
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'models_3d')").Scan(&models3dExists)
+		if customersExists && models3dExists {
+			var fkExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'models_3d' AND constraint_name = 'fk_models_3d_customer'
+				)
+			`).Scan(&fkExists)
+			if !fkExists {
+				sql := `
+					ALTER TABLE models_3d
+					ADD CONSTRAINT fk_models_3d_customer
+					FOREIGN KEY (customer_id)
+					REFERENCES customers(id)
+					ON UPDATE CASCADE
+					ON DELETE SET NULL
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for models_3d.customer_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for models_3d.customer_id")
+				}
+			}
+		}
 	}
 
 	// ========================================
@@ -328,6 +367,22 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING COST_PRESET MIGRATION: %s", err.Error()))
 	}
 
+	// Enforce a single default preset per (organization, type): dedupe existing
+	// data then create the partial unique index. Safe and idempotent.
+	if err := presetRepos.MigrateDefaults(Connector); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRESET DEFAULT CONSTRAINT MIGRATION: %s", err.Error()))
+	}
+
+	// 13.1. Print Profiles (FK: OrganizationID -> Companies; references presets by id)
+	if err := Connector.AutoMigrate(&profiles.PrintProfileModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRINT_PROFILE MIGRATION: %s", err.Error()))
+	}
+
+	// Enforce a single default print profile per organization (dedupe + index).
+	if err := profileRepos.MigrateDefaults(Connector); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PRINT_PROFILE DEFAULT CONSTRAINT MIGRATION: %s", err.Error()))
+	}
+
 	// ========================================
 	// LEVEL 3 (continued): Payment Methods (depends on Companies only)
 	// ========================================
@@ -346,6 +401,40 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING BUDGET MIGRATION: %s", err.Error()))
 	}
 
+	// 15.1. Budgets.profile_id FK -> print_profiles (ON DELETE SET NULL). AutoMigrate
+	// adds the nullable profile_id column from the model; FK creation is disabled
+	// during AutoMigrate (see newGormConfig), so add it here, idempotently: only
+	// when the budgets table exists and the constraint is not already present. ON
+	// DELETE SET NULL means deleting a profile simply detaches it from past budgets.
+	{
+		var budgetsExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budgets')").Scan(&budgetsExists)
+		if budgetsExists {
+			var fkExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'budgets' AND constraint_name = 'fk_budgets_profile'
+				)
+			`).Scan(&fkExists)
+			if !fkExists {
+				sql := `
+					ALTER TABLE budgets
+					ADD CONSTRAINT fk_budgets_profile
+					FOREIGN KEY (profile_id)
+					REFERENCES print_profiles(id)
+					ON UPDATE CASCADE
+					ON DELETE SET NULL
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for budgets.profile_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for budgets.profile_id")
+				}
+			}
+		}
+	}
+
 	// 16. BudgetStatusHistory (FK: OrganizationID -> Companies, BudgetID -> Budgets) CASCADE
 	if err := Connector.AutoMigrate(&budgets.BudgetStatusHistoryModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING BUDGET_STATUS_HISTORY MIGRATION: %s", err.Error()))
@@ -359,6 +448,40 @@ func RunMigrations() {
 	// 18. BudgetItemFilaments (FK: OrganizationID -> Companies, BudgetItemID -> BudgetItems CASCADE, FilamentID)
 	if err := Connector.AutoMigrate(&budgets.BudgetItemFilamentModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_FILAMENT MIGRATION: %s", err.Error()))
+	}
+
+	// 17.1. budget_items.model_3d_id FK -> models_3d(id) ON DELETE SET NULL. Added
+	// here (after both budget_items and models_3d exist), idempotently: only when the
+	// constraint is not already present. Deleting a model simply detaches it from the
+	// budget items that referenced it.
+	{
+		var budgetItemsExists, models3dExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budget_items')").Scan(&budgetItemsExists)
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'models_3d')").Scan(&models3dExists)
+		if budgetItemsExists && models3dExists {
+			var fkExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'budget_items' AND constraint_name = 'fk_budget_items_model3d'
+				)
+			`).Scan(&fkExists)
+			if !fkExists {
+				sql := `
+					ALTER TABLE budget_items
+					ADD CONSTRAINT fk_budget_items_model3d
+					FOREIGN KEY (model_3d_id)
+					REFERENCES models_3d(id)
+					ON UPDATE CASCADE
+					ON DELETE SET NULL
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for budget_items.model_3d_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for budget_items.model_3d_id")
+				}
+			}
+		}
 	}
 
 	// ========================================
@@ -377,9 +500,10 @@ func RunMigrations() {
 
 	orgFKTables := map[string]bool{
 		"activities": true, "users": true, "brands": true, "materials": true, "filaments": true,
-		"customers": true, "presets": true, "budgets": true, "budget_items": true,
+		"customers": true, "models_3d": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
+		"print_profiles": true,
 	}
 
 	for table := range orgFKTables {
@@ -474,6 +598,12 @@ func RunMigrations() {
 		{
 			"idx_filaments_brand_material",
 			"CREATE INDEX IF NOT EXISTS idx_filaments_brand_material ON filaments(brand_id, material_id) WHERE deleted_at IS NULL",
+		},
+		{
+			// Dedup guard for 3D model uploads: one live row per (org, file_hash).
+			// Partial so soft-deleted rows don't block re-uploading the same content.
+			"uq_models_3d_org_file_hash",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_models_3d_org_file_hash ON models_3d(organization_id, file_hash) WHERE deleted_at IS NULL",
 		},
 	}
 

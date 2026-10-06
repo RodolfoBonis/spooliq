@@ -36,7 +36,7 @@ func (uc *GetStatsUseCase) Execute(ctx context.Context, userRoles []string) (*ad
 		uc.logger.Error(ctx, "Non-admin user attempted to get platform stats", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("Only PlatformAdmin can access platform stats")
+		return nil, errors.Forbidden("platform_admin_required", "Apenas administradores da plataforma podem acessar as estatísticas")
 	}
 
 	// Get all companies to calculate stats
@@ -45,7 +45,7 @@ func (uc *GetStatsUseCase) Execute(ctx context.Context, userRoles []string) (*ad
 		uc.logger.Error(ctx, "Failed to fetch companies for stats", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.InternalServerError("Failed to fetch platform stats")
+		return nil, err
 	}
 
 	// Calculate stats

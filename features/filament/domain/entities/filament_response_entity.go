@@ -14,21 +14,26 @@ type BrandInfo struct {
 	Description string `json:"description,omitempty"`
 }
 
-// MaterialInfo represents basic material information for responses
+// MaterialInfo represents basic material information for responses. The
+// temperature fields serialize as temp_table/temp_extruder WITHOUT omitempty so
+// a legitimate 0 °C is preserved rather than dropped.
 type MaterialInfo struct {
 	ID           string  `json:"id"`
 	Name         string  `json:"name"`
 	Description  string  `json:"description,omitempty"`
-	TempTable    float32 `json:"temp_table,omitempty"`
-	TempExtruder float32 `json:"temp_extruder,omitempty"`
+	TempTable    float32 `json:"temp_table"`
+	TempExtruder float32 `json:"temp_extruder"`
 }
 
-// FindAllFilamentsResponse represents the response for listing filaments with relations
+// FindAllFilamentsResponse is the paginated list envelope for filaments. It
+// mirrors helpers.Page[FilamentResponse] (the value actually returned by the
+// list/search handlers) and exists as a concrete, non-generic type so Swagger
+// can document the response.
 type FindAllFilamentsResponse struct {
 	Data       []FilamentResponse `json:"data"`
-	Total      int                `json:"total"`
+	Total      int64              `json:"total"`
 	Page       int                `json:"page"`
-	Limit      int                `json:"limit"`
+	PageSize   int                `json:"page_size"`
 	TotalPages int                `json:"total_pages"`
 }
 

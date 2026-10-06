@@ -8,9 +8,9 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/core/services"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -19,7 +19,6 @@ type CreateUserUseCase struct {
 	userRepository repositories.UserRepository
 	keycloakAdmin  services.IKeycloakAdminService
 	logger         logger.Logger
-	validate       *validator.Validate
 }
 
 // NewCreateUserUseCase creates a new instance of CreateUserUseCase
@@ -32,25 +31,10 @@ func NewCreateUserUseCase(
 		userRepository: userRepository,
 		keycloakAdmin:  keycloakAdmin,
 		logger:         logger,
-		validate:       validator.New(),
 	}
 }
 
 // Execute creates a new user
-// @Summary Create a new user
-// @Description Creates a new user within the organization (Owner and OrgAdmin only)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body entities.CreateUserRequest true "User creation request"
-// @Success 201 {object} entities.UserEntity "User created successfully"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 409 {object} map[string]string "User already exists"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users [post]
 func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string, userRoles []string, req *entities.CreateUserRequest) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Creating user", map[string]interface{}{
 		"organization_id": organizationID,
@@ -59,11 +43,11 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 	})
 
 	// 1. Validate request
-	if err := uc.validate.Struct(req); err != nil {
+	if err := validation.Validate(req); err != nil {
 		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.BadRequestError("Invalid request data")
+		return nil, err
 	}
 
 	// 2. Check permissions (only Owner or OrgAdmin can create users)
@@ -74,7 +58,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 		uc.logger.Error(ctx, "User does not have permission to create users", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("You do not have permission to create users")
+		return nil, errors.Forbidden("users_create_forbidden", "Você não tem permissão para criar usuários")
 	}
 
 	// 3. Check if email already exists
@@ -83,14 +67,14 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 		uc.logger.Error(ctx, "Failed to check existing user", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.InternalServerError("Failed to check existing user")
+		return nil, err
 	}
 
 	if existingUser != nil {
 		uc.logger.Error(ctx, "User with email already exists", map[string]interface{}{
 			"email": req.Email,
 		})
-		return nil, errors.ConflictError("User with this email already exists")
+		return nil, errors.Conflict("email_already_registered", "Usuário com este e-mail já existe")
 	}
 
 	// 4. Validate user type
@@ -98,7 +82,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 		uc.logger.Error(ctx, "Invalid user type", map[string]interface{}{
 			"user_type": req.UserType,
 		})
-		return nil, errors.BadRequestError("Invalid user type. Must be 'admin' or 'user'")
+		return nil, errors.BadRequest("invalid_user_type", "Tipo de usuário inválido. Deve ser 'admin' ou 'user'")
 	}
 
 	// 5. Create user in Keycloak
@@ -117,7 +101,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 			"error": appErr.Message,
 			"email": req.Email,
 		})
-		return nil, errors.ExternalServiceError("Failed to create user in Keycloak")
+		return nil, errors.ExternalServiceError("Falha ao criar usuário no provedor de identidade")
 	}
 
 	// 6. Set user password in Keycloak
@@ -128,7 +112,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 		})
 		// Try to clean up Keycloak user (best effort)
 		// Note: In production, consider implementing a cleanup job
-		return nil, errors.ExternalServiceError("Failed to set user password")
+		return nil, errors.ExternalServiceError("Falha ao definir a senha do usuário")
 	}
 
 	// 7. Assign role based on user type
@@ -176,7 +160,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string,
 		uc.logger.Error(ctx, "Failed to create user in database", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.InternalServerError("Failed to create user")
+		return nil, err
 	}
 
 	uc.logger.Info(ctx, "User created successfully", map[string]interface{}{

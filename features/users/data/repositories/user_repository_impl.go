@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	domainRepositories "github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
@@ -21,15 +22,31 @@ func NewUserRepository(db *gorm.DB) domainRepositories.UserRepository {
 }
 
 // FindAll retrieves all users for a given organization
-func (r *UserRepositoryImpl) FindAll(ctx context.Context, organizationID string) ([]*entities.UserEntity, error) {
-	var userModels []models.UserModel
-	err := r.db.WithContext(ctx).
-		Where("organization_id = ?", organizationID).
-		Order("created_at DESC").
-		Find(&userModels).Error
+func (r *UserRepositoryImpl) FindAll(ctx context.Context, organizationID string, q helpers.ListQuery) ([]*entities.UserEntity, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.WithContext(ctx).Model(&models.UserModel{}).Where("organization_id = ?", organizationID)
+		if q.Search != "" {
+			like := "%" + q.Search + "%"
+			query = query.Where("name ILIKE ? OR email ILIKE ?", like, like)
+		}
+		return query
+	}
 
-	if err != nil {
-		return nil, err
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build()
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	} else {
+		query = query.Order("created_at DESC")
+	}
+
+	var userModels []models.UserModel
+	if err := paginate(query, q).Find(&userModels).Error; err != nil {
+		return nil, 0, err
 	}
 
 	users := make([]*entities.UserEntity, len(userModels))
@@ -37,7 +54,7 @@ func (r *UserRepositoryImpl) FindAll(ctx context.Context, organizationID string)
 		users[i] = model.ToEntity()
 	}
 
-	return users, nil
+	return users, total, nil
 }
 
 // FindByID retrieves a user by ID and organization
@@ -129,4 +146,15 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organizat
 	return r.db.WithContext(ctx).
 		Where("id = ? AND organization_id = ?", id, organizationID).
 		Delete(&models.UserModel{}).Error
+}
+
+// paginate applies the page's offset and limit to a query. A non-positive limit
+// (e.g. a zero-value ListQuery used in tests) means "no limit" instead of gorm's
+// literal LIMIT 0, which would return no rows.
+func paginate(db *gorm.DB, q helpers.ListQuery) *gorm.DB {
+	db = db.Offset(q.Offset())
+	if q.Limit() > 0 {
+		db = db.Limit(q.Limit())
+	}
+	return db
 }

@@ -3,12 +3,11 @@ package company
 import (
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/usecases"
-	subscriptionUsecases "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/gin-gonic/gin"
 )
 
 // Routes registers all company routes
-func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUseCase usecases.IBrandingUseCase, paymentMethodUseCase *subscriptionUsecases.PaymentMethodUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUseCase usecases.IBrandingUseCase, subscriptionPaymentsUseCase usecases.ISubscriptionPaymentsUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	companyRoutes := route.Group("/company")
 	{
 		// Platform Admin can create companies
@@ -29,7 +28,7 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICompanyUseCase, brandingUs
 		companyRoutes.GET("/branding/templates", protectFactory(brandingUseCase.ListTemplates, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 
 		// Subscription endpoints
-		// Owner can view payment history
-		companyRoutes.GET("/subscription/payments", protectFactory(paymentMethodUseCase.ListPaymentMethods, roles.OwnerRole))
+		// Owner can view the organization's subscription payment history.
+		companyRoutes.GET("/subscription/payments", protectFactory(subscriptionPaymentsUseCase.ListMyPayments, roles.OwnerRole))
 	}
 }

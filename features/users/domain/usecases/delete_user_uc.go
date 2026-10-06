@@ -28,20 +28,6 @@ func NewDeleteUserUseCase(
 }
 
 // Execute deletes a user
-// @Summary Delete user
-// @Description Deletes a user (Owner can delete anyone except self, OrgAdmin can delete users only)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "User ID (UUID)"
-// @Success 204 "User deleted successfully"
-// @Failure 400 {object} map[string]string "Invalid user ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/users/{id} [delete]
 func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string) error {
 	uc.logger.Info(ctx, "Deleting user", map[string]interface{}{
 		"user_id":         userID,
@@ -56,7 +42,7 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 		uc.logger.Error(ctx, "User does not have permission to delete users", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return errors.ForbiddenError("You do not have permission to delete users")
+		return errors.Forbidden("users_delete_forbidden", "Você não tem permissão para excluir usuários")
 	}
 
 	// 2. Fetch the user to be deleted
@@ -66,21 +52,21 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 			"error":   err.Error(),
 			"user_id": userID,
 		})
-		return errors.InternalServerError("Failed to fetch user")
+		return err
 	}
 
 	if targetUser == nil {
 		uc.logger.Info(ctx, "User not found", map[string]interface{}{
 			"user_id": userID,
 		})
-		return errors.NotFound("User not found")
+		return errors.NotFoundErr("user_not_found", "Usuário não encontrado")
 	}
 
 	// 3. Check hierarchical permissions
 	// Owner cannot delete self
 	if isOwner && targetUser.ID.String() == currentUserID {
 		uc.logger.Error(ctx, "Owner cannot delete self", nil)
-		return errors.ForbiddenError("You cannot delete your own user account")
+		return errors.Forbidden("owner_cannot_delete_self", "Você não pode excluir a sua própria conta de usuário")
 	}
 
 	// Owner cannot be deleted by anyone (including platform admins - this is org-level deletion)
@@ -88,7 +74,7 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 		uc.logger.Error(ctx, "Cannot delete owner user", map[string]interface{}{
 			"target_user_id": targetUser.ID,
 		})
-		return errors.ForbiddenError("Owner user cannot be deleted")
+		return errors.Forbidden("owner_cannot_be_deleted", "O usuário proprietário não pode ser excluído")
 	}
 
 	// OrgAdmin can only delete 'user' type users (not admins)
@@ -97,7 +83,7 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 			uc.logger.Error(ctx, "OrgAdmin cannot delete admin users", map[string]interface{}{
 				"target_user_type": targetUser.UserType,
 			})
-			return errors.ForbiddenError("You can only delete regular users")
+			return errors.Forbidden("org_admin_users_only", "Você só pode excluir usuários comuns")
 		}
 	}
 
@@ -107,7 +93,7 @@ func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 			"error":   err.Error(),
 			"user_id": userID,
 		})
-		return errors.InternalServerError("Failed to delete user")
+		return err
 	}
 
 	uc.logger.Info(ctx, "User deleted successfully", map[string]interface{}{

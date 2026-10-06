@@ -14,7 +14,7 @@
 2. [Regular Release (from develop)](#regular-release-from-develop)
 3. [Hotfix Release (from main)](#hotfix-release-from-main)
 4. [Understanding Feature Cutoff](#understanding-feature-cutoff)
-5. [QA Validation Checklist](#qa-validation-checklist)
+5. [Release Validation Checklist](#release-validation-checklist)
 6. [Post-Release](#post-release)
 7. [Rollback Procedure](#rollback-procedure)
 8. [Troubleshooting](#troubleshooting)
@@ -29,7 +29,6 @@ Before creating any release:
 - [ ] CI is green on `develop` branch
 - [ ] No known critical bugs in `develop`
 - [ ] Team is aware a release is planned
-- [ ] Staging environment is healthy
 
 ---
 
@@ -56,7 +55,6 @@ Before creating any release:
    ✅ Git tag created: vX.X.X
    ✅ Branch and tag pushed to GitHub
    ✅ PR created to main branch
-   ✅ Staging deployment triggered
    ✅ Team notified via Telegram
    ⚠️  FEATURE CUTOFF announced
    ```
@@ -85,32 +83,21 @@ Before creating any release:
 Next features will go to v2.2.0
 
 📋 PR: [link]
-🧪 Staging: [link]
 ⏱️ Target prod: 8h from now
 ```
 
-### Step 3: QA Validation (2-4 hours)
+### Step 3: Release PR Review (2-4 hours)
 
-**QA Team Responsibilities:**
+**Reviewer Responsibilities:**
 
-1. **Access Staging Environment**
-   - URL: Check deployment logs or team channel
-   - Version: Verify shows `vX.X.X-rc.TIMESTAMP`
-
-2. **Test New Features**
+1. **Review the Changes**
    - Check CHANGELOG in PR for list of changes
-   - Test each new feature mentioned
-   - Verify existing features still work
+   - Review each change mentioned
+   - Verify CI is green
 
-3. **Regression Testing**
-   - Core user flows (auth, main features)
-   - API endpoints (if applicable)
-   - Mobile responsiveness
-   - Performance check
+2. **Validation Checklist** (see section below)
 
-4. **Validation Checklist** (see section below)
-
-5. **Approval**
+3. **Approval**
    - If all checks pass: Approve the PR on GitHub
    - If issues found: Comment on PR, request fixes
 
@@ -119,10 +106,9 @@ Next features will go to v2.2.0
 **⚠️ Important:** This is a manual step to ensure conscious deployment!
 
 1. **Final Checks**
-   - [ ] QA approved the PR
+   - [ ] Release PR approved
    - [ ] All CI checks passed (green checkmarks)
    - [ ] No merge conflicts
-   - [ ] Staging is stable
 
 2. **Merge PR**
    - Go to the release PR
@@ -310,7 +296,7 @@ Monday 11:00 AM   🚀 Release v2.1.0 created
 
 Monday 12:00 PM   Dev3 merges feature C to develop  ← Goes to v2.2.0!
 
-Monday 3:00 PM    QA validates staging (A + B, not C)
+Monday 3:00 PM    PR reviewed (A + B, not C)
 Monday 4:00 PM    PR approved and merged
 Monday 5:00 PM    Production deployed (A + B, not C)
 Monday 6:00 PM    Backport merged, develop ready for next
@@ -344,15 +330,15 @@ git checkout release/vX.X.X
 git cherry-pick <commit-hash>
 git push
 ```
-⚠️ Requires re-QA of the modified release!
+⚠️ Requires re-review of the modified release!
 
 ---
 
-## QA Validation Checklist
+## Release Validation Checklist
 
 ### Pre-Deployment Checklist
 
-Use this checklist when validating in staging:
+Use this checklist when reviewing the release PR:
 
 #### Functionality
 - [ ] All new features work as expected
@@ -539,18 +525,6 @@ After production deployment:
    ```
 2. Or increment version number if tag is correct
 
-### Staging Deployment Not Triggered
-
-**Symptom:** Staging not deployed after release branch created
-
-**Check:**
-1. Workflow run status in Actions tab
-2. Branch naming: must be `release/vX.X.X`
-3. Not a backport (those are blocked)
-
-**Fix:**
-- Manually trigger: Actions → "Release Staging" → "Run workflow"
-
 ### Version Validation Failed
 
 **Symptom:** "Tag version doesn't match version.txt"
@@ -629,7 +603,7 @@ After production deployment:
    - Share delays immediately
 
 4. **Monitor Everything**
-   - Staging before production
+   - Release PR review before production
    - Production after deployment
    - Metrics always
 

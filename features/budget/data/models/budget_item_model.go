@@ -41,6 +41,9 @@ type BudgetItemModel struct {
 	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id,omitempty"`
 	AdditionalNotes *string    `gorm:"type:text" json:"additional_notes,omitempty"`
 
+	// Optional link to a 3D model (FK: models_3d(id) ON DELETE SET NULL)
+	Model3DID *uuid.UUID `gorm:"column:model_3d_id;type:uuid;index" json:"model_3d_id,omitempty"`
+
 	// Calculated costs per item
 	FilamentCost    int64 `gorm:"type:bigint;default:0" json:"filament_cost"`     // cents
 	WasteCost       int64 `gorm:"type:bigint;default:0" json:"waste_cost"`        // cents
@@ -94,6 +97,7 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		ManualLaborMinutesTotal: bi.ManualLaborMinutesTotal,
 		CostPresetID:            bi.CostPresetID,
 		AdditionalNotes:         bi.AdditionalNotes,
+		Model3DID:               bi.Model3DID,
 		FilamentCost:            bi.FilamentCost,
 		WasteCost:               bi.WasteCost,
 		EnergyCost:              bi.EnergyCost,
@@ -124,6 +128,7 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ManualLaborMinutesTotal = entity.ManualLaborMinutesTotal
 	bi.CostPresetID = entity.CostPresetID
 	bi.AdditionalNotes = entity.AdditionalNotes
+	bi.Model3DID = entity.Model3DID
 	bi.FilamentCost = entity.FilamentCost
 	bi.WasteCost = entity.WasteCost
 	bi.EnergyCost = entity.EnergyCost

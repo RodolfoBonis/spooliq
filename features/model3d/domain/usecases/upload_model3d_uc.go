@@ -3,14 +3,17 @@ package usecases
 import (
 	"bytes"
 	"crypto/sha256"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
 
-	"github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/database"
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -19,6 +22,12 @@ import (
 
 const maxFileSize = 50 * 1024 * 1024 // 50MB
 
+// uploadBodyLimit caps the whole request body (file + multipart/metadata overhead)
+// so an oversized upload is rejected while streaming, before anything is buffered
+// in memory. The slack covers the multipart envelope and the small text fields. It
+// is a var (not const) only so tests can shrink it.
+var uploadBodyLimit int64 = maxFileSize + (1 << 20) // 50MB + 1MB slack
+
 var allowedExtensions = map[string]bool{
 	".stl": true,
 	".3mf": true,
@@ -26,9 +35,8 @@ var allowedExtensions = map[string]bool{
 
 // Upload handles the multipart upload of a 3D model file.
 // @Summary Upload 3D Model
-// Schemes
 // @Description Upload a new 3D model file (STL or 3MF) with metadata
-// @Tags 3D Models
+// @Tags models3d
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "3D model file (.stl or .3mf, max 50MB)"
@@ -38,231 +46,177 @@ var allowedExtensions = map[string]bool{
 // @Param notes formData string false "Notes"
 // @Param tags formData string false "Tags"
 // @Success 201 {object} entities.Model3DEntity "Successfully uploaded 3D model"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 409 {object} object "Duplicate file already exists"
-// @Failure 500 {object} errors.HTTPError
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 409 {object} entities.DuplicateModel3DResponse "Duplicate file already exists"
+// @Failure 413 {object} errors.APIError "File too large"
+// @Failure 500 {object} errors.APIError
 // @Router /models3d [post]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *Model3DUseCase) Upload(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, errOrganizationRequired())
 		return
 	}
-
 	userID := helpers.GetUserID(c)
 
-	// Parse multipart file
+	// Enforce the size limit while STREAMING, before the body is buffered, so an
+	// oversized upload can never exhaust memory. MaxBytesReader makes the reader
+	// return an error once the cap is exceeded, which surfaces from FormFile below.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, uploadBodyLimit)
+
+	// File part is required.
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to read uploaded file", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := errors.UsecaseError("File is required")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		if isRequestTooLarge(err) {
+			coreErrors.Respond(c, errFileTooLarge())
+			return
+		}
+		coreErrors.Respond(c, errFileRequired())
 		return
 	}
 
-	// Validate file extension
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 	if !allowedExtensions[ext] {
-		appError := errors.UsecaseError("Unsupported file format. Only .stl and .3mf are allowed")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		coreErrors.Respond(c, errUnsupportedFileFormat())
 		return
 	}
 
-	// Validate file size
 	if fileHeader.Size > maxFileSize {
-		appError := errors.UsecaseError("File size exceeds the 50MB limit")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		coreErrors.Respond(c, errFileTooLarge())
 		return
 	}
 
-	// Read form fields
-	name := strings.TrimSpace(c.PostForm("name"))
-	if name == "" {
-		appError := errors.UsecaseError("Name is required")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	// Bind the multipart form metadata and validate it with the shared validator.
+	var request entities.CreateModel3DRequest
+	if err := c.ShouldBind(&request); err != nil {
+		if isRequestTooLarge(err) {
+			coreErrors.Respond(c, errFileTooLarge())
+			return
+		}
+		coreErrors.Respond(c, err)
 		return
 	}
-	if len(name) > 255 {
-		appError := errors.UsecaseError("Name must not exceed 255 characters")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-
-	if len(fileHeader.Filename) > 255 {
-		appError := errors.UsecaseError("File name must not exceed 255 characters")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	if err := validation.Validate(request); err != nil {
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	description := c.PostForm("description")
-	if len(description) > 2000 {
-		appError := errors.UsecaseError("Description must not exceed 2000 characters")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-
-	customerIDStr := c.PostForm("customer_id")
-	tags := c.PostForm("tags")
-	if len(tags) > 1000 {
-		appError := errors.UsecaseError("Tags must not exceed 1000 characters")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-
-	notes := c.PostForm("notes")
-	if len(notes) > 2000 {
-		appError := errors.UsecaseError("Notes must not exceed 2000 characters")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-
-	// Open the file and read its content
-	file, err := fileHeader.Open()
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to open uploaded file", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := errors.UsecaseError("Failed to process uploaded file")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-	defer file.Close()
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, file); err != nil {
-		uc.logger.Error(ctx, "Failed to read file content", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := errors.UsecaseError("Failed to read uploaded file")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-	fileBytes := buf.Bytes()
-
-	// Compute SHA-256 hash
-	hash := fmt.Sprintf("%x", sha256.Sum256(fileBytes))
-
-	// Dedup: check if a model with the same hash already exists
-	existing, err := uc.repository.FindByHash(hash, organizationID)
-	if err != nil {
-		uc.logger.Error(ctx, "Failed to check file hash", map[string]interface{}{
-			"error": err.Error(),
-		})
-		httpError := errors.NewHTTPError(http.StatusInternalServerError, "Failed to check for duplicate file")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-	if existing != nil {
-		c.JSON(http.StatusConflict, gin.H{
-			"error":    "A file with the same content already exists",
-			"existing": existing,
-		})
-		return
-	}
-
-	// Parse customer_id if provided
+	// Resolve and validate the optional customer reference against the org.
 	var customerID *uuid.UUID
-	if customerIDStr != "" {
-		parsed, err := uuid.Parse(customerIDStr)
+	if request.CustomerID != nil && *request.CustomerID != "" {
+		parsed, err := uuid.Parse(*request.CustomerID)
 		if err != nil {
-			appError := errors.UsecaseError("Invalid customer_id format")
-			httpError := appError.ToHTTPError()
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+			coreErrors.Respond(c, errInvalidCustomerID())
+			return
+		}
+		exists, err := uc.repository.CustomerExists(ctx, parsed, organizationID)
+		if err != nil {
+			uc.logger.Error(ctx, "Failed to validate customer", map[string]interface{}{"error": err.Error()})
+			coreErrors.Respond(c, err)
+			return
+		}
+		if !exists {
+			coreErrors.Respond(c, errCustomerNotFound())
 			return
 		}
 		customerID = &parsed
 	}
 
-	// Generate unique filename and upload to CDN
+	// Read the file content once; it is needed for hashing, upload and thumbnailing.
+	file, err := fileHeader.Open()
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to open uploaded file", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		if isRequestTooLarge(err) {
+			coreErrors.Respond(c, errFileTooLarge())
+			return
+		}
+		uc.logger.Error(ctx, "Failed to read file content", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
+		return
+	}
+	fileBytes := buf.Bytes()
+
+	hash := fmt.Sprintf("%x", sha256.Sum256(fileBytes))
+
+	// Dedup: reject when a model with the same hash already exists in the org.
+	existing, err := uc.repository.FindByHash(ctx, hash, organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to check file hash", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
+		return
+	}
+	if existing != nil {
+		respondDuplicate(c, existing)
+		return
+	}
+
+	// Upload the file to the CDN under a unique key.
 	uniqueID := uuid.New().String()
 	filename := uniqueID + ext
 	fileURL, err := uc.cdnService.UploadFile(ctx, bytes.NewReader(fileBytes), filename, "models3d")
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to upload file to CDN", map[string]interface{}{
-			"error": err.Error(),
-		})
-		httpError := errors.NewHTTPError(http.StatusInternalServerError, "Failed to upload file")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to upload file to CDN", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
 
-	// Generate thumbnail (non-blocking on failure)
+	// Generate a thumbnail best-effort; it is self-contained (timeout, panic-safe,
+	// concurrency-bounded) and returns nil on any problem, never blocking the upload.
 	var thumbnailURL *string
-	thumbReader, err := uc.thumbnailService.Generate(bytes.NewReader(fileBytes), ext)
-	if err != nil {
-		uc.logger.Warning(ctx, "Thumbnail generation failed", map[string]interface{}{
-			"error":    err.Error(),
-			"filename": fileHeader.Filename,
-		})
-	}
-	if thumbReader != nil {
+	if thumbReader := uc.thumbnailService.Generate(ctx, bytes.NewReader(fileBytes), ext); thumbReader != nil {
 		thumbFilename := uniqueID + ".png"
-		thumbURL, err := uc.cdnService.UploadFile(ctx, thumbReader, thumbFilename, "models3d_thumbs")
-		if err != nil {
-			uc.logger.Warning(ctx, "Thumbnail upload failed", map[string]interface{}{
-				"error": err.Error(),
-			})
+		if thumbURL, err := uc.cdnService.UploadFile(ctx, thumbReader, thumbFilename, "models3d_thumbs"); err != nil {
+			uc.logger.Warning(ctx, "Thumbnail upload failed", map[string]interface{}{"error": err.Error()})
 		} else {
 			thumbnailURL = &thumbURL
 		}
 	}
 
-	// Build optional string pointers
-	var tagsPtr, notesPtr *string
-	if tags != "" {
-		tagsPtr = &tags
-	}
-	if notes != "" {
-		notesPtr = &notes
-	}
-
 	model := &entities.Model3DEntity{
 		OrganizationID: organizationID,
 		CustomerID:     customerID,
-		Name:           name,
-		Description:    description,
-		FileName:       fileHeader.Filename,
+		Name:           request.Name,
+		Description:    request.Description,
+		FileName:       sanitizeFileName(fileHeader.Filename),
 		FileURL:        fileURL,
 		FileFormat:     ext,
 		FileSizeBytes:  fileHeader.Size,
 		FileHash:       hash,
 		ThumbnailURL:   thumbnailURL,
-		Notes:          notesPtr,
-		Tags:           tagsPtr,
+		Notes:          request.Notes,
+		Tags:           request.Tags,
 		OwnerUserID:    userID,
 	}
 
-	if err := uc.repository.Create(model); err != nil {
-		uc.logger.Error(ctx, "Failed to save 3D model", map[string]interface{}{
-			"error": err.Error(),
-		})
-		httpError := errors.NewHTTPError(http.StatusInternalServerError, "Failed to save 3D model")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	if err := uc.repository.Create(ctx, model); err != nil {
+		// A concurrent upload of the same content can race past the FindByHash
+		// check and trip the (organization_id, file_hash) partial unique index.
+		// Map that to the same 409 by re-reading the now-present row.
+		if database.IsUniqueViolation(err) {
+			if dup, derr := uc.repository.FindByHash(ctx, hash, organizationID); derr == nil && dup != nil {
+				respondDuplicate(c, dup)
+				return
+			}
+		}
+		uc.logger.Error(ctx, "Failed to save 3D model", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
 
-	uc.logger.Info(ctx, "3D model uploaded successfully", map[string]interface{}{
-		"model_id":   model.ID,
-		"model_name": model.Name,
-	})
+	uc.logger.Info(ctx, "3D model uploaded successfully", map[string]interface{}{"model_id": model.ID, "model_name": model.Name})
 
 	c.JSON(http.StatusCreated, model)
 
@@ -275,4 +229,41 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 		EntityName:     model.Name,
 		Description:    "3D Model created: " + model.Name,
 	})
+}
+
+// isRequestTooLarge reports whether err is (or wraps) the MaxBytesReader limit
+// error. Go returns a typed *http.MaxBytesError, but multipart parsing may wrap it
+// as a plain message, so we also match the well-known string.
+func isRequestTooLarge(err error) bool {
+	if err == nil {
+		return false
+	}
+	var maxErr *http.MaxBytesError
+	if stderrors.As(err, &maxErr) {
+		return true
+	}
+	return strings.Contains(err.Error(), "http: request body too large")
+}
+
+// sanitizeFileName makes a user-supplied file name safe to echo back in a
+// Content-Disposition header and to store: it strips any path, control characters,
+// quotes and backslashes, and trims surrounding whitespace, while keeping the
+// extension. Empty results fall back to a generic name.
+func sanitizeFileName(name string) string {
+	name = filepath.Base(name)
+	name = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f { // control chars (incl. CR/LF/TAB)
+			return -1
+		}
+		switch r {
+		case '"', '\\', '/':
+			return -1
+		}
+		return r
+	}, name)
+	name = strings.TrimSpace(name)
+	if name == "" || name == "." || name == ".." {
+		return "model"
+	}
+	return name
 }

@@ -5,75 +5,67 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
 	"github.com/gin-gonic/gin"
 )
 
-// Search searches for customers with filters
+// Search searches for customers with structured filters plus free-text search,
+// pagination and whitelisted sorting.
 // @Summary Search customers
-// @Description Search customers with various filters
+// @Description Search customers with filters, pagination and sorting.
 // @Tags customers
 // @Accept json
 // @Produce json
-// @Param name query string false "Customer name"
-// @Param email query string false "Customer email"
-// @Param phone query string false "Customer phone"
-// @Param document query string false "Customer document (CPF/CNPJ)"
-// @Param city query string false "Customer city"
-// @Param state query string false "Customer state"
-// @Param is_active query boolean false "Active status"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(10)
-// @Param sort_by query string false "Sort by field" Enums(name, email, created_at) default(created_at)
+// @Param q query string false "Case-insensitive search on name/email/phone/document"
+// @Param name query string false "Filter by name (partial, case-insensitive)"
+// @Param email query string false "Filter by email (partial, case-insensitive)"
+// @Param phone query string false "Filter by phone (partial)"
+// @Param document query string false "Filter by document/CPF/CNPJ (partial)"
+// @Param city query string false "Filter by city (partial, case-insensitive)"
+// @Param state query string false "Filter by state (partial, case-insensitive)"
+// @Param is_active query boolean false "Filter by active status"
+// @Param page query int false "Page number (1-based)" default(1)
+// @Param page_size query int false "Items per page (max 100)" default(20)
+// @Param sort_by query string false "Sort field" Enums(name, email, created_at) default(created_at)
 // @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(desc)
 // @Success 200 {object} entities.ListCustomersResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /v1/customers/search [get]
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
+// @Router /customers/search [get]
 // @Security BearerAuth
 func (uc *CustomerUseCase) Search(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	uc.logger.Info(ctx, "Customer search attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
-
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		appError := coreErrors.UsecaseError("Organization ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
 	var request entities.SearchCustomerRequest
 	if err := c.ShouldBindQuery(&request); err != nil {
-		uc.logger.Error(ctx, "Failed to bind query parameters", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid query parameters")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to bind query parameters", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
+	// Enforce the sort_by/sort_dir enums (and any other validate tags).
+	if err := validation.Validate(request); err != nil {
+		uc.logger.Error(ctx, "Invalid customer search parameters", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Set defaults
-	if request.Page < 1 {
-		request.Page = 1
-	}
-	if request.PageSize < 1 || request.PageSize > 100 {
-		request.PageSize = 10
-	}
-	if request.SortBy == "" {
-		request.SortBy = "created_at"
-	}
-	if request.SortDir == "" {
-		request.SortDir = "desc"
-	}
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{
+		DefaultPageSize: 20,
+		SortWhitelist:   customerSortWhitelist,
+		DefaultSort:     "created_at",
+		TieBreaker:      "id",
+	})
 
-	offset := (request.Page - 1) * request.PageSize
-
-	// Build filters map
+	// Build structured filters from the bound request.
 	filters := make(map[string]interface{})
 	if request.Name != "" {
 		filters["name"] = request.Name
@@ -99,46 +91,17 @@ func (uc *CustomerUseCase) Search(c *gin.Context) {
 	if request.IDFilter != nil {
 		filters["id"] = *request.IDFilter
 	}
-	filters["sort_by"] = request.SortBy
-	filters["sort_dir"] = request.SortDir
 
-	// Search customers
-	customers, total, err := uc.repository.SearchCustomers(ctx, organizationID, filters, request.PageSize, offset)
+	customers, total, err := uc.repository.SearchCustomers(ctx, organizationID, filters, q.Search, q.OrderClause(), q.Limit(), q.Offset())
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to search customers", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to search customers", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Build response
-	customerResponses := make([]entities.CustomerResponse, len(customers))
-	for i, customer := range customers {
-		// Get budget count for each customer
-		budgetCount, _ := uc.repository.CountBudgetsByCustomer(ctx, customer.ID)
-		customerResponses[i] = entities.CustomerResponse{
-			Customer:    customer,
-			BudgetCount: int(budgetCount),
-		}
-	}
+	responses := uc.buildCustomerResponses(ctx, customers)
 
-	totalPages := (total + request.PageSize - 1) / request.PageSize
+	uc.logger.Info(ctx, "Customer search completed successfully", map[string]interface{}{"count": len(responses), "total": total})
 
-	response := entities.ListCustomersResponse{
-		Data:       customerResponses,
-		Total:      total,
-		Page:       request.Page,
-		PageSize:   request.PageSize,
-		TotalPages: totalPages,
-	}
-
-	uc.logger.Info(ctx, "Customer search completed successfully", map[string]interface{}{
-		"count": len(customers),
-		"total": total,
-		"page":  request.Page,
-	})
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, helpers.NewPage(responses, total, q))
 }

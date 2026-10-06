@@ -28,11 +28,16 @@ type BudgetItemRequest struct {
 	// Filaments used in this item (1:N relationship)
 	Filaments []BudgetItemFilamentRequest `json:"filaments" validate:"required,min=1,dive"`
 
-	// Optional: specific cost preset for this item
+	// Optional: specific cost preset for this item. When omitted, the budget-level
+	// cost preset (resolved from the request/profile/org defaults) is used for this
+	// item's setup/labor rates — see the pricing input mapping.
 	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
 	// Optional: notes specific to this item
 	AdditionalNotes *string `json:"additional_notes,omitempty" validate:"omitempty,max=500"`
+
+	// Optional: link this item to a 3D model (must belong to the organization)
+	Model3DID *uuid.UUID `json:"model_3d_id,omitempty"`
 
 	// Order in the budget
 	Order int `json:"order" validate:"gte=0"`
@@ -44,9 +49,17 @@ type CreateBudgetRequest struct {
 	Description string    `json:"description,omitempty" validate:"omitempty,max=1000"`
 	CustomerID  uuid.UUID `json:"customer_id" validate:"required"`
 
-	// Global presets (apply to all items unless overridden)
+	// Optional print profile. When provided it supplies the machine/energy/cost
+	// presets for any slot not explicitly set below (see the budget preset resolver).
+	ProfileID *uuid.UUID `json:"profile_id,omitempty"`
+
+	// Global presets (apply to all items unless overridden). An explicit value here
+	// always wins over the profile and org defaults for that slot.
 	MachinePresetID *uuid.UUID `json:"machine_preset_id,omitempty"`
 	EnergyPresetID  *uuid.UUID `json:"energy_preset_id,omitempty"`
+	// CostPresetID is the budget-level cost preset driving overhead/profit (and the
+	// setup/labor rate fallback for items without their own cost preset).
+	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
 	// Configuration flags
 	IncludeEnergyCost bool `json:"include_energy_cost"`
@@ -67,9 +80,16 @@ type UpdateBudgetRequest struct {
 	Description *string    `json:"description,omitempty" validate:"omitempty,max=1000"`
 	CustomerID  *uuid.UUID `json:"customer_id,omitempty"`
 
+	// Optional print profile. Presets are ONLY re-resolved from the profile/org
+	// defaults when profile_id is explicitly provided in the update; otherwise the
+	// stored preset values are kept (partial-update semantics).
+	ProfileID *uuid.UUID `json:"profile_id,omitempty"`
+
 	// Global presets
 	MachinePresetID *uuid.UUID `json:"machine_preset_id,omitempty"`
 	EnergyPresetID  *uuid.UUID `json:"energy_preset_id,omitempty"`
+	// CostPresetID is the budget-level cost preset driving overhead/profit.
+	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
 	// Configuration flags
 	IncludeEnergyCost *bool `json:"include_energy_cost,omitempty"`

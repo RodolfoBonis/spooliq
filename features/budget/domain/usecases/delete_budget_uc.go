@@ -19,11 +19,11 @@ import (
 // @Produce json
 // @Param id path string true "Budget ID"
 // @Success 204
-// @Failure 400 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id} [delete]
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 409 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /budgets/{id} [delete]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -31,23 +31,15 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
-
-	uc.logger.Info(ctx, "Budget deletion attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Parse budget ID
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
@@ -58,7 +50,7 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -68,18 +60,14 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 			"budget_id": budgetID,
 			"status":    budget.Status,
 		})
-		appError := coreErrors.UsecaseError("Cannot delete printing or completed budgets")
-		c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Conflict(CodeBudgetNotDeletable, "Não é possível excluir orçamentos em impressão ou concluídos"))
 		return
 	}
 
 	// Delete budget
-	if err := uc.budgetRepository.Delete(ctx, budgetID); err != nil {
-		uc.logger.Error(ctx, "Failed to delete budget", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := uc.budgetRepository.Delete(ctx, budgetID, organizationID); err != nil {
+		uc.logger.Error(ctx, "Failed to delete budget", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 

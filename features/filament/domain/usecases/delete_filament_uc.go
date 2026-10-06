@@ -3,146 +3,95 @@ package usecases
 import (
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/database"
+	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
-
-	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// Delete handles deleting a filament (soft delete)
+// Delete handles deleting a filament (soft delete).
 // @Summary Delete Filament
-// @Schemes
 // @Description Delete a 3D printing filament (soft delete)
 // @Tags Filaments
 // @Accept json
 // @Produce json
 // @Param id path string true "Filament ID (UUID)"
 // @Success 204 "Successfully deleted filament"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 403 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 403 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /filaments/{id} [delete]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log filament deletion attempt
-	uc.logger.Info(ctx, "Filament deletion attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
-	})
-
-	// Extract user data from context
-	userID, _ := c.Get("user_id")
-	userIDStr, ok := userID.(string)
-	if !ok {
-		appError := coreErrors.UsecaseError("Invalid user ID in context")
-		httpError := appError.ToHTTPError()
-		uc.logger.Error(ctx, "Invalid user ID in context", map[string]interface{}{
-			"error": "user_id not found or invalid type",
-		})
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	userIDStr := helpers.GetUserID(c)
+	if userIDStr == "" {
+		uc.logger.Error(ctx, "User ID not found in context", nil)
+		coreErrors.Respond(c, coreErrors.BadRequest("user_required", "Usuário não encontrado no contexto"))
 		return
 	}
 
-	// Check if user is admin
 	userRole, _ := c.Get("user_role")
 	userRoleStr, _ := userRole.(string)
 	isAdmin := userRoleStr == roles.OrgAdminRole
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
-
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid filament ID", map[string]interface{}{
-			"filament_id": idParam,
-			"error":       err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError("Invalid filament ID format")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Invalid filament ID", map[string]interface{}{"filament_id": c.Param("id")})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_filament_id", "ID de filamento inválido"))
 		return
 	}
 
-	// Fetch existing filament to check ownership
 	existingFilament, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
-			appError := coreErrors.UsecaseError("Filament not found")
-			httpError := appError.ToHTTPError()
-
-			uc.logger.Error(ctx, "Filament not found", map[string]interface{}{
-				"filament_id": id,
-				"error":       err.Error(),
-			})
-
-			c.AbortWithStatusJSON(http.StatusNotFound, httpError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uc.logger.Error(ctx, "Filament not found", map[string]interface{}{"filament_id": id})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("filament_not_found", "Filamento não encontrado"))
 			return
 		}
-
-		uc.logger.Error(ctx, "Failed to retrieve filament", map[string]interface{}{
-			"filament_id": id,
-			"error":       err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to retrieve filament", map[string]interface{}{"filament_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Check permissions - only owner or admin can delete
+	// Only the owner or an admin may delete a filament.
 	if !isAdmin && (existingFilament.OwnerUserID == nil || *existingFilament.OwnerUserID != userIDStr) {
-		appError := coreErrors.UsecaseError("Access denied: you can only delete your own filaments")
-		httpError := appError.ToHTTPError()
-
-		uc.logger.Error(ctx, "Access denied to delete filament", map[string]interface{}{
-			"filament_id": id,
-			"user_id":     userIDStr,
-		})
-
-		c.AbortWithStatusJSON(http.StatusForbidden, httpError)
+		uc.logger.Warning(ctx, "Access denied to delete filament", map[string]interface{}{"filament_id": id, "user_id": userIDStr})
+		coreErrors.Respond(c, coreErrors.Forbidden("filament_access_denied", "Você só pode remover seus próprios filamentos"))
 		return
 	}
 
-	// Delete from database (soft delete)
 	if err := uc.repository.Delete(ctx, id); err != nil {
-		uc.logger.Error(ctx, "Failed to delete filament", map[string]interface{}{
-			"filament_id": id,
-			"error":       err.Error(),
-			"operation":   "delete_filament",
-		})
-
-		httpError := coreErrors.NewHTTPError(http.StatusInternalServerError, "Failed to delete filament")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		if database.IsForeignKeyViolation(err) {
+			uc.logger.Warning(ctx, "Filament deletion blocked: filament in use", map[string]interface{}{"filament_id": id})
+			coreErrors.Respond(c, coreErrors.Conflict("filament_in_use", "Filamento em uso e não pode ser removido"))
+			return
+		}
+		uc.logger.Error(ctx, "Failed to delete filament", map[string]interface{}{"filament_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	uc.logger.Info(ctx, "Filament deleted successfully", map[string]interface{}{
-		"filament_id":   id,
-		"filament_name": existingFilament.Name,
-	})
+	uc.logger.Info(ctx, "Filament deleted successfully", map[string]interface{}{"filament_id": id})
 
 	c.Status(http.StatusNoContent)
 
-	// Record activity (fire-and-forget)
 	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
 		OrganizationID: organizationID,
 		UserID:         helpers.GetUserID(c),

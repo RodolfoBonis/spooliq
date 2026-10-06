@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/RodolfoBonis/spooliq/core/entities"
 
@@ -166,6 +167,38 @@ func EnvAsaasWebhookSecret() string {
 // EnvAsaasBaseURL returns the Asaas base URL from environment variables.
 func EnvAsaasBaseURL() string {
 	return GetEnv("ASAAS_BASE_URL", "https://sandbox.asaas.com/api/v3")
+}
+
+// EnvCORSAllowedOrigins returns the explicit list of allowed CORS origins parsed
+// from the comma-separated CORS_ALLOWED_ORIGINS environment variable.
+//
+// When unset (or empty), it returns an empty slice, which the CORS middleware
+// treats as "allow all origins WITHOUT credentials". When a list is provided,
+// the middleware restricts origins to that list and enables credentials. Entries
+// are trimmed and blank entries are dropped. A single "*" entry is treated as
+// "allow all" (empty slice) to avoid the invalid wildcard+credentials combo.
+func EnvCORSAllowedOrigins() []string {
+	raw := GetEnv("CORS_ALLOWED_ORIGINS", "")
+	if raw == "" {
+		return []string{}
+	}
+
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" {
+			continue
+		}
+		if trimmed == "*" {
+			// A bare wildcard means "allow all"; return empty so the middleware
+			// uses AllowAllOrigins without credentials (wildcard + credentials is
+			// rejected by the CORS spec and by gin-contrib/cors).
+			return []string{}
+		}
+		origins = append(origins, trimmed)
+	}
+	return origins
 }
 
 // LoadEnvVars loads all environment variables required by the application.

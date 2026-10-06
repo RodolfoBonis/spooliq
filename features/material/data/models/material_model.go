@@ -14,8 +14,8 @@ type MaterialModel struct {
 	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_material_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
 	Description    string     `gorm:"type:text" json:"description,omitempty"`
-	TempTable      float32    `gorm:"type:float" json:"tempTable,omitempty"`
-	TempExtruder   float32    `gorm:"type:float" json:"tempExtruder,omitempty"`
+	TempTable      float32    `gorm:"type:float" json:"temp_table"`
+	TempExtruder   float32    `gorm:"type:float" json:"temp_extruder"`
 	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
 	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`

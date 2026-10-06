@@ -19,6 +19,29 @@ const (
 	StatusCompleted BudgetStatus = "completed" // StatusCompleted represents a completed budget
 )
 
+// KnownStatuses returns every valid budget status, in lifecycle order. It is the
+// single source of truth for validating a status filter on the list endpoint.
+func KnownStatuses() []BudgetStatus {
+	return []BudgetStatus{
+		StatusDraft,
+		StatusSent,
+		StatusApproved,
+		StatusRejected,
+		StatusPrinting,
+		StatusCompleted,
+	}
+}
+
+// IsKnownStatus reports whether s is one of the known budget statuses.
+func IsKnownStatus(s string) bool {
+	for _, known := range KnownStatuses() {
+		if string(known) == s {
+			return true
+		}
+	}
+	return false
+}
+
 // BudgetEntity represents a budget/quote in the domain layer
 type BudgetEntity struct {
 	ID             uuid.UUID    `json:"id"`
@@ -31,6 +54,9 @@ type BudgetEntity struct {
 	// Print time (manual input for now)
 	PrintTimeHours   int `json:"print_time_hours"`
 	PrintTimeMinutes int `json:"print_time_minutes"`
+
+	// Print profile the presets were resolved from (nil when none was used).
+	ProfileID *uuid.UUID `json:"profile_id,omitempty"`
 
 	// Presets used for calculations
 	MachinePresetID *uuid.UUID `json:"machine_preset_id,omitempty"`

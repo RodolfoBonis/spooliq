@@ -64,7 +64,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entities.PaginatedActivities"
+                            "$ref": "#/definitions/helpers.Page-entities_ActivityEntity"
                         }
                     },
                     "400": {
@@ -82,2915 +82,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/brands": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Find All existing filament brands",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Brands"
-                ],
-                "summary": "Find All Brands",
-                "responses": {
-                    "200": {
-                        "description": "Successfully List All Brands",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FindAllBrandsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Create a new filament brand",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Brands"
-                ],
-                "summary": "Create Brand",
-                "parameters": [
-                    {
-                        "description": "Brand data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.UpsertBrandRequestEntity"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Successfully created brand",
-                        "schema": {
-                            "$ref": "#/definitions/entities.BrandEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/brands/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Get a specific filament brand by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Brands"
-                ],
-                "summary": "Get Brand by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "Brand ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved brand",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FindByIDBrandResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Update an existing filament brand",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Brands"
-                ],
-                "summary": "Update Brand",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "Brand ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Brand data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.UpsertBrandRequestEntity"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully updated brand",
-                        "schema": {
-                            "$ref": "#/definitions/entities.BrandEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Delete a filament brand by its ID",
-                "tags": [
-                    "Brands"
-                ],
-                "summary": "Delete Brand",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "Brand ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully deleted brand"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/company/branding": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieves the current branding configuration for the company, or returns the default template if not configured",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Company Branding"
-                ],
-                "summary": "Get company branding configuration",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.CompanyBrandingEntity"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Updates or creates the branding configuration for the company with custom colors",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Company Branding"
-                ],
-                "summary": "Update company branding configuration",
-                "parameters": [
-                    {
-                        "description": "Branding configuration",
-                        "name": "branding",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.UpdateBrandingRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.CompanyBrandingEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/company/branding/templates": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all pre-defined branding templates that users can choose from",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Company Branding"
-                ],
-                "summary": "List available branding templates",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/entities.BrandingTemplate"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/conversion-funnel": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns the budget status funnel showing conversion rates between stages (draft, sent, approved, rejected, completed)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get budget conversion funnel",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.ConversionFunnelResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/goals-alerts": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns monthly goals progress (revenue, budgets, profit margin) and active alerts for low stock, expiring budgets, and pending approvals",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get goals progress and alerts",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.GoalsAlertsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/operational-insights": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns operational metrics including average ticket, profit margin, print time, rejection rate, and cost breakdown by category",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get operational insights and metrics",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.OperationalInsightsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/overview": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns key metrics including revenue, budgets, approval rate, profit margin, and new customers with period-over-period changes",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get dashboard overview metrics",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.OverviewResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/recent-activity": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns the most recent activity items for the organization including budget changes, customer actions, and filament updates",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get recent activity",
-                "parameters": [
-                    {
-                        "maximum": 50,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Number of items to return (max 50)",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.RecentActivityResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/revenue-trend": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns revenue, cost, and profit data points over time for charting purposes",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get revenue trend data",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.RevenueTrendResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/top-customers": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns the top customers ranked by total revenue for the selected period, including budget count and average ticket",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get top customers by revenue",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 50,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 5,
-                        "description": "Number of customers to return",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.TopCustomersResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/top-filaments": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns the most used filaments ranked by total grams consumed, including brand, material, and color information",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get top filaments by usage",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 50,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 5,
-                        "description": "Number of filaments to return",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.TopFilamentsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/dashboard/top-materials": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Returns the most used materials ranked by total grams consumed across all filaments",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Dashboard"
-                ],
-                "summary": "Get top materials by usage",
-                "parameters": [
-                    {
-                        "enum": [
-                            "7d",
-                            "30d",
-                            "3m",
-                            "6m",
-                            "1y",
-                            "all"
-                        ],
-                        "type": "string",
-                        "default": "30d",
-                        "description": "Period filter",
-                        "name": "period",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 50,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 5,
-                        "description": "Number of materials to return",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entities.TopMaterialsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/filaments": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Find all 3D printing filaments (user's own + global catalog)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Filaments"
-                ],
-                "summary": "Find All Filaments",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Items per page",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved filaments",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FindAllFilamentsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Create a new 3D printing filament",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Filaments"
-                ],
-                "summary": "Create Filament",
-                "parameters": [
-                    {
-                        "description": "Filament data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.CreateFilamentRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Successfully created filament",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FilamentResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/filaments/search": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Search 3D printing filaments with various filters",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Filaments"
-                ],
-                "summary": "Search Filaments",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by name (partial match)",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by brand ID (UUID)",
-                        "name": "brand_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by material ID (UUID)",
-                        "name": "material_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by color type (solid, gradient, duo, rainbow)",
-                        "name": "color_type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Filter by diameter (exact match)",
-                        "name": "diameter",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Minimum price per kg",
-                        "name": "min_price",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Maximum price per kg",
-                        "name": "max_price",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Items per page",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved filaments",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FindAllFilamentsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/filaments/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Retrieve a single filament by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Filaments"
-                ],
-                "summary": "Find Filament By ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filament ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved filament",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FilamentResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Update an existing 3D printing filament",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Filaments"
-                ],
-                "summary": "Update Filament",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filament ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Filament update data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.UpdateFilamentRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully updated filament",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FilamentResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Delete a 3D printing filament (soft delete)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Filaments"
-                ],
-                "summary": "Delete Filament",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filament ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully deleted filament"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/login": {
-            "post": {
-                "description": "Authenticate user and return JWT tokens",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User Login",
-                "parameters": [
-                    {
-                        "description": "Login credentials",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.RequestLoginEntity"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful login",
-                        "schema": {
-                            "$ref": "#/definitions/entities.LoginResponseEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/logout": {
-            "post": {
-                "description": "Invalidate the refresh token and logout the user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User Logout",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer refresh token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Logout successful",
-                        "schema": {
-                            "type": "boolean"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/materials": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Find All existing 3D printing materials",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Materials"
-                ],
-                "summary": "Find All Materials",
-                "responses": {
-                    "200": {
-                        "description": "Successfully List All Materials",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FindAllMaterialsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Create a new 3D printing material",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Materials"
-                ],
-                "summary": "Create Material",
-                "parameters": [
-                    {
-                        "description": "Material data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.UpsertMaterialRequestEntity"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Successfully created material",
-                        "schema": {
-                            "$ref": "#/definitions/entities.MaterialEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/materials/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Get a specific 3D printing material by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Materials"
-                ],
-                "summary": "Get Material by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "Material ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved material",
-                        "schema": {
-                            "$ref": "#/definitions/entities.FindByIDMaterialResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Update an existing 3D printing material",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Materials"
-                ],
-                "summary": "Update Material",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "Material ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Material data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.UpsertMaterialRequestEntity"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully updated material",
-                        "schema": {
-                            "$ref": "#/definitions/entities.MaterialEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Delete a 3D printing material by its ID",
-                "tags": [
-                    "Materials"
-                ],
-                "summary": "Delete Material",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "Material ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully deleted material"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve presets with optional filters including type, active status, default status, global status, and user ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Presets"
-                ],
-                "summary": "Get presets with filters",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Preset type filter (machine, energy, cost)",
-                        "name": "type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Filter only active presets",
-                        "name": "active",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Filter only default presets",
-                        "name": "default",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Filter only global presets",
-                        "name": "global",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter presets by user ID (UUID format)",
-                        "name": "user_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved presets",
-                        "schema": {}
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid user ID format",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/costs": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all available cost presets with pricing and margin configurations",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Cost Presets"
-                ],
-                "summary": "Get all cost presets",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved cost presets",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PresetEntity"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new cost preset with labor costs, packaging, shipping, overhead, and profit margins",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Cost Presets"
-                ],
-                "summary": "Create cost preset",
-                "parameters": [
-                    {
-                        "description": "Cost preset creation data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.CreateCostPresetRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Cost preset created successfully",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/costs/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve a specific cost preset with complete pricing and margin details by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Cost Presets"
-                ],
-                "summary": "Get cost preset by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Cost preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved cost preset",
-                        "schema": {
-                            "$ref": "#/definitions/entities.CostPresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found - Cost preset not found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update an existing cost preset with new pricing and margin configurations",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Cost Presets"
-                ],
-                "summary": "Update cost preset",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Cost preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Cost preset update data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.UpdateCostPresetRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Cost preset updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format or request data",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/energy": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all available energy presets with pricing and location data",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Energy Presets"
-                ],
-                "summary": "Get all energy presets",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved energy presets",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PresetEntity"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new energy preset with cost per kWh, currency, and location information",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Energy Presets"
-                ],
-                "summary": "Create energy preset",
-                "parameters": [
-                    {
-                        "description": "Energy preset creation data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.CreateEnergyPresetRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Energy preset created successfully",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/energy/currency/{currency}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve energy presets that use a specific currency (3-letter currency code)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Energy Presets"
-                ],
-                "summary": "Get energy presets by currency",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Currency code (3 letters, e.g., USD, EUR, BRL)",
-                        "name": "currency",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved energy presets by currency",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.EnergyPresetEntity"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/energy/location": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve energy presets filtered by country, state, and/or city",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Energy Presets"
-                ],
-                "summary": "Get energy presets by location",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by country",
-                        "name": "country",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by state/province",
-                        "name": "state",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by city",
-                        "name": "city",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved energy presets by location",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.EnergyPresetEntity"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/energy/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve a specific energy preset with complete pricing and location details by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Energy Presets"
-                ],
-                "summary": "Get energy preset by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Energy preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved energy preset",
-                        "schema": {
-                            "$ref": "#/definitions/entities.EnergyPresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found - Energy preset not found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update an existing energy preset with new pricing and location information",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Energy Presets"
-                ],
-                "summary": "Update energy preset",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Energy preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Energy preset update data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.UpdateEnergyPresetRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Energy preset updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format or request data",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/machines": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all available machine presets with their specifications",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Machine Presets"
-                ],
-                "summary": "Get all machine presets",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved machine presets",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/usecases.MachinePresetResponse"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new machine preset with specifications like build volume, nozzle diameter, and power consumption",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Machine Presets"
-                ],
-                "summary": "Create machine preset",
-                "parameters": [
-                    {
-                        "description": "Machine preset creation data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.CreateMachinePresetRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Machine preset created successfully",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/machines/brand/{brand}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all machine presets from a specific brand",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Machine Presets"
-                ],
-                "summary": "Get machine presets by brand",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Machine brand name",
-                        "name": "brand",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved machine presets by brand",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.MachinePresetEntity"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/machines/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve a specific machine preset with complete specifications by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Machine Presets"
-                ],
-                "summary": "Get machine preset by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Machine preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved machine preset",
-                        "schema": {
-                            "$ref": "#/definitions/entities.MachinePresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found - Machine preset not found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update an existing machine preset with new specifications",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Machine Presets"
-                ],
-                "summary": "Update machine preset",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Machine preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Machine preset update data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/usecases.UpdateMachinePresetRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Machine preset updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format or request data",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/presets/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve a specific preset by its unique identifier",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Presets"
-                ],
-                "summary": "Get preset by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved preset",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PresetEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found - Preset not found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Delete a preset by its unique identifier",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Presets"
-                ],
-                "summary": "Delete preset",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Preset ID (UUID format)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Preset deleted successfully"
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid ID format",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/refresh": {
-            "post": {
-                "description": "Refresh the user's access and refresh tokens",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Refresh Login Access Token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer refresh token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Tokens refreshed",
-                        "schema": {
-                            "$ref": "#/definitions/entities.LoginResponseEntity"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    }
-                }
-            }
-        },
-        "/register": {
-            "post": {
-                "description": "Register a new company with owner user, starts 14-day trial",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Register a new company",
-                "parameters": [
-                    {
-                        "description": "Registration data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/entities.RegisterResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/companies": {
+        "/admin/companies": {
             "get": {
                 "security": [
                     {
@@ -3032,42 +124,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of companies",
+                        "description": "Paginated companies",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListCompaniesResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_CompanyListItem"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/admin/companies/{organization_id}": {
+        "/admin/companies/{organization_id}": {
             "get": {
                 "security": [
                     {
@@ -3149,7 +232,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/companies/{organization_id}/status": {
+        "/admin/companies/{organization_id}/status": {
             "patch": {
                 "security": [
                     {
@@ -3240,7 +323,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/features/available": {
+        "/admin/features/available": {
             "get": {
                 "security": [
                     {
@@ -3255,29 +338,37 @@ const docTemplate = `{
                     "admin-features"
                 ],
                 "summary": "Get available features",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Available features",
+                        "description": "Paginated available features",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.AvailableFeature"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_AvailableFeature"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/admin/features/validate": {
+        "/admin/features/validate": {
             "post": {
                 "security": [
                     {
@@ -3334,7 +425,53 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/plans": {
+        "/admin/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gets platform analytics including MRR, subscription counts, and churn rate (PlatformAdmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get platform stats",
+                "responses": {
+                    "200": {
+                        "description": "Platform statistics",
+                        "schema": {
+                            "$ref": "#/definitions/entities.AdminStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans": {
             "get": {
                 "security": [
                     {
@@ -3349,23 +486,31 @@ const docTemplate = `{
                     "admin-plans"
                 ],
                 "summary": "List all subscription plans",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Plans list",
+                        "description": "Paginated plans",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.SubscriptionPlanResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_SubscriptionPlanResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -3435,7 +580,530 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/plans/{id}": {
+        "/admin/subscription-plans/bulk-activate": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Activate multiple subscription plans at once (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Bulk activate subscription plans",
+                "parameters": [
+                    {
+                        "description": "Bulk operation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bulk operation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/bulk-deactivate": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deactivate multiple subscription plans at once (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Bulk deactivate subscription plans",
+                "parameters": [
+                    {
+                        "description": "Bulk operation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bulk operation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/bulk-update": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update multiple subscription plans at once (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Bulk update subscription plans",
+                "parameters": [
+                    {
+                        "description": "Bulk update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bulk operation result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BulkOperationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/from-template": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new subscription plan from an existing template (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Create plan from template",
+                "parameters": [
+                    {
+                        "description": "Create from template request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateFromTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created plan",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/migrate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a migration to move companies from one plan to another (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Create plan migration",
+                "parameters": [
+                    {
+                        "description": "Plan migration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Migration result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/migrations/{migration_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the status of a plan migration (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get migration status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration ID",
+                        "name": "migration_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Migration status",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Migration not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/migrations/{migration_id}/execute": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Execute a scheduled plan migration immediately (admin only)",
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Execute plan migration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration ID",
+                        "name": "migration_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Migration result",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PlanMigrationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Migration not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of available plan templates (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get plan templates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by category",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated plan templates",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_PlanTemplate"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/subscription-plans/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific subscription plan by ID (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-plans"
+                ],
+                "summary": "Get subscription plan by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plan details",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Plan not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -3567,581 +1235,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/stats": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Gets platform analytics including MRR, subscription counts, and churn rate (PlatformAdmin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin"
-                ],
-                "summary": "Get platform stats",
-                "responses": {
-                    "200": {
-                        "description": "Platform statistics",
-                        "schema": {
-                            "$ref": "#/definitions/entities.AdminStats"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/bulk-activate": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Activate multiple subscription plans at once (admin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Bulk activate subscription plans",
-                "parameters": [
-                    {
-                        "description": "Bulk operation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.BulkOperationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Bulk operation result",
-                        "schema": {
-                            "$ref": "#/definitions/entities.BulkOperationResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/bulk-deactivate": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Deactivate multiple subscription plans at once (admin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Bulk deactivate subscription plans",
-                "parameters": [
-                    {
-                        "description": "Bulk operation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.BulkOperationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Bulk operation result",
-                        "schema": {
-                            "$ref": "#/definitions/entities.BulkOperationResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/bulk-update": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update multiple subscription plans at once (admin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Bulk update subscription plans",
-                "parameters": [
-                    {
-                        "description": "Bulk update request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.BulkUpdateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Bulk operation result",
-                        "schema": {
-                            "$ref": "#/definitions/entities.BulkOperationResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/from-template": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new subscription plan from an existing template (admin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Create plan from template",
-                "parameters": [
-                    {
-                        "description": "Create from template request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.CreateFromTemplateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created plan",
-                        "schema": {
-                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Template not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/migrate": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a migration to move companies from one plan to another (admin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Create plan migration",
-                "parameters": [
-                    {
-                        "description": "Plan migration request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/entities.PlanMigrationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Migration result",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PlanMigrationResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/migrations/{migration_id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get the status of a plan migration (admin only)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Get migration status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Migration ID",
-                        "name": "migration_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Migration status",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PlanMigrationResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Migration not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/migrations/{migration_id}/execute": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Execute a scheduled plan migration immediately (admin only)",
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Execute plan migration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Migration ID",
-                        "name": "migration_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Migration result",
-                        "schema": {
-                            "$ref": "#/definitions/entities.PlanMigrationResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Migration not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/templates": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get list of available plan templates (admin only)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Get plan templates",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by category",
-                        "name": "category",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Plan templates",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PlanTemplate"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a specific subscription plan by ID (admin only)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-plans"
-                ],
-                "summary": "Get subscription plan by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Plan ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Plan details",
-                        "schema": {
-                            "$ref": "#/definitions/entities.SubscriptionPlanResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Plan not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/admin/subscription-plans/{id}/can-delete": {
+        "/admin/subscription-plans/{id}/can-delete": {
             "get": {
                 "security": [
                     {
@@ -4202,7 +1296,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/subscription-plans/{id}/companies": {
+        "/admin/subscription-plans/{id}/companies": {
             "get": {
                 "security": [
                     {
@@ -4283,7 +1377,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/subscription-plans/{id}/financial-report": {
+        "/admin/subscription-plans/{id}/financial-report": {
             "get": {
                 "security": [
                     {
@@ -4356,7 +1450,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/subscription-plans/{id}/history": {
+        "/admin/subscription-plans/{id}/history": {
             "get": {
                 "security": [
                     {
@@ -4431,7 +1525,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/subscription-plans/{id}/stats": {
+        "/admin/subscription-plans/{id}/stats": {
             "get": {
                 "security": [
                     {
@@ -4492,7 +1586,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/subscriptions": {
+        "/admin/subscriptions": {
             "get": {
                 "security": [
                     {
@@ -4534,42 +1628,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of subscriptions",
+                        "description": "Paginated subscriptions",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListSubscriptionsResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_SubscriptionListItem"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/admin/subscriptions/{organization_id}": {
+        "/admin/subscriptions/{organization_id}": {
             "get": {
                 "security": [
                     {
@@ -4651,7 +1736,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/admin/subscriptions/{organization_id}/payments": {
+        "/admin/subscriptions/{organization_id}/payments": {
             "get": {
                 "security": [
                     {
@@ -4694,67 +1779,397 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Payment history",
+                        "description": "Paginated payment history",
                         "schema": {
-                            "$ref": "#/definitions/entities.PaymentHistoryResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_PaymentHistoryItem"
                         }
                     },
                     "400": {
                         "description": "Invalid organization ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Company not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets": {
+        "/brands": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all budgets with pagination",
+                "description": "List filament brands for the organization, paginated and searchable.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Brands"
+                ],
+                "summary": "Find All Brands",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on the brand name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "name",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of brands",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllBrandsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new filament brand",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Brands"
+                ],
+                "summary": "Create Brand",
+                "parameters": [
+                    {
+                        "description": "Brand data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertBrandRequestEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created brand",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BrandEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/brands/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific filament brand by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Brands"
+                ],
+                "summary": "Get Brand by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Brand ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved brand",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindByIDBrandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing filament brand",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Brands"
+                ],
+                "summary": "Update Brand",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Brand ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Brand data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertBrandRequestEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated brand",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BrandEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a filament brand by its ID",
+                "tags": [
+                    "Brands"
+                ],
+                "summary": "Delete Brand",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Brand ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted brand"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/budgets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List budgets (paginated). Supports free-text name search (q), and\nfiltering by status, customer_id and a created_at range (from/to,\nYYYY-MM-DD or RFC3339, inclusive). Sortable by created_at, name,\ntotal_cost and status (default created_at desc).",
                 "consumes": [
                     "application/json"
                 ],
@@ -4775,9 +2190,71 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Page size (max 100)",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on budget name (case-insensitive)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "approved",
+                            "rejected",
+                            "printing",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by customer UUID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at lower bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at upper bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "name",
+                            "total_cost",
+                            "status"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -4785,21 +2262,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListBudgetsResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_BudgetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -4842,35 +2317,32 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/by-customer/{customer_id}": {
+        "/budgets/by-customer/{customer_id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all budgets for a specific customer",
+                "description": "List budgets for a specific customer (paginated). Accepts the same\npagination, sort and filter params as GET /budgets (status, q,\nfrom/to); the path customer_id always scopes the result.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4898,9 +2370,65 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Page size (max 100)",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on budget name (case-insensitive)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "approved",
+                            "rejected",
+                            "printing",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at lower bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at upper bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "name",
+                            "total_cost",
+                            "status"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -4908,34 +2436,76 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListBudgetsResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_BudgetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/{id}": {
+        "/budgets/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Calculate a budget's full cost breakdown without saving it. Useful for live quoting in the UI.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Preview budget costs",
+                "parameters": [
+                    {
+                        "description": "Budget preview request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.PreviewBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/budgets/{id}": {
             "get": {
                 "security": [
                     {
@@ -4972,22 +2542,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -5037,29 +2604,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -5097,42 +2660,38 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/{id}/calculate": {
+        "/budgets/{id}/calculate": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Recalculate all costs for a budget",
+                "description": "Deprecated: returns stored budget costs without recalculating. Use POST /v1/budgets/{id}/recalculate to recompute.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5142,7 +2701,7 @@ const docTemplate = `{
                 "tags": [
                     "budgets"
                 ],
-                "summary": "Recalculate budget costs",
+                "summary": "Get budget costs (deprecated)",
                 "parameters": [
                     {
                         "type": "string",
@@ -5162,28 +2721,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/{id}/duplicate": {
+        "/budgets/{id}/duplicate": {
             "post": {
                 "security": [
                     {
@@ -5220,35 +2776,32 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/{id}/history": {
+        "/budgets/{id}/history": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get the status change history for a budget",
+                "description": "Get the status change history for a budget (paginated, newest first).",
                 "consumes": [
                     "application/json"
                 ],
@@ -5266,43 +2819,51 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Page size (max 100)",
+                        "name": "page_size",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_BudgetStatusHistoryEntity"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/{id}/pdf": {
+        "/budgets/{id}/pdf": {
             "get": {
                 "security": [
                     {
@@ -5346,28 +2907,86 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/budgets/{id}/status": {
+        "/budgets/{id}/recalculate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Recalculate all costs for a budget. Only allowed while the budget is a draft.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Recalculate budget costs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/budgets/{id}/status": {
             "patch": {
                 "security": [
                     {
@@ -5413,35 +3032,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/company": {
+        "/company": {
             "get": {
                 "security": [
                     {
@@ -5599,7 +3214,165 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/company/logo": {
+        "/company/branding": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the current branding configuration for the company, or returns the default template if not configured",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company Branding"
+                ],
+                "summary": "Get company branding configuration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyBrandingEntity"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates or creates the branding configuration for the company with custom colors",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company Branding"
+                ],
+                "summary": "Update company branding configuration",
+                "parameters": [
+                    {
+                        "description": "Branding configuration",
+                        "name": "branding",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateBrandingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CompanyBrandingEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/company/branding/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all pre-defined branding templates that users can choose from",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company Branding"
+                ],
+                "summary": "List available branding templates",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated branding templates",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_BrandingTemplate"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/company/logo": {
             "post": {
                 "security": [
                     {
@@ -5658,14 +3431,68 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/customers": {
+        "/company/subscription/payments": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all customers with pagination",
+                "description": "Returns the current organization's subscription payment history, paginated with the standard envelope (Owner only).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company"
+                ],
+                "summary": "List my subscription payments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated subscription payments",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_SubscriptionPaymentItem"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List customers for the organization, paginated and searchable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5680,15 +3507,44 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "Page number (1-based)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on name/email/phone/document",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "email",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -5702,15 +3558,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5753,35 +3613,38 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
             }
         },
-        "/v1/customers/search": {
+        "/customers/search": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Search customers with various filters",
+                "description": "Search customers with filters, pagination and sorting.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5795,57 +3658,63 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Customer name",
+                        "description": "Case-insensitive search on name/email/phone/document",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by name (partial, case-insensitive)",
                         "name": "name",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer email",
+                        "description": "Filter by email (partial, case-insensitive)",
                         "name": "email",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer phone",
+                        "description": "Filter by phone (partial)",
                         "name": "phone",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer document (CPF/CNPJ)",
+                        "description": "Filter by document/CPF/CNPJ (partial)",
                         "name": "document",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer city",
+                        "description": "Filter by city (partial, case-insensitive)",
                         "name": "city",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer state",
+                        "description": "Filter by state (partial, case-insensitive)",
                         "name": "state",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
-                        "description": "Active status",
+                        "description": "Filter by active status",
                         "name": "is_active",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "Page number (1-based)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
                         "name": "page_size",
                         "in": "query"
                     },
@@ -5857,7 +3726,7 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "default": "created_at",
-                        "description": "Sort by field",
+                        "description": "Sort field",
                         "name": "sort_by",
                         "in": "query"
                     },
@@ -5883,21 +3752,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
             }
         },
-        "/v1/customers/{id}": {
+        "/customers/{id}": {
             "get": {
                 "security": [
                     {
@@ -5934,22 +3807,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5999,29 +3875,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -6032,7 +3910,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a customer (soft delete)",
+                "description": "Delete a customer (soft delete). Blocked when the customer has budgets.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6059,26 +3937,1180 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/conversion-funnel": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the budget status funnel showing conversion rates between stages (draft, sent, approved, rejected, completed)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get budget conversion funnel",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ConversionFunnelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/goals-alerts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns monthly goals progress (revenue, budgets, profit margin) and active alerts for low stock, expiring budgets, and pending approvals",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get goals progress and alerts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.GoalsAlertsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/operational-insights": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns operational metrics including average ticket, profit margin, print time, rejection rate, and cost breakdown by category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get operational insights and metrics",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.OperationalInsightsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns key metrics including revenue, budgets, approval rate, profit margin, and new customers with period-over-period changes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard overview metrics",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.OverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/recent-activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the most recent activity items for the organization including budget changes, customer actions, and filament updates",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get recent activity",
+                "parameters": [
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of items to return (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.RecentActivityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/revenue-trend": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns revenue, cost, and profit data points over time for charting purposes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get revenue trend data",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.RevenueTrendResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/top-customers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the top customers ranked by total revenue for the selected period, including budget count and average ticket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get top customers by revenue",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of customers to return (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.TopCustomersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/top-filaments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the most used filaments ranked by total grams consumed, including brand, material, and color information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get top filaments by usage",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of filaments to return (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.TopFilamentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/top-materials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the most used materials ranked by total grams consumed across all filaments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get top materials by usage",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of materials to return (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.TopMaterialsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List 3D printing filaments for the organization, paginated, searchable and filterable.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Find All Filaments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on filament/brand/material name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alias of q (case-insensitive name search)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by brand ID (UUID)",
+                        "name": "brand_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by material ID (UUID)",
+                        "name": "material_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by color type (solid, gradient, duo, rainbow, ...)",
+                        "name": "color_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filter by diameter (exact match)",
+                        "name": "diameter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum price per kg",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum price per kg",
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at",
+                            "price_per_kg"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of filaments",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllFilamentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new 3D printing filament",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Create Filament",
+                "parameters": [
+                    {
+                        "description": "Filament data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateFilamentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created filament",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FilamentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search 3D printing filaments with filters, pagination and sorting.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Search Filaments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on filament/brand/material name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alias of q (case-insensitive name search)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by brand ID (UUID)",
+                        "name": "brand_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by material ID (UUID)",
+                        "name": "material_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by color type (solid, gradient, duo, rainbow, ...)",
+                        "name": "color_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filter by diameter (exact match)",
+                        "name": "diameter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum price per kg",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum price per kg",
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at",
+                            "price_per_kg"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of filaments",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllFilamentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a single filament by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Find Filament By ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved filament",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FilamentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing 3D printing filament",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Update Filament",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Filament update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateFilamentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated filament",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FilamentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a 3D printing filament (soft delete)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filaments"
+                ],
+                "summary": "Delete Filament",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted filament"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/live": {
+            "get": {
+                "description": "Reports that the process is up. No dependencies are checked.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Liveness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health/ready": {
+            "get": {
+                "description": "Pings Postgres and (when enabled) Redis. Returns 503 only if the database is down; a Redis outage is reported as degraded.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -6087,7 +5119,1015 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/payment-methods": {
+        "/health_check": {
+            "get": {
+                "description": "Backward-compatible liveness alias returning a plain-text body.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Legacy health check",
+                "responses": {
+                    "200": {
+                        "description": "This Service is Healthy",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "description": "Authenticate user and return JWT tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User Login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.RequestLoginEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful login",
+                        "schema": {
+                            "$ref": "#/definitions/entities.LoginResponseEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "post": {
+                "description": "Invalidate the refresh token and logout the user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User Logout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer refresh token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logout successful",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/materials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List 3D printing materials for the organization, paginated and searchable.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Materials"
+                ],
+                "summary": "Find All Materials",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on the material name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "name",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of materials",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllMaterialsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new 3D printing material",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Materials"
+                ],
+                "summary": "Create Material",
+                "parameters": [
+                    {
+                        "description": "Material data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertMaterialRequestEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created material",
+                        "schema": {
+                            "$ref": "#/definitions/entities.MaterialEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/materials/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific 3D printing material by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Materials"
+                ],
+                "summary": "Get Material by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Material ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved material",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindByIDMaterialResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing 3D printing material",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Materials"
+                ],
+                "summary": "Update Material",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Material ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Material data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertMaterialRequestEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated material",
+                        "schema": {
+                            "$ref": "#/definitions/entities.MaterialEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a 3D printing material by its ID",
+                "tags": [
+                    "Materials"
+                ],
+                "summary": "Delete Material",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Material ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted material"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/models3d": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List the organization's 3D models, paginated, searchable and filterable.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "List 3D Models",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on name/tags",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            ".stl",
+                            ".3mf"
+                        ],
+                        "type": "string",
+                        "description": "Filter by file format",
+                        "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Filter by customer ID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at",
+                            "file_size_bytes"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of 3D models",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListModel3DResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a new 3D model file (STL or 3MF) with metadata",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Upload 3D Model",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "3D model file (.stl or .3mf, max 50MB)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Notes",
+                        "name": "notes",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tags",
+                        "name": "tags",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully uploaded 3D model",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Model3DEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate file already exists",
+                        "schema": {
+                            "$ref": "#/definitions/entities.DuplicateModel3DResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "File too large",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/models3d/by-customer/{customer_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all 3D models associated with a specific customer (flat array).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Get 3D Models by Customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "3D models for the customer",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entities.Model3DEntity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/models3d/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific 3D model by its ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Get 3D Model by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The 3D model",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Model3DEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing 3D model's metadata. Send customer_id: null to detach the customer.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Update 3D Model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateModel3DRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The updated 3D model",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Model3DEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-delete a 3D model by its ID. The stored file is intentionally kept.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Delete 3D Model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted 3D model"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/models3d/{id}/file": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stream the raw STL/3MF file for a 3D model.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Stream 3D Model file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The model file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/payment-methods": {
             "get": {
                 "security": [
                     {
@@ -6102,23 +6142,31 @@ const docTemplate = `{
                     "payment-methods"
                 ],
                 "summary": "List payment methods",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Payment methods list",
+                        "description": "Paginated payment methods",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PaymentMethodResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_PaymentMethodResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -6188,7 +6236,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/payment-methods/{id}": {
+        "/payment-methods/{id}": {
             "delete": {
                 "security": [
                     {
@@ -6249,7 +6297,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/payment-methods/{id}/set-primary": {
+        "/payment-methods/{id}/set-primary": {
             "put": {
                 "security": [
                     {
@@ -6310,7 +6358,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/plans": {
+        "/plans": {
             "get": {
                 "description": "List all active subscription plans available for subscription",
                 "produces": [
@@ -6320,18 +6368,1913 @@ const docTemplate = `{
                     "plans"
                 ],
                 "summary": "List active subscription plans",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Plans list",
+                        "description": "Paginated plans",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.SubscriptionPlanResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_SubscriptionPlanResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope. Results are paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Get presets with filters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset type filter (machine, energy, cost)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter only active presets",
+                        "name": "active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter only default presets",
+                        "name": "default",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter only global presets",
+                        "name": "global",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter presets by user ID (UUID format)",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated presets",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid user ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/costs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve cost presets with pricing and margin configurations, paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Get cost presets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated cost presets",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_CostPresetResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new cost preset with labor costs, packaging, shipping, overhead, and profit margins",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Create cost preset",
+                "parameters": [
+                    {
+                        "description": "Cost preset creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateCostPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Cost preset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/costs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific cost preset with complete pricing and margin details by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Get cost preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cost preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved cost preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CostPresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Cost preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing cost preset with new pricing and margin configurations",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cost Presets"
+                ],
+                "summary": "Update cost preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cost preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cost preset update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateCostPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cost preset updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Cost preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve energy presets with pricing and location data, paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy presets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated energy presets",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_EnergyPresetResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new energy preset with cost per kWh, currency, and location information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Create energy preset",
+                "parameters": [
+                    {
+                        "description": "Energy preset creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateEnergyPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Energy preset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy/currency/{currency}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve energy presets that use a specific currency (3-letter currency code), paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy presets by currency",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Currency code (3 letters, e.g., USD, EUR, BRL)",
+                        "name": "currency",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated energy presets by currency",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_EnergyPresetResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy/location": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve energy presets filtered by country, state, and/or city, paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy presets by location",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by country",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by state/province",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by city",
+                        "name": "city",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated energy presets by location",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_EnergyPresetResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/energy/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific energy preset with complete pricing and location details by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Get energy preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Energy preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved energy preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.EnergyPresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Energy preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing energy preset with new pricing and location information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Energy Presets"
+                ],
+                "summary": "Update energy preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Energy preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Energy preset update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateEnergyPresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Energy preset updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Energy preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/from-template/{key}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Instantiate a preset in the caller's organization from a template, with optional overrides (name, is_default).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Create preset from template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional overrides",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.FromTemplateOverrides"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Preset created from template",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Unknown template key",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/machines": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve machine presets with their specifications, paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Get machine presets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated machine presets",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_MachinePresetResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new machine preset with specifications like build volume, nozzle diameter, and power consumption",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Create machine preset",
+                "parameters": [
+                    {
+                        "description": "Machine preset creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CreateMachinePresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Machine preset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/machines/brand/{brand}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve machine presets from a specific brand, paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Get machine presets by brand",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine brand name",
+                        "name": "brand",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated machine presets by brand",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_MachinePresetResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/machines/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific machine preset with complete specifications by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Get machine preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved machine preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.MachinePresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Machine preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing machine preset with new specifications",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Machine Presets"
+                ],
+                "summary": "Update machine preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Machine preset update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.UpdateMachinePresetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Machine preset updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format or request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Machine preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/suggest-name": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generate a preset name from its type and fields so the web app can prefill the name input. Pure helper; does not persist anything.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Suggest preset name",
+                "parameters": [
+                    {
+                        "description": "Type and fields",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecases.SuggestNameRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Suggested name",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type, paginated with the standard envelope.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "List preset templates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template type filter (machine, energy, cost)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated templates",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_PresetTemplate"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific preset by its unique identifier within the caller's organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Get preset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved preset",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a preset by its unique identifier within the caller's organization. Default presets cannot be deleted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Delete preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Preset deleted successfully"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - Default presets cannot be deleted",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/{id}/default": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark the preset as the single default for its (organization, type); clears any other default of the same type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Set preset as default",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Preset set as default",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/presets/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Copy a preset (base + type-specific data) within the caller's organization. The copy is named \"\u003cname\u003e (cópia)\" and is not a default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Presets"
+                ],
+                "summary": "Duplicate preset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Preset ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Preset duplicated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PresetEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Preset not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all print profiles for the caller's organization, each embedding the referenced presets' {id, name}.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "List print profiles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated profiles",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_ProfileResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a print profile referencing a machine, an energy and an optional cost preset. The referenced presets must belong to the organization and match their type. Name is auto-generated when empty.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Create print profile",
+                "parameters": [
+                    {
+                        "description": "Profile data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Profile created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request or preset reference",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific print profile by its ID within the caller's organization.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Get print profile by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a print profile. Only provided fields are applied; changed preset references are re-validated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Update print profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Profile update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid request or preset reference",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a print profile. The default profile cannot be deleted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Delete print profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Profile deleted"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - Default profiles cannot be deleted",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles/{id}/default": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark the profile as the single default for the organization; clears any other default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Set print profile as default",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile set as default",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/profiles/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Copy a print profile within the caller's organization. The copy is named \"\u003cname\u003e (cópia)\" and is not a default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Duplicate print profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID (UUID format)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Profile duplicated",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found - Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/refresh": {
+            "post": {
+                "description": "Refresh the user's access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refresh Login Access Token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer refresh token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tokens refreshed",
+                        "schema": {
+                            "$ref": "#/definitions/entities.LoginResponseEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Register a new company with owner user, starts 14-day trial",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new company",
+                "parameters": [
+                    {
+                        "description": "Registration data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/entities.RegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6342,7 +8285,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/subscriptions/cancel": {
+        "/subscriptions/cancel": {
             "delete": {
                 "security": [
                     {
@@ -6388,7 +8331,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/subscriptions/status": {
+        "/subscriptions/status": {
             "get": {
                 "security": [
                     {
@@ -6431,7 +8374,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/subscriptions/subscribe": {
+        "/subscriptions/subscribe": {
             "post": {
                 "security": [
                     {
@@ -6497,7 +8440,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/uploads/file": {
+        "/uploads/file": {
             "post": {
                 "security": [
                     {
@@ -6557,7 +8500,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/uploads/logo": {
+        "/uploads/logo": {
             "post": {
                 "security": [
                     {
@@ -6611,14 +8554,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/users": {
+        "/users": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lists all users within the organization (Owner and OrgAdmin only)",
+                "description": "Lists users within the organization (Owner and OrgAdmin only), paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6628,42 +8571,62 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "List all users",
+                "summary": "List users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name or email",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name, email or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List of users",
+                        "description": "Paginated users",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.UserEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_UserEntity"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -6706,52 +8669,37 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "409": {
                         "description": "User already exists",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
             }
         },
-        "/v1/users/{id}": {
+        "/users/{id}": {
             "get": {
                 "security": [
                     {
@@ -6788,46 +8736,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid user ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -6877,46 +8810,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -6954,46 +8872,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid user ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -7122,7 +9025,8 @@ const docTemplate = `{
                 "filament",
                 "material",
                 "budget",
-                "preset"
+                "preset",
+                "model3d"
             ],
             "x-enum-varnames": [
                 "EntityBrand",
@@ -7130,7 +9034,8 @@ const docTemplate = `{
                 "EntityFilament",
                 "EntityMaterial",
                 "EntityBudget",
-                "EntityPreset"
+                "EntityPreset",
+                "EntityModel3D"
             ]
         },
         "entities.AdminStats": {
@@ -7287,7 +9192,7 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "cost_preset_id": {
-                    "description": "Optional: specific cost preset for this item",
+                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor rates — see the pricing input mapping.",
                     "type": "string"
                 },
                 "filaments": {
@@ -7302,6 +9207,10 @@ const docTemplate = `{
                     "description": "Total manual labor time for ALL units (minutes)",
                     "type": "integer",
                     "minimum": 0
+                },
+                "model_3d_id": {
+                    "description": "Optional: link this item to a 3D model (must belong to the organization)",
+                    "type": "string"
                 },
                 "order": {
                     "description": "Order in the budget",
@@ -7351,6 +9260,14 @@ const docTemplate = `{
                 "budget_id": {
                     "type": "string"
                 },
+                "cost_preset": {
+                    "description": "{id, name} resolved from CostPresetID",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.CostPresetRef"
+                        }
+                    ]
+                },
                 "cost_preset_id": {
                     "description": "Cost preset and additional notes",
                     "type": "string"
@@ -7388,6 +9305,10 @@ const docTemplate = `{
                     "description": "Total manual labor time for ALL units (minutes)",
                     "type": "integer"
                 },
+                "model_3d_id": {
+                    "description": "Optional link to a 3D model",
+                    "type": "string"
+                },
                 "order": {
                     "type": "integer"
                 },
@@ -7415,6 +9336,14 @@ const docTemplate = `{
                 "product_quantity": {
                     "type": "integer"
                 },
+                "sale_total": {
+                    "description": "cents (with markup)",
+                    "type": "integer"
+                },
+                "sale_unit_price": {
+                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY\nto the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may\ndiffer from SaleTotal by a few cents.",
+                    "type": "integer"
+                },
                 "setup_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -7424,7 +9353,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "unit_price": {
-                    "description": "cents per unit",
+                    "description": "cents per unit (COST, no markup) - kept for compatibility",
                     "type": "integer"
                 },
                 "updated_at": {
@@ -7439,6 +9368,9 @@ const docTemplate = `{
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "cost_preset": {
+                    "$ref": "#/definitions/entities.CostPresetRef"
+                },
                 "cost_preset_id": {
                     "description": "For overhead/profit percentages",
                     "type": "string"
@@ -7537,6 +9469,18 @@ const docTemplate = `{
                 },
                 "print_time_minutes": {
                     "type": "integer"
+                },
+                "profile": {
+                    "description": "Profile is the {id, name} of the print profile the presets were resolved from\n(null when none was used). CostPreset is the {id, name} of the budget-level\ncost preset driving overhead/profit (null when none). Both are additive.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.ProfileRef"
+                        }
+                    ]
+                },
+                "profile_id": {
+                    "description": "Print profile the presets were resolved from (nil when none was used).",
+                    "type": "string"
                 },
                 "profit_amount": {
                     "description": "cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)",
@@ -8104,6 +10048,31 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.CostPresetRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.CostTemplateFields": {
+            "type": "object",
+            "properties": {
+                "labor_cost_per_hour": {
+                    "type": "number"
+                },
+                "overhead_percentage": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.CreateBudgetRequest": {
             "type": "object",
             "required": [
@@ -8112,6 +10081,10 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "cost_preset_id": {
+                    "description": "CostPresetID is the budget-level cost preset driving overhead/profit (and the\nsetup/labor rate fallback for items without their own cost preset).",
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -8143,7 +10116,7 @@ const docTemplate = `{
                     }
                 },
                 "machine_preset_id": {
-                    "description": "Global presets (apply to all items unless overridden)",
+                    "description": "Global presets (apply to all items unless overridden). An explicit value here\nalways wins over the profile and org defaults for that slot.",
                     "type": "string"
                 },
                 "name": {
@@ -8158,6 +10131,10 @@ const docTemplate = `{
                 "payment_terms": {
                     "type": "string",
                     "maxLength": 1000
+                },
+                "profile_id": {
+                    "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
+                    "type": "string"
                 }
             }
         },
@@ -8361,6 +10338,33 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.CreateProfileRequest": {
+            "type": "object",
+            "required": [
+                "energy_preset_id",
+                "machine_preset_id"
+            ],
+            "properties": {
+                "cost_preset_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "machine_preset_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.CreateUserRequest": {
             "type": "object",
             "required": [
@@ -8486,6 +10490,23 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.DuplicateModel3DResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "existing": {
+                    "$ref": "#/definitions/entities.Model3DEntity"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.EnergyPresetEntity": {
             "type": "object",
             "properties": {
@@ -8522,6 +10543,20 @@ const docTemplate = `{
                 },
                 "tariff_type": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.EnergyTemplateFields": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
                 }
             }
         },
@@ -8710,6 +10745,18 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.BrandEntity"
                     }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -8722,10 +10769,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.FilamentResponse"
                     }
                 },
-                "limit": {
+                "page": {
                     "type": "integer"
                 },
-                "page": {
+                "page_size": {
                     "type": "integer"
                 },
                 "total": {
@@ -8744,6 +10791,18 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.MaterialEntity"
                     }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -8825,13 +10884,13 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.ListBudgetsResponse": {
+        "entities.ListCustomersResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entities.BudgetResponse"
+                        "$ref": "#/definitions/entities.CustomerResponse"
                     }
                 },
                 "page": {
@@ -8848,36 +10907,13 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.ListCompaniesResponse": {
-            "type": "object",
-            "properties": {
-                "companies": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.CompanyListItem"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "total_count": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "entities.ListCustomersResponse": {
+        "entities.ListModel3DResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entities.CustomerResponse"
+                        "$ref": "#/definitions/entities.Model3DEntity"
                     }
                 },
                 "page": {
@@ -8908,29 +10944,6 @@ const docTemplate = `{
                 },
                 "page_size": {
                     "type": "integer"
-                },
-                "total_count": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "entities.ListSubscriptionsResponse": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "subscriptions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.SubscriptionListItem"
-                    }
                 },
                 "total_count": {
                     "type": "integer"
@@ -9012,6 +11025,35 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.MachineTemplateFields": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "build_volume_x": {
+                    "type": "number"
+                },
+                "build_volume_y": {
+                    "type": "number"
+                },
+                "build_volume_z": {
+                    "type": "number"
+                },
+                "filament_diameter": {
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "power_consumption": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.MaterialEntity": {
             "type": "object",
             "properties": {
@@ -9034,10 +11076,10 @@ const docTemplate = `{
                     "description": "Multi-tenancy",
                     "type": "string"
                 },
-                "tempExtruder": {
+                "temp_extruder": {
                     "type": "number"
                 },
-                "tempTable": {
+                "temp_table": {
                     "type": "number"
                 },
                 "updated_at": {
@@ -9082,6 +11124,73 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "entities.Model3DEntity": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "file_format": {
+                    "type": "string"
+                },
+                "file_hash": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "file_size_bytes": {
+                    "type": "integer"
+                },
+                "file_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_user_id": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.NullableString": {
+            "type": "object",
+            "properties": {
+                "set": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },
@@ -9170,29 +11279,6 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.PaginatedActivities": {
-            "type": "object",
-            "properties": {
-                "activities": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.ActivityEntity"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
         "entities.PaymentHistoryItem": {
             "type": "object",
             "properties": {
@@ -9219,29 +11305,6 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
-                }
-            }
-        },
-        "entities.PaymentHistoryResponse": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "payments": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.PaymentHistoryItem"
-                    }
-                },
-                "total_count": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
                 }
             }
         },
@@ -9819,6 +11882,43 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.PresetRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PresetTemplate": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "$ref": "#/definitions/entities.CostTemplateFields"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy": {
+                    "$ref": "#/definitions/entities.EnergyTemplateFields"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "machine": {
+                    "$ref": "#/definitions/entities.MachineTemplateFields"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.PresetType"
+                }
+            }
+        },
         "entities.PresetType": {
             "type": "string",
             "enum": [
@@ -9831,6 +11931,114 @@ const docTemplate = `{
                 "PresetTypeEnergy",
                 "PresetTypeCost"
             ]
+        },
+        "entities.PreviewBudgetRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "cost_preset_id": {
+                    "description": "CostPresetID is the budget-level cost preset driving overhead/profit (and the\nsetup/labor rate fallback for items without their own cost preset).",
+                    "type": "string"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "description": "Additional fields (echoed back on the preview response for convenience)",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "include_energy_cost": {
+                    "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_waste_cost": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "Items (products) - required",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemRequest"
+                    }
+                },
+                "machine_preset_id": {
+                    "description": "Global presets (apply to all items unless overridden). An explicit value here\nalways wins over the profile and org defaults for that slot.",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "payment_terms": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "profile_id": {
+                    "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ProfileRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ProfileResponse": {
+            "type": "object",
+            "properties": {
+                "cost_preset": {
+                    "$ref": "#/definitions/entities.PresetRef"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_preset": {
+                    "$ref": "#/definitions/entities.PresetRef"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "machine_preset": {
+                    "$ref": "#/definitions/entities.PresetRef"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
         },
         "entities.RecentActivityItem": {
             "type": "object",
@@ -10284,6 +12492,10 @@ const docTemplate = `{
         "entities.UpdateBudgetRequest": {
             "type": "object",
             "properties": {
+                "cost_preset_id": {
+                    "description": "CostPresetID is the budget-level cost preset driving overhead/profit.",
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -10330,6 +12542,10 @@ const docTemplate = `{
                 "payment_terms": {
                     "type": "string",
                     "maxLength": 1000
+                },
+                "profile_id": {
+                    "description": "Optional print profile. Presets are ONLY re-resolved from the profile/org\ndefaults when profile_id is explicitly provided in the update; otherwise the\nstored preset values are kept (partial-update semantics).",
+                    "type": "string"
                 }
             }
         },
@@ -10502,6 +12718,54 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.UpdateModel3DRequest": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "$ref": "#/definitions/entities.NullableString"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "tags": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
+        },
+        "entities.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "cost_preset_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_preset_id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "machine_preset_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -10543,12 +12807,12 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 1
                 },
-                "tempExtruder": {
+                "temp_extruder": {
                     "type": "number",
                     "maximum": 500,
                     "minimum": 0
                 },
-                "tempTable": {
+                "temp_table": {
                     "type": "number",
                     "maximum": 300,
                     "minimum": 0
@@ -10587,6 +12851,26 @@ const docTemplate = `{
                 },
                 "user_type": {
                     "description": "'owner', 'admin', 'user'",
+                    "type": "string"
+                }
+            }
+        },
+        "errors.APIError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Code is a stable, snake_case machine-readable identifier.",
+                    "type": "string"
+                },
+                "fields": {
+                    "description": "Fields holds per-field validation messages. Omitted when empty.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "description": "Message is the user-facing pt-BR message.",
                     "type": "string"
                 }
             }
@@ -10661,11 +12945,501 @@ const docTemplate = `{
                 }
             }
         },
+        "helpers.Page-entities_ActivityEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ActivityEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_AvailableFeature": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.AvailableFeature"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_BrandingTemplate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BrandingTemplate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_BudgetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_BudgetStatusHistoryEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_CompanyListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.CompanyListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PaymentHistoryItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentHistoryItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PaymentMethodResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentMethodResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PlanTemplate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanTemplate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PresetEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PresetEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PresetTemplate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PresetTemplate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_ProfileResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfileResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_SubscriptionListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SubscriptionListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_SubscriptionPlanResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_UserEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.UserEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_CostPresetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.CostPresetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_EnergyPresetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.EnergyPresetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_MachinePresetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.MachinePresetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_SubscriptionPaymentItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.SubscriptionPaymentItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usecases.CostPresetResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "labor_cost_per_hour": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "overhead_percentage": {
+                    "type": "number"
+                },
+                "packaging_cost_per_item": {
+                    "type": "number"
+                },
+                "post_processing_cost_per_hour": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                },
+                "quality_control_cost_per_item": {
+                    "type": "number"
+                },
+                "shipping_cost_base": {
+                    "type": "number"
+                },
+                "shipping_cost_per_gram": {
+                    "type": "number"
+                },
+                "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "usecases.CreateCostPresetRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
@@ -10695,7 +13469,7 @@ const docTemplate = `{
                 },
                 "profit_margin_percentage": {
                     "type": "number",
-                    "maximum": 100,
+                    "maximum": 1000,
                     "minimum": 0
                 },
                 "quality_control_cost_per_item": {
@@ -10715,6 +13489,7 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "user_id": {
+                    "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
                 }
             }
@@ -10723,10 +13498,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "currency",
-                "energy_cost_per_kwh",
-                "name",
-                "off_peak_hour_multiplier",
-                "peak_hour_multiplier"
+                "energy_cost_per_kwh"
             ],
             "properties": {
                 "city": {
@@ -10766,6 +13538,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
                 }
             }
@@ -10779,7 +13552,6 @@ const docTemplate = `{
                 "filament_diameter",
                 "layer_height_max",
                 "layer_height_min",
-                "name",
                 "nozzle_diameter",
                 "power_consumption",
                 "print_speed_max"
@@ -10837,6 +13609,74 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "user_id": {
+                    "description": "Deprecated: ignored; derived from the authenticated user.",
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.EnergyPresetResponse": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "off_peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "tariff_type": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.FromTemplateOverrides": {
+            "type": "object",
+            "properties": {
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -10861,6 +13701,9 @@ const docTemplate = `{
                 },
                 "cost_per_hour": {
                     "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
@@ -10902,6 +13745,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "type": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -10958,6 +13804,73 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "number"
+                }
+            }
+        },
+        "usecases.SubscriptionPaymentItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_url": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.SuggestNameRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "brand": {
+                    "description": "Machine",
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "labor_cost_per_hour": {
+                    "description": "Cost",
+                    "type": "number"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "nozzle_diameter": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                },
+                "provider": {
+                    "description": "Energy",
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.PresetType"
                 }
             }
         },
@@ -11025,14 +13938,12 @@ const docTemplate = `{
         },
         "usecases.UpdateCostPresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11075,9 +13986,6 @@ const docTemplate = `{
         },
         "usecases.UpdateEnergyPresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "city": {
                     "type": "string"
@@ -11095,6 +14003,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11125,9 +14034,6 @@ const docTemplate = `{
         },
         "usecases.UpdateMachinePresetRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "bed_temperature_max": {
                     "type": "number"
@@ -11157,6 +14063,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "id": {
+                    "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
                 },
                 "is_active": {
@@ -11188,17 +14095,24 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "2.8.0",
 	Host:             "",
-	BasePath:         "",
+	BasePath:         "/v1",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "SpoolIQ API",
+	Description:      "SpoolIq calcula o preço real das suas impressões 3D: filamento multi-cor (g/m), energia (kWh + bandeira), desgaste, overhead e mão-de-obra. Gera pacotes (só impressão, ajustes, modelagem), exporta PDF/CSV e guarda materiais.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -24,31 +24,33 @@ type CostPresetEntity struct {
 // Validate validates the cost preset entity
 func (c *CostPresetEntity) Validate() error {
 	if c.LaborCostPerHour < 0 {
-		return errors.New("labor cost per hour cannot be negative")
+		return errors.New("o custo de mão de obra por hora não pode ser negativo")
 	}
 	if c.PackagingCostPerItem < 0 {
-		return errors.New("packaging cost per item cannot be negative")
+		return errors.New("o custo de embalagem por item não pode ser negativo")
 	}
 	if c.ShippingCostBase < 0 {
-		return errors.New("shipping cost base cannot be negative")
+		return errors.New("o custo base de envio não pode ser negativo")
 	}
 	if c.ShippingCostPerGram < 0 {
-		return errors.New("shipping cost per gram cannot be negative")
+		return errors.New("o custo de envio por grama não pode ser negativo")
 	}
 	if c.OverheadPercentage < 0 || c.OverheadPercentage > 100 {
-		return errors.New("overhead percentage must be between 0 and 100")
+		return errors.New("o percentual de overhead deve estar entre 0 e 100")
 	}
-	if c.ProfitMarginPercentage < 0 || c.ProfitMarginPercentage > 100 {
-		return errors.New("profit margin percentage must be between 0 and 100")
+	// Profit margin is allowed to exceed 100% (e.g. keystone pricing and up),
+	// but is capped to guard against obvious data-entry mistakes.
+	if c.ProfitMarginPercentage < 0 || c.ProfitMarginPercentage > 1000 {
+		return errors.New("o percentual de margem de lucro deve estar entre 0 e 1000")
 	}
 	if c.PostProcessingCostPerHour < 0 {
-		return errors.New("post processing cost per hour cannot be negative")
+		return errors.New("o custo de pós-processamento por hora não pode ser negativo")
 	}
 	if c.SupportRemovalCostPerHour < 0 {
-		return errors.New("support removal cost per hour cannot be negative")
+		return errors.New("o custo de remoção de suporte por hora não pode ser negativo")
 	}
 	if c.QualityControlCostPerItem < 0 {
-		return errors.New("quality control cost per item cannot be negative")
+		return errors.New("o custo de controle de qualidade por item não pode ser negativo")
 	}
 
 	return nil

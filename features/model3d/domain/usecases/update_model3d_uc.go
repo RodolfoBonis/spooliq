@@ -3,10 +3,10 @@ package usecases
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -14,95 +14,63 @@ import (
 	"gorm.io/gorm"
 )
 
-// Update handles updating a 3D model's metadata.
+// Update updates a 3D model's metadata, organization-scoped.
 // @Summary Update 3D Model
-// Schemes
-// @Description Update an existing 3D model's metadata
-// @Tags 3D Models
+// @Description Update an existing 3D model's metadata. Send customer_id: null to detach the customer.
+// @Tags models3d
 // @Accept json
 // @Produce json
 // @Param id path string true "3D Model ID" format(uuid)
 // @Param request body entities.UpdateModel3DRequest true "Update data"
-// @Success 200 {object} entities.Model3DEntity "Successfully updated 3D model"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Success 200 {object} entities.Model3DEntity "The updated 3D model"
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /models3d/{id} [put]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *Model3DUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, errOrganizationRequired())
 		return
 	}
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid model ID", map[string]interface{}{
-			"model_id": idParam,
-			"error":    err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid model ID format")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		coreErrors.Respond(c, errInvalidModel3DID())
 		return
 	}
 
 	var request entities.UpdateModel3DRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		coreErrors.Respond(c, err)
+		return
+	}
+	if err := validation.Validate(request); err != nil {
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.validator.Struct(request); err != nil {
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		return
-	}
-
-	model, err := uc.repository.FindByID(id, organizationID)
+	model, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
-			appError := coreErrors.UsecaseError("3D model not found")
-			httpError := appError.ToHTTPError()
-			c.AbortWithStatusJSON(http.StatusNotFound, httpError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			coreErrors.Respond(c, errModel3DNotFound())
 			return
 		}
-
-		uc.logger.Error(ctx, "Failed to retrieve 3D model for update", map[string]interface{}{
-			"model_id": id,
-			"error":    err.Error(),
-		})
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to retrieve 3D model for update", map[string]interface{}{"model_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Apply non-nil fields from request
 	if request.Name != nil {
 		model.Name = *request.Name
 	}
 	if request.Description != nil {
 		model.Description = *request.Description
-	}
-	if request.CustomerID != nil {
-		parsed, err := uuid.Parse(*request.CustomerID)
-		if err != nil {
-			appError := coreErrors.UsecaseError("Invalid customer_id format")
-			httpError := appError.ToHTTPError()
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-			return
-		}
-		model.CustomerID = &parsed
 	}
 	if request.Tags != nil {
 		model.Tags = request.Tags
@@ -111,20 +79,39 @@ func (uc *Model3DUseCase) Update(c *gin.Context) {
 		model.Notes = request.Notes
 	}
 
-	if err := uc.repository.Update(model); err != nil {
-		uc.logger.Error(ctx, "Failed to update 3D model", map[string]interface{}{
-			"model_id": id,
-			"error":    err.Error(),
-		})
-		httpError := coreErrors.NewHTTPError(http.StatusInternalServerError, "Failed to update 3D model")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	// customer_id has three states: absent (keep), explicit null (detach), value
+	// (set + validate ownership). The repository Selects customer_id so an explicit
+	// nil is persisted as NULL.
+	if request.CustomerID.Set {
+		if request.CustomerID.Value == nil {
+			model.CustomerID = nil
+		} else {
+			parsed, err := uuid.Parse(*request.CustomerID.Value)
+			if err != nil {
+				coreErrors.Respond(c, errInvalidCustomerID())
+				return
+			}
+			exists, err := uc.repository.CustomerExists(ctx, parsed, organizationID)
+			if err != nil {
+				uc.logger.Error(ctx, "Failed to validate customer", map[string]interface{}{"error": err.Error()})
+				coreErrors.Respond(c, err)
+				return
+			}
+			if !exists {
+				coreErrors.Respond(c, errCustomerNotFound())
+				return
+			}
+			model.CustomerID = &parsed
+		}
+	}
+
+	if err := uc.repository.Update(ctx, model); err != nil {
+		uc.logger.Error(ctx, "Failed to update 3D model", map[string]interface{}{"model_id": id, "error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
 
-	uc.logger.Info(ctx, "3D model updated successfully", map[string]interface{}{
-		"model_id":   model.ID,
-		"model_name": model.Name,
-	})
+	uc.logger.Info(ctx, "3D model updated successfully", map[string]interface{}{"model_id": model.ID, "model_name": model.Name})
 
 	c.JSON(http.StatusOK, model)
 

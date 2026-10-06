@@ -1,14 +1,16 @@
 package usecases
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -22,11 +24,11 @@ import (
 // @Param id path string true "Budget ID"
 // @Param request body entities.UpdateBudgetRequest true "Update budget request"
 // @Success 200 {object} entities.BudgetResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id} [put]
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 409 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /budgets/{id} [put]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -34,43 +36,28 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
-
-	uc.logger.Info(ctx, "Budget update attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Parse budget ID
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
 	var request entities.UpdateBudgetRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid request format")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
-		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := validation.Validate(&request); err != nil {
+		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -81,22 +68,23 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		respondBudgetError(c, err)
 		return
 	}
 
-	// Check if budget can be edited
+	// Check if budget can be edited. This is a fast pre-check; the authoritative
+	// guard is the draft-scoped WHERE in the repository Update inside the
+	// transaction, which closes the TOCTOU race with a concurrent status change.
 	if !budget.CanBeEdited() {
 		uc.logger.Error(ctx, "Cannot edit non-draft budget", map[string]interface{}{
 			"budget_id": budgetID,
 			"status":    budget.Status,
 		})
-		appError := coreErrors.UsecaseError("Only draft budgets can be edited")
-		c.JSON(http.StatusForbidden, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Conflict(CodeBudgetNotEditable, "Apenas orçamentos em rascunho podem ser editados"))
 		return
 	}
 
-	// Update fields
+	// Update fields (only those explicitly provided in the request)
 	if request.Name != nil {
 		budget.Name = *request.Name
 	}
@@ -105,23 +93,50 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 	if request.CustomerID != nil {
 		// Verify customer exists and user has permission
-		_, err = uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID)
-		if err != nil {
+		if _, err := uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID); err != nil {
 			uc.logger.Error(ctx, "Customer not found", map[string]interface{}{
 				"error":       err.Error(),
 				"customer_id": *request.CustomerID,
 			})
-			appError := coreErrors.UsecaseError("Customer not found")
-			c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+			coreErrors.Respond(c, coreErrors.NotFoundErr(CodeCustomerNotFound, "Cliente não encontrado"))
 			return
 		}
 		budget.CustomerID = *request.CustomerID
 	}
-	if request.MachinePresetID != nil {
-		budget.MachinePresetID = request.MachinePresetID
-	}
-	if request.EnergyPresetID != nil {
-		budget.EnergyPresetID = request.EnergyPresetID
+	// Preset resolution on update is conditional: only when the request explicitly
+	// sends profile_id do we re-resolve every slot from the profile/org defaults
+	// (explicit IDs in the same request still win per slot). Otherwise we keep the
+	// stored presets and apply only the explicit per-slot overrides, preserving the
+	// existing partial-update semantics. presetsValidatedByResolver tracks whether
+	// the resolver already validated the budget-level presets.
+	presetsValidatedByResolver := false
+	if request.ProfileID != nil {
+		resolved, rerr := uc.resolvePresets(c, organizationID, PresetResolutionInput{
+			ProfileID:       request.ProfileID,
+			MachinePresetID: request.MachinePresetID,
+			EnergyPresetID:  request.EnergyPresetID,
+			CostPresetID:    request.CostPresetID,
+		})
+		if rerr != nil {
+			uc.logger.Error(ctx, "Failed to resolve budget presets", map[string]interface{}{"error": rerr.Error()})
+			respondBudgetError(c, rerr)
+			return
+		}
+		budget.ProfileID = resolved.ProfileID
+		budget.MachinePresetID = resolved.MachinePresetID
+		budget.EnergyPresetID = resolved.EnergyPresetID
+		budget.CostPresetID = resolved.CostPresetID
+		presetsValidatedByResolver = true
+	} else {
+		if request.MachinePresetID != nil {
+			budget.MachinePresetID = request.MachinePresetID
+		}
+		if request.EnergyPresetID != nil {
+			budget.EnergyPresetID = request.EnergyPresetID
+		}
+		if request.CostPresetID != nil {
+			budget.CostPresetID = request.CostPresetID
+		}
 	}
 	if request.IncludeEnergyCost != nil {
 		budget.IncludeEnergyCost = *request.IncludeEnergyCost
@@ -141,177 +156,88 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 
 	budget.UpdatedAt = time.Now()
 
-	// Update items if provided (delete all and recreate)
+	// A stored PDF no longer reflects the budget once it is edited.
+	budget.PDFUrl = nil
+
+	// Validate ONLY the references explicitly provided in this request. References
+	// already stored on the budget are deliberately NOT re-validated: the preset
+	// they point to may have been soft-deleted since, and historical references
+	// remain usable for calculation (see repository CalculateCosts/GetPresetInfo).
+	var itemsForValidation []entities.BudgetItemRequest
 	if request.Items != nil {
-		// Validate items
-		for i, item := range *request.Items {
-			if len(item.Filaments) == 0 {
-				uc.logger.Error(ctx, "Item has no filaments", map[string]interface{}{
-					"item_index": i,
-				})
-				appError := coreErrors.UsecaseError("Each item must have at least one filament")
-				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-				return
-			}
-		}
-
-		// Delete all existing items (cascade will delete filaments)
-		if err := uc.budgetRepository.DeleteAllItems(ctx, budgetID); err != nil {
-			uc.logger.Error(ctx, "Failed to delete existing items", map[string]interface{}{
-				"error": err.Error(),
-			})
-		}
-
-		// Create new items with filaments
-		for _, itemReq := range *request.Items {
-			item := &entities.BudgetItemEntity{
-				ID:                      uuid.New(),
-				BudgetID:                budget.ID,
-				ProductName:             itemReq.ProductName,
-				ProductDescription:      itemReq.ProductDescription,
-				ProductQuantity:         itemReq.ProductQuantity,
-				ProductDimensions:       itemReq.ProductDimensions,
-				PrintTimeHours:          itemReq.PrintTimeHours,
-				PrintTimeMinutes:        itemReq.PrintTimeMinutes,
-				CostPresetID:            itemReq.CostPresetID,
-				SetupTimeMinutes:        itemReq.SetupTimeMinutes,
-				ManualLaborMinutesTotal: itemReq.ManualLaborMinutesTotal,
-				AdditionalNotes:         itemReq.AdditionalNotes,
-				Order:                   itemReq.Order,
-				CreatedAt:               time.Now(),
-				UpdatedAt:               time.Now(),
-			}
-
-			// Save item
-			if err := uc.budgetRepository.AddItem(ctx, item); err != nil {
-				uc.logger.Error(ctx, "Failed to create budget item", map[string]interface{}{
-					"error": err.Error(),
-				})
-				continue
-			}
-
-			// Create filaments for this item
-			for _, filReq := range itemReq.Filaments {
-				filament := &entities.BudgetItemFilamentEntity{
-					ID:           uuid.New(),
-					BudgetItemID: item.ID,
-					FilamentID:   filReq.FilamentID,
-					Quantity:     filReq.Quantity,
-					Order:        filReq.Order,
-					CreatedAt:    time.Now(),
-					UpdatedAt:    time.Now(),
-				}
-
-				if err := uc.budgetRepository.AddItemFilament(ctx, filament); err != nil {
-					uc.logger.Error(ctx, "Failed to add filament to item", map[string]interface{}{
-						"error":       err.Error(),
-						"item_id":     item.ID,
-						"filament_id": filReq.FilamentID,
-					})
-				}
-			}
-		}
+		itemsForValidation = *request.Items
 	}
-
-	// Save to repository
-	if err := uc.budgetRepository.Update(ctx, budget); err != nil {
-		uc.logger.Error(ctx, "Failed to update budget", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	var vMachine, vEnergy, vCost *uuid.UUID
+	if !presetsValidatedByResolver {
+		vMachine, vEnergy, vCost = request.MachinePresetID, request.EnergyPresetID, request.CostPresetID
+	}
+	if err := uc.validateReferences(ctx, organizationID, vMachine, vEnergy, vCost, itemsForValidation); err != nil {
+		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
-	// Recalculate costs
-	if err := uc.budgetRepository.CalculateCosts(ctx, budget.ID); err != nil {
-		uc.logger.Error(ctx, "Failed to recalculate budget costs", map[string]interface{}{
-			"error": err.Error(),
-		})
+	// If items are provided, validate each has at least one filament before any write.
+	var built []builtBudgetItem
+	if request.Items != nil {
+		for i, item := range *request.Items {
+			if len(item.Filaments) == 0 {
+				uc.logger.Error(ctx, "Item has no filaments", map[string]interface{}{"item_index": i})
+				coreErrors.Respond(c, coreErrors.BadRequest(coreErrors.CodeValidationError, "Cada item do orçamento deve ter ao menos um filamento"))
+				return
+			}
+		}
+		built = buildBudgetItems(budget.ID, organizationID, *request.Items)
 	}
 
-	// Retrieve the updated budget
-	budget, _ = uc.budgetRepository.FindByID(ctx, budget.ID, organizationID)
-
-	// Build response
-	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
-	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
-
-	itemResponses := make([]entities.BudgetItemResponse, len(items))
-	var totalPrintMinutes int
-
-	for i, item := range items {
-		// Get filament usage info for this item
-		filaments, _ := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
-
-		// Calculate print time display
-		printTimeDisplay := ""
-		if item.PrintTimeHours > 0 {
-			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
-		} else {
-			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
+	// Persist atomically: the draft-guarded budget update runs first so a concurrent
+	// status change aborts the whole transaction before any item is touched; item
+	// replacement (if any) and the cost recalculation then succeed or roll back
+	// together.
+	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		if err := repo.Update(ctx, budget); err != nil {
+			return err
 		}
 
-		// Sum total print time
-		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
-
-		// Convert CostPresetID to string pointer
-		var costPresetIDStr *string
-		if item.CostPresetID != nil {
-			s := item.CostPresetID.String()
-			costPresetIDStr = &s
+		if request.Items != nil {
+			if err := repo.DeleteAllItems(ctx, budgetID, organizationID); err != nil {
+				return err
+			}
+			for _, b := range built {
+				if err := repo.AddItem(ctx, b.Item); err != nil {
+					return err
+				}
+				for _, filament := range b.Filaments {
+					if err := repo.AddItemFilament(ctx, filament); err != nil {
+						return err
+					}
+				}
+			}
 		}
 
-		itemResponses[i] = entities.BudgetItemResponse{
-			ID:                      item.ID.String(),
-			BudgetID:                item.BudgetID.String(),
-			ProductName:             item.ProductName,
-			ProductDescription:      item.ProductDescription,
-			ProductQuantity:         item.ProductQuantity,
-			ProductDimensions:       item.ProductDimensions,
-			PrintTimeHours:          item.PrintTimeHours,
-			PrintTimeMinutes:        item.PrintTimeMinutes,
-			PrintTimeDisplay:        printTimeDisplay,
-			CostPresetID:            costPresetIDStr,
-			SetupTimeMinutes:        item.SetupTimeMinutes,
-			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-			AdditionalNotes:         item.AdditionalNotes,
-			FilamentCost:            item.FilamentCost,
-			WasteCost:               item.WasteCost,
-			EnergyCost:              item.EnergyCost,
-			SetupCost:               item.SetupCost,
-			ManualLaborCost:         item.ManualLaborCost,
-			ItemTotalCost:           item.ItemTotalCost,
-			UnitPrice:               item.UnitPrice,
-			Filaments:               filaments,
-			Order:                   item.Order,
-			CreatedAt:               item.CreatedAt,
-			UpdatedAt:               item.UpdatedAt,
+		return repo.CalculateCosts(ctx, budget.ID, organizationID)
+	}); err != nil {
+		// A concurrent approval (or deletion) turns this into a conflict rather
+		// than an internal error.
+		if errors.Is(err, entities.ErrBudgetNotEditable) {
+			uc.logger.Warning(ctx, "Budget no longer editable (concurrent change)", map[string]interface{}{"budget_id": budgetID})
+			coreErrors.Respond(c, coreErrors.Conflict(CodeBudgetNotEditable, "Apenas orçamentos em rascunho podem ser editados"))
+			return
 		}
+		uc.logger.Error(ctx, "Failed to update budget", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
 	}
 
-	// Calculate total print time
-	totalHours := totalPrintMinutes / 60
-	totalMins := totalPrintMinutes % 60
-	totalPrintTimeDisplay := ""
-	if totalHours > 0 {
-		totalPrintTimeDisplay = fmt.Sprintf("%dh%02dm", totalHours, totalMins)
-	} else {
-		totalPrintTimeDisplay = fmt.Sprintf("%dm", totalMins)
+	// Build the response from the freshly stored (and recosted) budget.
+	response, err := uc.buildBudgetResponse(ctx, budget.ID, organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to retrieve updated budget", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
 	}
 
-	response := entities.BudgetResponse{
-		BudgetEntity:          budget,
-		Customer:              customerInfo,
-		Items:                 itemResponses,
-		TotalPrintTimeHours:   totalHours,
-		TotalPrintTimeMinutes: totalMins,
-		TotalPrintTimeDisplay: totalPrintTimeDisplay,
-	}
-
-	uc.logger.Info(ctx, "Budget updated successfully", map[string]interface{}{
-		"budget_id": budget.ID,
-	})
+	uc.logger.Info(ctx, "Budget updated successfully", map[string]interface{}{"budget_id": budget.ID})
 
 	c.JSON(http.StatusOK, response)
 

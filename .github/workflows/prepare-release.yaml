@@ -88,14 +88,14 @@ jobs:
             echo "Using provided version: $NEW_VERSION"
           fi
           
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Sync with main branch
         run: |
           echo "Fetching main branch..."
           git fetch origin main
 
-          echo "Merging main into ${{ inputs.source_branch }}..."
+          echo "Merging main into ${{ inputs.from_branch }}..."
           git merge origin/main --no-edit -m "chore: sync with main before release" || {
             echo "Merge conflict detected. Auto-resolving by preferring main's version..."
             # Auto-resolve conflicts by preferring main's versions of version.txt and CHANGELOG.md
@@ -110,7 +110,7 @@ jobs:
         run: |
           RELEASE_BRANCH="release/v${{ steps.determine-version.outputs.version }}"
           git checkout -b $RELEASE_BRANCH
-          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
+          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> "$GITHUB_ENV"
 
       - name: Update version file
         run: |
@@ -129,7 +129,7 @@ jobs:
             COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
           else
             echo "Generating changelog since $LAST_TAG"
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            COMMITS=$(git log "${LAST_TAG}"..HEAD --pretty=format:"- %s (%h)" --no-merges)
           fi
           
           # Create or update CHANGELOG.md
@@ -156,7 +156,7 @@ jobs:
             echo ""
             echo "$COMMITS"
             echo "EOF"
-          } >> $GITHUB_ENV
+          } >> "$GITHUB_ENV"
 
       - name: Commit CHANGELOG
         run: |
@@ -229,24 +229,17 @@ jobs:
 
           ### ⏱️ Quick Release Timeline (Target: 2-8 hours)
           - [x] Snapshot created & tag pushed
-          - [x] Staging deployment (check below)
-          - [ ] QA validation in staging (2-4h)
+          - [ ] Release PR review & approval (2-4h)
           - [ ] PR approval & merge to main
           - [ ] Production deployment (automatic)
           - [ ] Backport to develop (automatic)
 
           **Expected completion:** ${EXPECTED_COMPLETION}
 
-          ### 🧪 Staging Environment
-          Staging deployment triggered automatically.
-          Check the Actions tab for deployment status.
-
           ### 📝 Release Checklist
           - [ ] Version bumped to v${{ steps.determine-version.outputs.version }}
           - [ ] CHANGELOG.md updated
           - [ ] All CI tests passing
-          - [ ] Staging deployment successful
-          - [ ] QA validation complete
           - [ ] Breaking changes documented (if any)
           - [ ] No sensitive data included
 
@@ -270,19 +263,8 @@ jobs:
             --label "release" \
             --label "automated")
 
-          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "✓ PR created: $PR_URL"
-
-      - name: Trigger staging deployment
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "Triggering staging deployment for release branch..."
-
-          gh workflow run release-staging.yaml \
-            --ref ${{ env.RELEASE_BRANCH }} || echo "Staging deployment will trigger automatically on push"
-
-          echo "✓ Staging deployment triggered (or will trigger on push)"
 
       - name: Notify n8n
         if: success()
@@ -298,17 +280,16 @@ jobs:
               "version": "v${{ steps.determine-version.outputs.version }}",
               "branch": "${{ env.RELEASE_BRANCH }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "pr_url": "${{ steps.create-pr.outputs.pr_url }}",
                 "from_branch": "${{ inputs.from_branch }}",
                 "tag_created": true,
-                "staging_triggered": true,
                 "expected_completion": "'"$EXPECTED_COMPLETION"'",
                 "feature_cutoff": true,
                 "quick_release": true
               },
               "telegram_chat_id": "${{ secrets.CHAT_ID }}",
               "telegram_thread_id": "${{ secrets.THREAD_ID }}",
-              "telegram_message": "🚀 Release v${{ steps.determine-version.outputs.version }} prepared!\n\n⚠️ FEATURE CUTOFF: New features → next release\n⏱️ Target: 8h\n🧪 Staging: deploying\n📋 PR: ${{ steps.create-pr.outputs.pr_url }}"
+              "telegram_message": "🚀 Release v${{ steps.determine-version.outputs.version }} prepared!\n\n⚠️ FEATURE CUTOFF: New features → next release\n⏱️ Target: 8h\n📋 PR: ${{ steps.create-pr.outputs.pr_url }}"
             }' || echo "Notification failed (non-critical)"

@@ -16,10 +16,10 @@ import (
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} entities.AdminStats "Platform statistics"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/stats [get]
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
+// @Router /admin/stats [get]
 func (h *Handler) GetStats(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -29,12 +29,7 @@ func (h *Handler) GetStats(c *gin.Context) {
 	// Execute use case
 	response, err := h.getStatsUC.Execute(ctx, userRoles)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to get platform stats")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 

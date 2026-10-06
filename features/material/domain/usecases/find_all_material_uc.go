@@ -3,62 +3,58 @@ package usecases
 import (
 	"net/http"
 
-	"github.com/RodolfoBonis/spooliq/core/helpers"
-
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/gin-gonic/gin"
 )
 
-// FindAll handles retrieving all existing materials
+// FindAll handles retrieving a paginated, searchable list of materials.
 // @Summary Find All Materials
-// @Schemes
-// @Description Find All existing 3D printing materials
+// @Description List 3D printing materials for the organization, paginated and searchable.
 // @Tags Materials
 // @Accept json
 // @Produce json
-// @Success 200 {object} entities.FindAllMaterialsResponse "Successfully List All Materials"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 409 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Param page query int false "Page number (1-based)" default(1)
+// @Param page_size query int false "Items per page (max 100)" default(20)
+// @Param q query string false "Case-insensitive search on the material name"
+// @Param sort_by query string false "Sort field" Enums(name, created_at) default(name)
+// @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(asc)
+// @Success 200 {object} entities.FindAllMaterialsResponse "Paginated list of materials"
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /materials [get]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *MaterialUseCase) FindAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log materials retrieval attempt (automatic trace correlation via enhanced observability)
-	uc.logger.Info(ctx, "Materials retrieval attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{
+		DefaultPageSize: 20,
+		SortWhitelist:   materialSortWhitelist,
+		DefaultSort:     "name",
+		TieBreaker:      "id",
 	})
 
-	materials, err := uc.repository.FindAll(organizationID)
+	order := q.OrderClause()
+	if c.Query("sort_dir") == "" {
+		order = q.OrderClauseDir("asc")
+	}
 
+	materials, total, err := uc.repository.FindAll(organizationID, q.Search, order, q.Limit(), q.Offset())
 	if err != nil {
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Failed to retrieve materials", map[string]interface{}{
-			"error": err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to retrieve materials", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Log successful retrieval with automatic trace correlation
-	uc.logger.Info(ctx, "Materials retrieved successfully", map[string]interface{}{
-		"total_materials": len(materials),
-	})
+	uc.logger.Info(ctx, "Materials retrieved successfully", map[string]interface{}{"total_materials": total})
 
-	c.JSON(http.StatusOK, entities.FindAllMaterialsResponse{Data: materials})
+	c.JSON(http.StatusOK, helpers.NewPage(materials, total, q))
 }

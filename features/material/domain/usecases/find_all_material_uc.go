@@ -39,11 +39,12 @@ func (uc *MaterialUseCase) FindAll(c *gin.Context) {
 		DefaultPageSize: 20,
 		SortWhitelist:   materialSortWhitelist,
 		DefaultSort:     "name",
+		TieBreaker:      "id",
 	})
 
 	order := q.OrderClause()
 	if c.Query("sort_dir") == "" {
-		order = q.SortColumn + " asc"
+		order = q.OrderClauseDir("asc")
 	}
 
 	materials, total, err := uc.repository.FindAll(organizationID, q.Search, order, q.Limit(), q.Offset())

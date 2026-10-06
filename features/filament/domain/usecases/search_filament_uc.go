@@ -50,6 +50,7 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 		DefaultPageSize: 20,
 		SortWhitelist:   filamentSortWhitelist,
 		DefaultSort:     "created_at",
+		TieBreaker:      "filaments.id",
 	})
 
 	// `name` is a legacy alias of `q`; q wins when both are present.
@@ -72,7 +73,7 @@ func (uc *FilamentUseCase) Search(c *gin.Context) {
 		return
 	}
 
-	responses := uc.buildFilamentResponses(ctx, filaments)
+	responses := uc.buildFilamentResponses(ctx, organizationID, filaments)
 
 	uc.logger.Info(ctx, "Filaments search completed successfully", map[string]interface{}{"total_found": total, "returned": len(responses)})
 

@@ -42,6 +42,7 @@ func (uc *CustomerUseCase) FindAll(c *gin.Context) {
 		DefaultPageSize: 20,
 		SortWhitelist:   customerSortWhitelist,
 		DefaultSort:     "created_at",
+		TieBreaker:      "id",
 	})
 
 	customers, total, err := uc.repository.FindAll(ctx, organizationID, q.Search, q.OrderClause(), q.Limit(), q.Offset())

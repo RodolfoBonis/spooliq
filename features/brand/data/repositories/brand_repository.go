@@ -3,6 +3,7 @@ package repositories
 import (
 	"errors"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/brand/data/models"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/repositories"
@@ -42,7 +43,7 @@ func (b *brandRepository) FindAll(organizationID, search, order string, limit, o
 		Where("organization_id = ?", organizationID)
 
 	if search != "" {
-		query = query.Where("name ILIKE ?", "%"+search+"%")
+		query = query.Where(`name ILIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(search)+"%")
 	}
 
 	var total int64

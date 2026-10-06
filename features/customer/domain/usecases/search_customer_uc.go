@@ -62,6 +62,7 @@ func (uc *CustomerUseCase) Search(c *gin.Context) {
 		DefaultPageSize: 20,
 		SortWhitelist:   customerSortWhitelist,
 		DefaultSort:     "created_at",
+		TieBreaker:      "id",
 	})
 
 	// Build structured filters from the bound request.

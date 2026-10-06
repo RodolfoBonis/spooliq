@@ -107,13 +107,31 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 		return
 	}
 
+	// If brand or material is being changed, the new reference must belong to
+	// the caller's organization.
+	if request.BrandID != nil || request.MaterialID != nil {
+		brandID := existingFilament.BrandID
+		if request.BrandID != nil {
+			brandID = *request.BrandID
+		}
+		materialID := existingFilament.MaterialID
+		if request.MaterialID != nil {
+			materialID = *request.MaterialID
+		}
+		if err := uc.validateBrandAndMaterial(ctx, organizationID, brandID, materialID); err != nil {
+			uc.logger.Warning(ctx, "Filament update references brand/material outside organization", map[string]interface{}{"brand_id": brandID, "material_id": materialID})
+			coreErrors.Respond(c, err)
+			return
+		}
+	}
+
 	// Enforce unique name within the brand when the name changes.
 	if request.Name != nil && *request.Name != existingFilament.Name {
 		brandID := existingFilament.BrandID
 		if request.BrandID != nil {
 			brandID = *request.BrandID
 		}
-		exists, err := uc.repository.ExistsByNameAndBrand(ctx, *request.Name, brandID, &id)
+		exists, err := uc.repository.ExistsByNameAndBrand(ctx, *request.Name, brandID, organizationID, &id)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to check filament existence", map[string]interface{}{"name": *request.Name, "error": err.Error()})
 			coreErrors.Respond(c, err)
@@ -152,10 +170,10 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 	uc.logger.Info(ctx, "Filament updated successfully", map[string]interface{}{"filament_id": id})
 
 	response := &filamentEntities.FilamentResponse{FilamentEntity: updatedFilament}
-	if brandInfo, err := uc.repository.GetBrandInfo(ctx, updatedFilament.BrandID); err == nil {
+	if brandInfo, err := uc.repository.GetBrandInfo(ctx, updatedFilament.BrandID, organizationID); err == nil {
 		response.Brand = brandInfo
 	}
-	if materialInfo, err := uc.repository.GetMaterialInfo(ctx, updatedFilament.MaterialID); err == nil {
+	if materialInfo, err := uc.repository.GetMaterialInfo(ctx, updatedFilament.MaterialID, organizationID); err == nil {
 		response.Material = materialInfo
 	}
 

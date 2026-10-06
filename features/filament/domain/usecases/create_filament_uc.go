@@ -1,6 +1,8 @@
 package usecases
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	filamentEntities "github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // Create handles creating a new filament.
@@ -76,7 +79,14 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 		}
 	}
 
-	exists, err := uc.repository.ExistsByNameAndBrand(ctx, request.Name, request.BrandID, nil)
+	// The referenced brand and material must belong to the caller's organization.
+	if err := uc.validateBrandAndMaterial(ctx, organizationID, request.BrandID, request.MaterialID); err != nil {
+		uc.logger.Warning(ctx, "Filament references brand/material outside organization", map[string]interface{}{"brand_id": request.BrandID, "material_id": request.MaterialID})
+		coreErrors.Respond(c, err)
+		return
+	}
+
+	exists, err := uc.repository.ExistsByNameAndBrand(ctx, request.Name, request.BrandID, organizationID, nil)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to check filament existence", map[string]interface{}{"name": request.Name, "error": err.Error()})
 		coreErrors.Respond(c, err)
@@ -143,4 +153,23 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 		EntityName:     filament.Name,
 		CreatedAt:      time.Now(),
 	})
+}
+
+// validateBrandAndMaterial ensures the referenced brand and material exist
+// within the organization. A missing or foreign id yields a 400 with a stable
+// code; any other lookup failure is returned as-is for the 500 path.
+func (uc *FilamentUseCase) validateBrandAndMaterial(ctx context.Context, organizationID string, brandID, materialID uuid.UUID) error {
+	if _, err := uc.repository.GetBrandInfo(ctx, brandID, organizationID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return coreErrors.BadRequest("brand_not_found", "Marca não encontrada")
+		}
+		return err
+	}
+	if _, err := uc.repository.GetMaterialInfo(ctx, materialID, organizationID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return coreErrors.BadRequest("material_not_found", "Material não encontrado")
+		}
+		return err
+	}
+	return nil
 }

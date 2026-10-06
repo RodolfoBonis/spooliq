@@ -15,6 +15,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -161,11 +162,12 @@ func TestBrandFindAll(t *testing.T) {
 			query     string
 			wantOrder string
 		}{
-			{"/brands", "lower(name) asc"},
-			{"/brands?sort_by=created_at&sort_dir=desc", "created_at desc"},
-			{"/brands?sort_by=created_at&sort_dir=asc", "created_at asc"},
-			{"/brands?sort_by=unknown_col&sort_dir=desc", "lower(name) desc"}, // falls back to default column
-			{"/brands?sort_by=name", "lower(name) asc"},
+			// The "id" tie-breaker is appended for deterministic pagination.
+			{"/brands", "lower(name) asc, id asc"},
+			{"/brands?sort_by=created_at&sort_dir=desc", "created_at desc, id asc"},
+			{"/brands?sort_by=created_at&sort_dir=asc", "created_at asc, id asc"},
+			{"/brands?sort_by=unknown_col&sort_dir=desc", "lower(name) desc, id asc"}, // falls back to default column
+			{"/brands?sort_by=name", "lower(name) asc, id asc"},
 		}
 		for _, tc := range cases {
 			repo := &fakeBrandRepo{brands: seed}
@@ -258,12 +260,10 @@ func TestBrandErrorMapping(t *testing.T) {
 	})
 }
 
-// errFakeFK mimics the pgx foreign-key violation error text the real driver
-// produces, so the use case's isForeignKeyViolation detection is exercised.
-var errFakeFK = &fkError{}
-
-type fkError struct{}
-
-func (*fkError) Error() string {
-	return `ERROR: update or delete on table "brands" violates foreign key constraint "fk_filaments_brand" (SQLSTATE 23503)`
+// errFakeFK is a real *pgconn.PgError carrying SQLSTATE 23503, so the shared
+// database.IsForeignKeyViolation detection (errors.As on *pgconn.PgError) is
+// exercised exactly as it would be with the live driver.
+var errFakeFK error = &pgconn.PgError{
+	Code:    "23503",
+	Message: `update or delete on table "brands" violates foreign key constraint "fk_filaments_brand"`,
 }

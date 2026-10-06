@@ -239,13 +239,13 @@ func TestFilamentBatchInfoIsConstantQueries(t *testing.T) {
 	}
 
 	counter.reset()
-	brands, err := repo.GetBrandsInfo(ctx, brandIDs)
+	brands, err := repo.GetBrandsInfo(ctx, brandIDs, itOrgA)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), counter.count(), "brand info for the whole page must be a single query")
 	assert.Len(t, brands, 2) // two distinct brands across three rows
 
 	counter.reset()
-	materials, err := repo.GetMaterialsInfo(ctx, materialIDs)
+	materials, err := repo.GetMaterialsInfo(ctx, materialIDs, itOrgA)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), counter.count(), "material info for the whole page must be a single query")
 	assert.Len(t, materials, 2)
@@ -260,4 +260,50 @@ func TestFilamentBatchInfoIsConstantQueries(t *testing.T) {
 	_, _, err = repo.FindAll(ctx, itOrgA, "", "filaments.created_at desc", 20, 0)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), counter.count(), "FindAll must be count+select only")
+}
+
+// TestFilamentCrossOrgNoLeak proves the organization-scoped relationship
+// helpers never resolve a brand/material from another tenant: a filament in
+// org A that points at a brand id belonging to org B must not leak that brand's
+// name, and the single-lookup form returns ErrRecordNotFound (which the create
+// use case maps to a 400).
+func TestFilamentCrossOrgNoLeak(t *testing.T) {
+	repo, db, _ := setupFilamentRepo(t)
+	ctx := context.Background()
+
+	// Brand + material owned by org B.
+	foreignBrand := seedBrand(t, db, itOrgB, "SecretBrand")
+	foreignMat := seedMaterial(t, db, itOrgB, "SecretMat", 60, 210)
+
+	// A filament in org A that (wrongly) references org B's brand/material.
+	seedFilament(t, repo, itOrgA, "Leaky", foreignBrand, foreignMat, 100)
+
+	// Batch lookup scoped to org A must not return org B's brand/material.
+	brands, err := repo.GetBrandsInfo(ctx, []uuid.UUID{foreignBrand}, itOrgA)
+	require.NoError(t, err)
+	if _, ok := brands[foreignBrand]; ok {
+		t.Error("brand from another org leaked through GetBrandsInfo")
+	}
+	materials, err := repo.GetMaterialsInfo(ctx, []uuid.UUID{foreignMat}, itOrgA)
+	require.NoError(t, err)
+	if _, ok := materials[foreignMat]; ok {
+		t.Error("material from another org leaked through GetMaterialsInfo")
+	}
+
+	// Single lookup scoped to org A returns not found (-> create maps to 400).
+	_, err = repo.GetBrandInfo(ctx, foreignBrand, itOrgA)
+	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	_, err = repo.GetMaterialInfo(ctx, foreignMat, itOrgA)
+	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+
+	// But the owner org still resolves them.
+	_, err = repo.GetBrandInfo(ctx, foreignBrand, itOrgB)
+	require.NoError(t, err)
+
+	// A free-text search in org A for the org B brand name must not surface the
+	// leaky filament (the join is matched on the same organization_id).
+	rows, total, err := repo.SearchFilaments(ctx, itOrgA, nil, "SecretBrand", "filaments.created_at desc", 20, 0)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), total)
+	assert.Len(t, rows, 0)
 }

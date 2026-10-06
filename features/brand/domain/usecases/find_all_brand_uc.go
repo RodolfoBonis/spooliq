@@ -39,13 +39,14 @@ func (uc *BrandUseCase) FindAll(c *gin.Context) {
 		DefaultPageSize: 20,
 		SortWhitelist:   brandSortWhitelist,
 		DefaultSort:     "name",
+		TieBreaker:      "id",
 	})
 
 	// Catalog lists default to ascending order by name when the client does not
 	// specify a direction, matching the previous "name ASC" behavior.
 	order := q.OrderClause()
 	if c.Query("sort_dir") == "" {
-		order = q.SortColumn + " asc"
+		order = q.OrderClauseDir("asc")
 	}
 
 	brands, total, err := uc.repository.FindAll(organizationID, q.Search, order, q.Limit(), q.Offset())

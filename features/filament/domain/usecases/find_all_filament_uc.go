@@ -39,6 +39,7 @@ func (uc *FilamentUseCase) FindAll(c *gin.Context) {
 		DefaultPageSize: 20,
 		SortWhitelist:   filamentSortWhitelist,
 		DefaultSort:     "created_at",
+		TieBreaker:      "filaments.id",
 	})
 
 	filaments, total, err := uc.repository.FindAll(ctx, organizationID, q.Search, q.OrderClause(), q.Limit(), q.Offset())
@@ -48,7 +49,7 @@ func (uc *FilamentUseCase) FindAll(c *gin.Context) {
 		return
 	}
 
-	responses := uc.buildFilamentResponses(ctx, filaments)
+	responses := uc.buildFilamentResponses(ctx, organizationID, filaments)
 
 	uc.logger.Info(ctx, "Filaments retrieved successfully", map[string]interface{}{"total_filaments": total, "returned": len(responses)})
 

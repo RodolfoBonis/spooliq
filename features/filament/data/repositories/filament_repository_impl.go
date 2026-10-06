@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	"github.com/RodolfoBonis/spooliq/features/filament/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/filament/domain/repositories"
@@ -50,15 +51,27 @@ func (r *filamentRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, org
 	return model.ToEntity(), nil
 }
 
-// Update updates an existing filament
+// filamentUpdatableColumns are the columns a PUT is allowed to overwrite. They
+// are passed to Select so GORM persists explicit zero values (e.g. is_active
+// false) instead of skipping them, while ownership, tenant and creation columns
+// stay immutable.
+var filamentUpdatableColumns = []string{
+	"name", "description", "brand_id", "material_id",
+	"color", "color_hex", "color_type", "color_data", "color_preview",
+	"diameter", "weight", "price_per_kg", "url",
+	"print_temperature", "bed_temperature", "is_active", "updated_at",
+}
+
+// Update updates an existing filament. The update is organization-scoped and
+// uses Select so a full PUT persists zero values.
 func (r *filamentRepositoryImpl) Update(ctx context.Context, filament *entities.FilamentEntity) error {
 	model := &models.FilamentModel{}
 	model.FromEntity(filament)
 
-	// Use Updates instead of Save to avoid issues with zero values
 	if err := r.db.WithContext(ctx).
 		Model(&models.FilamentModel{}).
-		Where("id = ?", filament.ID).
+		Where("id = ? AND organization_id = ?", filament.ID, filament.OrganizationID).
+		Select(filamentUpdatableColumns).
 		Updates(model).Error; err != nil {
 		return fmt.Errorf("failed to update filament: %w", err)
 	}
@@ -88,20 +101,24 @@ func (r *filamentRepositoryImpl) SearchFilaments(ctx context.Context, organizati
 
 // list is the shared query builder behind FindAll and SearchFilaments. All
 // queries are organization-scoped. When search is non-empty it LEFT JOINs the
-// brand and material tables so the term can match the filament name as well as
-// the related brand/material names. order is trusted (whitelisted by the caller)
-// and defaults to newest-first.
+// brand and material tables (matched on the SAME organization_id, so a term can
+// never match a foreign org's brand/material) and compares names with an
+// escaped ILIKE. order is trusted (whitelisted by the caller) and defaults to
+// newest-first.
 func (r *filamentRepositoryImpl) list(ctx context.Context, organizationID string, filters map[string]interface{}, search, order string, limit, offset int) ([]*entities.FilamentEntity, int64, error) {
 	query := r.db.WithContext(ctx).
 		Model(&models.FilamentModel{}).
 		Where("filaments.organization_id = ?", organizationID)
 
 	if search != "" {
-		like := "%" + search + "%"
+		like := "%" + helpers.EscapeLike(search) + "%"
 		query = query.
-			Joins("LEFT JOIN brands ON brands.id = filaments.brand_id").
-			Joins("LEFT JOIN materials ON materials.id = filaments.material_id").
-			Where("filaments.name ILIKE ? OR brands.name ILIKE ? OR materials.name ILIKE ?", like, like, like)
+			Joins("LEFT JOIN brands ON brands.id = filaments.brand_id AND brands.organization_id = filaments.organization_id").
+			Joins("LEFT JOIN materials ON materials.id = filaments.material_id AND materials.organization_id = filaments.organization_id").
+			Where(
+				`filaments.name ILIKE ? ESCAPE '\' OR brands.name ILIKE ? ESCAPE '\' OR materials.name ILIKE ? ESCAPE '\'`,
+				like, like, like,
+			)
 	}
 
 	query = applyFilamentFilters(query, filters)
@@ -160,12 +177,13 @@ func applyFilamentFilters(query *gorm.DB, filters map[string]interface{}) *gorm.
 	return query
 }
 
-// ExistsByNameAndBrand checks if a filament with the given name and brand already exists
-func (r *filamentRepositoryImpl) ExistsByNameAndBrand(ctx context.Context, name string, brandID uuid.UUID, excludeID *uuid.UUID) (bool, error) {
+// ExistsByNameAndBrand checks if a filament with the given name and brand already
+// exists within the organization.
+func (r *filamentRepositoryImpl) ExistsByNameAndBrand(ctx context.Context, name string, brandID uuid.UUID, organizationID string, excludeID *uuid.UUID) (bool, error) {
 	var count int64
 
 	query := r.db.WithContext(ctx).Model(&models.FilamentModel{}).
-		Where("name = ? AND brand_id = ?", name, brandID)
+		Where("name = ? AND brand_id = ? AND organization_id = ?", name, brandID, organizationID)
 
 	if excludeID != nil {
 		query = query.Where("id != ?", *excludeID)
@@ -178,8 +196,9 @@ func (r *filamentRepositoryImpl) ExistsByNameAndBrand(ctx context.Context, name 
 	return count > 0, nil
 }
 
-// GetBrandInfo fetches brand information by ID
-func (r *filamentRepositoryImpl) GetBrandInfo(ctx context.Context, brandID uuid.UUID) (*entities.BrandInfo, error) {
+// GetBrandInfo fetches brand information by ID, scoped to the organization so a
+// filament can never resolve a brand that belongs to another tenant.
+func (r *filamentRepositoryImpl) GetBrandInfo(ctx context.Context, brandID uuid.UUID, organizationID string) (*entities.BrandInfo, error) {
 	var brand struct {
 		ID          uuid.UUID `gorm:"column:id"`
 		Name        string    `gorm:"column:name"`
@@ -189,9 +208,9 @@ func (r *filamentRepositoryImpl) GetBrandInfo(ctx context.Context, brandID uuid.
 	if err := r.db.WithContext(ctx).
 		Table("brands").
 		Select("id, name, description").
-		Where("id = ?", brandID).
+		Where("id = ? AND organization_id = ?", brandID, organizationID).
 		First(&brand).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch brand: %w", err)
+		return nil, err
 	}
 
 	return &entities.BrandInfo{
@@ -201,8 +220,8 @@ func (r *filamentRepositoryImpl) GetBrandInfo(ctx context.Context, brandID uuid.
 	}, nil
 }
 
-// GetMaterialInfo fetches material information by ID
-func (r *filamentRepositoryImpl) GetMaterialInfo(ctx context.Context, materialID uuid.UUID) (*entities.MaterialInfo, error) {
+// GetMaterialInfo fetches material information by ID, scoped to the organization.
+func (r *filamentRepositoryImpl) GetMaterialInfo(ctx context.Context, materialID uuid.UUID, organizationID string) (*entities.MaterialInfo, error) {
 	var material struct {
 		ID           uuid.UUID `gorm:"column:id"`
 		Name         string    `gorm:"column:name"`
@@ -214,9 +233,9 @@ func (r *filamentRepositoryImpl) GetMaterialInfo(ctx context.Context, materialID
 	if err := r.db.WithContext(ctx).
 		Table("materials").
 		Select("id, name, description, temp_table, temp_extruder").
-		Where("id = ?", materialID).
+		Where("id = ? AND organization_id = ?", materialID, organizationID).
 		First(&material).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch material: %w", err)
+		return nil, err
 	}
 
 	return &entities.MaterialInfo{
@@ -228,10 +247,10 @@ func (r *filamentRepositoryImpl) GetMaterialInfo(ctx context.Context, materialID
 	}, nil
 }
 
-// GetBrandsInfo fetches multiple brands in a single query, returning a map keyed
-// by brand ID. This is the batch form used by list endpoints to avoid issuing
-// one query per row (N+1).
-func (r *filamentRepositoryImpl) GetBrandsInfo(ctx context.Context, brandIDs []uuid.UUID) (map[uuid.UUID]*entities.BrandInfo, error) {
+// GetBrandsInfo fetches multiple brands in a single query, scoped to the
+// organization, returning a map keyed by brand ID. This is the batch form used
+// by list endpoints to avoid issuing one query per row (N+1).
+func (r *filamentRepositoryImpl) GetBrandsInfo(ctx context.Context, brandIDs []uuid.UUID, organizationID string) (map[uuid.UUID]*entities.BrandInfo, error) {
 	result := make(map[uuid.UUID]*entities.BrandInfo)
 	ids := dedupeIDs(brandIDs)
 	if len(ids) == 0 {
@@ -247,7 +266,7 @@ func (r *filamentRepositoryImpl) GetBrandsInfo(ctx context.Context, brandIDs []u
 	if err := r.db.WithContext(ctx).
 		Table("brands").
 		Select("id, name, description").
-		Where("id IN ?", ids).
+		Where("id IN ? AND organization_id = ?", ids, organizationID).
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch brands: %w", err)
 	}
@@ -263,9 +282,10 @@ func (r *filamentRepositoryImpl) GetBrandsInfo(ctx context.Context, brandIDs []u
 	return result, nil
 }
 
-// GetMaterialsInfo fetches multiple materials in a single query, returning a map
-// keyed by material ID. Batch form used by list endpoints to avoid N+1.
-func (r *filamentRepositoryImpl) GetMaterialsInfo(ctx context.Context, materialIDs []uuid.UUID) (map[uuid.UUID]*entities.MaterialInfo, error) {
+// GetMaterialsInfo fetches multiple materials in a single query, scoped to the
+// organization, returning a map keyed by material ID. Batch form used by list
+// endpoints to avoid N+1.
+func (r *filamentRepositoryImpl) GetMaterialsInfo(ctx context.Context, materialIDs []uuid.UUID, organizationID string) (map[uuid.UUID]*entities.MaterialInfo, error) {
 	result := make(map[uuid.UUID]*entities.MaterialInfo)
 	ids := dedupeIDs(materialIDs)
 	if len(ids) == 0 {
@@ -283,7 +303,7 @@ func (r *filamentRepositoryImpl) GetMaterialsInfo(ctx context.Context, materialI
 	if err := r.db.WithContext(ctx).
 		Table("materials").
 		Select("id, name, description, temp_table, temp_extruder").
-		Where("id IN ?", ids).
+		Where("id IN ? AND organization_id = ?", ids, organizationID).
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch materials: %w", err)
 	}

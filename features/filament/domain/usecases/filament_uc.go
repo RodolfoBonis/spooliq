@@ -52,7 +52,7 @@ var filamentSortWhitelist = map[string]string{
 // filaments, batch-loading the related brand and material info in exactly one
 // query each (per page) regardless of row count. This is the N+1 fix for the
 // list/search endpoints, which previously issued two queries per row.
-func (uc *FilamentUseCase) buildFilamentResponses(ctx context.Context, filaments []*entities.FilamentEntity) []entities.FilamentResponse {
+func (uc *FilamentUseCase) buildFilamentResponses(ctx context.Context, organizationID string, filaments []*entities.FilamentEntity) []entities.FilamentResponse {
 	responses := make([]entities.FilamentResponse, len(filaments))
 
 	brandIDs := make([]uuid.UUID, 0, len(filaments))
@@ -62,12 +62,12 @@ func (uc *FilamentUseCase) buildFilamentResponses(ctx context.Context, filaments
 		materialIDs = append(materialIDs, f.MaterialID)
 	}
 
-	brands, err := uc.repository.GetBrandsInfo(ctx, brandIDs)
+	brands, err := uc.repository.GetBrandsInfo(ctx, brandIDs, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to batch-load brand info", map[string]interface{}{"error": err.Error()})
 		brands = map[uuid.UUID]*entities.BrandInfo{}
 	}
-	materials, err := uc.repository.GetMaterialsInfo(ctx, materialIDs)
+	materials, err := uc.repository.GetMaterialsInfo(ctx, materialIDs, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to batch-load material info", map[string]interface{}{"error": err.Error()})
 		materials = map[uuid.UUID]*entities.MaterialInfo{}

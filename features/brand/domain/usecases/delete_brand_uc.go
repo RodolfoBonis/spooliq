@@ -3,8 +3,8 @@ package usecases
 import (
 	"errors"
 	"net/http"
-	"strings"
 
+	"github.com/RodolfoBonis/spooliq/core/database"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
@@ -58,7 +58,7 @@ func (uc *BrandUseCase) Delete(c *gin.Context) {
 	if err := uc.repository.Delete(id); err != nil {
 		// A RESTRICT foreign key (filaments reference the brand) surfaces as a
 		// 23503 violation; report it as a clean 409 instead of a 500.
-		if isForeignKeyViolation(err) {
+		if database.IsForeignKeyViolation(err) {
 			uc.logger.Warning(ctx, "Brand deletion blocked: brand in use", map[string]interface{}{"brand_id": id})
 			coreErrors.Respond(c, coreErrors.Conflict("brand_in_use", "Marca em uso e não pode ser removida"))
 			return
@@ -81,16 +81,4 @@ func (uc *BrandUseCase) Delete(c *gin.Context) {
 		EntityName:     brand.Name,
 		Description:    "Brand deleted: " + brand.Name,
 	})
-}
-
-// isForeignKeyViolation reports whether err is a PostgreSQL foreign key
-// constraint violation (SQLSTATE 23503). It matches on the SQLSTATE string the
-// pgx driver embeds in its error text, avoiding a hard dependency on the driver
-// error type in the domain layer.
-func isForeignKeyViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "SQLSTATE 23503") || strings.Contains(strings.ToLower(msg), "violates foreign key constraint")
 }

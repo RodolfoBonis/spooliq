@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/RodolfoBonis/spooliq/core/database"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
@@ -70,6 +71,11 @@ func (uc *CustomerUseCase) Delete(c *gin.Context) {
 	}
 
 	if err := uc.repository.Delete(ctx, customerID); err != nil {
+		if database.IsForeignKeyViolation(err) {
+			uc.logger.Warning(ctx, "Customer deletion blocked: customer in use", map[string]interface{}{"customer_id": customerID})
+			coreErrors.Respond(c, coreErrors.Conflict("customer_in_use", "Cliente possui orçamentos associados e não pode ser removido"))
+			return
+		}
 		uc.logger.Error(ctx, "Failed to delete customer", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, err)
 		return

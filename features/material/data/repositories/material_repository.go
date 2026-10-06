@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"errors"
+	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/material/data/models"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/material/domain/repositories"
@@ -40,7 +42,7 @@ func (m *materialRepository) FindAll(organizationID, search, order string, limit
 		Where("organization_id = ?", organizationID)
 
 	if search != "" {
-		query = query.Where("name ILIKE ?", "%"+search+"%")
+		query = query.Where(`name ILIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(search)+"%")
 	}
 
 	var total int64
@@ -87,12 +89,20 @@ func (m *materialRepository) Delete(id uuid.UUID) error {
 	return m.db.Delete(&models.MaterialModel{}, "id = ?", id).Error
 }
 
+// materialUpdatableColumns are the columns a PUT may overwrite. They are passed
+// to Select so GORM persists explicit zero values (e.g. temp_table: 0) instead
+// of skipping them.
+var materialUpdatableColumns = []string{"name", "description", "temp_table", "temp_extruder", "updated_at"}
+
 func (m *materialRepository) Update(entity *entities.MaterialEntity) error {
 	material := models.MaterialModel{}
-
 	material.FromEntity(entity)
+	material.UpdatedAt = time.Now()
 
-	return m.db.Model(material).Where("id = ?", material.ID).Updates(material).Error
+	return m.db.Model(&models.MaterialModel{}).
+		Where("id = ? AND organization_id = ?", material.ID, material.OrganizationID).
+		Select(materialUpdatableColumns).
+		Updates(material).Error
 }
 
 func (m *materialRepository) Exists(name string, organizationID string) (bool, error) {

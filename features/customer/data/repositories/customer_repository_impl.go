@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	budgetModels "github.com/RodolfoBonis/spooliq/features/budget/data/models"
 	"github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	"github.com/RodolfoBonis/spooliq/features/customer/domain/entities"
@@ -43,14 +44,22 @@ func (r *customerRepositoryImpl) FindByID(ctx context.Context, id uuid.UUID, org
 	return model.ToEntity(), nil
 }
 
+// customerUpdatableColumns are the columns a PUT may overwrite. Passed to
+// Select so GORM persists explicit zero/empty values instead of skipping them,
+// while owner/tenant/creation columns stay immutable.
+var customerUpdatableColumns = []string{
+	"name", "email", "phone", "document", "address", "city", "state",
+	"zip_code", "notes", "is_active", "updated_at",
+}
+
 func (r *customerRepositoryImpl) Update(ctx context.Context, customer *entities.CustomerEntity) error {
 	model := &models.CustomerModel{}
 	model.FromEntity(customer)
 
-	// Use Updates instead of Save to avoid issues with zero values
 	if err := r.db.WithContext(ctx).
 		Model(&models.CustomerModel{}).
-		Where("id = ?", customer.ID).
+		Where("id = ? AND organization_id = ?", customer.ID, customer.OrganizationID).
+		Select(customerUpdatableColumns).
 		Updates(model).Error; err != nil {
 		return fmt.Errorf("failed to update customer: %w", err)
 	}
@@ -87,9 +96,9 @@ func (r *customerRepositoryImpl) list(ctx context.Context, organizationID string
 		Where("organization_id = ?", organizationID)
 
 	if search != "" {
-		like := "%" + strings.ToLower(search) + "%"
+		like := "%" + helpers.EscapeLike(strings.ToLower(search)) + "%"
 		query = query.Where(
-			"LOWER(name) LIKE ? OR LOWER(email) LIKE ? OR LOWER(phone) LIKE ? OR LOWER(document) LIKE ?",
+			`LOWER(name) LIKE ? ESCAPE '\' OR LOWER(email) LIKE ? ESCAPE '\' OR LOWER(phone) LIKE ? ESCAPE '\' OR LOWER(document) LIKE ? ESCAPE '\'`,
 			like, like, like, like,
 		)
 	}
@@ -129,22 +138,22 @@ func applyCustomerFilters(query *gorm.DB, filters map[string]interface{}) *gorm.
 		return query
 	}
 	if name, ok := filters["name"].(string); ok && name != "" {
-		query = query.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(name)+"%")
+		query = query.Where(`LOWER(name) LIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(strings.ToLower(name))+"%")
 	}
 	if email, ok := filters["email"].(string); ok && email != "" {
-		query = query.Where("LOWER(email) LIKE ?", "%"+strings.ToLower(email)+"%")
+		query = query.Where(`LOWER(email) LIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(strings.ToLower(email))+"%")
 	}
 	if phone, ok := filters["phone"].(string); ok && phone != "" {
-		query = query.Where("phone LIKE ?", "%"+phone+"%")
+		query = query.Where(`phone LIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(phone)+"%")
 	}
 	if document, ok := filters["document"].(string); ok && document != "" {
-		query = query.Where("document LIKE ?", "%"+document+"%")
+		query = query.Where(`document LIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(document)+"%")
 	}
 	if city, ok := filters["city"].(string); ok && city != "" {
-		query = query.Where("LOWER(city) LIKE ?", "%"+strings.ToLower(city)+"%")
+		query = query.Where(`LOWER(city) LIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(strings.ToLower(city))+"%")
 	}
 	if state, ok := filters["state"].(string); ok && state != "" {
-		query = query.Where("LOWER(state) LIKE ?", "%"+strings.ToLower(state)+"%")
+		query = query.Where(`LOWER(state) LIKE ? ESCAPE '\'`, "%"+helpers.EscapeLike(strings.ToLower(state))+"%")
 	}
 	if isActive, ok := filters["is_active"].(bool); ok {
 		query = query.Where("is_active = ?", isActive)

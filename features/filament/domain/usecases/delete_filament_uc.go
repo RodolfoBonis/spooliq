@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/database"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
@@ -77,6 +78,11 @@ func (uc *FilamentUseCase) Delete(c *gin.Context) {
 	}
 
 	if err := uc.repository.Delete(ctx, id); err != nil {
+		if database.IsForeignKeyViolation(err) {
+			uc.logger.Warning(ctx, "Filament deletion blocked: filament in use", map[string]interface{}{"filament_id": id})
+			coreErrors.Respond(c, coreErrors.Conflict("filament_in_use", "Filamento em uso e não pode ser removido"))
+			return
+		}
 		uc.logger.Error(ctx, "Failed to delete filament", map[string]interface{}{"filament_id": id, "error": err.Error()})
 		coreErrors.Respond(c, err)
 		return

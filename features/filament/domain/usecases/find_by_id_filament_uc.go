@@ -58,10 +58,10 @@ func (uc *FilamentUseCase) FindByID(c *gin.Context) {
 	uc.logger.Info(ctx, "Filament retrieved successfully", map[string]interface{}{"filament_id": filament.ID})
 
 	response := &filamentEntities.FilamentResponse{FilamentEntity: filament}
-	if brandInfo, err := uc.repository.GetBrandInfo(ctx, filament.BrandID); err == nil {
+	if brandInfo, err := uc.repository.GetBrandInfo(ctx, filament.BrandID, organizationID); err == nil {
 		response.Brand = brandInfo
 	}
-	if materialInfo, err := uc.repository.GetMaterialInfo(ctx, filament.MaterialID); err == nil {
+	if materialInfo, err := uc.repository.GetMaterialInfo(ctx, filament.MaterialID, organizationID); err == nil {
 		response.Material = materialInfo
 	}
 

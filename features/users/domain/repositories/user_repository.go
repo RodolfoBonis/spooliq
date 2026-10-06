@@ -3,13 +3,14 @@ package repositories
 import (
 	"context"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	"github.com/google/uuid"
 )
 
 // UserRepository defines the interface for user data access
 type UserRepository interface {
-	FindAll(ctx context.Context, organizationID string) ([]*entities.UserEntity, error)
+	FindAll(ctx context.Context, organizationID string, q helpers.ListQuery) ([]*entities.UserEntity, int64, error)
 	FindByID(ctx context.Context, id uuid.UUID, organizationID string) (*entities.UserEntity, error)
 	FindByEmail(ctx context.Context, email string) (*entities.UserEntity, error)
 	FindByKeycloakUserID(ctx context.Context, keycloakUserID string) (*entities.UserEntity, error)

@@ -29,34 +29,34 @@ type MachinePresetEntity struct {
 // Validate validates the machine preset entity
 func (m *MachinePresetEntity) Validate() error {
 	if m.BuildVolumeX <= 0 {
-		return errors.New("build volume X must be greater than 0")
+		return errors.New("o volume de construção X deve ser maior que 0")
 	}
 	if m.BuildVolumeY <= 0 {
-		return errors.New("build volume Y must be greater than 0")
+		return errors.New("o volume de construção Y deve ser maior que 0")
 	}
 	if m.BuildVolumeZ <= 0 {
-		return errors.New("build volume Z must be greater than 0")
+		return errors.New("o volume de construção Z deve ser maior que 0")
 	}
 	if m.NozzleDiameter <= 0 {
-		return errors.New("nozzle diameter must be greater than 0")
+		return errors.New("o diâmetro do bico deve ser maior que 0")
 	}
 	if m.LayerHeightMin <= 0 {
-		return errors.New("minimum layer height must be greater than 0")
+		return errors.New("a altura mínima de camada deve ser maior que 0")
 	}
 	if m.LayerHeightMax <= 0 {
-		return errors.New("maximum layer height must be greater than 0")
+		return errors.New("a altura máxima de camada deve ser maior que 0")
 	}
 	if m.LayerHeightMin >= m.LayerHeightMax {
-		return errors.New("minimum layer height must be less than maximum layer height")
+		return errors.New("a altura mínima de camada deve ser menor que a altura máxima de camada")
 	}
 	if m.PrintSpeedMax <= 0 {
-		return errors.New("maximum print speed must be greater than 0")
+		return errors.New("a velocidade máxima de impressão deve ser maior que 0")
 	}
 	if m.PowerConsumption <= 0 {
-		return errors.New("power consumption must be greater than 0")
+		return errors.New("o consumo de energia deve ser maior que 0")
 	}
 	if m.FilamentDiameter <= 0 {
-		return errors.New("filament diameter must be greater than 0")
+		return errors.New("o diâmetro do filamento deve ser maior que 0")
 	}
 
 	return nil

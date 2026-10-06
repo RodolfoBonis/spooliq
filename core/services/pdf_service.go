@@ -258,12 +258,6 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 	pdf.CellFormat(35, 6, s.convertUTF8("Subtotal (R$)"), "1", 0, "C", true, 0, "")
 	pdf.Ln(-1)
 
-	// Calculate total direct costs (subtotal) for proportional distribution
-	var budgetSubtotal int64 = 0
-	for _, item := range items {
-		budgetSubtotal += item.ItemTotalCost
-	}
-
 	// Table rows - showing products
 	pdf.SetFont("Arial", "", 7) // Reduced from 8
 	r, g, b = s.hexToRGB(branding.BodyTextColor)
@@ -287,23 +281,13 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 			description = description[:57] + "..."
 		}
 
-		// Calculate final price with overhead and profit distributed proportionally
-		var itemFinalCost int64 = item.ItemTotalCost
-		if budgetSubtotal > 0 {
-			// Calculate item's proportion of total direct costs
-			itemProportion := float64(item.ItemTotalCost) / float64(budgetSubtotal)
-
-			// Distribute overhead and profit proportionally
-			itemOverhead := int64(float64(budget.OverheadCost) * itemProportion)
-			itemProfit := int64(float64(budget.ProfitAmount) * itemProportion)
-
-			// Final cost includes direct costs + overhead + profit
-			itemFinalCost = item.ItemTotalCost + itemOverhead + itemProfit
-		}
-
-		// Calculate unit price and subtotal with markup
-		unitPriceWithMarkup := float64(itemFinalCost) / 100.0 / float64(item.ProductQuantity)
-		subtotalWithMarkup := float64(item.ProductQuantity) * unitPriceWithMarkup
+		// Use the per-item SALE values computed once by the shared pricing
+		// distribution (see response_builder / pricing.Calculate) so the PDF and the
+		// API show identical figures. SaleTotal values sum EXACTLY to budget.TotalCost;
+		// SaleUnitPrice is rounded independently, so unit * qty may differ from the
+		// subtotal by a few cents.
+		subtotalWithMarkup := float64(item.SaleTotal) / 100.0
+		unitPriceWithMarkup := float64(item.SaleUnitPrice) / 100.0
 
 		pdf.CellFormat(95, 5, s.convertUTF8(description), "1", 0, "L", fillColor, 0, "") // Reduced height from 6 to 5
 		pdf.CellFormat(20, 5, fmt.Sprintf("%d", item.ProductQuantity), "1", 0, "C", fillColor, 0, "")

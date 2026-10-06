@@ -42,7 +42,7 @@ func (uc *ListCompaniesUseCase) Execute(ctx context.Context, userRoles []string,
 		uc.logger.Error(ctx, "Non-admin user attempted to list all companies", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("Only PlatformAdmin can list all companies")
+		return nil, errors.Forbidden("platform_admin_required", "Apenas administradores da plataforma podem listar as empresas")
 	}
 
 	// Set defaults
@@ -59,7 +59,7 @@ func (uc *ListCompaniesUseCase) Execute(ctx context.Context, userRoles []string,
 		uc.logger.Error(ctx, "Failed to fetch companies", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.InternalServerError("Failed to fetch companies")
+		return nil, err
 	}
 
 	// Map entities to response items

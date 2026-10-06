@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
@@ -34,10 +35,12 @@ func NewPlanAdvancedUseCase(
 // @Tags admin-plans
 // @Produce json
 // @Param category query string false "Filter by category"
-// @Success 200 {array} adminEntities.PlanTemplate "Plan templates"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} helpers.Page[adminEntities.PlanTemplate] "Paginated plan templates"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/templates [get]
+// @Router /admin/subscription-plans/templates [get]
 func (uc *PlanAdvancedUseCase) GetPlanTemplates(c *gin.Context) {
 	ctx := c.Request.Context()
 	category := c.Query("category")
@@ -47,11 +50,11 @@ func (uc *PlanAdvancedUseCase) GetPlanTemplates(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to get plan templates", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get plan templates"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, templates)
+	c.JSON(http.StatusOK, paginateInMemory(c, templates))
 }
 
 // CreatePlanFromTemplate creates a plan from template (admin only)
@@ -66,13 +69,13 @@ func (uc *PlanAdvancedUseCase) GetPlanTemplates(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Template not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/from-template [post]
+// @Router /admin/subscription-plans/from-template [post]
 func (uc *PlanAdvancedUseCase) CreatePlanFromTemplate(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req adminEntities.CreateFromTemplateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -82,7 +85,7 @@ func (uc *PlanAdvancedUseCase) CreatePlanFromTemplate(c *gin.Context) {
 
 	templateID, err := uuid.Parse(req.TemplateID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_template_id", "ID de template inválido"))
 		return
 	}
 
@@ -92,7 +95,7 @@ func (uc *PlanAdvancedUseCase) CreatePlanFromTemplate(c *gin.Context) {
 			"error":       err.Error(),
 			"template_id": req.TemplateID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create plan from template"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -105,10 +108,12 @@ func (uc *PlanAdvancedUseCase) CreatePlanFromTemplate(c *gin.Context) {
 // @Description Get list of available features that can be added to plans (admin only)
 // @Tags admin-features
 // @Produce json
-// @Success 200 {array} adminEntities.AvailableFeature "Available features"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} helpers.Page[adminEntities.AvailableFeature] "Paginated available features"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/features/available [get]
+// @Router /admin/features/available [get]
 func (uc *PlanAdvancedUseCase) GetAvailableFeatures(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -117,11 +122,11 @@ func (uc *PlanAdvancedUseCase) GetAvailableFeatures(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to get available features", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get available features"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, features)
+	c.JSON(http.StatusOK, paginateInMemory(c, features))
 }
 
 // ValidateFeatures validates if features are available and compatible (admin only)
@@ -135,13 +140,13 @@ func (uc *PlanAdvancedUseCase) GetAvailableFeatures(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/features/validate [post]
+// @Router /admin/features/validate [post]
 func (uc *PlanAdvancedUseCase) ValidateFeatures(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req adminEntities.FeatureValidationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -150,7 +155,7 @@ func (uc *PlanAdvancedUseCase) ValidateFeatures(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to validate features", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate features"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -168,13 +173,13 @@ func (uc *PlanAdvancedUseCase) ValidateFeatures(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/migrate [post]
+// @Router /admin/subscription-plans/migrate [post]
 func (uc *PlanAdvancedUseCase) CreatePlanMigration(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req adminEntities.PlanMigrationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -189,7 +194,7 @@ func (uc *PlanAdvancedUseCase) CreatePlanMigration(c *gin.Context) {
 			"from_plan_id": req.FromPlanID,
 			"to_plan_id":   req.ToPlanID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create plan migration"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -207,14 +212,14 @@ func (uc *PlanAdvancedUseCase) CreatePlanMigration(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Migration not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/migrations/{migration_id} [get]
+// @Router /admin/subscription-plans/migrations/{migration_id} [get]
 func (uc *PlanAdvancedUseCase) GetMigrationStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	migrationIDStr := c.Param("migration_id")
 
 	migrationID, err := uuid.Parse(migrationIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid migration ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_migration_id", "ID de migração inválido"))
 		return
 	}
 
@@ -224,12 +229,12 @@ func (uc *PlanAdvancedUseCase) GetMigrationStatus(c *gin.Context) {
 			"error":        err.Error(),
 			"migration_id": migrationIDStr,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get migration status"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if result == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Migration not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("migration_not_found", "Migração não encontrada"))
 		return
 	}
 
@@ -246,14 +251,14 @@ func (uc *PlanAdvancedUseCase) GetMigrationStatus(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Migration not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/admin/subscription-plans/migrations/{migration_id}/execute [post]
+// @Router /admin/subscription-plans/migrations/{migration_id}/execute [post]
 func (uc *PlanAdvancedUseCase) ExecutePlanMigration(c *gin.Context) {
 	ctx := c.Request.Context()
 	migrationIDStr := c.Param("migration_id")
 
 	migrationID, err := uuid.Parse(migrationIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid migration ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_migration_id", "ID de migração inválido"))
 		return
 	}
 
@@ -263,9 +268,29 @@ func (uc *PlanAdvancedUseCase) ExecutePlanMigration(c *gin.Context) {
 			"error":        err.Error(),
 			"migration_id": migrationIDStr,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute plan migration"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+// paginateInMemory applies the standard list query (page/page_size) to an
+// already-materialized slice, returning the standard envelope. Used for small,
+// in-code catalogs (templates, available features) that are not DB-paginated.
+func paginateInMemory[T any](c *gin.Context, items []T) helpers.Page[T] {
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 100})
+	total := int64(len(items))
+	off := q.Offset()
+	if off > len(items) {
+		off = len(items)
+	}
+	end := len(items)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(items) {
+			end = len(items)
+		}
+	}
+	return helpers.NewPage(items[off:end], total, q)
 }

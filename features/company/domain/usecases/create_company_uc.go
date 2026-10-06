@@ -6,6 +6,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ import (
 // @Failure 400 {object} map[string]interface{}
 // @Failure 409 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/company [post]
+// @Router /company [post]
 // @Security BearerAuth
 func (uc *CompanyUseCase) Create(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -44,8 +45,7 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 		uc.logger.Error(ctx, "Organization ID not found in context", map[string]interface{}{
 			"is_platform_admin": isPlatformAdmin,
 		})
-		appError := coreErrors.UsecaseError("Organization ID required")
-		c.JSON(http.StatusForbidden, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Forbidden("organization_id_required", "Organização obrigatória"))
 		return
 	}
 
@@ -54,17 +54,15 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid company creation payload", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("Invalid request format")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.validator.Struct(request); err != nil {
+	if err := validation.Validate(request); err != nil {
 		uc.logger.Error(ctx, "Company creation validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -94,8 +92,7 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": targetOrgID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -103,8 +100,7 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 		uc.logger.Error(ctx, "Company already exists for this organization", map[string]interface{}{
 			"organization_id": targetOrgID,
 		})
-		appError := coreErrors.UsecaseError(entities.ErrCompanyAlreadyExists.Error())
-		c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Conflict("company_already_exists", "Empresa já existe para esta organização"))
 		return
 	}
 
@@ -132,8 +128,7 @@ func (uc *CompanyUseCase) Create(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to create company", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 

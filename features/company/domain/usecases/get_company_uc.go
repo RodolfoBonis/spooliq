@@ -19,7 +19,7 @@ import (
 // @Success 200 {object} entities.CompanyResponse
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/company [get]
+// @Router /company [get]
 // @Security BearerAuth
 func (uc *CompanyUseCase) Get(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -32,8 +32,7 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 	organizationID := getOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		appError := coreErrors.UsecaseError("Organization ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return
 	}
 
@@ -43,8 +42,7 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 			uc.logger.Info(ctx, "Company not found", map[string]interface{}{
 				"organization_id": organizationID,
 			})
-			appError := coreErrors.UsecaseError(err.Error())
-			c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 			return
 		}
 
@@ -52,8 +50,7 @@ func (uc *CompanyUseCase) Get(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 

@@ -9,52 +9,41 @@ import (
 	"github.com/google/uuid"
 )
 
-// FindByCustomer handles listing all 3D models for a specific customer.
+// FindByCustomer lists all 3D models for a specific customer as a FLAT array. The
+// web app relies on this un-paginated shape, so it is intentionally not wrapped in
+// a Page envelope. It remains organization-scoped.
 // @Summary Get 3D Models by Customer
-// Schemes
-// @Description List all 3D models associated with a specific customer
-// @Tags 3D Models
+// @Description List all 3D models associated with a specific customer (flat array).
+// @Tags models3d
 // @Accept json
 // @Produce json
 // @Param customer_id path string true "Customer ID" format(uuid)
-// @Success 200 {object} entities.FindAllModel3DResponse "Successfully retrieved 3D models"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Success 200 {array} entities.Model3DEntity "3D models for the customer"
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /models3d/by-customer/{customer_id} [get]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *Model3DUseCase) FindByCustomer(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, errOrganizationRequired())
 		return
 	}
 
-	customerIDParam := c.Param("customer_id")
-	customerID, err := uuid.Parse(customerIDParam)
+	customerID, err := uuid.Parse(c.Param("customer_id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid customer ID", map[string]interface{}{
-			"customer_id": customerIDParam,
-			"error":       err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid customer ID format")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		coreErrors.Respond(c, errInvalidCustomerID())
 		return
 	}
 
-	models, err := uc.repository.FindByCustomerID(customerID, organizationID)
+	models, err := uc.repository.FindByCustomerID(ctx, customerID, organizationID)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to list 3D models by customer", map[string]interface{}{
-			"customer_id": customerID,
-			"error":       err.Error(),
-		})
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to list 3D models by customer", map[string]interface{}{"customer_id": customerID, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 

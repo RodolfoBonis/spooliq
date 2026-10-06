@@ -24,19 +24,19 @@ type EnergyPresetEntity struct {
 // Validate validates the energy preset entity
 func (e *EnergyPresetEntity) Validate() error {
 	if e.EnergyCostPerKwh <= 0 {
-		return errors.New("energy cost per kWh must be greater than 0")
+		return errors.New("o custo de energia por kWh deve ser maior que 0")
 	}
 	if e.Currency == "" {
-		return errors.New("currency is required")
+		return errors.New("a moeda é obrigatória")
 	}
 	if len(e.Currency) != 3 {
-		return errors.New("currency must be a 3-letter ISO code")
+		return errors.New("a moeda deve ser um código ISO de 3 letras")
 	}
 	if e.PeakHourMultiplier <= 0 {
-		return errors.New("peak hour multiplier must be greater than 0")
+		return errors.New("o multiplicador de horário de pico deve ser maior que 0")
 	}
 	if e.OffPeakHourMultiplier <= 0 {
-		return errors.New("off-peak hour multiplier must be greater than 0")
+		return errors.New("o multiplicador de horário fora de pico deve ser maior que 0")
 	}
 
 	return nil

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
@@ -75,7 +76,7 @@ func NewManageSubscriptionUseCase(
 // @Failure 404 {object} map[string]string "Plan or payment method not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/subscriptions/subscribe [post]
+// @Router /subscriptions/subscribe [post]
 func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -85,7 +86,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid subscription request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -96,12 +97,12 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 		return
 	}
 
@@ -112,12 +113,12 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 			"error":   err.Error(),
 			"plan_id": req.PlanID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find subscription plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Subscription plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("subscription_plan_not_found", "Plano de assinatura não encontrado"))
 		return
 	}
 
@@ -128,7 +129,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query payment gateway link"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -149,7 +150,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 				"error":           err.Error(),
 				"organization_id": orgID,
 			})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment account"})
+			coreerrors.Respond(c, coreerrors.ExternalServiceError("Falha ao criar conta de pagamento"))
 			return
 		}
 
@@ -166,7 +167,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 				"organization_id": orgID,
 				"customer_id":     asaasCustomer.ID,
 			})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save payment gateway link"})
+			coreerrors.Respond(c, err)
 			return
 		}
 
@@ -194,7 +195,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 					"error":           err.Error(),
 					"organization_id": orgID,
 				})
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find payment methods"})
+				coreerrors.Respond(c, err)
 				return
 			}
 
@@ -207,7 +208,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 			}
 
 			if primaryPaymentMethod == nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "No payment method found. Please add a credit card first."})
+				coreerrors.Respond(c, coreerrors.BadRequest("no_payment_method", "Nenhum método de pagamento encontrado. Adicione um cartão de crédito primeiro."))
 				return
 			}
 
@@ -221,17 +222,17 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 					"error":             err.Error(),
 					"payment_method_id": *req.PaymentMethodID,
 				})
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find payment method"})
+				coreerrors.Respond(c, err)
 				return
 			}
 
 			if paymentMethod == nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Payment method not found"})
+				coreerrors.Respond(c, coreerrors.NotFoundErr("payment_method_not_found", "Método de pagamento não encontrado"))
 				return
 			}
 
 			if paymentMethod.OrganizationID != orgID {
-				c.JSON(http.StatusForbidden, gin.H{"error": "Payment method does not belong to your organization"})
+				coreerrors.Respond(c, coreerrors.NotFoundErr("payment_method_not_found", "Método de pagamento não encontrado"))
 				return
 			}
 
@@ -263,7 +264,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 			"organization_id": orgID,
 			"customer_id":     asaasCustomerID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create subscription"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -328,7 +329,7 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 // @Failure 400 {object} map[string]string "No active subscription"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/subscriptions/cancel [delete]
+// @Router /subscriptions/cancel [delete]
 func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -340,17 +341,17 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 		return
 	}
 
 	if company.SubscriptionPlanID == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No active subscription found"})
+		coreerrors.Respond(c, coreerrors.BadRequest("no_active_subscription", "Nenhuma assinatura ativa encontrada"))
 		return
 	}
 
@@ -361,12 +362,12 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query payment gateway link"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if paymentGatewayLink == nil || paymentGatewayLink.SubscriptionID == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No subscription found in payment gateway"})
+		coreerrors.Respond(c, coreerrors.BadRequest("no_gateway_subscription", "Nenhuma assinatura encontrada no gateway de pagamento"))
 		return
 	}
 
@@ -377,7 +378,7 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 			"organization_id": orgID,
 			"subscription_id": *paymentGatewayLink.SubscriptionID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -424,7 +425,7 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 // @Failure 404 {object} map[string]string "No active subscription"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Security BearerAuth
-// @Router /v1/subscriptions/status [get]
+// @Router /subscriptions/status [get]
 func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
@@ -436,17 +437,17 @@ func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 		return
 	}
 
 	if company.SubscriptionPlanID == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No active subscription found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("no_active_subscription", "Nenhuma assinatura ativa encontrada"))
 		return
 	}
 
@@ -457,12 +458,12 @@ func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 			"error":   err.Error(),
 			"plan_id": *company.SubscriptionPlanID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find subscription plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Subscription plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("subscription_plan_not_found", "Plano de assinatura não encontrado"))
 		return
 	}
 
@@ -473,7 +474,7 @@ func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query payment gateway link"})
+		coreerrors.Respond(c, err)
 		return
 	}
 

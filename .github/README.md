@@ -27,8 +27,7 @@ This directory contains GitHub Actions workflows and configuration for the Spool
 4. **Creates tag immediately** (before PR)
 5. Pushes branch and tag
 6. Creates PR to main
-7. Triggers staging deployment
-8. **Announces FEATURE CUTOFF** to team
+7. **Announces FEATURE CUTOFF** to team
 
 **Feature Cutoff:** Any features merged to develop AFTER this runs go to the NEXT release!
 
@@ -67,15 +66,6 @@ This directory contains GitHub Actions workflows and configuration for the Spool
 - Marks PR as `priority:critical`
 - Expedited timeline (1-2h target)
 
-#### `release-staging.yaml`
-**Trigger:** Automatic (push to develop or release/* branches)
-**Purpose:** Staging environment deployment
-
-**Features:**
-- Blocks backport deployments (no duplicate staging deploys)
-- Generates staging-specific version tags
-- Deploys to staging cluster via ArgoCD
-
 ---
 
 ### CI/CD Workflows
@@ -86,7 +76,7 @@ This directory contains GitHub Actions workflows and configuration for the Spool
 
 **Runs:**
 - Unit tests
-- Linters (gofmt, go vet, golint, staticcheck, goimports)
+- Linters (gofmt, go vet, staticcheck, goimports) via `make lint`
 - Build validation
 - Code coverage
 
@@ -108,12 +98,6 @@ This directory contains GitHub Actions workflows and configuration for the Spool
 **Purpose:** Team notification
 
 Sends Telegram/n8n notification announcing feature cutoff.
-
-#### `bot-code-reviewer.yaml`
-Automated code review bot
-
-#### `generate-description.yaml`
-Auto-generates PR descriptions
 
 ---
 
@@ -153,12 +137,11 @@ gh label sync -f .github/labels.yaml
 - ✅ Release branch created
 - ✅ Tag created: `v2.X.X`
 - ✅ PR to main created
-- ✅ Staging deployed
 - ⚠️ **FEATURE CUTOFF announced**
 - ⏱️ Expected completion: 8 hours
 
-5. **QA validates in staging** (2-4h)
-6. **Approve & merge PR manually**
+5. **Review & approve the release PR** (2-4h)
+6. **Merge PR manually**
 7. **Production deployment happens automatically**
 
 ### Creating a Hotfix
@@ -188,11 +171,10 @@ A: Options:
 ```
 T+0h:    Release created (snapshot of develop)
          ↓ Feature cutoff announced
-         ↓ Staging deployed
 
-T+0.5h:  QA starts testing
+T+0.5h:  Release PR review starts
 
-T+4h:    QA completes, approves PR
+T+4h:    Review completes, PR approved
 
 T+5h:    PR merged → Production deployment triggered
 
@@ -227,12 +209,6 @@ Manual resolution required:
 2. Resolve conflicts
 3. Push
 4. Auto-merge will proceed
-
-### Staging Deployment Not Triggered
-
-- Check workflow runs in Actions tab
-- Verify release/* branch was pushed
-- Check if backport (those are blocked)
 
 ---
 
@@ -274,7 +250,7 @@ Configure in GitHub Settings → Secrets:
 ## 🎯 Best Practices
 
 1. **Always use conventional commits** - See `.cursor/rules/commit-flow.mdc`
-2. **Test in staging before approving** - Don't skip QA!
+2. **Review the release PR carefully before approving** - It's the gate to production!
 3. **Monitor Telegram notifications** - Stay informed
 4. **Respect feature cutoff** - Don't force features into releases
 5. **Keep releases small and frequent** - Better than big releases!

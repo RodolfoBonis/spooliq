@@ -3,7 +3,6 @@ package usecases
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
@@ -13,98 +12,59 @@ import (
 	"gorm.io/gorm"
 )
 
-// Delete handles soft-deleting a 3D model.
+// Delete soft-deletes a 3D model, organization-scoped.
+//
+// It deliberately does NOT remove the CDN objects (file/thumbnail). Budgets may
+// reference this model (budget_items.model_3d_id), and the row is only
+// soft-deleted, so the underlying file must remain retrievable. CDNService.DeleteFile
+// is kept available for a future hard-delete/garbage-collection path.
 // @Summary Delete 3D Model
-// Schemes
-// @Description Soft-delete a 3D model by its ID
-// @Tags 3D Models
+// @Description Soft-delete a 3D model by its ID. The stored file is intentionally kept.
+// @Tags models3d
 // @Accept json
 // @Produce json
 // @Param id path string true "3D Model ID" format(uuid)
 // @Success 204 "Successfully deleted 3D model"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /models3d/{id} [delete]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *Model3DUseCase) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, errOrganizationRequired())
 		return
 	}
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid model ID", map[string]interface{}{
-			"model_id": idParam,
-			"error":    err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid model ID format")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		coreErrors.Respond(c, errInvalidModel3DID())
 		return
 	}
 
-	model, err := uc.repository.FindByID(id, organizationID)
+	model, err := uc.repository.FindByID(ctx, id, organizationID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
-			appError := coreErrors.UsecaseError("3D model not found")
-			httpError := appError.ToHTTPError()
-			c.AbortWithStatusJSON(http.StatusNotFound, httpError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			coreErrors.Respond(c, errModel3DNotFound())
 			return
 		}
-
-		uc.logger.Error(ctx, "Failed to retrieve 3D model for deletion", map[string]interface{}{
-			"model_id": id,
-			"error":    err.Error(),
-		})
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to retrieve 3D model for deletion", map[string]interface{}{"model_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.repository.Delete(id); err != nil {
-		uc.logger.Error(ctx, "Failed to delete 3D model", map[string]interface{}{
-			"model_id":   id,
-			"model_name": model.Name,
-			"error":      err.Error(),
-		})
-		httpError := coreErrors.NewHTTPError(http.StatusInternalServerError, "Failed to delete 3D model")
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	if err := uc.repository.Delete(ctx, id, organizationID); err != nil {
+		uc.logger.Error(ctx, "Failed to delete 3D model", map[string]interface{}{"model_id": id, "error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
 
-	// Clean up CDN files (best-effort: log errors but don't fail the request)
-	if model.FileURL != "" {
-		if err := uc.cdnService.DeleteFile(ctx, model.FileURL); err != nil {
-			uc.logger.Warning(ctx, "Failed to delete model file from CDN", map[string]interface{}{
-				"model_id": model.ID,
-				"file_url": model.FileURL,
-				"error":    err.Error(),
-			})
-		}
-	}
-	if model.ThumbnailURL != nil && *model.ThumbnailURL != "" {
-		if err := uc.cdnService.DeleteFile(ctx, *model.ThumbnailURL); err != nil {
-			uc.logger.Warning(ctx, "Failed to delete thumbnail from CDN", map[string]interface{}{
-				"model_id":      model.ID,
-				"thumbnail_url": *model.ThumbnailURL,
-				"error":         err.Error(),
-			})
-		}
-	}
-
-	uc.logger.Info(ctx, "3D model deleted successfully", map[string]interface{}{
-		"model_id":   model.ID,
-		"model_name": model.Name,
-	})
+	uc.logger.Info(ctx, "3D model deleted successfully", map[string]interface{}{"model_id": model.ID, "model_name": model.Name})
 
 	c.Status(http.StatusNoContent)
 

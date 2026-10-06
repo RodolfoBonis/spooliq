@@ -3,10 +3,10 @@ package usecases
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,6 @@ import (
 
 // Update handles updating an existing brand.
 // @Summary Update Brand
-// @Schemes
 // @Description Update an existing filament brand
 // @Tags Brands
 // @Accept json
@@ -24,158 +23,82 @@ import (
 // @Param id path string true "Brand ID" format(uuid)
 // @Param request body entities.UpsertBrandRequestEntity true "Brand data"
 // @Success 200 {object} entities.BrandEntity "Successfully updated brand"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 409 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 404 {object} errors.APIError
+// @Failure 409 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /brands/{id} [put]
-// @Security Bearer
+// @Security BearerAuth
 func (uc *BrandUseCase) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log brand update attempt (automatic trace correlation via enhanced observability)
-	uc.logger.Info(ctx, "Brand update attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
-	})
-
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
-
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Invalid brand ID", map[string]interface{}{
-			"brand_id": idParam,
-			"error":    err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Invalid brand ID", map[string]interface{}{"brand_id": c.Param("id")})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_brand_id", "ID de marca inválido"))
 		return
 	}
 
 	var request entities.UpsertBrandRequestEntity
-
-	if err := c.BindJSON(&request); err != nil {
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Invalid brand update payload", map[string]interface{}{
-			"error": err.Error(),
-		})
-
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	if err := c.ShouldBindJSON(&request); err != nil {
+		uc.logger.Error(ctx, "Invalid brand update payload", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.validator.Struct(request); err != nil {
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Brand update validation failed", map[string]interface{}{
-			"error":             err.Error(),
-			"validation_failed": true,
-		})
-
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+	if err := validation.Validate(request); err != nil {
+		uc.logger.Error(ctx, "Brand update validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
 	brand, err := uc.repository.FindByID(id, organizationID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
-			appError := coreErrors.UsecaseError("Brand not found")
-			httpError := appError.ToHTTPError()
-
-			// Enhanced logging with automatic trace correlation
-			uc.logger.Error(ctx, "Brand not found for update", map[string]interface{}{
-				"brand_id": id,
-				"error":    err.Error(),
-			})
-
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uc.logger.Error(ctx, "Brand not found for update", map[string]interface{}{"brand_id": id})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("brand_not_found", "Marca não encontrada"))
 			return
 		}
-
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Failed to get brand for update", map[string]interface{}{
-			"brand_id": id,
-			"error":    err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to get brand for update", map[string]interface{}{"brand_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Check if another brand with the same name exists (excluding current brand)
+	// Enforce unique brand name within the organization (excluding this brand).
 	if request.Name != brand.Name {
 		exists, err := uc.repository.Exists(request.Name, organizationID)
 		if err != nil {
-			// Enhanced logging with automatic trace correlation
-			uc.logger.Error(ctx, "Failed to check brand name existence", map[string]interface{}{
-				"name":  request.Name,
-				"error": err.Error(),
-			})
-
-			appError := coreErrors.UsecaseError(err.Error())
-			httpError := appError.ToHTTPError()
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+			uc.logger.Error(ctx, "Failed to check brand name existence", map[string]interface{}{"name": request.Name, "error": err.Error()})
+			coreErrors.Respond(c, err)
 			return
 		}
-
 		if exists {
-			appError := coreErrors.UsecaseError("Brand with this name already exists")
-			httpError := appError.ToHTTPError()
-
-			// Enhanced logging with automatic trace correlation
-			uc.logger.Error(ctx, "Brand update failed: name already exists", map[string]interface{}{
-				"name":     request.Name,
-				"conflict": true,
-			})
-
-			c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+			uc.logger.Warning(ctx, "Brand update failed: name already exists", map[string]interface{}{"name": request.Name})
+			coreErrors.Respond(c, coreErrors.Conflict("brand_name_taken", "Já existe uma marca com este nome"))
 			return
 		}
 	}
 
-	// Update brand fields
 	brand.Name = request.Name
 	brand.Description = request.Description
 
-	// Save updated brand
 	if err := uc.repository.Update(brand); err != nil {
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Failed to update brand", map[string]interface{}{
-			"brand_id": id,
-			"error":    err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError("Failed to update brand")
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to update brand", map[string]interface{}{"brand_id": id, "error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Log successful update with automatic trace correlation
-	uc.logger.Info(ctx, "Brand updated successfully", map[string]interface{}{
-		"brand_id":   brand.ID,
-		"brand_name": brand.Name,
-	})
+	uc.logger.Info(ctx, "Brand updated successfully", map[string]interface{}{"brand_id": brand.ID})
 
-	c.JSON(200, brand)
+	c.JSON(http.StatusOK, brand)
 
 	uc.activityService.Record(ctx, activityEntities.ActivityEntity{
 		OrganizationID: organizationID,

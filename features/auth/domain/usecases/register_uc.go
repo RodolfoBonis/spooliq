@@ -10,15 +10,16 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	authEntities "github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	presetUsecases "github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	userEntities "github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	userRepositories "github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -29,8 +30,8 @@ type RegisterUseCase struct {
 	companyRepository companyRepositories.CompanyRepository
 	userRepository    userRepositories.UserRepository
 	gatewayLinkRepo   subscriptionRepositories.PaymentGatewayLinkRepository
+	presetCreateUC    *presetUsecases.CreatePresetUseCase
 	logger            logger.Logger
-	validator         *validator.Validate
 }
 
 // NewRegisterUseCase creates a new RegisterUseCase
@@ -40,6 +41,7 @@ func NewRegisterUseCase(
 	companyRepository companyRepositories.CompanyRepository,
 	userRepository userRepositories.UserRepository,
 	gatewayLinkRepo subscriptionRepositories.PaymentGatewayLinkRepository,
+	presetCreateUC *presetUsecases.CreatePresetUseCase,
 	logger logger.Logger,
 ) *RegisterUseCase {
 	return &RegisterUseCase{
@@ -48,8 +50,8 @@ func NewRegisterUseCase(
 		companyRepository: companyRepository,
 		userRepository:    userRepository,
 		gatewayLinkRepo:   gatewayLinkRepo,
+		presetCreateUC:    presetCreateUC,
 		logger:            logger,
-		validator:         validator.New(),
 	}
 }
 
@@ -78,18 +80,16 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid registration payload", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := errors.UsecaseError("Invalid request format")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
+	// Validate request (pt-BR field errors via the shared validator)
+	if err := validation.Validate(request); err != nil {
 		uc.logger.Error(ctx, "Registration validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := errors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -100,8 +100,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error": err.Error(),
 			"email": request.Email,
 		})
-		appError := errors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -109,8 +108,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		uc.logger.Error(ctx, "Email already registered", map[string]interface{}{
 			"email": request.Email,
 		})
-		appError := errors.UsecaseError("Email already registered")
-		c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+		errors.Respond(c, errors.Conflict("email_already_registered", "E-mail já cadastrado"))
 		return
 	}
 
@@ -129,8 +127,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.UsecaseError("Failed to create payment account: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		errors.Respond(c, errors.ExternalServiceError("Falha ao criar conta de pagamento"))
 		return
 	}
 
@@ -141,8 +138,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.UsecaseError("Failed to create user account: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		errors.Respond(c, errors.ExternalServiceError("Falha ao criar conta de usuário"))
 		return
 	}
 
@@ -183,8 +179,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -237,10 +232,13 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
+
+	// Seed starter default presets (energy + cost) for the new organization.
+	// Best-effort: any failure is logged but never blocks registration.
+	uc.seedDefaultPresets(ctx, organizationID, &user.ID)
 
 	// Note: For trial users, we don't create subscription in Asaas yet
 	// Subscriptions will be created when user upgrades to Starter+ plans
@@ -412,4 +410,34 @@ func (uc *RegisterUseCase) createAsaasCustomer(ctx context.Context, request auth
 	})
 
 	return customer, nil
+}
+
+// seedDefaultPresets creates the starter default energy and cost presets for a
+// freshly registered organization from the static template catalog. It is
+// best-effort: errors are logged and never propagated, so a seeding hiccup can
+// never fail an otherwise successful registration. No machine preset is created
+// because the organization's printer is unknown at registration time.
+func (uc *RegisterUseCase) seedDefaultPresets(ctx context.Context, organizationID string, userID *uuid.UUID) {
+	if uc.presetCreateUC == nil {
+		return
+	}
+
+	seeds := []struct {
+		label string
+		key   string
+	}{
+		{"energy", "energia-residencial-br"},
+		{"cost", "custo-hobby"},
+	}
+
+	for _, seed := range seeds {
+		if _, err := uc.presetCreateUC.CreateFromTemplate(seed.key, presetUsecases.FromTemplateOverrides{IsDefault: true}, organizationID, userID); err != nil {
+			uc.logger.Error(ctx, "Failed to seed default preset", map[string]interface{}{
+				"error":           err.Error(),
+				"organization_id": organizationID,
+				"preset":          seed.label,
+				"template_key":    seed.key,
+			})
+		}
+	}
 }

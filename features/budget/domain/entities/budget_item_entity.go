@@ -36,6 +36,9 @@ type BudgetItemEntity struct {
 	CostPresetID    *uuid.UUID `json:"cost_preset_id,omitempty"`
 	AdditionalNotes *string    `json:"additional_notes,omitempty"`
 
+	// Optional link to a 3D model
+	Model3DID *uuid.UUID `json:"model_3d_id,omitempty"`
+
 	// Calculated costs per item
 	FilamentCost    int64 `json:"filament_cost"`     // cents
 	WasteCost       int64 `json:"waste_cost"`        // cents

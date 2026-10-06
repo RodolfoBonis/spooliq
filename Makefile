@@ -42,7 +42,7 @@ clean:
 # Run the linter
 lint:
 	@echo "Running linter..."
-	@sh .config/scripts/lint.sh
+	@bash .config/scripts/lint.sh
 
 # Raise the infrastructure (PostgreSQL + Redis)
 infrastructure/raise:

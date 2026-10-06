@@ -6,6 +6,7 @@ import (
 	dataRepositories "github.com/RodolfoBonis/spooliq/features/company/data/repositories"
 	domainRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/usecases"
+	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"go.uber.org/fx"
 )
 
@@ -18,5 +19,8 @@ var Module = fx.Options(
 	}),
 	fx.Provide(func(repo domainRepositories.BrandingRepository, logger logger.Logger) usecases.IBrandingUseCase {
 		return usecases.NewBrandingUseCase(repo, logger)
+	}),
+	fx.Provide(func(repo subscriptionRepositories.SubscriptionRepository, logger logger.Logger) usecases.ISubscriptionPaymentsUseCase {
+		return usecases.NewSubscriptionPaymentsUseCase(repo, logger)
 	}),
 )

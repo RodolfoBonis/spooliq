@@ -59,11 +59,9 @@ func InitAndRun() fx.Option {
 					docs.SwaggerInfo.Schemes = []string{"https"}
 				}
 
-				docs.SwaggerInfo.BasePath = "/v1"
-
-				docs.SwaggerInfo.Title = "spooliq"
-				docs.SwaggerInfo.Description = "SpoolIq calcula o preço real das suas impressões 3D: filamento multi-cor (g/m), energia (kWh + bandeira), desgaste, overhead e mão-de-obra. Gera pacotes (só impressão, ajustes, modelagem), exporta PDF/CSV e guarda materiais."
-				docs.SwaggerInfo.Version = "1.0"
+				// Title, Description, Version and BasePath are defined once as
+				// general annotations in main.go and baked into docs at generation
+				// time. Only Host and Schemes are environment-specific and set here.
 
 				runPort := fmt.Sprintf(":%s", cfg.Port)
 

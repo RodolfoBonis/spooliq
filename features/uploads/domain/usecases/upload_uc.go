@@ -41,7 +41,7 @@ func NewUploadUseCase(cdnService *services.CDNService, logger logger.Logger) IUp
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/uploads/logo [post]
+// @Router /uploads/logo [post]
 // @Security BearerAuth
 func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -57,8 +57,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to get file from request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("File is required")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("file_required", "O arquivo é obrigatório"))
 		return
 	}
 	defer file.Close()
@@ -78,8 +77,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 			"extension": ext,
 			"filename":  header.Filename,
 		})
-		appError := coreErrors.UsecaseError("Invalid file type. Allowed: jpg, jpeg, png, webp, svg")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_file_type", "Tipo de arquivo inválido. Permitidos: jpg, jpeg, png, webp, svg"))
 		return
 	}
 
@@ -89,8 +87,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 			"size":     header.Size,
 			"filename": header.Filename,
 		})
-		appError := coreErrors.UsecaseError("File size exceeds 5MB limit")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("file_too_large", "O tamanho do arquivo excede o limite de 5MB"))
 		return
 	}
 
@@ -104,8 +101,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 			"error":    err.Error(),
 			"filename": filename,
 		})
-		appError := coreErrors.UsecaseError("Failed to upload file")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -131,7 +127,7 @@ func (uc *UploadUseCase) UploadLogo(c *gin.Context) {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /v1/uploads/file [post]
+// @Router /uploads/file [post]
 // @Security BearerAuth
 func (uc *UploadUseCase) UploadFile(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -147,8 +143,7 @@ func (uc *UploadUseCase) UploadFile(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to get file from request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("File is required")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("file_required", "O arquivo é obrigatório"))
 		return
 	}
 	defer file.Close()
@@ -172,8 +167,7 @@ func (uc *UploadUseCase) UploadFile(c *gin.Context) {
 			"extension": ext,
 			"filename":  header.Filename,
 		})
-		appError := coreErrors.UsecaseError("Invalid file type. Allowed: jpg, jpeg, png, webp, svg, pdf, 3mf, stl, gcode")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_file_type", "Tipo de arquivo inválido. Permitidos: jpg, jpeg, png, webp, svg, pdf, 3mf, stl, gcode"))
 		return
 	}
 
@@ -183,8 +177,7 @@ func (uc *UploadUseCase) UploadFile(c *gin.Context) {
 			"size":     header.Size,
 			"filename": header.Filename,
 		})
-		appError := coreErrors.UsecaseError("File size exceeds 50MB limit")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("file_too_large", "O tamanho do arquivo excede o limite de 50MB"))
 		return
 	}
 
@@ -204,8 +197,7 @@ func (uc *UploadUseCase) UploadFile(c *gin.Context) {
 			"error":    err.Error(),
 			"filename": filename,
 		})
-		appError := coreErrors.UsecaseError("Failed to upload file")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 

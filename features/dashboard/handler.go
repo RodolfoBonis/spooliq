@@ -4,12 +4,18 @@ import (
 	"net/http"
 	"strconv"
 
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/dashboard/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/dashboard/domain/repositories"
 	"github.com/gin-gonic/gin"
 )
+
+// maxDashboardLimit caps the number of rows any dashboard widget (recent-activity
+// and the top-* endpoints) may request, protecting the database from unbounded
+// scans driven by the client-supplied limit.
+const maxDashboardLimit = 50
 
 // Handler provides HTTP handlers for dashboard endpoints.
 type Handler struct {
@@ -25,6 +31,36 @@ func NewDashboardHandler(repo repositories.DashboardRepository, activityService 
 	}
 }
 
+// requireOrganizationID extracts organization_id from context, writing a 400 and
+// returning ok=false when it is missing.
+func requireOrganizationID(c *gin.Context) (string, bool) {
+	organizationID := helpers.GetOrganizationID(c)
+	if organizationID == "" {
+		coreerrors.Respond(c, coreerrors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
+		return "", false
+	}
+	return organizationID, true
+}
+
+// parseWidgetLimit reads the "limit" query param, defaulting to def and clamping
+// the result to [1, maxDashboardLimit]. Widgets are not paginated lists, so they
+// use this single-value cap instead of the standard pagination envelope.
+func parseWidgetLimit(c *gin.Context, def int) int {
+	limit := def
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+	if limit > maxDashboardLimit {
+		limit = maxDashboardLimit
+	}
+	if limit < 1 {
+		limit = 1
+	}
+	return limit
+}
+
 // GetOverview godoc
 // @Summary Get dashboard overview metrics
 // @Description Returns key metrics including revenue, budgets, approval rate, profit margin, and new customers with period-over-period changes
@@ -36,12 +72,11 @@ func NewDashboardHandler(repo repositories.DashboardRepository, activityService 
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/overview [get]
 func (h *Handler) GetOverview(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -50,7 +85,7 @@ func (h *Handler) GetOverview(c *gin.Context) {
 
 	resp, err := h.repo.GetOverview(organizationID, start, end, prevStart, prevEnd)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -69,12 +104,11 @@ func (h *Handler) GetOverview(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/revenue-trend [get]
 func (h *Handler) GetRevenueTrend(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -83,7 +117,7 @@ func (h *Handler) GetRevenueTrend(c *gin.Context) {
 
 	resp, err := h.repo.GetRevenueTrend(organizationID, start, end, period.TruncateFunc())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -102,12 +136,11 @@ func (h *Handler) GetRevenueTrend(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/conversion-funnel [get]
 func (h *Handler) GetConversionFunnel(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -116,7 +149,7 @@ func (h *Handler) GetConversionFunnel(c *gin.Context) {
 
 	resp, err := h.repo.GetConversionFunnel(organizationID, start, end)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -135,28 +168,19 @@ func (h *Handler) GetConversionFunnel(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/recent-activity [get]
 func (h *Handler) GetRecentActivity(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	limit := 20
-	if l := c.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
-		}
-	}
-	if limit > 50 {
-		limit = 50
-	}
+	limit := parseWidgetLimit(c, 20)
 
 	activities, err := h.activityService.FindRecentByOrganization(organizationID, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -188,33 +212,27 @@ func (h *Handler) GetRecentActivity(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param period query string false "Period filter" Enums(7d, 30d, 3m, 6m, 1y, all) default(30d)
-// @Param limit query int false "Number of customers to return" default(5) minimum(1) maximum(50)
+// @Param limit query int false "Number of customers to return (max 50)" default(5) minimum(1) maximum(50)
 // @Success 200 {object} entities.TopCustomersResponse
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/top-customers [get]
 func (h *Handler) GetTopCustomers(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
 	period := entities.ParsePeriod(c.Query("period"))
 	start, end, _, _ := period.ToTimeRange()
 
-	limit := 5
-	if l := c.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
-		}
-	}
+	limit := parseWidgetLimit(c, 5)
 
 	resp, err := h.repo.GetTopCustomers(organizationID, start, end, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -233,12 +251,11 @@ func (h *Handler) GetTopCustomers(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/operational-insights [get]
 func (h *Handler) GetOperationalInsights(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
@@ -247,7 +264,7 @@ func (h *Handler) GetOperationalInsights(c *gin.Context) {
 
 	resp, err := h.repo.GetOperationalInsights(organizationID, start, end, prevStart, prevEnd)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -262,33 +279,27 @@ func (h *Handler) GetOperationalInsights(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param period query string false "Period filter" Enums(7d, 30d, 3m, 6m, 1y, all) default(30d)
-// @Param limit query int false "Number of filaments to return" default(5) minimum(1) maximum(50)
+// @Param limit query int false "Number of filaments to return (max 50)" default(5) minimum(1) maximum(50)
 // @Success 200 {object} entities.TopFilamentsResponse
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/top-filaments [get]
 func (h *Handler) GetTopFilaments(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
 	period := entities.ParsePeriod(c.Query("period"))
 	start, end, _, _ := period.ToTimeRange()
 
-	limit := 5
-	if l := c.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
-		}
-	}
+	limit := parseWidgetLimit(c, 5)
 
 	resp, err := h.repo.GetTopFilaments(organizationID, start, end, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -303,33 +314,27 @@ func (h *Handler) GetTopFilaments(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param period query string false "Period filter" Enums(7d, 30d, 3m, 6m, 1y, all) default(30d)
-// @Param limit query int false "Number of materials to return" default(5) minimum(1) maximum(50)
+// @Param limit query int false "Number of materials to return (max 50)" default(5) minimum(1) maximum(50)
 // @Success 200 {object} entities.TopMaterialsResponse
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/top-materials [get]
 func (h *Handler) GetTopMaterials(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
 	period := entities.ParsePeriod(c.Query("period"))
 	start, end, _, _ := period.ToTimeRange()
 
-	limit := 5
-	if l := c.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
-		}
-	}
+	limit := parseWidgetLimit(c, 5)
 
 	resp, err := h.repo.GetTopMaterials(organizationID, start, end, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -347,18 +352,17 @@ func (h *Handler) GetTopMaterials(c *gin.Context) {
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Failure 500 {object} errors.HTTPError
-// @Security Bearer
+// @Security BearerAuth
 // @Router /dashboard/goals-alerts [get]
 func (h *Handler) GetGoalsAlerts(c *gin.Context) {
-	organizationID := helpers.GetOrganizationID(c)
-	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
 	resp, err := h.repo.GetGoalsAlerts(organizationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 

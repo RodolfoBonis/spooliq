@@ -1,7 +1,10 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/features/activity"
@@ -25,6 +28,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/model3d"
 	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
+	"github.com/RodolfoBonis/spooliq/features/profile"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
@@ -47,6 +51,7 @@ func InitializeRoutes(
 	budgetUc budgetuc.IBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
 	brandingUc companyuc.IBrandingUseCase,
+	subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase,
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
@@ -56,35 +61,57 @@ func InitializeRoutes(
 	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
 	manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase,
 	presetHandler *preset.Handler,
+	profileHandler *profile.Handler,
 	dashboardHandler *dashboard.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
 	adminHandler *admin.Handler,
+	healthHandler *health.Handler,
 	protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc,
 	cacheMiddleware *middlewares.CacheMiddleware,
 	logger logger.Logger,
 ) {
+	// Unknown routes and methods return the standard error envelope instead of
+	// gin's default plain-text 404/405.
+	registerFallbacks(router)
 
 	root := router.Group("/v1")
 
 	root.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	health.Routes(root, logger)
+	healthHandler.Register(root)
 	activity.Routes(root, activityService, protectFactory)
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
-	company.Routes(root, companyUc, brandingUc, paymentMethodUc, protectFactory)
+	company.Routes(root, companyUc, brandingUc, subscriptionPaymentsUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	model3d.Routes(root, model3dUc, protectFactory)
 	preset.SetupRoutes(root, presetHandler, protectFactory)
+	profile.Routes(root, profileHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
 	users.SetupRoutes(root, userHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
 	admin.SetupRoutes(root, adminHandler, protectFactory)
 	subscriptions.Routes(root, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, protectFactory)
+}
+
+// registerFallbacks wires the no-route (404) and no-method (405) handlers so
+// unmatched requests emit the standard error envelope. HandleMethodNotAllowed
+// must be enabled on the engine (done at middleware setup) for NoMethod to run.
+func registerFallbacks(router *gin.Engine) {
+	router.NoRoute(func(c *gin.Context) {
+		errors.AbortWith(c, errors.NotFoundErr(errors.CodeRouteNotFound, "Rota não encontrada"))
+	})
+	router.NoMethod(func(c *gin.Context) {
+		errors.AbortWith(c, &errors.APIError{
+			Status:  http.StatusMethodNotAllowed,
+			Code:    errors.CodeMethodNotAllowed,
+			Message: "Método não permitido",
+		})
+	})
 }

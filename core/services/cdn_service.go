@@ -1,20 +1,57 @@
 package services
 
 import (
-	"context"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"context"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
+
+// ErrObjectNotFound is returned by StreamFile when the requested object does not
+// exist in the bucket. Callers map it to an HTTP 404.
+var ErrObjectNotFound = stderrors.New("cdn: object not found")
+
+// explicitContentTypes overrides mime.TypeByExtension for 3D model formats,
+// which the stdlib maps to application/octet-stream. Storing the proper type lets
+// the CDN edge and the stream endpoint serve a meaningful Content-Type.
+var explicitContentTypes = map[string]string{
+	".stl": "model/stl",
+	".3mf": "model/3mf",
+}
+
+// ContentTypeForFile resolves the MIME type for a filename, preferring the
+// explicit 3D-model overrides and falling back to the stdlib extension table and
+// finally application/octet-stream.
+func ContentTypeForFile(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ct, ok := explicitContentTypes[ext]; ok {
+		return ct
+	}
+	if ct := mime.TypeByExtension(ext); ct != "" {
+		return ct
+	}
+	return "application/octet-stream"
+}
+
+// ObjectStream carries a streamed object's reader plus the metadata needed to
+// serve it over HTTP. Body must be closed by the caller.
+type ObjectStream struct {
+	Body        io.ReadCloser
+	Size        int64
+	ContentType string
+}
 
 // CDNService uploads/serves files directly via MinIO + the new cdn edge (replaces the rb-cdn proxy).
 type CDNService struct {
@@ -52,10 +89,7 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 	}
 	key := path.Join(folder, filename)
 
-	contentType := mime.TypeByExtension(filepath.Ext(filename))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+	contentType := ContentTypeForFile(filename)
 
 	uctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -106,8 +140,36 @@ func (s *CDNService) DownloadFile(ctx context.Context, pathOrURL string) ([]byte
 	return data, nil
 }
 
-// DeleteFile removes an object from the bucket. pathOrURL may be a bare object key or a full
-// URL (old rb-cdn proxy or new edge form); the key is derived like DownloadFile.
+// StreamFile opens an object for streaming and returns its reader plus size and
+// content type. The caller owns Body and must Close it. A missing object yields
+// ErrObjectNotFound so handlers can map it to a 404 without leaking details.
+func (s *CDNService) StreamFile(ctx context.Context, pathOrURL string) (*ObjectStream, error) {
+	if s.minio == nil {
+		return nil, fmt.Errorf("cdn: MinIO client not configured")
+	}
+	key := s.objectKey(pathOrURL)
+
+	obj, err := s.minio.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("cdn: get object: %w", err)
+	}
+
+	// MinIO defers the real request until the first read/stat; Stat surfaces a
+	// missing object as a 404 ErrorResponse.
+	info, err := obj.Stat()
+	if err != nil {
+		_ = obj.Close()
+		if minio.ToErrorResponse(err).StatusCode == http.StatusNotFound {
+			return nil, ErrObjectNotFound
+		}
+		return nil, fmt.Errorf("cdn: stat object: %w", err)
+	}
+
+	return &ObjectStream{Body: obj, Size: info.Size, ContentType: info.ContentType}, nil
+}
+
+// DeleteFile removes an object from the bucket. pathOrURL may be a bare key or a
+// stored URL (same forms DownloadFile accepts).
 func (s *CDNService) DeleteFile(ctx context.Context, pathOrURL string) error {
 	if s.minio == nil {
 		return fmt.Errorf("cdn: MinIO client not configured")

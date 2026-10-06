@@ -2,7 +2,6 @@ package admin
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
@@ -13,6 +12,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// adminListOptions is the pagination config shared by the admin list endpoints.
+// These lists are platform-wide and filtered by status (not free-text), so only
+// page/page_size are honored here.
+func adminListOptions() helpers.ListQueryOptions {
+	return helpers.ListQueryOptions{DefaultPageSize: 20}
+}
 
 // Handler handles HTTP requests for admin operations
 type Handler struct {
@@ -126,35 +132,25 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Items per page" default(20)
 // @Param status query string false "Filter by subscription status"
-// @Success 200 {object} adminEntities.ListCompaniesResponse "List of companies"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies [get]
+// @Success 200 {object} helpers.Page[adminEntities.CompanyListItem] "Paginated companies"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
+// @Router /admin/companies [get]
 func (h *Handler) ListCompanies(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
-
-	// Parse query parameters
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	q := helpers.ParseListQuery(c, adminListOptions())
 	statusFilter := c.Query("status")
 
-	// Execute use case
-	response, err := h.listCompaniesUC.Execute(ctx, userRoles, page, pageSize, statusFilter)
+	response, err := h.listCompaniesUC.Execute(ctx, userRoles, q.Page, q.PageSize, statusFilter)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to list companies")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, helpers.NewPage(response.Companies, response.TotalCount, q))
 }
 
 // GetCompanyDetails handles getting company details
@@ -171,7 +167,7 @@ func (h *Handler) ListCompanies(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies/{organization_id} [get]
+// @Router /admin/companies/{organization_id} [get]
 func (h *Handler) GetCompanyDetails(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -179,23 +175,15 @@ func (h *Handler) GetCompanyDetails(c *gin.Context) {
 	organizationIDStr := c.Param("organization_id")
 	organizationID, err := uuid.Parse(organizationIDStr)
 	if err != nil {
-		appError := errors.BadRequestError("Invalid organization ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_organization_id", "ID de organização inválido"))
 		return
 	}
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
 
-	// Execute use case
 	response, err := h.getCompanyDetailsUC.Execute(ctx, userRoles, organizationID)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to get company details")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -217,7 +205,7 @@ func (h *Handler) GetCompanyDetails(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/companies/{organization_id}/status [patch]
+// @Router /admin/companies/{organization_id}/status [patch]
 func (h *Handler) UpdateCompanyStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -225,31 +213,23 @@ func (h *Handler) UpdateCompanyStatus(c *gin.Context) {
 	organizationIDStr := c.Param("organization_id")
 	organizationID, err := uuid.Parse(organizationIDStr)
 	if err != nil {
-		appError := errors.BadRequestError("Invalid organization ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_organization_id", "ID de organização inválido"))
 		return
 	}
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
 
-	// Parse request body
+	// ShouldBindJSON enforces the `validate:` tags via the shared validator, so
+	// field-level failures surface as a 400 validation_error with pt-BR fields.
 	var req adminEntities.UpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.BadRequestError("Invalid request body")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	// Execute use case
 	response, err := h.updateCompanyStatusUC.Execute(ctx, userRoles, organizationID, &req)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to update company status")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -266,35 +246,25 @@ func (h *Handler) UpdateCompanyStatus(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Items per page" default(20)
 // @Param status query string false "Filter by subscription status"
-// @Success 200 {object} adminEntities.ListSubscriptionsResponse "List of subscriptions"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions [get]
+// @Success 200 {object} helpers.Page[adminEntities.SubscriptionListItem] "Paginated subscriptions"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
+// @Router /admin/subscriptions [get]
 func (h *Handler) ListSubscriptions(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
-
-	// Parse query parameters
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	q := helpers.ParseListQuery(c, adminListOptions())
 	statusFilter := c.Query("status")
 
-	// Execute use case
-	response, err := h.listSubscriptionsUC.Execute(ctx, userRoles, page, pageSize, statusFilter)
+	response, err := h.listSubscriptionsUC.Execute(ctx, userRoles, q.Page, q.PageSize, statusFilter)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to list subscriptions")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, helpers.NewPage(response.Subscriptions, response.TotalCount, q))
 }
 
 // GetSubscriptionDetails handles getting subscription details
@@ -311,7 +281,7 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Company not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions/{organization_id} [get]
+// @Router /admin/subscriptions/{organization_id} [get]
 func (h *Handler) GetSubscriptionDetails(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -319,23 +289,15 @@ func (h *Handler) GetSubscriptionDetails(c *gin.Context) {
 	organizationIDStr := c.Param("organization_id")
 	organizationID, err := uuid.Parse(organizationIDStr)
 	if err != nil {
-		appError := errors.BadRequestError("Invalid organization ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_organization_id", "ID de organização inválido"))
 		return
 	}
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
 
-	// Execute use case
 	response, err := h.getSubscriptionDetailsUC.Execute(ctx, userRoles, organizationID)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to get subscription details")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -352,43 +314,31 @@ func (h *Handler) GetSubscriptionDetails(c *gin.Context) {
 // @Param organization_id path string true "Organization ID (UUID)"
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Items per page" default(20)
-// @Success 200 {object} adminEntities.PaymentHistoryResponse "Payment history"
-// @Failure 400 {object} map[string]string "Invalid organization ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Company not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/admin/subscriptions/{organization_id}/payments [get]
+// @Success 200 {object} helpers.Page[adminEntities.PaymentHistoryItem] "Paginated payment history"
+// @Failure 400 {object} errors.HTTPError "Invalid organization ID"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 404 {object} errors.HTTPError "Company not found"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
+// @Router /admin/subscriptions/{organization_id}/payments [get]
 func (h *Handler) GetPaymentHistory(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Parse organization ID from URL
 	organizationIDStr := c.Param("organization_id")
 	organizationID, err := uuid.Parse(organizationIDStr)
 	if err != nil {
-		appError := errors.BadRequestError("Invalid organization ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_organization_id", "ID de organização inválido"))
 		return
 	}
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
+	q := helpers.ParseListQuery(c, adminListOptions())
 
-	// Parse query parameters
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	// Execute use case
-	response, err := h.getPaymentHistoryUC.Execute(ctx, userRoles, organizationID, page, pageSize)
+	response, err := h.getPaymentHistoryUC.Execute(ctx, userRoles, organizationID, q.Page, q.PageSize)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to get payment history")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, helpers.NewPage(response.Payments, response.TotalCount, q))
 }

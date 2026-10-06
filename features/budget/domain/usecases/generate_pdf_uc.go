@@ -9,7 +9,6 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
-	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -23,10 +22,10 @@ import (
 // @Param id path string true "Budget ID"
 // @Param force query bool false "Force regenerate PDF even if exists"
 // @Success 200 {object} map[string]interface{} "PDF URL and metadata"
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /v1/budgets/{id}/pdf [get]
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Router /budgets/{id}/pdf [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -34,24 +33,16 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
-
-	uc.logger.Info(ctx, "PDF generation attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Get budget ID from path
 	budgetIDStr := c.Param("id")
 	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID format", map[string]interface{}{
-			"budget_id": budgetIDStr,
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID format")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID format", map[string]interface{}{"budget_id": budgetIDStr})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
@@ -65,8 +56,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		appError := coreErrors.UsecaseError("Budget not found")
-		c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -88,14 +78,13 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	}
 
 	// Get customer info
-	customer, err := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID)
+	customer, err := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to get customer info", map[string]interface{}{
 			"error":       err.Error(),
 			"customer_id": budget.CustomerID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -106,74 +95,14 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		respondBudgetError(c, err)
 		return
 	}
 
-	// Build items response with filaments and calculate total print time
-	itemsResponse := make([]entities.BudgetItemResponse, 0, len(items))
-	var totalPrintMinutes int
-
-	for _, item := range items {
-		// Get filament usage info for this item
-		filaments, err := uc.budgetRepository.GetFilamentUsageInfo(ctx, item.ID)
-		if err != nil {
-			uc.logger.Error(ctx, "Failed to get filament usage info", map[string]interface{}{
-				"error":   err.Error(),
-				"item_id": item.ID,
-			})
-		}
-
-		// Calculate print time display
-		printTimeDisplay := ""
-		if item.PrintTimeHours > 0 {
-			printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
-		} else {
-			printTimeDisplay = fmt.Sprintf("%dm", item.PrintTimeMinutes)
-		}
-
-		// Sum total print time
-		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
-
-		// Convert CostPresetID to string pointer
-		var costPresetIDStr *string
-		if item.CostPresetID != nil {
-			s := item.CostPresetID.String()
-			costPresetIDStr = &s
-		}
-
-		itemsResponse = append(itemsResponse, entities.BudgetItemResponse{
-			ID:                      item.ID.String(),
-			BudgetID:                item.BudgetID.String(),
-			ProductName:             item.ProductName,
-			ProductDescription:      item.ProductDescription,
-			ProductQuantity:         item.ProductQuantity,
-			ProductDimensions:       item.ProductDimensions,
-			PrintTimeHours:          item.PrintTimeHours,
-			PrintTimeMinutes:        item.PrintTimeMinutes,
-			PrintTimeDisplay:        printTimeDisplay,
-			SetupTimeMinutes:        item.SetupTimeMinutes,
-			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
-			CostPresetID:            costPresetIDStr,
-			AdditionalNotes:         item.AdditionalNotes,
-			FilamentCost:            item.FilamentCost,
-			WasteCost:               item.WasteCost,
-			EnergyCost:              item.EnergyCost,
-			SetupCost:               item.SetupCost,
-			ManualLaborCost:         item.ManualLaborCost,
-			ItemTotalCost:           item.ItemTotalCost,
-			UnitPrice:               item.UnitPrice,
-			Filaments:               filaments,
-			Order:                   item.Order,
-			CreatedAt:               item.CreatedAt,
-			UpdatedAt:               item.UpdatedAt,
-		})
-	}
-
-	// Calculate total print time
-	totalHours := totalPrintMinutes / 60
-	totalMins := totalPrintMinutes % 60
+	// Build items response (with the shared per-item sale distribution) plus the
+	// total print time. Using the same builder as the API guarantees the PDF shows
+	// identical per-item sale values.
+	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
 
 	// Get company info
 	company, err := uc.budgetRepository.GetCompanyByOrganizationID(ctx, organizationID)
@@ -182,8 +111,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := coreErrors.RepositoryError("Company information not found. Please configure your company settings first.")
-		c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.NotFoundErr("company_not_configured", "Informações da empresa não encontradas. Configure os dados da sua empresa primeiro."))
 		return
 	}
 
@@ -215,8 +143,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		appError := coreErrors.UsecaseError("Failed to generate PDF")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
 
@@ -238,9 +165,11 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 		})
 		// Continue even if CDN upload fails - user can still download the PDF
 	} else {
-		// Save CDN URL to database
+		// Save CDN URL to database via the dedicated pdf_url writer, which is NOT
+		// restricted to drafts (PDFs are generated for approved/sent budgets, and
+		// the generic Update is draft-only).
 		budget.PDFUrl = &cdnURL
-		err = uc.budgetRepository.Update(ctx, budget)
+		err = uc.budgetRepository.UpdatePDFURL(ctx, budgetID, organizationID, &cdnURL)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to save PDF URL to database", map[string]interface{}{
 				"error":     err.Error(),

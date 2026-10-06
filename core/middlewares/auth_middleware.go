@@ -9,6 +9,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
+	"github.com/RodolfoBonis/spooliq/core/types"
 	"github.com/gin-gonic/gin"
 
 	jsonToken "github.com/golang-jwt/jwt/v4"
@@ -108,25 +109,12 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 				}
 			}
 
-			// Check if user has at least one of the required roles
-			hasRequiredRole := false
-			matchedRole := ""
-			for _, requiredRole := range roles {
-				if userClaim.Roles.Contains(requiredRole) {
-					hasRequiredRole = true
-					matchedRole = requiredRole
-					break
-				}
-			}
-
-			if !hasRequiredRole {
-				logger.Info(ctx, "Role check failed", map[string]interface{}{
-					"required_roles": roles,
-					"user_roles":     userClaim.Roles,
-				})
-				appError := errors.NewAppError(entities.ErrUnauthorized, "Perfil de acesso necessário ausente", nil, nil)
-				logger.LogError(ctx, "Auth failed: missing required role", appError)
-				errors.AbortWith(c, appError)
+			// Check if user has at least one of the required roles. A valid token
+			// that lacks any required role is an authorization failure (403), handled
+			// by authorizeRole below; 401 is reserved for a missing/invalid/expired
+			// token (handled above).
+			matchedRole, authorized := authorizeRole(c, logger, userClaim.Roles, roles)
+			if !authorized {
 				return
 			}
 
@@ -162,4 +150,28 @@ func NewProtectMiddleware(logger logger.Logger, authService *services.AuthServic
 			handler(c)
 		}
 	}
+}
+
+// authorizeRole checks whether userRoles contains at least one of the required
+// roles. On success it returns the matched role and true. On failure it writes the
+// standard 403 envelope (code "insufficient_role") via errors.AbortWith and returns
+// ("", false). It is a 403 (not 401) because the token is valid; the caller merely
+// lacks permission. Extracted so the authorization decision is unit-testable without
+// a live Keycloak token.
+func authorizeRole(c *gin.Context, log logger.Logger, userRoles types.Array, required []string) (string, bool) {
+	for _, requiredRole := range required {
+		if userRoles.Contains(requiredRole) {
+			return requiredRole, true
+		}
+	}
+
+	ctx := c.Request.Context()
+	log.Info(ctx, "Role check failed", map[string]interface{}{
+		"required_roles": required,
+		"user_roles":     userRoles,
+	})
+	forbidden := errors.Forbidden("insufficient_role", "Você não tem permissão para realizar esta ação")
+	log.LogError(ctx, "Auth failed: missing required role", forbidden)
+	errors.AbortWith(c, forbidden)
+	return "", false
 }

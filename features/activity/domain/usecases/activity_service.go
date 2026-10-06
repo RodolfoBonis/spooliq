@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/activity/domain/repositories"
@@ -70,7 +70,7 @@ func (s *ActivityService) Record(ctx context.Context, activity entities.Activity
 // @Param page_size query int false "Page size" default(20)
 // @Param entity_type query string false "Filter by entity type"
 // @Param action query string false "Filter by action"
-// @Success 200 {object} entities.PaginatedActivities
+// @Success 200 {object} helpers.Page[entities.ActivityEntity]
 // @Failure 400 {object} errors.HTTPError
 // @Failure 401 {object} errors.HTTPError
 // @Security BearerAuth
@@ -78,31 +78,16 @@ func (s *ActivityService) Record(ctx context.Context, activity entities.Activity
 func (s *ActivityService) ListActivities(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "organization not found in context"})
+		coreerrors.Respond(c, coreerrors.Unauthorized("organization_id_missing", "Organização não encontrada no contexto"))
 		return
 	}
 
-	page := 1
-	if p := c.Query("page"); p != "" {
-		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
-			page = parsed
-		}
-	}
-
-	pageSize := 20
-	if ps := c.Query("page_size"); ps != "" {
-		if parsed, err := strconv.Atoi(ps); err == nil && parsed > 0 {
-			if parsed > 100 {
-				parsed = 100
-			}
-			pageSize = parsed
-		}
-	}
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
 
 	filter := &entities.ActivityFilter{
 		OrganizationID: organizationID,
-		Page:           page,
-		PageSize:       pageSize,
+		Page:           q.Page,
+		PageSize:       q.PageSize,
 	}
 
 	if et := c.Query("entity_type"); et != "" {
@@ -121,11 +106,11 @@ func (s *ActivityService) ListActivities(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list activities"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, helpers.NewPage(result.Activities, result.Total, q))
 }
 
 // FindRecentByOrganization returns the most recent activities for an organization.

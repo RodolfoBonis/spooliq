@@ -29,20 +29,6 @@ func NewFindUserUseCase(
 }
 
 // Execute finds a user by ID
-// @Summary Get user by ID
-// @Description Gets a user by ID (Owner, OrgAdmin, or self)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "User ID (UUID)"
-// @Success 200 {object} entities.UserEntity "User details"
-// @Failure 400 {object} map[string]string "Invalid user ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /users/{id} [get]
 func (uc *FindUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Finding user by ID", map[string]interface{}{
 		"user_id":         userID,

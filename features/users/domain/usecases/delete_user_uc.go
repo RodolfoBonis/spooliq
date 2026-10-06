@@ -28,20 +28,6 @@ func NewDeleteUserUseCase(
 }
 
 // Execute deletes a user
-// @Summary Delete user
-// @Description Deletes a user (Owner can delete anyone except self, OrgAdmin can delete users only)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "User ID (UUID)"
-// @Success 204 "User deleted successfully"
-// @Failure 400 {object} map[string]string "Invalid user ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /users/{id} [delete]
 func (uc *DeleteUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string) error {
 	uc.logger.Info(ctx, "Deleting user", map[string]interface{}{
 		"user_id":         userID,

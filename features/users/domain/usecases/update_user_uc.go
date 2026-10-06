@@ -30,21 +30,6 @@ func NewUpdateUserUseCase(
 }
 
 // Execute updates a user
-// @Summary Update user
-// @Description Updates a user (Owner can update anyone, OrgAdmin can update users only, not self)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "User ID (UUID)"
-// @Param request body entities.UpdateUserRequest true "User update request"
-// @Success 200 {object} entities.UserEntity "User updated successfully"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /users/{id} [put]
 func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organizationID string, currentUserID string, userRoles []string, req *entities.UpdateUserRequest) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Updating user", map[string]interface{}{
 		"user_id":         userID,

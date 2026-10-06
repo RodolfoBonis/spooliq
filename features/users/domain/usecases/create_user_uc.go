@@ -35,20 +35,6 @@ func NewCreateUserUseCase(
 }
 
 // Execute creates a new user
-// @Summary Create a new user
-// @Description Creates a new user within the organization (Owner and OrgAdmin only)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body entities.CreateUserRequest true "User creation request"
-// @Success 201 {object} entities.UserEntity "User created successfully"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 409 {object} map[string]string "User already exists"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /users [post]
 func (uc *CreateUserUseCase) Execute(ctx context.Context, organizationID string, userRoles []string, req *entities.CreateUserRequest) (*entities.UserEntity, error) {
 	uc.logger.Info(ctx, "Creating user", map[string]interface{}{
 		"organization_id": organizationID,

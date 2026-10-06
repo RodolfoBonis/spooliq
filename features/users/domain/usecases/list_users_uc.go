@@ -29,17 +29,6 @@ func NewListUsersUseCase(
 }
 
 // Execute lists all users in the organization
-// @Summary List all users
-// @Description Lists all users within the organization (Owner and OrgAdmin only)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {array} entities.UserEntity "List of users"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /users [get]
 func (uc *ListUsersUseCase) Execute(ctx context.Context, organizationID string, userRoles []string, q helpers.ListQuery) ([]*entities.UserEntity, int64, error) {
 	uc.logger.Info(ctx, "Listing users", map[string]interface{}{
 		"organization_id": organizationID,

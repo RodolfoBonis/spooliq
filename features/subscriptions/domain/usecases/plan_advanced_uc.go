@@ -279,7 +279,7 @@ func (uc *PlanAdvancedUseCase) ExecutePlanMigration(c *gin.Context) {
 // already-materialized slice, returning the standard envelope. Used for small,
 // in-code catalogs (templates, available features) that are not DB-paginated.
 func paginateInMemory[T any](c *gin.Context, items []T) helpers.Page[T] {
-	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 100})
 	total := int64(len(items))
 	off := q.Offset()
 	if off > len(items) {

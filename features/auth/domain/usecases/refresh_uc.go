@@ -1,9 +1,11 @@
 package usecases
 
 import (
+	stderrors "errors"
 	"net/http"
 	"strings"
 
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
@@ -45,7 +47,14 @@ func (uc *authUseCaseImpl) RefreshAuthToken(c *gin.Context) {
 	)
 	if err != nil {
 		uc.Logger.LogError(ctx, "Refresh falhou", err)
-		errors.AbortWith(c, errors.Unauthorized("invalid_token", "Token inválido ou expirado"))
+		// Only a rejected token is a 401 (the web logs the user out on 401). A
+		// Keycloak outage or network error stays a retryable 500.
+		var kcErr *gocloak.APIError
+		if stderrors.As(err, &kcErr) && (kcErr.Code == http.StatusBadRequest || kcErr.Code == http.StatusUnauthorized) {
+			errors.AbortWith(c, errors.Unauthorized("invalid_token", "Token inválido ou expirado"))
+			return
+		}
+		errors.AbortWith(c, err)
 		return
 	}
 	uc.Logger.Info(ctx, "Token refreshed successfully", logger.Fields{

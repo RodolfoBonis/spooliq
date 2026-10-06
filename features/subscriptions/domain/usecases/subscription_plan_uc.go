@@ -790,7 +790,7 @@ func toPlanResponse(plan *entities.SubscriptionPlanEntity) *entities.Subscriptio
 // already-materialized slice of plan responses, returning the standard envelope.
 // Plans are a small catalog, so pagination happens in memory.
 func paginatePlanResponses(c *gin.Context, items []entities.SubscriptionPlanResponse) helpers.Page[entities.SubscriptionPlanResponse] {
-	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 100})
 	total := int64(len(items))
 	off := q.Offset()
 	if off > len(items) {

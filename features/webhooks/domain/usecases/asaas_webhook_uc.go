@@ -10,6 +10,7 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
@@ -52,26 +53,26 @@ func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to read webhook body", map[string]interface{}{"error": err.Error()})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_request", "Corpo de requisição inválido"))
 		return
 	}
 
 	if uc.webhookSecret != "" {
 		signature := c.GetHeader("asaas-access-token")
 		if signature == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing signature"})
+			coreerrors.Respond(c, coreerrors.Unauthorized("missing_signature", "Assinatura ausente"))
 			return
 		}
 
 		if !uc.validateSignature(ctx, bodyBytes, signature) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+			coreerrors.Respond(c, coreerrors.Unauthorized("invalid_signature", "Assinatura inválida"))
 			return
 		}
 	}
 
 	var webhookEvent webhookEntities.AsaasWebhookRequest
 	if err := json.Unmarshal(bodyBytes, &webhookEvent); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_request", "JSON inválido"))
 		return
 	}
 
@@ -99,7 +100,7 @@ func (uc *AsaasWebhookUseCase) HandleWebhook(c *gin.Context) {
 			"error": err.Error(),
 			"event": webhookEvent.Event,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process event"})
+		coreerrors.Respond(c, err)
 		return
 	}
 

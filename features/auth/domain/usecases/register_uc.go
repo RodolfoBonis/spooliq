@@ -10,6 +10,7 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/services"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	authEntities "github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	companyEntities "github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
@@ -19,7 +20,6 @@ import (
 	userEntities "github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	userRepositories "github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -32,7 +32,6 @@ type RegisterUseCase struct {
 	gatewayLinkRepo   subscriptionRepositories.PaymentGatewayLinkRepository
 	presetCreateUC    *presetUsecases.CreatePresetUseCase
 	logger            logger.Logger
-	validator         *validator.Validate
 }
 
 // NewRegisterUseCase creates a new RegisterUseCase
@@ -53,7 +52,6 @@ func NewRegisterUseCase(
 		gatewayLinkRepo:   gatewayLinkRepo,
 		presetCreateUC:    presetCreateUC,
 		logger:            logger,
-		validator:         validator.New(),
 	}
 }
 
@@ -82,18 +80,16 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid registration payload", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := errors.UsecaseError("Invalid request format")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
+	// Validate request (pt-BR field errors via the shared validator)
+	if err := validation.Validate(request); err != nil {
 		uc.logger.Error(ctx, "Registration validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := errors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -104,8 +100,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error": err.Error(),
 			"email": request.Email,
 		})
-		appError := errors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -113,8 +108,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 		uc.logger.Error(ctx, "Email already registered", map[string]interface{}{
 			"email": request.Email,
 		})
-		appError := errors.UsecaseError("Email already registered")
-		c.JSON(http.StatusConflict, gin.H{"error": appError.Message})
+		errors.Respond(c, errors.Conflict("email_already_registered", "E-mail já cadastrado"))
 		return
 	}
 
@@ -133,8 +127,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.UsecaseError("Failed to create payment account: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		errors.Respond(c, errors.ExternalServiceError("Falha ao criar conta de pagamento"))
 		return
 	}
 
@@ -145,8 +138,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.UsecaseError("Failed to create user account: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		errors.Respond(c, errors.ExternalServiceError("Falha ao criar conta de usuário"))
 		return
 	}
 
@@ -187,8 +179,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -241,8 +232,7 @@ func (uc *RegisterUseCase) Register(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := errors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 

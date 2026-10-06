@@ -40,6 +40,15 @@ var (
 	// ErrPresetNotFound is returned when a preset is not found
 	ErrPresetNotFound = errors.New("preset not found")
 
+	// ErrInvalidPresetReference is returned when a referenced preset does not belong
+	// to the caller's organization or is of the wrong type. It is safe to surface as
+	// a 400 (bad request) with the stable code invalid_preset_reference.
+	ErrInvalidPresetReference = errors.New("referenced preset does not belong to your organization")
+
+	// ErrInvalidStatusFilter is returned when a list request carries a status filter
+	// that is not one of the known budget statuses. Surfaced as a 400.
+	ErrInvalidStatusFilter = errors.New("invalid status filter")
+
 	// ErrProfileNotFound is returned when a budget references a print profile that
 	// does not exist within the caller's organization (another tenant's profile, or
 	// a soft-deleted one). It is safe to surface as a 400 (bad request).

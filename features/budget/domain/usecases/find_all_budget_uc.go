@@ -2,25 +2,33 @@ package usecases
 
 import (
 	"net/http"
-	"strconv"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
-	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 )
 
-// FindAll retrieves all budgets with pagination
+// FindAll lists budgets for the organization with pagination, filtering and sorting.
 // @Summary List budgets
-// @Description Get all budgets with pagination
+// @Description List budgets (paginated). Supports free-text name search (q), and
+// @Description filtering by status, customer_id and a created_at range (from/to,
+// @Description YYYY-MM-DD or RFC3339, inclusive). Sortable by created_at, name,
+// @Description total_cost and status (default created_at desc).
 // @Tags budgets
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} entities.ListBudgetsResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Param page_size query int false "Page size (max 100)" default(20)
+// @Param q query string false "Free-text search on budget name (case-insensitive)"
+// @Param status query string false "Filter by status" Enums(draft, sent, approved, rejected, printing, completed)
+// @Param customer_id query string false "Filter by customer UUID"
+// @Param from query string false "Created-at lower bound (YYYY-MM-DD or RFC3339, inclusive)"
+// @Param to query string false "Created-at upper bound (YYYY-MM-DD or RFC3339, inclusive)"
+// @Param sort_by query string false "Sort field" Enums(created_at, name, total_cost, status) default(created_at)
+// @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(desc)
+// @Success 200 {object} helpers.Page[entities.BudgetResponse]
+// @Failure 400 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /budgets [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) FindAll(c *gin.Context) {
@@ -29,73 +37,39 @@ func (uc *BudgetUseCase) FindAll(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
 
-	uc.logger.Info(ctx, "Budgets retrieval attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
+	listQuery := budgetListQuery(c)
 
-	// Parse pagination parameters
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
+	filters, apiErr := parseBudgetFilters(c, listQuery.Search)
+	if apiErr != nil {
+		coreErrors.Respond(c, apiErr)
+		return
 	}
 
-	offset := (page - 1) * pageSize
-
-	// Get budgets from repository
-	budgets, total, err := uc.budgetRepository.FindAll(ctx, organizationID, pageSize, offset)
+	budgets, total, err := uc.budgetRepository.SearchBudgets(ctx, organizationID, filters, listQuery.OrderClause(), listQuery.Limit(), listQuery.Offset())
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to retrieve budgets", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to retrieve budgets", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
-	// Build response using the shared builder so every budget carries the same
-	// per-item sale values and cost-preset references as the detail endpoints.
-	budgetResponses := make([]entities.BudgetResponse, len(budgets))
-	for i, budget := range budgets {
-		customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
-		items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
-
-		itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
-
-		budgetResponses[i] = entities.BudgetResponse{
-			BudgetEntity:          budget,
-			Customer:              customerInfo,
-			Items:                 itemResponses,
-			TotalPrintTimeHours:   totalHours,
-			TotalPrintTimeMinutes: totalMins,
-			TotalPrintTimeDisplay: formatPrintTime(totalHours, totalMins),
-		}
+	budgetResponses, err := uc.buildBudgetListResponses(ctx, budgets, organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to build budget list response", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
 	}
 
-	totalPages := (total + pageSize - 1) / pageSize
-
-	response := entities.ListBudgetsResponse{
-		Data:       budgetResponses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: totalPages,
-	}
+	page := helpers.NewPage(budgetResponses, int64(total), listQuery)
 
 	uc.logger.Info(ctx, "Budgets retrieved successfully", map[string]interface{}{
-		"count": len(budgets),
+		"count": len(budgetResponses),
 		"total": total,
-		"page":  page,
+		"page":  listQuery.Page,
 	})
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, page)
 }

@@ -17,9 +17,9 @@ import (
 // @Produce json
 // @Param id path string true "Budget ID"
 // @Success 200 {object} entities.BudgetResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /budgets/{id} [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) FindByID(c *gin.Context) {
@@ -28,23 +28,15 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
-
-	uc.logger.Info(ctx, "Budget retrieval by ID attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Parse budget ID
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
@@ -55,7 +47,7 @@ func (uc *BudgetUseCase) FindByID(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		respondBudgetError(c, err)
 		return
 	}
 

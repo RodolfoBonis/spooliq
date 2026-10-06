@@ -22,9 +22,9 @@ import (
 // @Param id path string true "Budget ID"
 // @Param force query bool false "Force regenerate PDF even if exists"
 // @Success 200 {object} map[string]interface{} "PDF URL and metadata"
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /budgets/{id}/pdf [get]
 // @Security BearerAuth
 func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
@@ -33,24 +33,16 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
-
-	uc.logger.Info(ctx, "PDF generation attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Get budget ID from path
 	budgetIDStr := c.Param("id")
 	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID format", map[string]interface{}{
-			"budget_id": budgetIDStr,
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID format")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID format", map[string]interface{}{"budget_id": budgetIDStr})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
@@ -64,8 +56,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		appError := coreErrors.UsecaseError("Budget not found")
-		c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -93,8 +84,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":       err.Error(),
 			"customer_id": budget.CustomerID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -105,8 +95,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -122,8 +111,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := coreErrors.RepositoryError("Company information not found. Please configure your company settings first.")
-		c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.NotFoundErr("company_not_configured", "Informações da empresa não encontradas. Configure os dados da sua empresa primeiro."))
 		return
 	}
 
@@ -155,8 +143,7 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		appError := coreErrors.UsecaseError("Failed to generate PDF")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -22,8 +23,8 @@ import (
 // @Produce json
 // @Param request body entities.PreviewBudgetRequest true "Budget preview request"
 // @Success 200 {object} entities.BudgetResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Failure 400 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /budgets/preview [post]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Preview(c *gin.Context) {
@@ -32,36 +33,27 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
 
 	var request entities.PreviewBudgetRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		uc.logger.Error(ctx, "Failed to bind preview request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.BadRequestError("Não foi possível interpretar os dados do orçamento. Verifique o formato e tente novamente.")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to bind preview request", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.validator.Struct(request); err != nil {
-		uc.logger.Error(ctx, "Preview validation failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.BadRequestError("Dados do orçamento inválidos: informe ao menos um item, e cada item deve ter ao menos um filamento.")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := validation.Validate(&request); err != nil {
+		uc.logger.Error(ctx, "Preview validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
 	for i, item := range request.Items {
 		if len(item.Filaments) == 0 {
-			uc.logger.Error(ctx, "Preview item has no filaments", map[string]interface{}{
-				"item_index": i,
-			})
-			appError := coreErrors.BadRequestError("Cada item do orçamento deve ter ao menos um filamento.")
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			uc.logger.Error(ctx, "Preview item has no filaments", map[string]interface{}{"item_index": i})
+			coreErrors.Respond(c, coreErrors.BadRequest(coreErrors.CodeValidationError, "Cada item do orçamento deve ter ao menos um filamento"))
 			return
 		}
 	}
@@ -76,21 +68,15 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		CostPresetID:    request.CostPresetID,
 	})
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to resolve preview presets", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.BadRequestError("Referências inválidas no orçamento: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to resolve preview presets", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
 	// Validate the remaining references (item-level cost presets + filaments).
 	if err := uc.validateReferences(ctx, organizationID, nil, nil, nil, request.Items); err != nil {
-		uc.logger.Error(ctx, "Invalid preview references", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.BadRequestError("Referências inválidas no orçamento: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid preview references", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -122,11 +108,8 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		Items:              specs,
 	})
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to compute budget preview", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.BadRequestError("Não foi possível calcular o orçamento: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to compute budget preview", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 

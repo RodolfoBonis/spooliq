@@ -7,6 +7,7 @@ import (
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
@@ -23,11 +24,10 @@ import (
 // @Param id path string true "Budget ID"
 // @Param request body entities.UpdateBudgetRequest true "Update budget request"
 // @Success 200 {object} entities.BudgetResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Failure 400 {object} errors.HTTPError
+// @Failure 404 {object} errors.HTTPError
+// @Failure 409 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
 // @Router /budgets/{id} [put]
 // @Security BearerAuth
 func (uc *BudgetUseCase) Update(c *gin.Context) {
@@ -36,43 +36,28 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeOrganizationRequired, "Organização não identificada"))
 		return
 	}
-
-	uc.logger.Info(ctx, "Budget update attempt started", map[string]interface{}{
-		"user_agent": c.Request.UserAgent(),
-		"ip":         c.ClientIP(),
-	})
 
 	// Parse budget ID
 	budgetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid budget ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget ID", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.BadRequest(CodeInvalidBudgetID, "ID de orçamento inválido"))
 		return
 	}
 
 	var request entities.UpdateBudgetRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Invalid request format")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
-		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := validation.Validate(&request); err != nil {
+		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -83,7 +68,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			"error":     err.Error(),
 			"budget_id": budgetID,
 		})
-		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -95,8 +80,7 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			"budget_id": budgetID,
 			"status":    budget.Status,
 		})
-		appError := coreErrors.ConflictError("Only draft budgets can be edited")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.Conflict(CodeBudgetNotEditable, "Apenas orçamentos em rascunho podem ser editados"))
 		return
 	}
 
@@ -109,14 +93,12 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	}
 	if request.CustomerID != nil {
 		// Verify customer exists and user has permission
-		_, err = uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID)
-		if err != nil {
+		if _, err := uc.customerRepository.FindByID(ctx, *request.CustomerID, organizationID); err != nil {
 			uc.logger.Error(ctx, "Customer not found", map[string]interface{}{
 				"error":       err.Error(),
 				"customer_id": *request.CustomerID,
 			})
-			appError := coreErrors.UsecaseError("Customer not found")
-			c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+			coreErrors.Respond(c, coreErrors.NotFoundErr(CodeCustomerNotFound, "Cliente não encontrado"))
 			return
 		}
 		budget.CustomerID = *request.CustomerID
@@ -136,11 +118,8 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			CostPresetID:    request.CostPresetID,
 		})
 		if rerr != nil {
-			uc.logger.Error(ctx, "Failed to resolve budget presets", map[string]interface{}{
-				"error": rerr.Error(),
-			})
-			appError := coreErrors.BadRequestError(rerr.Error())
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			uc.logger.Error(ctx, "Failed to resolve budget presets", map[string]interface{}{"error": rerr.Error()})
+			respondBudgetError(c, rerr)
 			return
 		}
 		budget.ProfileID = resolved.ProfileID
@@ -193,11 +172,8 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		vMachine, vEnergy, vCost = request.MachinePresetID, request.EnergyPresetID, request.CostPresetID
 	}
 	if err := uc.validateReferences(ctx, organizationID, vMachine, vEnergy, vCost, itemsForValidation); err != nil {
-		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.BadRequestError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
@@ -206,11 +182,8 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.Items != nil {
 		for i, item := range *request.Items {
 			if len(item.Filaments) == 0 {
-				uc.logger.Error(ctx, "Item has no filaments", map[string]interface{}{
-					"item_index": i,
-				})
-				appError := coreErrors.UsecaseError("Each item must have at least one filament")
-				c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+				uc.logger.Error(ctx, "Item has no filaments", map[string]interface{}{"item_index": i})
+				coreErrors.Respond(c, coreErrors.BadRequest(coreErrors.CodeValidationError, "Cada item do orçamento deve ter ao menos um filamento"))
 				return
 			}
 		}
@@ -247,35 +220,24 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		// A concurrent approval (or deletion) turns this into a conflict rather
 		// than an internal error.
 		if errors.Is(err, entities.ErrBudgetNotEditable) {
-			uc.logger.Warning(ctx, "Budget no longer editable (concurrent change)", map[string]interface{}{
-				"budget_id": budgetID,
-			})
-			appError := coreErrors.ConflictError("Only draft budgets can be edited")
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			uc.logger.Warning(ctx, "Budget no longer editable (concurrent change)", map[string]interface{}{"budget_id": budgetID})
+			coreErrors.Respond(c, coreErrors.Conflict(CodeBudgetNotEditable, "Apenas orçamentos em rascunho podem ser editados"))
 			return
 		}
-		uc.logger.Error(ctx, "Failed to update budget", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to update budget", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
 	// Build the response from the freshly stored (and recosted) budget.
 	response, err := uc.buildBudgetResponse(ctx, budget.ID, organizationID)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to retrieve updated budget", map[string]interface{}{
-			"error": err.Error(),
-		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		uc.logger.Error(ctx, "Failed to retrieve updated budget", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
 		return
 	}
 
-	uc.logger.Info(ctx, "Budget updated successfully", map[string]interface{}{
-		"budget_id": budget.ID,
-	})
+	uc.logger.Info(ctx, "Budget updated successfully", map[string]interface{}{"budget_id": budget.ID})
 
 	c.JSON(http.StatusOK, response)
 

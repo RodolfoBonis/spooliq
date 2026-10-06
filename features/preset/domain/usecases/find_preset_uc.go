@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/repositories"
 	"github.com/google/uuid"
@@ -32,9 +33,10 @@ func (uc *FindPresetUseCase) FindByID(id uuid.UUID, organizationID string) (*ent
 	return uc.presetRepo.GetByID(id, organizationID)
 }
 
-// FindPresets finds presets for an organization applying the given combinable filters.
-func (uc *FindPresetUseCase) FindPresets(organizationID string, filters entities.PresetFilters) ([]*entities.PresetEntity, error) {
-	return uc.presetRepo.ListPresets(organizationID, filters)
+// FindPresets finds a page of presets for an organization applying the given
+// combinable filters, search, sort and pagination.
+func (uc *FindPresetUseCase) FindPresets(organizationID string, filters entities.PresetFilters, q helpers.ListQuery) ([]*entities.PresetEntity, int64, error) {
+	return uc.presetRepo.ListPresetsPage(organizationID, filters, q)
 }
 
 // FindMachinePresetByID finds a machine preset with full details within the organization scope.
@@ -162,32 +164,32 @@ func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID, organizationID str
 	}, nil
 }
 
-// FindAllMachinePresets finds all machine presets with full details for a specific organization
-func (uc *FindPresetUseCase) FindAllMachinePresets(organizationID string) ([]*MachinePresetResponse, error) {
-	return uc.presetRepo.GetMachinePresets(organizationID)
+// FindAllMachinePresets finds a page of machine presets with full details for a specific organization
+func (uc *FindPresetUseCase) FindAllMachinePresets(organizationID string, q helpers.ListQuery) ([]*MachinePresetResponse, int64, error) {
+	return uc.presetRepo.GetMachinePresets(organizationID, q)
 }
 
-// FindAllEnergyPresets finds all energy presets with full details for a specific organization
-func (uc *FindPresetUseCase) FindAllEnergyPresets(organizationID string) ([]*EnergyPresetResponse, error) {
-	return uc.presetRepo.GetEnergyPresets(organizationID)
+// FindAllEnergyPresets finds a page of energy presets with full details for a specific organization
+func (uc *FindPresetUseCase) FindAllEnergyPresets(organizationID string, q helpers.ListQuery) ([]*EnergyPresetResponse, int64, error) {
+	return uc.presetRepo.GetEnergyPresets(organizationID, q)
 }
 
-// FindAllCostPresets finds all cost presets with full details for a specific organization
-func (uc *FindPresetUseCase) FindAllCostPresets(organizationID string) ([]*CostPresetResponse, error) {
-	return uc.presetRepo.GetCostPresets(organizationID)
+// FindAllCostPresets finds a page of cost presets with full details for a specific organization
+func (uc *FindPresetUseCase) FindAllCostPresets(organizationID string, q helpers.ListQuery) ([]*CostPresetResponse, int64, error) {
+	return uc.presetRepo.GetCostPresets(organizationID, q)
 }
 
-// FindMachinePresetsByBrand finds machine presets by brand for a specific organization
-func (uc *FindPresetUseCase) FindMachinePresetsByBrand(brand, organizationID string) ([]*MachinePresetResponse, error) {
-	return uc.presetRepo.GetMachinePresetsByBrand(brand, organizationID)
+// FindMachinePresetsByBrand finds a page of machine presets by brand for a specific organization
+func (uc *FindPresetUseCase) FindMachinePresetsByBrand(brand, organizationID string, q helpers.ListQuery) ([]*MachinePresetResponse, int64, error) {
+	return uc.presetRepo.GetMachinePresetsByBrand(brand, organizationID, q)
 }
 
-// FindEnergyPresetsByLocation finds energy presets by location for a specific organization
-func (uc *FindPresetUseCase) FindEnergyPresetsByLocation(country, state, city, organizationID string) ([]*EnergyPresetResponse, error) {
-	return uc.presetRepo.GetEnergyPresetsByLocation(country, state, city, organizationID)
+// FindEnergyPresetsByLocation finds a page of energy presets by location for a specific organization
+func (uc *FindPresetUseCase) FindEnergyPresetsByLocation(country, state, city, organizationID string, q helpers.ListQuery) ([]*EnergyPresetResponse, int64, error) {
+	return uc.presetRepo.GetEnergyPresetsByLocation(country, state, city, organizationID, q)
 }
 
-// FindEnergyPresetsByCurrency finds energy presets by currency for a specific organization
-func (uc *FindPresetUseCase) FindEnergyPresetsByCurrency(currency, organizationID string) ([]*EnergyPresetResponse, error) {
-	return uc.presetRepo.GetEnergyPresetsByCurrency(currency, organizationID)
+// FindEnergyPresetsByCurrency finds a page of energy presets by currency for a specific organization
+func (uc *FindPresetUseCase) FindEnergyPresetsByCurrency(currency, organizationID string, q helpers.ListQuery) ([]*EnergyPresetResponse, int64, error) {
+	return uc.presetRepo.GetEnergyPresetsByCurrency(currency, organizationID, q)
 }

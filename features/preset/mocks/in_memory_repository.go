@@ -2,11 +2,43 @@
 package mocks
 
 import (
+	"strings"
+
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/repositories"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// applyListQuery reproduces the repository's search + pagination semantics for
+// the in-memory mock: it filters by case-insensitive name substring, reports the
+// total number of matching rows and returns only the requested page.
+func applyListQuery[T any](items []T, name func(T) string, q helpers.ListQuery) ([]T, int64) {
+	if q.Search != "" {
+		needle := strings.ToLower(q.Search)
+		filtered := make([]T, 0, len(items))
+		for _, it := range items {
+			if strings.Contains(strings.ToLower(name(it)), needle) {
+				filtered = append(filtered, it)
+			}
+		}
+		items = filtered
+	}
+	total := int64(len(items))
+	off := q.Offset()
+	if off > len(items) {
+		off = len(items)
+	}
+	end := len(items)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(items) {
+			end = len(items)
+		}
+	}
+	return items[off:end], total
+}
 
 // InMemoryPresetRepository is a stateful, in-memory implementation of
 // repositories.PresetRepository used in tests.
@@ -105,6 +137,13 @@ func (r *InMemoryPresetRepository) GetByID(id uuid.UUID, organizationID string) 
 
 // ListPresets lists presets for an organization applying combinable filters.
 func (r *InMemoryPresetRepository) ListPresets(organizationID string, filters entities.PresetFilters) ([]*entities.PresetEntity, error) {
+	page, _, err := r.ListPresetsPage(organizationID, filters, helpers.ListQuery{})
+	return page, err
+}
+
+// ListPresetsPage lists presets for an organization applying combinable filters,
+// search and pagination.
+func (r *InMemoryPresetRepository) ListPresetsPage(organizationID string, filters entities.PresetFilters, q helpers.ListQuery) ([]*entities.PresetEntity, int64, error) {
 	r.record(organizationID)
 	var result []*entities.PresetEntity
 	for _, preset := range r.presets {
@@ -131,7 +170,8 @@ func (r *InMemoryPresetRepository) ListPresets(organizationID string, filters en
 		clone := *preset
 		result = append(result, &clone)
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *entities.PresetEntity) string { return p.Name }, q)
+	return page, total, nil
 }
 
 // Update updates a preset scoped to its organization.
@@ -341,7 +381,7 @@ func (r *InMemoryPresetRepository) machineResponse(id uuid.UUID) *repositories.M
 }
 
 // GetMachinePresets lists active machine responses scoped to an organization.
-func (r *InMemoryPresetRepository) GetMachinePresets(organizationID string) ([]*repositories.MachinePresetResponse, error) {
+func (r *InMemoryPresetRepository) GetMachinePresets(organizationID string, q helpers.ListQuery) ([]*repositories.MachinePresetResponse, int64, error) {
 	r.record(organizationID)
 	var result []*repositories.MachinePresetResponse
 	for id := range r.machines {
@@ -351,11 +391,12 @@ func (r *InMemoryPresetRepository) GetMachinePresets(organizationID string) ([]*
 		}
 		result = append(result, r.machineResponse(id))
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *repositories.MachinePresetResponse) string { return p.Name }, q)
+	return page, total, nil
 }
 
 // GetMachinePresetsByBrand lists active machine responses scoped to org and brand.
-func (r *InMemoryPresetRepository) GetMachinePresetsByBrand(brand, organizationID string) ([]*repositories.MachinePresetResponse, error) {
+func (r *InMemoryPresetRepository) GetMachinePresetsByBrand(brand, organizationID string, q helpers.ListQuery) ([]*repositories.MachinePresetResponse, int64, error) {
 	r.record(organizationID)
 	var result []*repositories.MachinePresetResponse
 	for id, machine := range r.machines {
@@ -365,7 +406,8 @@ func (r *InMemoryPresetRepository) GetMachinePresetsByBrand(brand, organizationI
 		}
 		result = append(result, r.machineResponse(id))
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *repositories.MachinePresetResponse) string { return p.Name }, q)
+	return page, total, nil
 }
 
 func (r *InMemoryPresetRepository) energyResponse(id uuid.UUID) *repositories.EnergyPresetResponse {
@@ -393,7 +435,7 @@ func (r *InMemoryPresetRepository) energyResponse(id uuid.UUID) *repositories.En
 }
 
 // GetEnergyPresets lists active energy responses scoped to an organization.
-func (r *InMemoryPresetRepository) GetEnergyPresets(organizationID string) ([]*repositories.EnergyPresetResponse, error) {
+func (r *InMemoryPresetRepository) GetEnergyPresets(organizationID string, q helpers.ListQuery) ([]*repositories.EnergyPresetResponse, int64, error) {
 	r.record(organizationID)
 	var result []*repositories.EnergyPresetResponse
 	for id := range r.energies {
@@ -403,11 +445,12 @@ func (r *InMemoryPresetRepository) GetEnergyPresets(organizationID string) ([]*r
 		}
 		result = append(result, r.energyResponse(id))
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *repositories.EnergyPresetResponse) string { return p.Name }, q)
+	return page, total, nil
 }
 
 // GetEnergyPresetsByLocation lists active energy responses scoped to org and location.
-func (r *InMemoryPresetRepository) GetEnergyPresetsByLocation(country, state, city, organizationID string) ([]*repositories.EnergyPresetResponse, error) {
+func (r *InMemoryPresetRepository) GetEnergyPresetsByLocation(country, state, city, organizationID string, q helpers.ListQuery) ([]*repositories.EnergyPresetResponse, int64, error) {
 	r.record(organizationID)
 	var result []*repositories.EnergyPresetResponse
 	for id, energy := range r.energies {
@@ -426,11 +469,12 @@ func (r *InMemoryPresetRepository) GetEnergyPresetsByLocation(country, state, ci
 		}
 		result = append(result, r.energyResponse(id))
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *repositories.EnergyPresetResponse) string { return p.Name }, q)
+	return page, total, nil
 }
 
 // GetEnergyPresetsByCurrency lists active energy responses scoped to org and currency.
-func (r *InMemoryPresetRepository) GetEnergyPresetsByCurrency(currency, organizationID string) ([]*repositories.EnergyPresetResponse, error) {
+func (r *InMemoryPresetRepository) GetEnergyPresetsByCurrency(currency, organizationID string, q helpers.ListQuery) ([]*repositories.EnergyPresetResponse, int64, error) {
 	r.record(organizationID)
 	var result []*repositories.EnergyPresetResponse
 	for id, energy := range r.energies {
@@ -440,11 +484,12 @@ func (r *InMemoryPresetRepository) GetEnergyPresetsByCurrency(currency, organiza
 		}
 		result = append(result, r.energyResponse(id))
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *repositories.EnergyPresetResponse) string { return p.Name }, q)
+	return page, total, nil
 }
 
 // GetCostPresets lists active cost responses scoped to an organization.
-func (r *InMemoryPresetRepository) GetCostPresets(organizationID string) ([]*repositories.CostPresetResponse, error) {
+func (r *InMemoryPresetRepository) GetCostPresets(organizationID string, q helpers.ListQuery) ([]*repositories.CostPresetResponse, int64, error) {
 	r.record(organizationID)
 	var result []*repositories.CostPresetResponse
 	for id := range r.costs {
@@ -473,5 +518,6 @@ func (r *InMemoryPresetRepository) GetCostPresets(organizationID string) ([]*rep
 			QualityControlCostPerItem: cost.QualityControlCostPerItem,
 		})
 	}
-	return result, nil
+	page, total := applyListQuery(result, func(p *repositories.CostPresetResponse) string { return p.Name }, q)
+	return page, total, nil
 }

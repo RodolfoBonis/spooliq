@@ -115,7 +115,7 @@ func (r *PrintProfileRepositoryImpl) ListPage(organizationID string, q helpers.L
 	}
 
 	var profileModels []models.PrintProfileModel
-	if err := query.Offset(q.Offset()).Limit(q.Limit()).Find(&profileModels).Error; err != nil {
+	if err := paginate(query, q).Find(&profileModels).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -230,4 +230,15 @@ func (r *PrintProfileRepositoryImpl) Duplicate(id uuid.UUID, organizationID stri
 		return nil, err
 	}
 	return result, nil
+}
+
+// paginate applies the page's offset and limit to a query. A non-positive limit
+// (e.g. a zero-value ListQuery used in tests) means "no limit" instead of gorm's
+// literal LIMIT 0, which would return no rows.
+func paginate(db *gorm.DB, q helpers.ListQuery) *gorm.DB {
+	db = db.Offset(q.Offset())
+	if q.Limit() > 0 {
+		db = db.Limit(q.Limit())
+	}
+	return db
 }

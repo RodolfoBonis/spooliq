@@ -45,7 +45,7 @@ func (r *UserRepositoryImpl) FindAll(ctx context.Context, organizationID string,
 	}
 
 	var userModels []models.UserModel
-	if err := query.Offset(q.Offset()).Limit(q.Limit()).Find(&userModels).Error; err != nil {
+	if err := paginate(query, q).Find(&userModels).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -146,4 +146,15 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organizat
 	return r.db.WithContext(ctx).
 		Where("id = ? AND organization_id = ?", id, organizationID).
 		Delete(&models.UserModel{}).Error
+}
+
+// paginate applies the page's offset and limit to a query. A non-positive limit
+// (e.g. a zero-value ListQuery used in tests) means "no limit" instead of gorm's
+// literal LIMIT 0, which would return no rows.
+func paginate(db *gorm.DB, q helpers.ListQuery) *gorm.DB {
+	db = db.Offset(q.Offset())
+	if q.Limit() > 0 {
+		db = db.Limit(q.Limit())
+	}
+	return db
 }

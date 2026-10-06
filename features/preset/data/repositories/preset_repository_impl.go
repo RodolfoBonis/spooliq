@@ -174,7 +174,7 @@ func (r *PresetRepositoryImpl) ListPresetsPage(organizationID string, filters en
 	}
 
 	var presetModels []models.PresetModel
-	if err := query.Offset(q.Offset()).Limit(q.Limit()).Find(&presetModels).Error; err != nil {
+	if err := paginate(query, q).Find(&presetModels).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -715,7 +715,7 @@ func (r *PresetRepositoryImpl) GetMachinePresets(organizationID string, q helper
 	}
 
 	var results []*repositories.MachinePresetResponse
-	err := query.Offset(q.Offset()).Limit(q.Limit()).Scan(&results).Error
+	err := paginate(query, q).Scan(&results).Error
 	return results, total, err
 }
 
@@ -766,7 +766,7 @@ func (r *PresetRepositoryImpl) GetMachinePresetsByBrand(brand, organizationID st
 	}
 
 	var results []*repositories.MachinePresetResponse
-	err := query.Offset(q.Offset()).Limit(q.Limit()).Scan(&results).Error
+	err := paginate(query, q).Scan(&results).Error
 	return results, total, err
 }
 
@@ -812,7 +812,7 @@ func (r *PresetRepositoryImpl) GetEnergyPresets(organizationID string, q helpers
 	}
 
 	var results []*repositories.EnergyPresetResponse
-	err := query.Offset(q.Offset()).Limit(q.Limit()).Scan(&results).Error
+	err := paginate(query, q).Scan(&results).Error
 	return results, total, err
 }
 
@@ -867,7 +867,7 @@ func (r *PresetRepositoryImpl) GetEnergyPresetsByLocation(country, state, city, 
 	}
 
 	var results []*repositories.EnergyPresetResponse
-	err := query.Offset(q.Offset()).Limit(q.Limit()).Scan(&results).Error
+	err := paginate(query, q).Scan(&results).Error
 	return results, total, err
 }
 
@@ -913,7 +913,7 @@ func (r *PresetRepositoryImpl) GetEnergyPresetsByCurrency(currency, organization
 	}
 
 	var results []*repositories.EnergyPresetResponse
-	err := query.Offset(q.Offset()).Limit(q.Limit()).Scan(&results).Error
+	err := paginate(query, q).Scan(&results).Error
 	return results, total, err
 }
 
@@ -959,7 +959,7 @@ func (r *PresetRepositoryImpl) GetCostPresets(organizationID string, q helpers.L
 	}
 
 	var results []*repositories.CostPresetResponse
-	err := query.Offset(q.Offset()).Limit(q.Limit()).Scan(&results).Error
+	err := paginate(query, q).Scan(&results).Error
 	return results, total, err
 }
 
@@ -980,4 +980,15 @@ func (r *PresetRepositoryImpl) IsReferencedByProfile(presetID uuid.UUID, organiz
 		return false, err
 	}
 	return exists, nil
+}
+
+// paginate applies the page's offset and limit to a query. A non-positive limit
+// (e.g. a zero-value ListQuery used in tests) means "no limit" instead of gorm's
+// literal LIMIT 0, which would return no rows.
+func paginate(db *gorm.DB, q helpers.ListQuery) *gorm.DB {
+	db = db.Offset(q.Offset())
+	if q.Limit() > 0 {
+		db = db.Limit(q.Limit())
+	}
+	return db
 }

@@ -61,7 +61,7 @@ func (uc *FindUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organi
 			"requested_user":  userID,
 			"current_user_id": currentUserID,
 		})
-		return nil, errors.ForbiddenError("You do not have permission to view this user")
+		return nil, errors.Forbidden("user_view_forbidden", "Você não tem permissão para visualizar este usuário")
 	}
 
 	// Fetch user from database
@@ -71,14 +71,14 @@ func (uc *FindUserUseCase) Execute(ctx context.Context, userID uuid.UUID, organi
 			"error":   err.Error(),
 			"user_id": userID,
 		})
-		return nil, errors.InternalServerError("Failed to fetch user")
+		return nil, err
 	}
 
 	if user == nil {
 		uc.logger.Info(ctx, "User not found", map[string]interface{}{
 			"user_id": userID,
 		})
-		return nil, errors.NotFound("User not found")
+		return nil, errors.NotFoundErr("user_not_found", "Usuário não encontrado")
 	}
 
 	uc.logger.Info(ctx, "User found successfully", map[string]interface{}{

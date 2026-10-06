@@ -44,10 +44,10 @@ func (fakeCustomerRepo) Update(_ context.Context, _ *customerEntities.CustomerEn
 	return nil
 }
 func (fakeCustomerRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
-func (fakeCustomerRepo) FindAll(_ context.Context, _ string, _, _ int) ([]*customerEntities.CustomerEntity, int, error) {
+func (fakeCustomerRepo) FindAll(_ context.Context, _, _, _ string, _, _ int) ([]*customerEntities.CustomerEntity, int64, error) {
 	return nil, 0, nil
 }
-func (fakeCustomerRepo) SearchCustomers(_ context.Context, _ string, _ map[string]interface{}, _, _ int) ([]*customerEntities.CustomerEntity, int, error) {
+func (fakeCustomerRepo) SearchCustomers(_ context.Context, _ string, _ map[string]interface{}, _, _ string, _, _ int) ([]*customerEntities.CustomerEntity, int64, error) {
 	return nil, 0, nil
 }
 func (fakeCustomerRepo) ExistsByEmail(_ context.Context, _ string, _ string, _ *uuid.UUID) (bool, error) {
@@ -61,6 +61,9 @@ func (fakeCustomerRepo) GetCustomerBudgets(_ context.Context, _ uuid.UUID) ([]cu
 }
 func (fakeCustomerRepo) SumBudgetTotalsByCustomerAndStatus(_ context.Context, _ uuid.UUID, _ []string) (int64, error) {
 	return 0, nil
+}
+func (fakeCustomerRepo) GetBudgetStatsByCustomers(_ context.Context, _ []uuid.UUID, _ []string) (map[uuid.UUID]customerEntities.CustomerBudgetStats, error) {
+	return nil, nil
 }
 
 // presetValidation records a (id,type) pair passed to ValidatePresetInOrg.

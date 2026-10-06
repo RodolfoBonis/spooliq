@@ -3,26 +3,26 @@ package usecases
 import (
 	"net/http"
 
-	"github.com/RodolfoBonis/spooliq/core/helpers"
-
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
-	"github.com/RodolfoBonis/spooliq/features/brand/domain/entities"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/gin-gonic/gin"
 )
 
-// FindAll handles retrieving all existing brands
+// FindAll handles retrieving a paginated, searchable list of brands.
 // @Summary Find All Brands
-// Schemes
-// @Description Find All existing filament brands
+// @Description List filament brands for the organization, paginated and searchable.
 // @Tags Brands
 // @Accept json
 // @Produce json
-// @Success 200 {object} entities.FindAllBrandsResponse "Successfully List All Brands"
-// @Failure 400 {object} errors.HTTPError
-// @Failure 401 {object} errors.HTTPError
-// @Failure 404 {object} errors.HTTPError
-// @Failure 409 {object} errors.HTTPError
-// @Failure 500 {object} errors.HTTPError
+// @Param page query int false "Page number (1-based)" default(1)
+// @Param page_size query int false "Items per page (max 100)" default(20)
+// @Param q query string false "Case-insensitive search on the brand name"
+// @Param sort_by query string false "Sort field" Enums(name, created_at) default(name)
+// @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(asc)
+// @Success 200 {object} entities.FindAllBrandsResponse "Paginated list of brands"
+// @Failure 400 {object} errors.APIError
+// @Failure 401 {object} errors.APIError
+// @Failure 500 {object} errors.APIError
 // @Router /brands [get]
 // @Security BearerAuth
 func (uc *BrandUseCase) FindAll(c *gin.Context) {
@@ -31,34 +31,32 @@ func (uc *BrandUseCase) FindAll(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_required", "Organização não encontrada no contexto"))
 		return
 	}
 
-	// Log brands retrieval attempt (automatic trace correlation via enhanced observability)
-	uc.logger.Info(ctx, "Brands retrieval attempt started", map[string]interface{}{
-		"ip":         c.ClientIP(),
-		"user_agent": c.Request.UserAgent(),
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{
+		DefaultPageSize: 20,
+		SortWhitelist:   brandSortWhitelist,
+		DefaultSort:     "name",
+		TieBreaker:      "id",
 	})
 
-	brands, err := uc.repository.FindAll(organizationID)
+	// Catalog lists default to ascending order by name when the client does not
+	// specify a direction, matching the previous "name ASC" behavior.
+	order := q.OrderClause()
+	if c.Query("sort_dir") == "" {
+		order = q.OrderClauseDir("asc")
+	}
 
+	brands, total, err := uc.repository.FindAll(organizationID, q.Search, order, q.Limit(), q.Offset())
 	if err != nil {
-		// Enhanced logging with automatic trace correlation
-		uc.logger.Error(ctx, "Failed to retrieve brands", map[string]interface{}{
-			"error": err.Error(),
-		})
-
-		appError := coreErrors.UsecaseError(err.Error())
-		httpError := appError.ToHTTPError()
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		uc.logger.Error(ctx, "Failed to retrieve brands", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	// Log successful retrieval with automatic trace correlation
-	uc.logger.Info(ctx, "Brands retrieved successfully", map[string]interface{}{
-		"total_brands": len(brands),
-	})
+	uc.logger.Info(ctx, "Brands retrieved successfully", map[string]interface{}{"total_brands": total})
 
-	c.JSON(http.StatusOK, entities.FindAllBrandsResponse{Data: brands})
+	c.JSON(http.StatusOK, helpers.NewPage(brands, total, q))
 }

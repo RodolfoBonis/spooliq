@@ -35,6 +35,13 @@ type ListQueryOptions struct {
 	// sort_by or sends one that is not whitelisted. It should be a key present
 	// in SortWhitelist; otherwise OrderClause() returns an empty string.
 	DefaultSort string
+	// TieBreaker is an OPTIONAL, trusted column expression (e.g. "id" or
+	// "filaments.id") appended as a final "ASC" term to every ORDER BY so rows
+	// with equal sort keys keep a stable, deterministic order across pages. It
+	// is never taken from user input and is not appended when it equals the
+	// resolved sort column. Empty (default) disables it, leaving existing
+	// callers unaffected.
+	TieBreaker string
 }
 
 // ListQuery is the normalized, validated result of parsing list query params.
@@ -53,6 +60,9 @@ type ListQuery struct {
 	SortDir string
 	// sortName is the public sort name, kept for diagnostics/echoing.
 	sortName string
+	// tieBreaker is the trusted stable-order column copied from
+	// ListQueryOptions.TieBreaker; empty when disabled.
+	tieBreaker string
 }
 
 // Offset returns the SQL OFFSET for the current page.
@@ -66,13 +76,30 @@ func (q ListQuery) Limit() int {
 }
 
 // OrderClause returns a safe "column asc|desc" string built only from the
-// whitelist, suitable for gorm's Order(). Returns an empty string when no
-// column was resolved (so callers can fall back to their own default).
+// whitelist, suitable for gorm's Order(). When a TieBreaker was configured and
+// differs from the sort column, it is appended as a trailing ", <tie> asc" term
+// so pagination is deterministic. Returns an empty string when no column was
+// resolved (so callers can fall back to their own default).
 func (q ListQuery) OrderClause() string {
+	return q.orderWith(q.SortDir)
+}
+
+// OrderClauseDir behaves like OrderClause but forces the primary sort direction
+// (normalized to asc/desc). It lets callers apply a per-resource default
+// direction while still honoring the whitelist and the stable tie-breaker.
+func (q ListQuery) OrderClauseDir(dir string) string {
+	return q.orderWith(normalizeSortDir(dir))
+}
+
+func (q ListQuery) orderWith(dir string) string {
 	if q.SortColumn == "" {
 		return ""
 	}
-	return q.SortColumn + " " + q.SortDir
+	clause := q.SortColumn + " " + dir
+	if q.tieBreaker != "" && q.tieBreaker != q.SortColumn {
+		clause += ", " + q.tieBreaker + " " + sortDirectionAsc
+	}
+	return clause
 }
 
 // SortName returns the resolved public sort name.
@@ -117,6 +144,7 @@ func ParseListQuery(c *gin.Context, opts ListQueryOptions) ListQuery {
 		SortColumn: sortColumn,
 		SortDir:    sortDir,
 		sortName:   sortName,
+		tieBreaker: opts.TieBreaker,
 	}
 }
 

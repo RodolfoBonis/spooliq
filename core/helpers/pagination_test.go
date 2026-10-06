@@ -250,3 +250,61 @@ func TestNewPageDataNeverNil(t *testing.T) {
 		t.Errorf("Data len = %d, want 0", len(p.Data))
 	}
 }
+
+func tieOpts(tie string) ListQueryOptions {
+	o := defaultOpts()
+	o.TieBreaker = tie
+	return o
+}
+
+func TestOrderClauseTieBreaker(t *testing.T) {
+	tests := []struct {
+		name      string
+		query     string
+		opts      ListQueryOptions
+		wantOrder string
+	}{
+		{
+			name:      "tie-breaker appended to default sort",
+			query:     "",
+			opts:      tieOpts("id"),
+			wantOrder: "created_at desc, id asc",
+		},
+		{
+			name:      "tie-breaker appended to explicit sort",
+			query:     "sort_by=name&sort_dir=asc",
+			opts:      tieOpts("filaments.id"),
+			wantOrder: "lower(name) asc, filaments.id asc",
+		},
+		{
+			name:      "tie-breaker skipped when equal to sort column",
+			query:     "sort_by=created_at&sort_dir=asc",
+			opts:      tieOpts("created_at"),
+			wantOrder: "created_at asc",
+		},
+		{
+			name:      "no tie-breaker keeps clause unchanged",
+			query:     "",
+			opts:      defaultOpts(),
+			wantOrder: "created_at desc",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseListQuery(newCtx(tt.query), tt.opts).OrderClause()
+			if got != tt.wantOrder {
+				t.Errorf("OrderClause() = %q, want %q", got, tt.wantOrder)
+			}
+		})
+	}
+}
+
+func TestOrderClauseDir(t *testing.T) {
+	q := ParseListQuery(newCtx(""), tieOpts("id"))
+	if got := q.OrderClauseDir("asc"); got != "created_at asc, id asc" {
+		t.Errorf("OrderClauseDir(asc) = %q, want %q", got, "created_at asc, id asc")
+	}
+	if got := q.OrderClauseDir("DESC"); got != "created_at desc, id asc" {
+		t.Errorf("OrderClauseDir(DESC) = %q, want %q", got, "created_at desc, id asc")
+	}
+}

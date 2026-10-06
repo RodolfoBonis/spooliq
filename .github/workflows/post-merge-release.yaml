@@ -33,8 +33,8 @@ jobs:
           # Remove v prefix if exists
           VERSION=${VERSION#v}
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
           echo "Tag: v${VERSION}"
 
@@ -140,7 +140,7 @@ jobs:
               "pr_number": ${{ github.event.pull_request.number }},
               "pr_title": '"$(echo "$PR_TITLE" | jq -Rs .)"',
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "pr_url": "${{ github.event.pull_request.html_url }}",
                 "merged_by": "${{ github.event.pull_request.merged_by.login }}"

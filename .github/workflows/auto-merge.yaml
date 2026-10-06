@@ -63,9 +63,11 @@ jobs:
           PR_MERGEABLE=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable -q '.mergeable')
           PR_CHECKS=$(gh pr checks ${{ github.event.pull_request.number }} --json status -q '[.[] | .status] | all(. == "COMPLETED")')
 
-          echo "state=$PR_STATE" >> $GITHUB_OUTPUT
-          echo "mergeable=$PR_MERGEABLE" >> $GITHUB_OUTPUT
-          echo "checks=$PR_CHECKS" >> $GITHUB_OUTPUT
+          {
+            echo "state=$PR_STATE"
+            echo "mergeable=$PR_MERGEABLE"
+            echo "checks=$PR_CHECKS"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Auto-merge backport PR
         if: |

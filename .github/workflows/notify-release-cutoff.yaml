@@ -31,9 +31,11 @@ jobs:
             URGENCY="critical"
           fi
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-          echo "urgency=$URGENCY" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "type=$TYPE"
+            echo "urgency=$URGENCY"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Notify team of feature cutoff
         env:

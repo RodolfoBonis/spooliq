@@ -6,8 +6,8 @@
 # global installs. Keep these versions in sync with CI (ci.yaml).
 set -uo pipefail
 
-STATICCHECK_VERSION="v0.8.1"
-GOIMPORTS_VERSION="v0.51.0"
+STATICCHECK_VERSION="v0.7.0" # latest supporting Go 1.25 (go.mod); v0.8+ needs Go 1.26
+GOIMPORTS_VERSION="v0.49.0" # x/tools v0.50+ needs Go 1.26
 
 FAIL=0
 
@@ -32,15 +32,20 @@ else
 fi
 
 # 3. staticcheck (advanced static analysis)
-STATIC_OUT=$(go run "honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION}" ./... 2>&1)
+# Findings go to stdout and set a non-zero exit; stderr only carries `go run`
+# noise (module downloads, toolchain notices), shown just when the run fails.
+STATIC_ERR=$(mktemp)
+STATIC_OUT=$(go run "honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION}" ./... 2>"$STATIC_ERR")
 STATIC_STATUS=$?
-if [ $STATIC_STATUS -ne 0 ] || [ -n "$STATIC_OUT" ]; then
+if [ $STATIC_STATUS -ne 0 ]; then
   echo -e "\nProblems found by staticcheck:"
   echo "$STATIC_OUT"
+  cat "$STATIC_ERR"
   FAIL=1
 else
   echo "staticcheck: OK"
 fi
+rm -f "$STATIC_ERR"
 
 # 4. goimports (import organization)
 IMP_OUT=$(go run "golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION}" -l .)

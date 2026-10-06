@@ -3,6 +3,7 @@ package usecases
 import (
 	"bytes"
 	"crypto/sha256"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +21,12 @@ import (
 )
 
 const maxFileSize = 50 * 1024 * 1024 // 50MB
+
+// uploadBodyLimit caps the whole request body (file + multipart/metadata overhead)
+// so an oversized upload is rejected while streaming, before anything is buffered
+// in memory. The slack covers the multipart envelope and the small text fields. It
+// is a var (not const) only so tests can shrink it.
+var uploadBodyLimit int64 = maxFileSize + (1 << 20) // 50MB + 1MB slack
 
 var allowedExtensions = map[string]bool{
 	".stl": true,
@@ -43,6 +50,7 @@ var allowedExtensions = map[string]bool{
 // @Failure 401 {object} errors.APIError
 // @Failure 404 {object} errors.APIError
 // @Failure 409 {object} entities.DuplicateModel3DResponse "Duplicate file already exists"
+// @Failure 413 {object} errors.APIError "File too large"
 // @Failure 500 {object} errors.APIError
 // @Router /models3d [post]
 // @Security BearerAuth
@@ -57,9 +65,18 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 	}
 	userID := helpers.GetUserID(c)
 
+	// Enforce the size limit while STREAMING, before the body is buffered, so an
+	// oversized upload can never exhaust memory. MaxBytesReader makes the reader
+	// return an error once the cap is exceeded, which surfaces from FormFile below.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, uploadBodyLimit)
+
 	// File part is required.
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
+		if isRequestTooLarge(err) {
+			coreErrors.Respond(c, errFileTooLarge())
+			return
+		}
 		coreErrors.Respond(c, errFileRequired())
 		return
 	}
@@ -78,6 +95,10 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 	// Bind the multipart form metadata and validate it with the shared validator.
 	var request entities.CreateModel3DRequest
 	if err := c.ShouldBind(&request); err != nil {
+		if isRequestTooLarge(err) {
+			coreErrors.Respond(c, errFileTooLarge())
+			return
+		}
 		coreErrors.Respond(c, err)
 		return
 	}
@@ -118,6 +139,10 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, file); err != nil {
+		if isRequestTooLarge(err) {
+			coreErrors.Respond(c, errFileTooLarge())
+			return
+		}
 		uc.logger.Error(ctx, "Failed to read file content", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
@@ -148,13 +173,10 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 		return
 	}
 
-	// Generate a thumbnail best-effort; failures never block the upload.
+	// Generate a thumbnail best-effort; it is self-contained (timeout, panic-safe,
+	// concurrency-bounded) and returns nil on any problem, never blocking the upload.
 	var thumbnailURL *string
-	thumbReader, err := uc.thumbnailService.Generate(bytes.NewReader(fileBytes), ext)
-	if err != nil {
-		uc.logger.Warning(ctx, "Thumbnail generation failed", map[string]interface{}{"error": err.Error(), "filename": fileHeader.Filename})
-	}
-	if thumbReader != nil {
+	if thumbReader := uc.thumbnailService.Generate(ctx, bytes.NewReader(fileBytes), ext); thumbReader != nil {
 		thumbFilename := uniqueID + ".png"
 		if thumbURL, err := uc.cdnService.UploadFile(ctx, thumbReader, thumbFilename, "models3d_thumbs"); err != nil {
 			uc.logger.Warning(ctx, "Thumbnail upload failed", map[string]interface{}{"error": err.Error()})
@@ -168,7 +190,7 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 		CustomerID:     customerID,
 		Name:           request.Name,
 		Description:    request.Description,
-		FileName:       fileHeader.Filename,
+		FileName:       sanitizeFileName(fileHeader.Filename),
 		FileURL:        fileURL,
 		FileFormat:     ext,
 		FileSizeBytes:  fileHeader.Size,
@@ -207,4 +229,41 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 		EntityName:     model.Name,
 		Description:    "3D Model created: " + model.Name,
 	})
+}
+
+// isRequestTooLarge reports whether err is (or wraps) the MaxBytesReader limit
+// error. Go returns a typed *http.MaxBytesError, but multipart parsing may wrap it
+// as a plain message, so we also match the well-known string.
+func isRequestTooLarge(err error) bool {
+	if err == nil {
+		return false
+	}
+	var maxErr *http.MaxBytesError
+	if stderrors.As(err, &maxErr) {
+		return true
+	}
+	return strings.Contains(err.Error(), "http: request body too large")
+}
+
+// sanitizeFileName makes a user-supplied file name safe to echo back in a
+// Content-Disposition header and to store: it strips any path, control characters,
+// quotes and backslashes, and trims surrounding whitespace, while keeping the
+// extension. Empty results fall back to a generic name.
+func sanitizeFileName(name string) string {
+	name = filepath.Base(name)
+	name = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f { // control chars (incl. CR/LF/TAB)
+			return -1
+		}
+		switch r {
+		case '"', '\\', '/':
+			return -1
+		}
+		return r
+	}, name)
+	name = strings.TrimSpace(name)
+	if name == "" || name == "." || name == ".." {
+		return "model"
+	}
+	return name
 }

@@ -1,6 +1,8 @@
 package usecases
 
 import (
+	"net/http"
+
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -18,7 +20,7 @@ const (
 	CodeFileRequired = "file_required"
 	// CodeUnsupportedFileFormat (400) — the file is not a .stl or .3mf.
 	CodeUnsupportedFileFormat = "unsupported_file_format"
-	// CodeFileTooLarge (400) — the file exceeds the 50MB limit.
+	// CodeFileTooLarge (413) — the file exceeds the 50MB limit.
 	CodeFileTooLarge = "file_too_large"
 	// CodeCustomerNotFound (404) — the referenced customer is not in the organization.
 	CodeCustomerNotFound = "customer_not_found"
@@ -49,7 +51,8 @@ func errUnsupportedFileFormat() *coreErrors.APIError {
 }
 
 func errFileTooLarge() *coreErrors.APIError {
-	return coreErrors.BadRequest(CodeFileTooLarge, "O arquivo excede o limite de 50MB")
+	// 413 Payload Too Large (not 400): the request body itself is too big.
+	return &coreErrors.APIError{Status: http.StatusRequestEntityTooLarge, Code: CodeFileTooLarge, Message: "O arquivo excede o limite de 50MB"}
 }
 
 func errCustomerNotFound() *coreErrors.APIError {

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -395,4 +398,54 @@ func TestStreamFile_OrgIsolation404(t *testing.T) {
 	uc.StreamFile(c)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.Equal(t, "model3d_not_found", decodeEnvelope(t, rec)["code"])
+}
+
+// --- Oversized upload (413) ---
+
+func TestUpload_FileTooLarge(t *testing.T) {
+	orig := uploadBodyLimit
+	uploadBodyLimit = 1024 // shrink so a small fixture exceeds it
+	defer func() { uploadBodyLimit = orig }()
+
+	uc := newUC(newFakeRepo())
+	c, rec := ctxWithOrg(testOrg)
+	// A file comfortably larger than the shrunk body limit.
+	big := strings.Repeat("A", 8*1024)
+	req, _ := multipartUpload(t, "model.stl", big, map[string]string{"name": "Big"})
+	c.Request = req
+	uc.Upload(c)
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	assert.Equal(t, "file_too_large", decodeEnvelope(t, rec)["code"])
+}
+
+// --- Filename sanitization & Content-Disposition ---
+
+func TestSanitizeFileName(t *testing.T) {
+	assert.Equal(t, "model.stl", sanitizeFileName(`mo"del.stl`))
+	assert.Equal(t, "evil.stl", sanitizeFileName(`../../evil.stl`))
+	assert.Equal(t, "ab.stl", sanitizeFileName("a\\b.stl"))
+	assert.Equal(t, "linebreak.stl", sanitizeFileName("line\r\nbreak.stl"))
+	assert.Equal(t, "model", sanitizeFileName(""))
+	assert.Equal(t, "model", sanitizeFileName(".."))
+	assert.Equal(t, "cão.3mf", sanitizeFileName("cão.3mf")) // non-ASCII kept
+}
+
+func TestContentDisposition_QuotesAndUnicode(t *testing.T) {
+	// A name with a double quote must be safely quoted/escaped, never breaking the header.
+	d := contentDisposition(`a"b.stl`)
+	assert.Contains(t, d, "inline")
+	assert.NotContains(t, d, "filename=\"a\"b.stl\"", "raw unescaped quote must not appear")
+
+	// Parsing it back yields the original filename (proves it is well-formed).
+	_, params, err := mime.ParseMediaType(d)
+	require.NoError(t, err)
+	assert.Equal(t, `a"b.stl`, params["filename"])
+}
+
+func TestIsRequestTooLarge(t *testing.T) {
+	assert.True(t, isRequestTooLarge(&http.MaxBytesError{Limit: 10}))
+	assert.True(t, isRequestTooLarge(errors.New("http: request body too large")))
+	assert.False(t, isRequestTooLarge(errors.New("some other error")))
+	assert.False(t, isRequestTooLarge(nil))
 }

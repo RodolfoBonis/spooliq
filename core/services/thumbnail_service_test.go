@@ -3,18 +3,21 @@ package services
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"encoding/binary"
 	"fmt"
 	"image/png"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/fogleman/fauxgl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// cubeFaces lists the 12 triangles (as vertex-index triples) of an axis-aligned
-// cube whose 8 corners are cubeCorners. Shared by the ASCII STL and 3MF fixtures.
+// cubeCorners / cubeFaces describe an axis-aligned cube, shared by fixtures.
 var cubeCorners = [8][3]float64{
 	{0, 0, 0}, {20, 0, 0}, {20, 20, 0}, {0, 20, 0},
 	{0, 0, 20}, {20, 0, 20}, {20, 20, 20}, {0, 20, 20},
@@ -42,8 +45,50 @@ func asciiSTLCube() string {
 	return b.String()
 }
 
-// minimal3MF builds a minimal valid 3MF package (an OPC/zip container with the
-// content-types map, the package relationships, and a single cube mesh).
+// binarySTLOffCenterCubes builds a valid BINARY STL made of n cubes stacked along
+// a diagonal and translated far from the origin, exercising the "large/off-center"
+// geometry that used to send the renderer into a near-infinite loop.
+func binarySTLOffCenterCubes(n int) []byte {
+	offset := 100000.0
+	var tris [][4][3]float32
+	for i := 0; i < n; i++ {
+		d := offset + float64(i)*25.0
+		var corners [8][3]float64
+		for j, c := range cubeCorners {
+			corners[j] = [3]float64{c[0] + d, c[1] + d, c[2] + d}
+		}
+		for _, f := range cubeFaces {
+			var t [4][3]float32
+			t[0] = [3]float32{0, 0, 1}
+			for k, idx := range f {
+				t[k+1] = [3]float32{float32(corners[idx][0]), float32(corners[idx][1]), float32(corners[idx][2])}
+			}
+			tris = append(tris, t)
+		}
+	}
+	var buf bytes.Buffer
+	buf.Write(make([]byte, 80))
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(len(tris)))
+	for _, t := range tris {
+		for _, v := range t {
+			_ = binary.Write(&buf, binary.LittleEndian, v)
+		}
+		_ = binary.Write(&buf, binary.LittleEndian, uint16(0))
+	}
+	return buf.Bytes()
+}
+
+// binarySTLClaiming builds a size-consistent binary STL that declares `count`
+// triangles (bodies are zeroed; it is only used to exercise the header guard).
+func binarySTLClaiming(count uint32) []byte {
+	var buf bytes.Buffer
+	buf.Write(make([]byte, 80))
+	_ = binary.Write(&buf, binary.LittleEndian, count)
+	buf.Write(make([]byte, int(count)*stlBinaryTriangleRecSize))
+	return buf.Bytes()
+}
+
+// minimal3MF builds a minimal valid 3MF package containing a single cube mesh.
 func minimal3MF(t *testing.T) []byte {
 	t.Helper()
 
@@ -108,34 +153,102 @@ func assertIsPNG(t *testing.T, r io.Reader) {
 	assert.NoError(t, err, "thumbnail must be a decodable PNG")
 }
 
+func newSvc() *ThumbnailService { return NewThumbnailService(&logger.NoopLogger{}) }
+
 func TestThumbnailService_GenerateSTL(t *testing.T) {
-	svc := NewThumbnailService(&logger.NoopLogger{})
-	r, err := svc.Generate(bytes.NewReader([]byte(asciiSTLCube())), ".stl")
-	require.NoError(t, err)
+	r := newSvc().Generate(context.Background(), bytes.NewReader([]byte(asciiSTLCube())), ".stl")
 	assertIsPNG(t, r)
 }
 
 func TestThumbnailService_Generate3MF(t *testing.T) {
-	svc := NewThumbnailService(&logger.NoopLogger{})
-	r, err := svc.Generate(bytes.NewReader(minimal3MF(t)), ".3mf")
-	require.NoError(t, err)
+	r := newSvc().Generate(context.Background(), bytes.NewReader(minimal3MF(t)), ".3mf")
 	assertIsPNG(t, r)
 }
 
 func TestThumbnailService_UnsupportedFormat(t *testing.T) {
-	svc := NewThumbnailService(&logger.NoopLogger{})
-	r, err := svc.Generate(bytes.NewReader([]byte("data")), ".obj")
-	assert.Error(t, err)
+	r := newSvc().Generate(context.Background(), bytes.NewReader([]byte("data")), ".obj")
 	assert.Nil(t, r)
 }
 
-func TestThumbnailService_InvalidSTLReturnsNilNil(t *testing.T) {
-	// Garbage content for a supported extension is handled fault-tolerantly:
-	// Generate logs and returns (nil, nil) rather than propagating an error.
-	svc := NewThumbnailService(&logger.NoopLogger{})
-	r, err := svc.Generate(bytes.NewReader([]byte("not an stl")), ".stl")
-	assert.NoError(t, err)
+func TestThumbnailService_InvalidSTLReturnsNil(t *testing.T) {
+	r := newSvc().Generate(context.Background(), bytes.NewReader([]byte("not an stl")), ".stl")
 	assert.Nil(t, r)
+}
+
+// Regression: a large, far-off-center mesh used to hang the rasterizer. It must now
+// render (or at worst time out) well within the render timeout.
+func TestThumbnailService_LargeOffCenterMeshDoesNotHang(t *testing.T) {
+	svc := newSvc()
+	svc.renderTimeout = 9 * time.Second
+	data := binarySTLOffCenterCubes(300) // 3600 triangles, offset ~100k
+
+	done := make(chan io.Reader, 1)
+	start := time.Now()
+	go func() { done <- svc.Generate(context.Background(), bytes.NewReader(data), ".stl") }()
+
+	select {
+	case r := <-done:
+		assert.NotNil(t, r, "off-center mesh should render")
+		assert.Less(t, time.Since(start), 9*time.Second)
+	case <-time.After(15 * time.Second):
+		t.Fatal("Generate hung on a large off-center mesh")
+	}
+}
+
+// A binary STL whose header declares more triangles than the cap is rejected by the
+// cheap pre-parse guard, fast, without allocating/parsing the mesh.
+func TestThumbnailService_BinarySTLHugeCountRejectedFast(t *testing.T) {
+	svc := newSvc()
+	svc.maxTriangles = 10 // shrink the cap so a tiny fixture trips it
+	data := binarySTLClaiming(11)
+
+	start := time.Now()
+	r := svc.Generate(context.Background(), bytes.NewReader(data), ".stl")
+	assert.Nil(t, r)
+	assert.Less(t, time.Since(start), time.Second, "guard must reject before any render slot/work")
+}
+
+// A panicking renderer must be recovered: Generate returns nil and does not crash.
+func TestThumbnailService_PanicInRenderIsRecovered(t *testing.T) {
+	svc := newSvc()
+	svc.render = func(*fauxgl.Mesh) (io.Reader, error) { panic("boom") }
+
+	assert.NotPanics(t, func() {
+		r := svc.Generate(context.Background(), bytes.NewReader([]byte(asciiSTLCube())), ".stl")
+		assert.Nil(t, r)
+	})
+}
+
+// A slow renderer must be abandoned at the timeout: Generate returns nil promptly.
+func TestThumbnailService_RenderTimeout(t *testing.T) {
+	svc := newSvc()
+	svc.renderTimeout = 100 * time.Millisecond
+	svc.render = func(*fauxgl.Mesh) (io.Reader, error) {
+		time.Sleep(3 * time.Second)
+		return bytes.NewReader([]byte("late")), nil
+	}
+
+	start := time.Now()
+	r := svc.Generate(context.Background(), bytes.NewReader([]byte(asciiSTLCube())), ".stl")
+	assert.Nil(t, r)
+	assert.Less(t, time.Since(start), time.Second, "must return at the timeout, not wait for the render")
+}
+
+// When all render slots are taken, Generate skips the thumbnail instead of queueing.
+func TestThumbnailService_SemaphoreSkipsWhenSaturated(t *testing.T) {
+	svc := newSvc()
+	svc.sem = make(chan struct{}, 2) // isolated from the package default
+	svc.acquireTimeout = 50 * time.Millisecond
+	svc.sem <- struct{}{}
+	svc.sem <- struct{}{}
+	defer func() { <-svc.sem; <-svc.sem }()
+
+	start := time.Now()
+	r := svc.Generate(context.Background(), bytes.NewReader([]byte(asciiSTLCube())), ".stl")
+	assert.Nil(t, r)
+	elapsed := time.Since(start)
+	assert.GreaterOrEqual(t, elapsed, 50*time.Millisecond)
+	assert.Less(t, elapsed, time.Second)
 }
 
 func TestContentTypeForFile(t *testing.T) {

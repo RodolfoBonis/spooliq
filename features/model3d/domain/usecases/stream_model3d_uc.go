@@ -2,7 +2,7 @@ package usecases
 
 import (
 	"errors"
-	"fmt"
+	"mime"
 	"net/http"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -72,9 +72,20 @@ func (uc *Model3DUseCase) StreamFile(c *gin.Context) {
 	contentType := services.ContentTypeForFile(model.FileName)
 
 	extraHeaders := map[string]string{
-		"Content-Disposition": fmt.Sprintf(`inline; filename="%s"`, model.FileName),
+		"Content-Disposition": contentDisposition(model.FileName),
 		"Cache-Control":       "private, max-age=300",
 	}
 
 	c.DataFromReader(http.StatusOK, stream.Size, contentType, stream.Body, extraHeaders)
+}
+
+// contentDisposition builds a safe inline Content-Disposition value for a file
+// name. mime.FormatMediaType handles quoting and RFC 2231 encoding for non-ASCII
+// names; it returns "" for an unrepresentable name, in which case we fall back to a
+// bare "inline".
+func contentDisposition(name string) string {
+	if d := mime.FormatMediaType("inline", map[string]string{"filename": name}); d != "" {
+		return d
+	}
+	return "inline"
 }

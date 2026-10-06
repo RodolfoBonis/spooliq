@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,16 +15,23 @@ import (
 )
 
 // Safe-unzip limits guarding against malformed archives and zip bombs.
+//
+// Per-entry size and ratio caps apply to the entries we actually READ. Declared
+// sizes of entries we never open (e.g. a 120MB Metadata/plate_1.gcode when
+// slice_info.config already has the data) must not reject the archive.
 const (
-	maxZipEntries        = 2000
-	maxTotalUncompressed = 500 << 20 // 500MB total
-	maxEntrySize         = 100 << 20 // 100MB per entry
-	maxCompressionRatio  = 200       // uncompressed/compressed, above the floor
-	ratioFloorBytes      = 1 << 20   // only enforce the ratio past 1MB uncompressed
+	maxZipEntries       = 2000
+	maxTotalDeclared    = 2 << 30   // 2GB declared across all entries (sanity bound)
+	maxEntrySize        = 100 << 20 // 100MB per fully-read entry (config files)
+	maxCompressionRatio = 200       // uncompressed/compressed, above the floor
+	ratioFloorBytes     = 1 << 20   // only enforce the ratio past 1MB uncompressed
+	maxGCodeStreamBytes = 1 << 30   // decompression budget for a streamed embedded G-code
 )
 
 const (
 	sliceInfoPath      = "Metadata/slice_info.config"
+	modelPath          = "3D/3dmodel.model"
+	modelHeadBytes     = 64 << 10 // the <metadata name="Application"> tag sits at the top
 	projectSettingPath = "Metadata/project_settings.config"
 	platePrefix        = "Metadata/plate_"
 )
@@ -49,16 +57,8 @@ func Parse3MF(ra io.ReaderAt, size int64) (*entities.Analysis, error) {
 	var totalDeclared uint64
 	index := make(map[string]*zip.File, len(zr.File))
 	for _, f := range zr.File {
-		if f.UncompressedSize64 > maxEntrySize {
-			return nil, ErrCorruptFile
-		}
-		if f.CompressedSize64 > 0 && f.UncompressedSize64 > ratioFloorBytes {
-			if float64(f.UncompressedSize64)/float64(f.CompressedSize64) > maxCompressionRatio {
-				return nil, ErrCorruptFile
-			}
-		}
 		totalDeclared += f.UncompressedSize64
-		if totalDeclared > maxTotalUncompressed {
+		if totalDeclared > maxTotalDeclared {
 			return nil, ErrCorruptFile
 		}
 		index[f.Name] = f
@@ -83,7 +83,7 @@ func Parse3MF(ra io.ReaderAt, size int64) (*entities.Analysis, error) {
 	}
 
 	fbColors, fbTypes := parseProjectSettings(projectSettingsData)
-	slicer := detectSlicer3MF(sliceInfoData, projectSettingsData)
+	slicer := detectSlicer3MF(readZipEntryHead(index[modelPath], modelHeadBytes), sliceInfoData, projectSettingsData)
 
 	// 1. slice_info.config.
 	if len(sliceInfoData) > 0 {
@@ -244,7 +244,9 @@ func parseEmbeddedGCode(index map[string]*zip.File) []entities.Plate {
 
 	plates := make([]entities.Plate, 0, len(files))
 	for _, pf := range files {
-		data, err := readZipEntry(pf.f)
+		// Real plate G-code is large (often >100MB for multi-color prints), so it is
+		// streamed and only its head and tail (where slicers write metadata) are kept.
+		data, err := readZipGCodeHeadTail(pf.f)
 		if err != nil {
 			continue
 		}
@@ -257,6 +259,70 @@ func parseEmbeddedGCode(index map[string]*zip.File) []entities.Plate {
 		plates = append(plates, plate)
 	}
 	return plates
+}
+
+// readZipGCodeHeadTail streams an embedded G-code entry and returns its first and
+// last headTailLimit bytes concatenated (separated by a newline), which is where
+// slicers write their metadata comments. Memory stays bounded at ~2×headTailLimit
+// regardless of the entry size; the decompression budget and the compression
+// ratio are enforced on the bytes actually decompressed.
+func readZipGCodeHeadTail(f *zip.File) ([]byte, error) {
+	rc, err := f.Open()
+	if err != nil {
+		return nil, ErrCorruptFile
+	}
+	defer func() { _ = rc.Close() }()
+
+	limit := int(headTailLimit)
+	head := make([]byte, 0, limit)
+	tail := make([]byte, limit) // ring buffer
+	var tailLen, tailPos int
+	var total uint64
+	buf := make([]byte, 64<<10)
+	for {
+		n, rerr := rc.Read(buf)
+		if n > 0 {
+			chunk := buf[:n]
+			total += uint64(n)
+			if total > maxGCodeStreamBytes {
+				return nil, ErrCorruptFile
+			}
+			if f.CompressedSize64 > 0 && total > ratioFloorBytes &&
+				float64(total)/float64(f.CompressedSize64) > maxCompressionRatio {
+				return nil, ErrCorruptFile
+			}
+			if room := limit - len(head); room > 0 {
+				take := min(room, len(chunk))
+				head = append(head, chunk[:take]...)
+				chunk = chunk[take:]
+			}
+			for len(chunk) > 0 {
+				c := copy(tail[tailPos:], chunk)
+				chunk = chunk[c:]
+				tailPos = (tailPos + c) % limit
+				tailLen = min(tailLen+c, limit)
+			}
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			return nil, ErrCorruptFile
+		}
+	}
+
+	out := make([]byte, 0, len(head)+1+tailLen)
+	out = append(out, head...)
+	if tailLen > 0 {
+		out = append(out, '\n')
+		if tailLen < limit {
+			out = append(out, tail[:tailLen]...)
+		} else {
+			out = append(out, tail[tailPos:]...)
+			out = append(out, tail[:tailPos]...)
+		}
+	}
+	return out, nil
 }
 
 // --- project_settings.config (JSON) fallback ---
@@ -276,7 +342,22 @@ func parseProjectSettings(data []byte) (colors, types []string) {
 }
 
 // detectSlicer3MF is a best-effort slicer identification from the archive text.
-func detectSlicer3MF(sliceInfoData, projectSettingsData []byte) entities.Slicer {
+var (
+	appMetadataRe      = regexp.MustCompile(`<metadata name="Application">\s*([A-Za-z][A-Za-z ]*?)[- ]v?([0-9][0-9A-Za-z.+\-]*)\s*</metadata>`)
+	bblClientVersionRe = regexp.MustCompile(`key="X-BBL-Client-Version"\s+value="([^"]+)"`)
+)
+
+// detectSlicer3MF identifies the slicer and its version. The most reliable source
+// is the 3MF model's <metadata name="Application"> (e.g. "BambuStudio-02.08.02.61",
+// "OrcaSlicer-2.1.1", "PrusaSlicer-2.7.1"); Bambu's slice_info X-BBL-Client-Version
+// header and a text scan of the configs are fallbacks.
+func detectSlicer3MF(modelHead, sliceInfoData, projectSettingsData []byte) entities.Slicer {
+	if m := appMetadataRe.FindSubmatch(modelHead); m != nil {
+		return entities.Slicer{Name: canonicalSlicerName(string(m[1])), Version: string(m[2])}
+	}
+	if m := bblClientVersionRe.FindSubmatch(sliceInfoData); m != nil {
+		return entities.Slicer{Name: "BambuStudio", Version: string(m[1])}
+	}
 	var blob strings.Builder
 	blob.Write(sliceInfoData)
 	blob.Write(projectSettingsData)
@@ -291,6 +372,41 @@ func detectSlicer3MF(sliceInfoData, projectSettingsData []byte) entities.Slicer 
 	default:
 		return entities.Slicer{}
 	}
+}
+
+// canonicalSlicerName maps an Application tag prefix to a display name.
+func canonicalSlicerName(raw string) string {
+	switch strings.ToLower(strings.ReplaceAll(strings.TrimSpace(raw), " ", "")) {
+	case "bambustudio":
+		return "BambuStudio"
+	case "orcaslicer":
+		return "OrcaSlicer"
+	case "prusaslicer":
+		return "PrusaSlicer"
+	case "superslicer":
+		return "SuperSlicer"
+	default:
+		return strings.TrimSpace(raw)
+	}
+}
+
+// readZipEntryHead returns up to n decompressed bytes from the start of an
+// entry, or nil when the entry is missing or unreadable. Memory is bounded by n
+// regardless of the entry size.
+func readZipEntryHead(f *zip.File, n int64) []byte {
+	if f == nil {
+		return nil
+	}
+	rc, err := f.Open()
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = rc.Close() }()
+	data, err := io.ReadAll(io.LimitReader(rc, n))
+	if err != nil {
+		return nil
+	}
+	return data
 }
 
 // --- tiny helpers ---

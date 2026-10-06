@@ -337,13 +337,13 @@ jobs:
             --base develop \
             --head "$BACKPORT_BRANCH" \
             --title "🔄 Backport ${TAG} to develop" \
-            --body "$(cat <<'EOF'
+            --body "$(cat <<EOF
           ## Automated Backport
 
           This PR backports release **${TAG}** from main to develop.
 
           ### Changes Included
-          - Version bump to $VERSION
+          - Version bump to ${TAG#v}
           - CHANGELOG updates
           - All features and fixes from the release
 

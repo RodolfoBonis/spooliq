@@ -64,7 +64,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entities.PaginatedActivities"
+                            "$ref": "#/definitions/helpers.Page-entities_ActivityEntity"
                         }
                     },
                     "400": {
@@ -124,36 +124,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of companies",
+                        "description": "Paginated companies",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListCompaniesResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_CompanyListItem"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -347,23 +338,31 @@ const docTemplate = `{
                     "admin-features"
                 ],
                 "summary": "Get available features",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Available features",
+                        "description": "Paginated available features",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.AvailableFeature"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_AvailableFeature"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -454,28 +453,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -496,23 +486,31 @@ const docTemplate = `{
                     "admin-plans"
                 ],
                 "summary": "List all subscription plans",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Plans list",
+                        "description": "Paginated plans",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.SubscriptionPlanResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_SubscriptionPlanResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -1016,25 +1014,31 @@ const docTemplate = `{
                         "description": "Filter by category",
                         "name": "category",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Plan templates",
+                        "description": "Paginated plan templates",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PlanTemplate"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_PlanTemplate"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -1624,36 +1628,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of subscriptions",
+                        "description": "Paginated subscriptions",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListSubscriptionsResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_SubscriptionListItem"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -1784,54 +1779,39 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Payment history",
+                        "description": "Paginated payment history",
                         "schema": {
-                            "$ref": "#/definitions/entities.PaymentHistoryResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_PaymentHistoryItem"
                         }
                     },
                     "400": {
                         "description": "Invalid organization ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Company not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -1844,7 +1824,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Find All existing filament brands",
+                "description": "List filament brands for the organization, paginated and searchable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1855,9 +1835,53 @@ const docTemplate = `{
                     "Brands"
                 ],
                 "summary": "Find All Brands",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on the brand name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "name",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Successfully List All Brands",
+                        "description": "Paginated list of brands",
                         "schema": {
                             "$ref": "#/definitions/entities.FindAllBrandsResponse"
                         }
@@ -1865,31 +1889,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -1932,25 +1944,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -1994,25 +2006,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -2063,31 +2075,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -2120,25 +2132,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -2151,7 +2169,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all budgets with pagination",
+                "description": "List budgets (paginated). Supports free-text name search (q), and\nfiltering by status, customer_id and a created_at range (from/to,\nYYYY-MM-DD or RFC3339, inclusive). Sortable by created_at, name,\ntotal_cost and status (default created_at desc).",
                 "consumes": [
                     "application/json"
                 ],
@@ -2172,9 +2190,71 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Page size (max 100)",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on budget name (case-insensitive)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "approved",
+                            "rejected",
+                            "printing",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by customer UUID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at lower bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at upper bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "name",
+                            "total_cost",
+                            "status"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -2182,21 +2262,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListBudgetsResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_BudgetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2239,22 +2317,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2267,7 +2342,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all budgets for a specific customer",
+                "description": "List budgets for a specific customer (paginated). Accepts the same\npagination, sort and filter params as GET /budgets (status, q,\nfrom/to); the path customer_id always scopes the result.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2295,9 +2370,65 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Page size (max 100)",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on budget name (case-insensitive)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "approved",
+                            "rejected",
+                            "printing",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at lower bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created-at upper bound (YYYY-MM-DD or RFC3339, inclusive)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "name",
+                            "total_cost",
+                            "status"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -2305,28 +2436,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entities.ListBudgetsResponse"
+                            "$ref": "#/definitions/helpers.Page-entities_BudgetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2371,15 +2493,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2422,22 +2542,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2487,36 +2604,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2554,29 +2660,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2619,22 +2721,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2677,22 +2776,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2705,7 +2801,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get the status change history for a budget",
+                "description": "Get the status change history for a budget (paginated, newest first).",
                 "consumes": [
                     "application/json"
                 ],
@@ -2723,37 +2819,45 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Page size (max 100)",
+                        "name": "page_size",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_BudgetStatusHistoryEntity"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2803,22 +2907,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2861,29 +2962,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -2935,36 +3032,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -3256,26 +3342,31 @@ const docTemplate = `{
                     "Company Branding"
                 ],
                 "summary": "List available branding templates",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Paginated branding templates",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/entities.BrandingTemplate"
-                                }
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_BrandingTemplate"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -3340,6 +3431,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/company/subscription/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the current organization's subscription payment history, paginated with the standard envelope (Owner only).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company"
+                ],
+                "summary": "List my subscription payments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated subscription payments",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-usecases_SubscriptionPaymentItem"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/customers": {
             "get": {
                 "security": [
@@ -3347,7 +3492,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all customers with pagination",
+                "description": "List customers for the organization, paginated and searchable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3362,15 +3507,44 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "Page number (1-based)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on name/email/phone/document",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "email",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
@@ -3384,15 +3558,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -3435,22 +3613,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -3463,7 +3644,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Search customers with various filters",
+                "description": "Search customers with filters, pagination and sorting.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3477,57 +3658,63 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Customer name",
+                        "description": "Case-insensitive search on name/email/phone/document",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by name (partial, case-insensitive)",
                         "name": "name",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer email",
+                        "description": "Filter by email (partial, case-insensitive)",
                         "name": "email",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer phone",
+                        "description": "Filter by phone (partial)",
                         "name": "phone",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer document (CPF/CNPJ)",
+                        "description": "Filter by document/CPF/CNPJ (partial)",
                         "name": "document",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer city",
+                        "description": "Filter by city (partial, case-insensitive)",
                         "name": "city",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Customer state",
+                        "description": "Filter by state (partial, case-insensitive)",
                         "name": "state",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
-                        "description": "Active status",
+                        "description": "Filter by active status",
                         "name": "is_active",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "Page number (1-based)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Page size",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
                         "name": "page_size",
                         "in": "query"
                     },
@@ -3539,7 +3726,7 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "default": "created_at",
-                        "description": "Sort by field",
+                        "description": "Sort field",
                         "name": "sort_by",
                         "in": "query"
                     },
@@ -3565,15 +3752,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -3616,22 +3807,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -3681,29 +3875,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -3714,7 +3910,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a customer (soft delete)",
+                "description": "Delete a customer (soft delete). Blocked when the customer has budgets.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3741,29 +3937,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4163,7 +4361,7 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Number of customers to return",
+                        "description": "Number of customers to return (max 50)",
                         "name": "limit",
                         "in": "query"
                     }
@@ -4235,7 +4433,7 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Number of filaments to return",
+                        "description": "Number of filaments to return (max 50)",
                         "name": "limit",
                         "in": "query"
                     }
@@ -4307,7 +4505,7 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Number of materials to return",
+                        "description": "Number of materials to return (max 50)",
                         "name": "limit",
                         "in": "query"
                     }
@@ -4347,7 +4545,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Find all 3D printing filaments (user's own + global catalog)",
+                "description": "List 3D printing filaments for the organization, paginated and searchable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4362,21 +4560,50 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "Page number (1-based)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 20,
-                        "description": "Items per page",
-                        "name": "limit",
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on filament/brand/material name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at",
+                            "price_per_kg"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved filaments",
+                        "description": "Paginated list of filaments",
                         "schema": {
                             "$ref": "#/definitions/entities.FindAllFilamentsResponse"
                         }
@@ -4384,19 +4611,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4439,25 +4666,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4470,7 +4697,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Search 3D printing filaments with various filters",
+                "description": "Search 3D printing filaments with filters, pagination and sorting.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4484,7 +4711,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filter by name (partial match)",
+                        "description": "Case-insensitive search on filament/brand/material name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alias of q (case-insensitive name search)",
                         "name": "name",
                         "in": "query"
                     },
@@ -4502,7 +4735,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by color type (solid, gradient, duo, rainbow)",
+                        "description": "Filter by color type (solid, gradient, duo, rainbow, ...)",
                         "name": "color_type",
                         "in": "query"
                     },
@@ -4527,21 +4760,44 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 1,
-                        "description": "Page number",
+                        "description": "Page number (1-based)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 20,
-                        "description": "Items per page",
-                        "name": "limit",
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at",
+                            "price_per_kg"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved filaments",
+                        "description": "Paginated list of filaments",
                         "schema": {
                             "$ref": "#/definitions/entities.FindAllFilamentsResponse"
                         }
@@ -4549,19 +4805,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4604,31 +4860,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4678,37 +4928,37 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4746,31 +4996,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -4801,7 +5051,7 @@ const docTemplate = `{
         },
         "/health/ready": {
             "get": {
-                "description": "Pings Postgres and (when enabled) Redis. Returns 503 if a required dependency is down.",
+                "description": "Pings Postgres and (when enabled) Redis. Returns 503 only if the database is down; a Redis outage is reported as degraded.",
                 "produces": [
                     "application/json"
                 ],
@@ -4980,7 +5230,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Find All existing 3D printing materials",
+                "description": "List 3D printing materials for the organization, paginated and searchable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4991,9 +5241,53 @@ const docTemplate = `{
                     "Materials"
                 ],
                 "summary": "Find All Materials",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on the material name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "name",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Successfully List All Materials",
+                        "description": "Paginated list of materials",
                         "schema": {
                             "$ref": "#/definitions/entities.FindAllMaterialsResponse"
                         }
@@ -5001,31 +5295,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5068,25 +5350,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5130,25 +5412,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5199,31 +5481,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5256,25 +5538,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/errors.HTTPError"
+                            "$ref": "#/definitions/errors.APIError"
                         }
                     }
                 }
@@ -5295,23 +5583,31 @@ const docTemplate = `{
                     "payment-methods"
                 ],
                 "summary": "List payment methods",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Payment methods list",
+                        "description": "Paginated payment methods",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PaymentMethodResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_PaymentMethodResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -5513,23 +5809,31 @@ const docTemplate = `{
                     "plans"
                 ],
                 "summary": "List active subscription plans",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Plans list",
+                        "description": "Paginated plans",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.SubscriptionPlanResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_SubscriptionPlanResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -5542,7 +5846,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope.",
+                "description": "Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope. Results are paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5583,12 +5887,44 @@ const docTemplate = `{
                         "description": "Filter presets by user ID (UUID format)",
                         "name": "user_id",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved presets",
-                        "schema": {}
+                        "description": "Paginated presets",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_PresetEntity"
+                        }
                     },
                     "400": {
                         "description": "Bad Request - Invalid user ID format",
@@ -5612,7 +5948,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all available cost presets with pricing and margin configurations",
+                "description": "Retrieve cost presets with pricing and margin configurations, paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5622,15 +5958,44 @@ const docTemplate = `{
                 "tags": [
                     "Cost Presets"
                 ],
-                "summary": "Get all cost presets",
+                "summary": "Get cost presets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved cost presets",
+                        "description": "Paginated cost presets",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PresetEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-usecases_CostPresetResponse"
                         }
                     },
                     "500": {
@@ -5809,7 +6174,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all available energy presets with pricing and location data",
+                "description": "Retrieve energy presets with pricing and location data, paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5819,15 +6184,44 @@ const docTemplate = `{
                 "tags": [
                     "Energy Presets"
                 ],
-                "summary": "Get all energy presets",
+                "summary": "Get energy presets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved energy presets",
+                        "description": "Paginated energy presets",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PresetEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-usecases_EnergyPresetResponse"
                         }
                     },
                     "500": {
@@ -5895,7 +6289,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve energy presets that use a specific currency (3-letter currency code)",
+                "description": "Retrieve energy presets that use a specific currency (3-letter currency code), paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5913,16 +6307,43 @@ const docTemplate = `{
                         "name": "currency",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved energy presets by currency",
+                        "description": "Paginated energy presets by currency",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.EnergyPresetEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-usecases_EnergyPresetResponse"
                         }
                     },
                     "500": {
@@ -5941,7 +6362,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve energy presets filtered by country, state, and/or city",
+                "description": "Retrieve energy presets filtered by country, state, and/or city, paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5970,16 +6391,43 @@ const docTemplate = `{
                         "description": "Filter by city",
                         "name": "city",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved energy presets by location",
+                        "description": "Paginated energy presets by location",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.EnergyPresetEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-usecases_EnergyPresetResponse"
                         }
                     },
                     "500": {
@@ -6172,7 +6620,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all available machine presets with their specifications",
+                "description": "Retrieve machine presets with their specifications, paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6182,15 +6630,44 @@ const docTemplate = `{
                 "tags": [
                     "Machine Presets"
                 ],
-                "summary": "Get all machine presets",
+                "summary": "Get machine presets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved machine presets",
+                        "description": "Paginated machine presets",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/usecases.MachinePresetResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-usecases_MachinePresetResponse"
                         }
                     },
                     "500": {
@@ -6258,7 +6735,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all machine presets from a specific brand",
+                "description": "Retrieve machine presets from a specific brand, paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6276,16 +6753,43 @@ const docTemplate = `{
                         "name": "brand",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved machine presets by brand",
+                        "description": "Paginated machine presets by brand",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.MachinePresetEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-usecases_MachinePresetResponse"
                         }
                     },
                     "500": {
@@ -6463,7 +6967,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type.",
+                "description": "Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type, paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6480,16 +6984,31 @@ const docTemplate = `{
                         "description": "Template type filter (machine, energy, cost)",
                         "name": "type",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Templates",
+                        "description": "Paginated templates",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.PresetTemplate"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_PresetTemplate"
                         }
                     }
                 }
@@ -6728,14 +7247,43 @@ const docTemplate = `{
                     "Profiles"
                 ],
                 "summary": "List print profiles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 100, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Profiles",
+                        "description": "Paginated profiles",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.ProfileResponse"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_ProfileResponse"
                         }
                     },
                     "500": {
@@ -7454,7 +8002,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lists all users within the organization (Owner and OrgAdmin only)",
+                "description": "Lists users within the organization (Owner and OrgAdmin only), paginated with the standard envelope.",
                 "consumes": [
                     "application/json"
                 ],
@@ -7464,42 +8012,62 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "List all users",
+                "summary": "List users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Free-text search on name or email",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name, email or created_at",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List of users",
+                        "description": "Paginated users",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entities.UserEntity"
-                            }
+                            "$ref": "#/definitions/helpers.Page-entities_UserEntity"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -7542,46 +8110,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "409": {
                         "description": "User already exists",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -7624,46 +8177,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid user ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -7713,46 +8251,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -7790,46 +8313,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid user ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -9651,6 +10159,18 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.BrandEntity"
                     }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -9663,10 +10183,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.FilamentResponse"
                     }
                 },
-                "limit": {
+                "page": {
                     "type": "integer"
                 },
-                "page": {
+                "page_size": {
                     "type": "integer"
                 },
                 "total": {
@@ -9685,6 +10205,18 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.MaterialEntity"
                     }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -9766,52 +10298,6 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.ListBudgetsResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.BudgetResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "entities.ListCompaniesResponse": {
-            "type": "object",
-            "properties": {
-                "companies": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.CompanyListItem"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "total_count": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
         "entities.ListCustomersResponse": {
             "type": "object",
             "properties": {
@@ -9849,29 +10335,6 @@ const docTemplate = `{
                 },
                 "page_size": {
                     "type": "integer"
-                },
-                "total_count": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "entities.ListSubscriptionsResponse": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "subscriptions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.SubscriptionListItem"
-                    }
                 },
                 "total_count": {
                     "type": "integer"
@@ -10004,10 +10467,10 @@ const docTemplate = `{
                     "description": "Multi-tenancy",
                     "type": "string"
                 },
-                "tempExtruder": {
+                "temp_extruder": {
                     "type": "number"
                 },
-                "tempTable": {
+                "temp_table": {
                     "type": "number"
                 },
                 "updated_at": {
@@ -10140,29 +10603,6 @@ const docTemplate = `{
                 }
             }
         },
-        "entities.PaginatedActivities": {
-            "type": "object",
-            "properties": {
-                "activities": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.ActivityEntity"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
         "entities.PaymentHistoryItem": {
             "type": "object",
             "properties": {
@@ -10189,29 +10629,6 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
-                }
-            }
-        },
-        "entities.PaymentHistoryResponse": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "payments": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.PaymentHistoryItem"
-                    }
-                },
-                "total_count": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
                 }
             }
         },
@@ -11689,12 +12106,12 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 1
                 },
-                "tempExtruder": {
+                "temp_extruder": {
                     "type": "number",
                     "maximum": 500,
                     "minimum": 0
                 },
-                "tempTable": {
+                "temp_table": {
                     "type": "number",
                     "maximum": 300,
                     "minimum": 0
@@ -11733,6 +12150,26 @@ const docTemplate = `{
                 },
                 "user_type": {
                     "description": "'owner', 'admin', 'user'",
+                    "type": "string"
+                }
+            }
+        },
+        "errors.APIError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Code is a stable, snake_case machine-readable identifier.",
+                    "type": "string"
+                },
+                "fields": {
+                    "description": "Fields holds per-field validation messages. Omitted when empty.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "description": "Message is the user-facing pt-BR message.",
                     "type": "string"
                 }
             }
@@ -11804,6 +12241,499 @@ const docTemplate = `{
                             "$ref": "#/definitions/entities.BudgetStatus"
                         }
                     ]
+                }
+            }
+        },
+        "helpers.Page-entities_ActivityEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ActivityEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_AvailableFeature": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.AvailableFeature"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_BrandingTemplate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BrandingTemplate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_BudgetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_BudgetStatusHistoryEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_CompanyListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.CompanyListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PaymentHistoryItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentHistoryItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PaymentMethodResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentMethodResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PlanTemplate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlanTemplate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PresetEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PresetEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_PresetTemplate": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PresetTemplate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_ProfileResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfileResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_SubscriptionListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SubscriptionListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_SubscriptionPlanResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SubscriptionPlanResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_UserEntity": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.UserEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_CostPresetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.CostPresetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_EnergyPresetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.EnergyPresetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_MachinePresetResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.MachinePresetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-usecases_SubscriptionPaymentItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.SubscriptionPaymentItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usecases.CostPresetResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "labor_cost_per_hour": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "overhead_percentage": {
+                    "type": "number"
+                },
+                "packaging_cost_per_item": {
+                    "type": "number"
+                },
+                "post_processing_cost_per_hour": {
+                    "type": "number"
+                },
+                "profit_margin_percentage": {
+                    "type": "number"
+                },
+                "quality_control_cost_per_item": {
+                    "type": "number"
+                },
+                "shipping_cost_base": {
+                    "type": "number"
+                },
+                "shipping_cost_per_gram": {
+                    "type": "number"
+                },
+                "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -11983,6 +12913,62 @@ const docTemplate = `{
                 }
             }
         },
+        "usecases.EnergyPresetResponse": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "energy_cost_per_kwh": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "off_peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "peak_hour_multiplier": {
+                    "type": "number"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "tariff_type": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "usecases.FromTemplateOverrides": {
             "type": "object",
             "properties": {
@@ -12117,6 +13103,32 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "number"
+                }
+            }
+        },
+        "usecases.SubscriptionPaymentItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_url": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },

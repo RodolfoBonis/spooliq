@@ -76,7 +76,7 @@ This directory contains GitHub Actions workflows and configuration for the Spool
 
 **Runs:**
 - Unit tests
-- Linters (gofmt, go vet, golint, staticcheck, goimports)
+- Linters (gofmt, go vet, staticcheck, goimports) via `make lint`
 - Build validation
 - Code coverage
 
@@ -98,12 +98,6 @@ This directory contains GitHub Actions workflows and configuration for the Spool
 **Purpose:** Team notification
 
 Sends Telegram/n8n notification announcing feature cutoff.
-
-#### `bot-code-reviewer.yaml`
-Automated code review bot
-
-#### `generate-description.yaml`
-Auto-generates PR descriptions
 
 ---
 

@@ -8,11 +8,11 @@ var (
 	// ErrCannotDeleteDefaultProfile is returned when attempting to delete the default profile.
 	ErrCannotDeleteDefaultProfile = errors.New("default profiles cannot be deleted")
 	// ErrInvalidMachinePreset is returned when the referenced machine preset is missing or of the wrong type.
-	ErrInvalidMachinePreset = errors.New("machine_preset_id must reference a machine preset in your organization")
+	ErrInvalidMachinePreset = errors.New("machine_preset_id deve referenciar um preset de máquina da sua organização")
 	// ErrInvalidEnergyPreset is returned when the referenced energy preset is missing or of the wrong type.
-	ErrInvalidEnergyPreset = errors.New("energy_preset_id must reference an energy preset in your organization")
+	ErrInvalidEnergyPreset = errors.New("energy_preset_id deve referenciar um preset de energia da sua organização")
 	// ErrInvalidCostPreset is returned when the referenced cost preset is missing or of the wrong type.
-	ErrInvalidCostPreset = errors.New("cost_preset_id must reference a cost preset in your organization")
+	ErrInvalidCostPreset = errors.New("cost_preset_id deve referenciar um preset de custo da sua organização")
 	// ErrDefaultConflict is returned when a concurrent mutation would create a
 	// second default profile for the same organization.
 	ErrDefaultConflict = errors.New("já existe um perfil padrão para esta organização; tente novamente")

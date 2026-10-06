@@ -1,77 +1,61 @@
-#!/bin/bash
-# Script para rodar ferramentas de lint e análise estática no projeto Go
-# Agora coleta todos os erros e só falha no final, mostrando um resumo
+#!/usr/bin/env bash
+# Run lint and static-analysis tools for the Go project.
+# Collects every finding and only fails at the end, printing a summary.
+#
+# Tools are pinned and executed via `go run`, so a fresh machine needs no
+# global installs. Keep these versions in sync with CI (ci.yaml).
+set -uo pipefail
+
+STATICCHECK_VERSION="v0.8.1"
+GOIMPORTS_VERSION="v0.51.0"
 
 FAIL=0
 
-# 1. gofmt (formatação)
+# 1. gofmt (formatting)
 FMT_OUT=$(gofmt -l .)
 if [ -n "$FMT_OUT" ]; then
-  echo -e "\nArquivos com problemas de formatação (gofmt):"
+  echo -e "\nFiles with formatting problems (gofmt):"
   echo "$FMT_OUT"
   FAIL=1
 else
   echo "gofmt: OK"
 fi
 
-# 2. go vet (erros comuns)
+# 2. go vet (common mistakes)
 VET_OUT=$(go vet ./... 2>&1 | grep -v "github.com/shoenig/go-m1cpu")
 if [ -n "$VET_OUT" ]; then
-  echo -e "\nProblemas encontrados pelo go vet:"
+  echo -e "\nProblems found by go vet:"
   echo "$VET_OUT"
   FAIL=1
 else
   echo "go vet: OK"
 fi
 
-# 3. golint (boas práticas)
-if ! command -v golint &> /dev/null; then
-  echo "golint não encontrado. Instale com: go install golang.org/x/lint/golint@latest"
+# 3. staticcheck (advanced static analysis)
+STATIC_OUT=$(go run "honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION}" ./... 2>&1)
+STATIC_STATUS=$?
+if [ $STATIC_STATUS -ne 0 ] || [ -n "$STATIC_OUT" ]; then
+  echo -e "\nProblems found by staticcheck:"
+  echo "$STATIC_OUT"
   FAIL=1
 else
-  LINT_OUT=$(golint ./...)
-  if [ -n "$LINT_OUT" ]; then
-    echo -e "\nProblemas encontrados pelo golint:"
-    echo "$LINT_OUT"
-    FAIL=1
-  else
-    echo "golint: OK"
-  fi
+  echo "staticcheck: OK"
 fi
 
-# 4. staticcheck (análise avançada)
-if ! command -v staticcheck &> /dev/null; then
-  echo "staticcheck não encontrado. Instale com: go install honnef.co/go/tools/cmd/staticcheck@latest"
+# 4. goimports (import organization)
+IMP_OUT=$(go run "golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION}" -l .)
+IMP_STATUS=$?
+if [ $IMP_STATUS -ne 0 ] || [ -n "$IMP_OUT" ]; then
+  echo -e "\nFiles with unorganized imports (goimports):"
+  echo "$IMP_OUT"
   FAIL=1
 else
-  STATIC_OUT=$(staticcheck ./... 2>&1)
-  if [ -n "$STATIC_OUT" ]; then
-    echo -e "\nProblemas encontrados pelo staticcheck:"
-    echo "$STATIC_OUT"
-    FAIL=1
-  else
-    echo "staticcheck: OK"
-  fi
-fi
-
-# 5. goimports (organização dos imports)
-if ! command -v goimports &> /dev/null; then
-  echo "goimports não encontrado. Instale com: go install golang.org/x/tools/cmd/goimports@latest"
-  FAIL=1
-else
-  IMP_OUT=$(goimports -l .)
-  if [ -n "$IMP_OUT" ]; then
-    echo -e "\nArquivos com imports desorganizados (goimports):"
-    echo "$IMP_OUT"
-    FAIL=1
-  else
-    echo "goimports: OK"
-  fi
+  echo "goimports: OK"
 fi
 
 if [ $FAIL -eq 0 ]; then
-  echo -e "\n✅ Lint finalizado com sucesso!"
+  echo -e "\n✅ Lint finished successfully!"
 else
-  echo -e "\n❌ Foram encontrados problemas de lint. Veja os detalhes acima."
+  echo -e "\n❌ Lint problems were found. See the details above."
   exit 1
-fi 
+fi

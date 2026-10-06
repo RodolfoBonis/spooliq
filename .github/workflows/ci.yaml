@@ -23,7 +23,7 @@ permissions:
   discussions: write
   repository-projects: write
   issues: write
-  pull-requests: write      
+  pull-requests: write
 
 env:
   # Must match go.mod's `go` directive (1.25.x). When the runner Go is older than go.mod requires,
@@ -74,46 +74,21 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install Lint Dependencies
-        run: |
-          go install golang.org/x/lint/golint@latest
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          go install golang.org/x/tools/cmd/goimports@latest
-          export PATH=$PATH:$(go env GOPATH)/bin
-
+      # Lint tools (staticcheck, goimports) are pinned and executed via `go run`
+      # inside .config/scripts/lint.sh, so CI and local runs use identical versions.
+      # No separate tool installation step is needed.
       - name: Run lint
         id: lint
         run: |
           if [ -f .config/scripts/lint.sh ]; then
             chmod +x .config/scripts/lint.sh
-            export PATH=$PATH:$(go env GOPATH)/bin
             set +e
             ./.config/scripts/lint.sh > lint_output.txt 2>&1
             echo "status=$?" >> $GITHUB_OUTPUT
             set -e
+            cat lint_output.txt
           else
             echo "status=0" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install Python dependencies for comment
-        if: ${{ github.event_name == 'pull_request' && steps.lint.outputs.status != '0' }}
-        run: |
-          if [ -f .config/scripts/requirements.txt ]; then
-            pip install -r .config/scripts/requirements.txt
-          else
-            pip install openai PyGithub
-          fi
-
-      - name: Comment lint issues on PR
-        if: ${{ github.event_name == 'pull_request' && steps.lint.outputs.status != '0' }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
-          REPO_NAME: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          if [ -f .config/scripts/generate_lint_report.py ]; then
-            python .config/scripts/generate_lint_report.py
           fi
 
       - name: Exit if lint failed
@@ -178,7 +153,7 @@ jobs:
           go tool cover -html=coverage.out -o coverage.html
 
       - name: Upload coverage artifacts
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -233,26 +208,6 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./... > vulnerability_report.txt 2>&1 || echo "Vulnerabilities found"
 
-      - name: Install Python dependencies for vulnerability comment
-        if: ${{ steps.govulncheck.outcome == 'failure' && github.event_name == 'pull_request' }}
-        run: |
-          pip install -r .config/scripts/requirements.txt
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
-          REPO_NAME: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-
-      - name: Comment vulnerability issues on PR
-        if: ${{ steps.govulncheck.outcome == 'failure' && github.event_name == 'pull_request'}}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
-          REPO_NAME: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: python .config/scripts/generate_vulnerability_report.py
-
-
       - name: Upload vulnerability report
         if: ${{ steps.govulncheck.outcome == 'failure' }}
         env:
@@ -296,14 +251,14 @@ jobs:
             # Fallback: use workflow start time (approximate)
             START_TIME=$(date -u -d '2 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
           fi
-          
+
           END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          
+
           # Calculate duration in seconds using date command
           START_EPOCH=$(date -d "$START_TIME" +%s)
           END_EPOCH=$(date -d "$END_TIME" +%s)
           DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
-          
+
           # Convert to human readable format
           if [ $DURATION_SECONDS -lt 60 ]; then
             DURATION="${DURATION_SECONDS}s"
@@ -317,7 +272,7 @@ jobs:
             SECONDS=$((DURATION_SECONDS % 60))
             DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
           fi
-          
+
           echo "duration=$DURATION" >> $GITHUB_OUTPUT
 
       - name: Notify n8n Success

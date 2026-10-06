@@ -616,4 +616,51 @@ func RunMigrations() {
 	}
 
 	fmt.Println("Dashboard indexes setup completed")
+
+	runDataMigrations()
+}
+
+// dataMigrations are one-off data fixes. Each runs exactly once per database:
+// its name is recorded in data_migrations after it succeeds.
+var dataMigrations = []struct{ name, sql string }{
+	{
+		// Filaments were created with is_active=false since the module was added
+		// (no default, and create/update ignored the field). Nothing ever let users
+		// deactivate a filament, so every existing row is meant to be active.
+		"2026-10-06_activate_legacy_filaments",
+		"UPDATE filaments SET is_active = true WHERE is_active = false",
+	},
+}
+
+// runDataMigrations applies pending dataMigrations, each in its own transaction
+// together with its marker row, so a failure leaves it pending for the next start.
+func runDataMigrations() {
+	if err := Connector.Exec(`CREATE TABLE IF NOT EXISTS data_migrations (
+		name varchar(255) PRIMARY KEY,
+		applied_at timestamptz NOT NULL DEFAULT now()
+	)`).Error; err != nil {
+		fmt.Printf("Warning: data_migrations table creation failed: %v\n", err)
+		return
+	}
+	for _, m := range dataMigrations {
+		var applied int64
+		if err := Connector.Raw("SELECT count(*) FROM data_migrations WHERE name = ?", m.name).Scan(&applied).Error; err != nil {
+			fmt.Printf("Warning: data migration %s check failed: %v\n", m.name, err)
+			continue
+		}
+		if applied > 0 {
+			continue
+		}
+		err := Connector.Transaction(func(tx *gorm.DB) error {
+			res := tx.Exec(m.sql)
+			if res.Error != nil {
+				return res.Error
+			}
+			fmt.Printf("Data migration %s applied (%d rows)\n", m.name, res.RowsAffected)
+			return tx.Exec("INSERT INTO data_migrations (name) VALUES (?) ON CONFLICT (name) DO NOTHING", m.name).Error
+		})
+		if err != nil {
+			fmt.Printf("Warning: data migration %s failed: %v\n", m.name, err)
+		}
+	}
 }

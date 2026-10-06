@@ -307,3 +307,31 @@ func TestFilamentCrossOrgNoLeak(t *testing.T) {
 	assert.Equal(t, int64(0), total)
 	assert.Len(t, rows, 0)
 }
+
+// Regression: search JOINs brands/materials; the scan must keep the filament's
+// own columns (id, name, price, color) instead of the joined tables' ones.
+func TestFilamentSearchReturnsFilamentColumns(t *testing.T) {
+	repo, db, _ := setupFilamentRepo(t)
+	ctx := context.Background()
+
+	brand := seedBrand(t, db, itOrgA, "Voolt 3D")
+	mat := seedMaterial(t, db, itOrgA, "PLA Premium", 60, 210)
+	seedFilament(t, repo, itOrgA, "PLA Preto Velvet", brand, mat, 11990)
+
+	all, _, err := repo.FindAll(ctx, itOrgA, "", "filaments.created_at desc", 20, 0)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
+	want := all[0]
+
+	for _, q := range []string{"preto", "voolt", "premium"} {
+		rows, total, err := repo.SearchFilaments(ctx, itOrgA, nil, q, "filaments.created_at desc", 20, 0)
+		require.NoError(t, err, q)
+		require.Equal(t, int64(1), total, q)
+		require.Len(t, rows, 1, q)
+		got := rows[0]
+		assert.Equal(t, want.ID, got.ID, "id for q=%s", q)
+		assert.Equal(t, "PLA Preto Velvet", got.Name, "name for q=%s", q)
+		assert.Equal(t, want.PricePerKg, got.PricePerKg, "price for q=%s", q)
+		assert.Equal(t, want.CreatedAt.Unix(), got.CreatedAt.Unix(), "created_at for q=%s", q)
+	}
+}

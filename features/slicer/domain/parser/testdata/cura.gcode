@@ -1,0 +1,22 @@
+;FLAVOR:Marlin
+;TIME:3600
+;Filament used: 3.21m
+;Layer height: 0.2
+;MINX:5.0
+;MINY:5.0
+;MINZ:0.2
+;MAXX:205.0
+;MAXY:205.0
+;MAXZ:20.0
+;Generated with Cura_SteamEngine 5.6.0
+M140 S60
+M105
+M190 S60
+M104 S210
+G28
+G1 Z0.2 F720
+G1 X90 Y90 E2 F1200
+G1 X110 Y110 E4
+M104 S0
+M140 S0
+;End of Gcode

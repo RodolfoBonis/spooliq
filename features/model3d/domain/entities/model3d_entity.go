@@ -3,6 +3,7 @@ package entities
 import (
 	"time"
 
+	slicerentities "github.com/RodolfoBonis/spooliq/features/slicer/domain/entities"
 	"github.com/google/uuid"
 )
 
@@ -22,7 +23,10 @@ type Model3DEntity struct {
 	Notes          *string    `json:"notes,omitempty"`
 	Tags           *string    `json:"tags,omitempty"`
 	OwnerUserID    string     `json:"owner_user_id"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	DeletedAt      *time.Time `json:"deleted_at,omitempty"`
+	// SliceAnalysis is the stored slicer analysis (without suggestions, which are
+	// computed at read time). Present only for sliced uploads.
+	SliceAnalysis *slicerentities.Analysis `json:"slice_analysis,omitempty"`
+	CreatedAt     time.Time                `json:"created_at"`
+	UpdatedAt     time.Time                `json:"updated_at"`
+	DeletedAt     *time.Time               `json:"deleted_at,omitempty"`
 }

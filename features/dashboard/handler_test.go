@@ -96,7 +96,46 @@ func TestGetOverview_MissingOrganizationID(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Organization ID not found", response["error"])
+	assert.Equal(t, "organization_id_missing", response["code"])
+}
+
+// Top widgets clamp the client-supplied limit to maxDashboardLimit (50).
+func TestGetTopCustomers_LimitClampedToMax(t *testing.T) {
+	mockRepo := mocks.NewMockDashboardRepository()
+	mockActivitySvc := mocks.NewMockActivityService()
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+
+	// The repository must be invoked with 50, never the requested 1000.
+	mockRepo.On("GetTopCustomers", testOrganizationID, mock.Anything, mock.Anything, 50).
+		Return(&entities.TopCustomersResponse{}, nil)
+
+	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/top-customers?limit=1000")
+	c.Request.URL.RawQuery = "limit=1000"
+	setOrganizationID(c, testOrganizationID)
+
+	handler.GetTopCustomers(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertCalled(t, "GetTopCustomers", testOrganizationID, mock.Anything, mock.Anything, 50)
+}
+
+// Top filaments clamp too.
+func TestGetTopFilaments_LimitClampedToMax(t *testing.T) {
+	mockRepo := mocks.NewMockDashboardRepository()
+	mockActivitySvc := mocks.NewMockActivityService()
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+
+	mockRepo.On("GetTopFilaments", testOrganizationID, mock.Anything, mock.Anything, 50).
+		Return(&entities.TopFilamentsResponse{}, nil)
+
+	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/top-filaments?limit=9999")
+	c.Request.URL.RawQuery = "limit=9999"
+	setOrganizationID(c, testOrganizationID)
+
+	handler.GetTopFilaments(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertCalled(t, "GetTopFilaments", testOrganizationID, mock.Anything, mock.Anything, 50)
 }
 
 func TestGetOverview_RepositoryError(t *testing.T) {

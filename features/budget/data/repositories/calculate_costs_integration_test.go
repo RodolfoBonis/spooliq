@@ -108,6 +108,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			manual_labor_minutes_total integer DEFAULT 0,
 			cost_preset_id uuid,
 			additional_notes text,
+			model_3d_id uuid,
 			filament_cost bigint DEFAULT 0,
 			waste_cost bigint DEFAULT 0,
 			energy_cost bigint DEFAULT 0,

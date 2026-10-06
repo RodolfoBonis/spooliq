@@ -108,8 +108,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 					"trial_ends_at":   company.TrialEndsAt,
 				})
 				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error":               "Trial period has expired",
-					"message":             "Please subscribe to continue using the service",
+					"error":               "O período de avaliação expirou",
+					"message":             "Assine para continuar usando o serviço",
 					"code":                "trial_expired",
 					"subscription_status": "trial_expired",
 					"trial_ended_at":      company.TrialEndsAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -130,8 +130,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 					"organization_id": organizationID,
 				})
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":   "Unable to verify subscription status",
-					"message": "Please contact support",
+					"error":   "Não foi possível verificar o status da assinatura",
+					"message": "Entre em contato com o suporte",
 					"code":    "subscription_check_failed",
 				})
 				c.Abort()
@@ -158,8 +158,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 					"path":            c.Request.URL.Path,
 				})
 				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error":               "Payment required to access this feature",
-					"message":             "Your subscription is active but payment is still being processed. You can still access payment-related endpoints to resolve this issue.",
+					"error":               "Pagamento necessário para acessar este recurso",
+					"message":             "Sua assinatura está ativa, mas o pagamento ainda está sendo processado. Você ainda pode acessar os endpoints relacionados a pagamento para resolver este problema.",
 					"code":                "payment_pending",
 					"subscription_status": "payment_pending",
 					"payment_recovery_endpoints": []string{
@@ -167,7 +167,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 						"/v1/subscriptions/subscribe",
 						"/v1/subscriptions/status",
 					},
-					"help": "You can add payment methods, retry subscription, or check status while payment is being processed.",
+					"help": "Você pode adicionar métodos de pagamento, tentar assinar novamente ou verificar o status enquanto o pagamento é processado.",
 				})
 				c.Abort()
 				return
@@ -183,8 +183,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				"status":          company.SubscriptionStatus,
 			})
 			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error":               "Subscription suspended due to payment issues",
-				"message":             "Please update your payment information to reactivate your subscription",
+				"error":               "Assinatura suspensa devido a problemas de pagamento",
+				"message":             "Atualize suas informações de pagamento para reativar sua assinatura",
 				"code":                "subscription_suspended",
 				"subscription_status": "suspended",
 				// Note: next_payment_due removed - calculate dynamically from SubscriptionPayments if needed
@@ -198,8 +198,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				"status":          company.SubscriptionStatus,
 			})
 			c.JSON(http.StatusForbidden, gin.H{
-				"error":               "Subscription has been cancelled",
-				"message":             "Please contact support to reactivate your account",
+				"error":               "Sua assinatura foi cancelada",
+				"message":             "Entre em contato com o suporte para reativar sua conta",
 				"code":                "subscription_cancelled",
 				"subscription_status": "cancelled",
 			})
@@ -212,8 +212,8 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				"status":          company.SubscriptionStatus,
 			})
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":   "Unable to verify subscription status",
-				"message": "Please contact support",
+				"error":   "Não foi possível verificar o status da assinatura",
+				"message": "Entre em contato com o suporte",
 				"code":    "subscription_status_unknown",
 			})
 			c.Abort()

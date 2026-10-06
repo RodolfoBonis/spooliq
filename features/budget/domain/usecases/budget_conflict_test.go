@@ -192,6 +192,9 @@ func (f *fakeBudgetRepo) ValidatePresetInOrg(_ context.Context, presetID uuid.UU
 	f.validatedPresets = append(f.validatedPresets, presetValidation{id: presetID, presetType: presetType})
 	return nil
 }
+func (f *fakeBudgetRepo) ValidateModel3DsInOrg(_ context.Context, _ []uuid.UUID, _ string) error {
+	return nil
+}
 func (f *fakeBudgetRepo) GetCustomerInfo(_ context.Context, id uuid.UUID, _ string) (*entities.CustomerInfo, error) {
 	return &entities.CustomerInfo{ID: id.String(), Name: "Test"}, nil
 }

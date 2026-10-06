@@ -52,5 +52,9 @@ func (uc *BudgetUseCase) validateReferences(
 		return err
 	}
 
+	if err := uc.budgetRepository.ValidateModel3DsInOrg(ctx, collectModel3DIDs(items), organizationID); err != nil {
+		return err
+	}
+
 	return nil
 }

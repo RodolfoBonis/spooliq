@@ -54,6 +54,10 @@ var (
 	// a soft-deleted one). It is safe to surface as a 400 (bad request).
 	ErrProfileNotFound = errors.New("requested print profile does not belong to your organization")
 
+	// ErrInvalidModel3DReference is returned when a budget item references a 3D model
+	// that does not belong to the caller's organization. Safe to surface as a 400.
+	ErrInvalidModel3DReference = errors.New("referenced 3D model does not belong to your organization")
+
 	// ErrUnauthorizedAccess is returned when user tries to access a budget they don't own
 	ErrUnauthorizedAccess = errors.New("unauthorized access to budget")
 )

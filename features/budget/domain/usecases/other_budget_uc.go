@@ -121,6 +121,7 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 			ManualLaborMinutesTotal: original.ManualLaborMinutesTotal,
 			CostPresetID:            original.CostPresetID,
 			AdditionalNotes:         original.AdditionalNotes,
+			Model3DID:               original.Model3DID,
 			CreatedAt:               now,
 			UpdatedAt:               now,
 		}

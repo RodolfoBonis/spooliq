@@ -34,6 +34,8 @@ const (
 	CodeProfileNotFound = "profile_not_found"
 	// CodeFilamentNotFound (400) — a referenced filament is not in the organization.
 	CodeFilamentNotFound = "filament_not_found"
+	// CodeInvalidModel3DReference (400) — a referenced 3D model is not in the organization.
+	CodeInvalidModel3DReference = "invalid_model3d_reference"
 	// CodeCustomerNotFound (404) — the referenced customer is not in the organization.
 	CodeCustomerNotFound = "customer_not_found"
 	// CodeInvalidStatusFilter (400) — the list status filter is not a known status.
@@ -72,6 +74,8 @@ func budgetAPIError(err error) *coreErrors.APIError {
 		return coreErrors.BadRequest(CodeInvalidPresetReference, "Uma ou mais referências de preset são inválidas ou não pertencem à sua organização")
 	case errors.Is(err, entities.ErrFilamentNotFound):
 		return coreErrors.BadRequest(CodeFilamentNotFound, "Um ou mais filamentos informados não pertencem à sua organização")
+	case errors.Is(err, entities.ErrInvalidModel3DReference):
+		return coreErrors.BadRequest(CodeInvalidModel3DReference, "Um ou mais modelos 3D informados não pertencem à sua organização")
 	case errors.Is(err, entities.ErrCustomerNotFound):
 		return coreErrors.NotFoundErr(CodeCustomerNotFound, "Cliente não encontrado")
 	case errors.Is(err, entities.ErrInvalidStatusFilter):

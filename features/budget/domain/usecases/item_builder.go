@@ -71,6 +71,7 @@ func buildBudgetItems(budgetID uuid.UUID, organizationID string, reqs []entities
 			ManualLaborMinutesTotal: req.ManualLaborMinutesTotal,
 			CostPresetID:            req.CostPresetID,
 			AdditionalNotes:         req.AdditionalNotes,
+			Model3DID:               req.Model3DID,
 			CreatedAt:               now,
 			UpdatedAt:               now,
 		}
@@ -88,6 +89,24 @@ func collectFilamentIDs(reqs []entities.BudgetItemRequest) []uuid.UUID {
 		for _, fil := range req.Filaments {
 			ids = append(ids, fil.FilamentID)
 		}
+	}
+	return ids
+}
+
+// collectModel3DIDs returns every distinct, non-nil 3D model ID referenced by the
+// request items, so references can be validated against the organization in one go.
+func collectModel3DIDs(reqs []entities.BudgetItemRequest) []uuid.UUID {
+	seen := make(map[uuid.UUID]struct{})
+	ids := make([]uuid.UUID, 0)
+	for _, req := range reqs {
+		if req.Model3DID == nil {
+			continue
+		}
+		if _, ok := seen[*req.Model3DID]; ok {
+			continue
+		}
+		seen[*req.Model3DID] = struct{}{}
+		ids = append(ids, *req.Model3DID)
 	}
 	return ids
 }

@@ -52,7 +52,7 @@ func createListSchema(t *testing.T, db *gorm.DB) {
 			unit_price bigint NOT NULL DEFAULT 0, product_dimensions varchar(100),
 			print_time_hours integer DEFAULT 0, print_time_minutes integer DEFAULT 0,
 			setup_time_minutes integer DEFAULT 0, manual_labor_minutes_total integer DEFAULT 0,
-			cost_preset_id uuid, additional_notes text,
+			cost_preset_id uuid, additional_notes text, model_3d_id uuid,
 			filament_cost bigint DEFAULT 0, waste_cost bigint DEFAULT 0, energy_cost bigint DEFAULT 0,
 			setup_cost bigint DEFAULT 0, manual_labor_cost bigint DEFAULT 0, item_total_cost bigint DEFAULT 0,
 			created_at timestamptz, updated_at timestamptz

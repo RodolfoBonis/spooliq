@@ -50,6 +50,13 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		return
 	}
 
+	// Cross-field discount validation (percent cap + paired presence).
+	if err := validateDiscountInput(request.DiscountType, request.DiscountValue); err != nil {
+		uc.logger.Error(ctx, "Invalid discount", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
+
 	for i, item := range request.Items {
 		if len(item.Filaments) == 0 {
 			uc.logger.Error(ctx, "Preview item has no filaments", map[string]interface{}{"item_index": i})
@@ -80,6 +87,8 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		return
 	}
 
+	includeMachineCost := resolveIncludeMachineCost(request.IncludeMachineCost)
+
 	// Assemble the persistence-agnostic pricing input from the request items.
 	specs := make([]entities.PricingItemSpec, len(request.Items))
 	for i, item := range request.Items {
@@ -93,19 +102,27 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 			PrintTimeMinutes:        item.PrintTimeMinutes,
 			SetupTimeMinutes:        item.SetupTimeMinutes,
 			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+			PostProcessingMinutes:   item.PostProcessingMinutes,
+			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			CostPresetID:            item.CostPresetID,
 			Filaments:               filaments,
 		}
 	}
 
 	result, err := uc.budgetRepository.ComputeBudgetPricing(ctx, entities.PricingComputationInput{
-		OrganizationID:     organizationID,
-		IncludeEnergyCost:  request.IncludeEnergyCost,
-		IncludeWasteCost:   request.IncludeWasteCost,
-		MachinePresetID:    resolved.MachinePresetID,
-		EnergyPresetID:     resolved.EnergyPresetID,
-		BudgetCostPresetID: resolved.CostPresetID,
-		Items:              specs,
+		OrganizationID:        organizationID,
+		IncludeEnergyCost:     request.IncludeEnergyCost,
+		IncludeWasteCost:      request.IncludeWasteCost,
+		IncludeMachineCost:    includeMachineCost,
+		MachinePresetID:       resolved.MachinePresetID,
+		EnergyPresetID:        resolved.EnergyPresetID,
+		BudgetCostPresetID:    resolved.CostPresetID,
+		DiscountType:          derefString(request.DiscountType),
+		DiscountValue:         derefFloat(request.DiscountValue),
+		IncludeShipping:       request.IncludeShipping,
+		ShippingOverrideCents: request.ShippingOverride,
+		TaxRate:               request.TaxRate,
+		Items:                 specs,
 	})
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to compute budget preview", map[string]interface{}{"error": err.Error()})
@@ -115,27 +132,42 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 
 	// Build the transient (never-persisted) budget + item responses.
 	previewBudget := &entities.BudgetEntity{
-		OrganizationID:    organizationID,
-		Name:              request.Name,
-		Description:       request.Description,
-		Status:            entities.StatusDraft,
-		ProfileID:         resolved.ProfileID,
-		MachinePresetID:   resolved.MachinePresetID,
-		EnergyPresetID:    resolved.EnergyPresetID,
-		CostPresetID:      resolved.CostPresetID,
-		IncludeEnergyCost: request.IncludeEnergyCost,
-		IncludeWasteCost:  request.IncludeWasteCost,
-		DeliveryDays:      request.DeliveryDays,
-		PaymentTerms:      request.PaymentTerms,
-		Notes:             request.Notes,
-		FilamentCost:      result.FilamentCost,
-		WasteCost:         result.WasteCost,
-		EnergyCost:        result.EnergyCost,
-		SetupCost:         result.SetupCost,
-		LaborCost:         result.LaborCost,
-		OverheadCost:      result.Overhead,
-		ProfitAmount:      result.Profit,
-		TotalCost:         result.Total,
+		OrganizationID:     organizationID,
+		Name:               request.Name,
+		Description:        request.Description,
+		Status:             entities.StatusDraft,
+		ProfileID:          resolved.ProfileID,
+		MachinePresetID:    resolved.MachinePresetID,
+		EnergyPresetID:     resolved.EnergyPresetID,
+		CostPresetID:       resolved.CostPresetID,
+		IncludeEnergyCost:  request.IncludeEnergyCost,
+		IncludeWasteCost:   request.IncludeWasteCost,
+		IncludeMachineCost: includeMachineCost,
+		DiscountType:       request.DiscountType,
+		DiscountValue:      request.DiscountValue,
+		IncludeShipping:    request.IncludeShipping,
+		ShippingOverride:   request.ShippingOverride,
+		TaxRate:            request.TaxRate,
+		DeliveryDays:       request.DeliveryDays,
+		PaymentTerms:       request.PaymentTerms,
+		Notes:              request.Notes,
+		FilamentCost:       result.FilamentCost,
+		WasteCost:          result.WasteCost,
+		EnergyCost:         result.EnergyCost,
+		MachineCost:        result.MachineCost,
+		SetupCost:          result.SetupCost,
+		LaborCost:          result.LaborCost,
+		PostProcessingCost: result.PostProcessingCost,
+		PackagingCost:      result.PackagingCost,
+		QualityControlCost: result.QualityControlCost,
+		FailureCost:        result.FailureCost,
+		OverheadCost:       result.Overhead,
+		ProfitAmount:       result.Profit,
+		DiscountAmount:     result.DiscountAmount,
+		ShippingCost:       result.ShippingCost,
+		TaxAmount:          result.TaxAmount,
+		TaxRateApplied:     result.TaxRateApplied,
+		TotalCost:          result.Total,
 	}
 
 	var customerInfo *entities.CustomerInfo
@@ -189,12 +221,20 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 			CostPreset:              costPresetRef,
 			SetupTimeMinutes:        item.SetupTimeMinutes,
 			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+			PostProcessingMinutes:   item.PostProcessingMinutes,
+			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			AdditionalNotes:         item.AdditionalNotes,
 			FilamentCost:            res.FilamentCost,
 			WasteCost:               res.WasteCost,
 			EnergyCost:              res.EnergyCost,
+			MachineCost:             res.MachineCost,
 			SetupCost:               res.SetupCost,
 			ManualLaborCost:         res.ManualLaborCost,
+			PostProcessingCost:      res.PostProcessingCost,
+			SupportRemovalCost:      res.SupportRemovalCost,
+			PackagingCost:           res.PackagingCost,
+			QualityControlCost:      res.QualityControlCost,
+			FailureCost:             res.FailureCost,
 			ItemTotalCost:           res.ItemTotalCost,
 			UnitPrice:               res.UnitCost,
 			SaleTotal:               res.SaleTotal,
@@ -211,6 +251,7 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 
 	response := entities.BudgetResponse{
 		BudgetEntity:          previewBudget,
+		BasePrice:             result.BasePrice,
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		Profile:               profileRef,

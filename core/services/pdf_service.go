@@ -299,19 +299,50 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 	pdf.Ln(3) // Reduced from 4 to 3
 }
 
-// addCostSummary adds the cost summary section
+// addCostSummary adds the cost summary section: the pre-adjustment subtotal
+// (base price), then discount (when > 0), shipping (when included) and taxes
+// (when > 0), and finally the total. These reconcile as
+// base - discount + shipping + tax = total (taxes are "por dentro"). The per-item
+// rows above already sum to total - shipping (see pricing.DistributeMarkup).
 func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.Ln(2)
 
-	// Total
-	pdf.SetFont("Arial", "B", 11) // Reduced from 12
-	r, g, b := s.hexToRGB(branding.AccentColor)
+	r, g, b := s.hexToRGB(branding.BodyTextColor)
+
+	// Subtotal (sale price before discount/shipping/tax).
+	pdf.SetFont("Arial", "", 10)
 	pdf.SetTextColor(r, g, b)
-	pdf.Cell(120, 6, s.convertUTF8("TOTAL:")) // Reduced height from 8 to 6
-	pdf.SetFont("Arial", "B", 13)             // Reduced from 14
+	pdf.Cell(120, 6, s.convertUTF8("Subtotal:"))
+	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.BasePrice())/100.0))
+	pdf.Ln(5)
+
+	if budget.DiscountAmount > 0 {
+		pdf.Cell(120, 6, s.convertUTF8("Desconto:"))
+		pdf.Cell(0, 6, fmt.Sprintf("- R$ %.2f", float64(budget.DiscountAmount)/100.0))
+		pdf.Ln(5)
+	}
+
+	if budget.IncludeShipping {
+		pdf.Cell(120, 6, s.convertUTF8("Frete:"))
+		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.ShippingCost)/100.0))
+		pdf.Ln(5)
+	}
+
+	if budget.TaxAmount > 0 {
+		pdf.Cell(120, 6, s.convertUTF8("Impostos:"))
+		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.TaxAmount)/100.0))
+		pdf.Ln(5)
+	}
+
+	// Total.
+	pdf.SetFont("Arial", "B", 11)
+	ar, ag, ab := s.hexToRGB(branding.AccentColor)
+	pdf.SetTextColor(ar, ag, ab)
+	pdf.Cell(120, 6, s.convertUTF8("TOTAL:"))
+	pdf.SetFont("Arial", "B", 13)
 	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.TotalCost)/100.0))
 
-	pdf.Ln(6) // Reduced from 8 to 6
+	pdf.Ln(6)
 }
 
 // addAdditionalInfo adds delivery, payment and notes

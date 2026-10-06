@@ -144,6 +144,32 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.IncludeWasteCost != nil {
 		budget.IncludeWasteCost = *request.IncludeWasteCost
 	}
+	if request.IncludeMachineCost != nil {
+		budget.IncludeMachineCost = *request.IncludeMachineCost
+	}
+	// Discount / shipping / tax (partial update: only applied when provided).
+	if request.DiscountType != nil {
+		budget.DiscountType = request.DiscountType
+	}
+	if request.DiscountValue != nil {
+		budget.DiscountValue = request.DiscountValue
+	}
+	if request.IncludeShipping != nil {
+		budget.IncludeShipping = *request.IncludeShipping
+	}
+	if request.ShippingOverride != nil {
+		budget.ShippingOverride = request.ShippingOverride
+	}
+	if request.TaxRate != nil {
+		budget.TaxRate = request.TaxRate
+	}
+	// Validate the resulting discount state (post-merge), so a partial update that
+	// only touches one of type/value is checked against the effective pair.
+	if err := validateDiscountInput(budget.DiscountType, budget.DiscountValue); err != nil {
+		uc.logger.Error(ctx, "Invalid discount", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
 	if request.DeliveryDays != nil {
 		budget.DeliveryDays = request.DeliveryDays
 	}

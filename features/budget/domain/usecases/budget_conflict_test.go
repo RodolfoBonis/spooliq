@@ -133,7 +133,7 @@ func (f *fakeBudgetRepo) GetCustomersInfo(_ context.Context, ids []uuid.UUID, _ 
 	}
 	return out, nil
 }
-func (f *fakeBudgetRepo) GetItemsByBudgetIDs(_ context.Context, _ []uuid.UUID) (map[uuid.UUID][]*entities.BudgetItemEntity, error) {
+func (f *fakeBudgetRepo) GetItemsByBudgetIDs(_ context.Context, _ []uuid.UUID, _ string) (map[uuid.UUID][]*entities.BudgetItemEntity, error) {
 	return map[uuid.UUID][]*entities.BudgetItemEntity{}, nil
 }
 func (f *fakeBudgetRepo) GetFilamentUsageInfoByItemIDs(_ context.Context, _ []uuid.UUID, _ string) (map[uuid.UUID][]entities.FilamentUsageInfo, error) {

@@ -53,7 +53,7 @@ type BudgetRepository interface {
 	GetCustomersInfo(ctx context.Context, customerIDs []uuid.UUID, organizationID string) (map[uuid.UUID]*entities.CustomerInfo, error)
 	// GetItemsByBudgetIDs loads the items of every given budget, grouped by budget ID
 	// and ordered by item "order" within each budget.
-	GetItemsByBudgetIDs(ctx context.Context, budgetIDs []uuid.UUID) (map[uuid.UUID][]*entities.BudgetItemEntity, error)
+	GetItemsByBudgetIDs(ctx context.Context, budgetIDs []uuid.UUID, organizationID string) (map[uuid.UUID][]*entities.BudgetItemEntity, error)
 	// GetFilamentUsageInfoByItemIDs loads the filament usage of every given item,
 	// grouped by item ID and ordered by the color-change order within each item.
 	GetFilamentUsageInfoByItemIDs(ctx context.Context, itemIDs []uuid.UUID, organizationID string) (map[uuid.UUID][]entities.FilamentUsageInfo, error)

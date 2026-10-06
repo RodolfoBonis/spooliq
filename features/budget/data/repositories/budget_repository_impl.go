@@ -272,7 +272,7 @@ func (r *budgetRepositoryImpl) GetCustomersInfo(ctx context.Context, customerIDs
 
 // GetItemsByBudgetIDs loads the items of every given budget in ONE query, grouped
 // by budget ID and ordered by item "order" within each budget.
-func (r *budgetRepositoryImpl) GetItemsByBudgetIDs(ctx context.Context, budgetIDs []uuid.UUID) (map[uuid.UUID][]*entities.BudgetItemEntity, error) {
+func (r *budgetRepositoryImpl) GetItemsByBudgetIDs(ctx context.Context, budgetIDs []uuid.UUID, organizationID string) (map[uuid.UUID][]*entities.BudgetItemEntity, error) {
 	out := make(map[uuid.UUID][]*entities.BudgetItemEntity)
 	ids := uniqueIDs(budgetIDs)
 	if len(ids) == 0 {
@@ -281,7 +281,7 @@ func (r *budgetRepositoryImpl) GetItemsByBudgetIDs(ctx context.Context, budgetID
 
 	var items []*models.BudgetItemModel
 	if err := r.db.WithContext(ctx).
-		Where("budget_id IN ?", ids).
+		Where("budget_id IN ? AND organization_id = ?", ids, organizationID).
 		Order("budget_id ASC, \"order\" ASC").
 		Find(&items).Error; err != nil {
 		return nil, fmt.Errorf("failed to load budget items: %w", err)

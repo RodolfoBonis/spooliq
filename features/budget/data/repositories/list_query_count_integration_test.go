@@ -179,7 +179,7 @@ func runListLoad(t *testing.T, db *gorm.DB, org string) int64 {
 	_, err = repo.GetCustomersInfo(ctx, customerIDs, org)
 	require.NoError(t, err)
 
-	itemsByBudget, err := repo.GetItemsByBudgetIDs(ctx, budgetIDs)
+	itemsByBudget, err := repo.GetItemsByBudgetIDs(ctx, budgetIDs, org)
 	require.NoError(t, err)
 
 	itemIDs := make([]uuid.UUID, 0)

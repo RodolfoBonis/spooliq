@@ -232,7 +232,7 @@ func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets [
 		return nil, err
 	}
 
-	itemsByBudget, err := uc.budgetRepository.GetItemsByBudgetIDs(ctx, budgetIDs)
+	itemsByBudget, err := uc.budgetRepository.GetItemsByBudgetIDs(ctx, budgetIDs, organizationID)
 	if err != nil {
 		return nil, err
 	}

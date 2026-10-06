@@ -60,13 +60,13 @@ jobs:
             echo "Using provided version: $NEW_VERSION"
           fi
           
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create hotfix branch
         run: |
           HOTFIX_BRANCH="hotfix/v${{ steps.determine-version.outputs.version }}"
           git checkout -b $HOTFIX_BRANCH
-          echo "HOTFIX_BRANCH=$HOTFIX_BRANCH" >> $GITHUB_ENV
+          echo "HOTFIX_BRANCH=$HOTFIX_BRANCH" >> "$GITHUB_ENV"
 
       - name: Update version file
         run: |
@@ -177,7 +177,7 @@ jobs:
             --label "priority:critical" \
             --label "automated")
           
-          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "PR created: $PR_URL"
 
       - name: Notify n8n
@@ -192,7 +192,7 @@ jobs:
               "version": "v${{ steps.determine-version.outputs.version }}",
               "branch": "${{ env.HOTFIX_BRANCH }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "description": "${{ inputs.description }}",
                 "pr_url": "${{ steps.pr-main.outputs.pr_url }}",

@@ -69,7 +69,7 @@ jobs:
           git config --global url."git@github.com:".insteadOf "https://github.com/"
 
       - name: Set GOPRIVATE
-        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> "$GITHUB_ENV"
 
       - name: Download dependencies
         run: go mod download
@@ -84,11 +84,11 @@ jobs:
             chmod +x .config/scripts/lint.sh
             set +e
             ./.config/scripts/lint.sh > lint_output.txt 2>&1
-            echo "status=$?" >> $GITHUB_OUTPUT
+            echo "status=$?" >> "$GITHUB_OUTPUT"
             set -e
             cat lint_output.txt
           else
-            echo "status=0" >> $GITHUB_OUTPUT
+            echo "status=0" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Exit if lint failed
@@ -135,7 +135,7 @@ jobs:
           git config --global url."git@github.com:".insteadOf "https://github.com/"
 
       - name: Set GOPRIVATE
-        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> "$GITHUB_ENV"
 
       - name: Download dependencies
         run: go mod download
@@ -197,7 +197,7 @@ jobs:
           git config --global url."git@github.com:".insteadOf "https://github.com/"
 
       - name: Set GOPRIVATE
-        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> "$GITHUB_ENV"
 
       - name: Download dependencies
         run: go mod download
@@ -213,13 +213,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "## 🔒 Security Vulnerability Report" >> vulnerability_summary.md
-          echo "" >> vulnerability_summary.md
-          echo "Vulnerabilities were found in this build:" >> vulnerability_summary.md
-          echo "" >> vulnerability_summary.md
-          echo '```' >> vulnerability_summary.md
-          cat vulnerability_report.txt >> vulnerability_summary.md
-          echo '```' >> vulnerability_summary.md
+          {
+            echo "## 🔒 Security Vulnerability Report"
+            echo ""
+            echo "Vulnerabilities were found in this build:"
+            echo ""
+            echo '```'
+            cat vulnerability_report.txt
+            echo '```'
+          } >> vulnerability_summary.md
 
       - name: Upload vulnerability artifacts
         if: ${{ steps.govulncheck.outcome == 'failure' }}
@@ -273,7 +275,7 @@ jobs:
             DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
           fi
 
-          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
 
       - name: Notify n8n Success
         run: |
@@ -288,7 +290,7 @@ jobs:
               "tag": null,
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "build_time": "${{ steps.build-duration.outputs.duration }}",
                 "test_results": "all passed",
@@ -310,13 +312,13 @@ jobs:
         id: failure-analysis
         run: |
           if [[ "${{ needs.lint_go.result }}" != "success" ]]; then
-            echo "error_type=Lint errors found" >> $GITHUB_OUTPUT
+            echo "error_type=Lint errors found" >> "$GITHUB_OUTPUT"
           elif [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "error_type=Tests failed" >> $GITHUB_OUTPUT
+            echo "error_type=Tests failed" >> "$GITHUB_OUTPUT"
           elif [[ "${{ needs.check_vulnerabilities.result }}" != "success" ]]; then
-            echo "error_type=Security vulnerabilities found" >> $GITHUB_OUTPUT
+            echo "error_type=Security vulnerabilities found" >> "$GITHUB_OUTPUT"
           else
-            echo "error_type=Unknown CI failure" >> $GITHUB_OUTPUT
+            echo "error_type=Unknown CI failure" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Notify n8n Failure
@@ -332,7 +334,7 @@ jobs:
               "tag": null,
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "error_message": "${{ steps.failure-analysis.outputs.error_type }}",
                 "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",

@@ -73,8 +73,8 @@ jobs:
           fi
 
           # All validations passed
-          echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+          echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
 
           echo "✓ Version validated: $INPUT_VERSION"
           echo "✓ Tag validated: $INPUT_TAG"
@@ -114,7 +114,7 @@ jobs:
         id: repo-owner
         run: |
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
+          echo "lowercase=$REPO_OWNER" >> "$GITHUB_OUTPUT"
 
       - name: Setup SSH for private repos
         env:
@@ -127,7 +127,7 @@ jobs:
           git config --global url."git@github.com:".insteadOf "https://github.com/"
 
       - name: Set GOPRIVATE
-        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> $GITHUB_ENV
+        run: echo "GOPRIVATE=github.com/RodolfoBonis/*" >> "$GITHUB_ENV"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -209,7 +209,7 @@ jobs:
             DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
           fi
 
-          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
 
       - name: Notify n8n Success
         if: success()
@@ -226,7 +226,7 @@ jobs:
               "tag": "${{ needs.validate.outputs.tag }}",
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "docker_image": "'$DOCKER_IMAGE'",
                 "argocd_sync": "success",
@@ -251,7 +251,7 @@ jobs:
               "tag": "${{ needs.validate.outputs.tag }}",
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "error_message": "GoReleaser deployment failed - check GitHub Actions logs",
                 "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
@@ -308,7 +308,6 @@ jobs:
           git fetch origin develop:develop
 
           # Get the release version
-          VERSION="${{ needs.validate.outputs.version }}"
           TAG="${{ needs.validate.outputs.tag }}"
 
           # Create backport branch from develop
@@ -336,15 +335,15 @@ jobs:
 
           gh pr create \
             --base develop \
-            --head $BACKPORT_BRANCH \
+            --head "$BACKPORT_BRANCH" \
             --title "🔄 Backport ${TAG} to develop" \
-            --body "$(cat <<'EOF'
+            --body "$(cat <<EOF
           ## Automated Backport
 
           This PR backports release **${TAG}** from main to develop.
 
           ### Changes Included
-          - Version bump to $VERSION
+          - Version bump to ${TAG#v}
           - CHANGELOG updates
           - All features and fixes from the release
 
@@ -374,7 +373,7 @@ jobs:
               "repository": "${{ github.repository }}",
               "version": "${{ needs.validate.outputs.tag }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "target_branch": "develop",
                 "auto_merge": true

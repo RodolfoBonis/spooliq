@@ -6,29 +6,32 @@ import (
 	companyModels "github.com/RodolfoBonis/spooliq/features/company/data/models"
 	customerModels "github.com/RodolfoBonis/spooliq/features/customer/data/models"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/entities"
+	slicerentities "github.com/RodolfoBonis/spooliq/features/slicer/domain/entities"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // Model3DModel represents the database model for 3D model entities.
 type Model3DModel struct {
-	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrganizationID string         `gorm:"type:varchar(255);not null;index:idx_model3d_org" json:"organization_id"`
-	CustomerID     *uuid.UUID     `gorm:"type:uuid;index:idx_model3d_customer" json:"customer_id,omitempty"`
-	Name           string         `gorm:"type:varchar(255);not null" json:"name"`
-	Description    string         `gorm:"type:text" json:"description,omitempty"`
-	FileName       string         `gorm:"type:varchar(255);not null" json:"file_name"`
-	FileURL        string         `gorm:"type:varchar(1024);not null" json:"file_url"`
-	FileFormat     string         `gorm:"type:varchar(10);not null" json:"file_format"`
-	FileSizeBytes  int64          `gorm:"type:bigint;not null" json:"file_size_bytes"`
-	FileHash       string         `gorm:"type:varchar(64);not null;index:idx_model3d_hash" json:"file_hash"`
-	ThumbnailURL   *string        `gorm:"type:varchar(1024)" json:"thumbnail_url,omitempty"`
-	Notes          *string        `gorm:"type:text" json:"notes,omitempty"`
-	Tags           *string        `gorm:"type:text" json:"tags,omitempty"`
-	OwnerUserID    string         `gorm:"type:varchar(255);not null" json:"owner_user_id"`
-	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt      time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrganizationID string     `gorm:"type:varchar(255);not null;index:idx_model3d_org" json:"organization_id"`
+	CustomerID     *uuid.UUID `gorm:"type:uuid;index:idx_model3d_customer" json:"customer_id,omitempty"`
+	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
+	Description    string     `gorm:"type:text" json:"description,omitempty"`
+	FileName       string     `gorm:"type:varchar(255);not null" json:"file_name"`
+	FileURL        string     `gorm:"type:varchar(1024);not null" json:"file_url"`
+	FileFormat     string     `gorm:"type:varchar(10);not null" json:"file_format"`
+	FileSizeBytes  int64      `gorm:"type:bigint;not null" json:"file_size_bytes"`
+	FileHash       string     `gorm:"type:varchar(64);not null;index:idx_model3d_hash" json:"file_hash"`
+	ThumbnailURL   *string    `gorm:"type:varchar(1024)" json:"thumbnail_url,omitempty"`
+	Notes          *string    `gorm:"type:text" json:"notes,omitempty"`
+	Tags           *string    `gorm:"type:text" json:"tags,omitempty"`
+	OwnerUserID    string     `gorm:"type:varchar(255);not null" json:"owner_user_id"`
+	// SliceAnalysis is stored as JSONB and (de)serialized via GORM's json serializer.
+	SliceAnalysis *slicerentities.Analysis `gorm:"type:jsonb;serializer:json" json:"slice_analysis,omitempty"`
+	CreatedAt     time.Time                `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time                `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     gorm.DeletedAt           `gorm:"index" json:"deleted_at,omitempty"`
 
 	// GORM v2 Relationships
 	Organization *companyModels.CompanyModel   `gorm:"foreignKey:OrganizationID;references:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"organization,omitempty"`
@@ -68,6 +71,7 @@ func (m *Model3DModel) ToEntity() *entities.Model3DEntity {
 		Notes:          m.Notes,
 		Tags:           m.Tags,
 		OwnerUserID:    m.OwnerUserID,
+		SliceAnalysis:  m.SliceAnalysis,
 		CreatedAt:      m.CreatedAt,
 		UpdatedAt:      m.UpdatedAt,
 		DeletedAt:      deletedAt,
@@ -92,6 +96,7 @@ func (m *Model3DModel) FromEntity(entity *entities.Model3DEntity) {
 	m.Notes = entity.Notes
 	m.Tags = entity.Tags
 	m.OwnerUserID = entity.OwnerUserID
+	m.SliceAnalysis = entity.SliceAnalysis
 	m.CreatedAt = entity.CreatedAt
 	m.UpdatedAt = entity.UpdatedAt
 	if entity.DeletedAt != nil {

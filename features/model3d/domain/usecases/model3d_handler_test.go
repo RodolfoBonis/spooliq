@@ -18,6 +18,8 @@ import (
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/repositories"
+	slicerservice "github.com/RodolfoBonis/spooliq/features/slicer/domain/service"
+	slicersuggest "github.com/RodolfoBonis/spooliq/features/slicer/domain/suggest"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -113,13 +115,22 @@ func (fakeActivity) FindRecentByOrganization(_ string, _ int) ([]activityEntitie
 func newUC(repo repositories.Model3DRepository) *Model3DUseCase {
 	cdn := services.NewCDNService("", coreEntities.CdnKeysEntity{}, &logger.NoopLogger{})
 	thumb := services.NewThumbnailService(&logger.NoopLogger{})
+	slicerSvc := slicerservice.NewService(noopCatalog{}, &logger.NoopLogger{})
 	return &Model3DUseCase{
 		repository:       repo,
 		cdnService:       cdn,
 		thumbnailService: thumb,
+		slicerService:    slicerSvc,
 		logger:           &logger.NoopLogger{},
 		activityService:  fakeActivity{},
 	}
+}
+
+// noopCatalog is an empty filament catalog so suggestions resolve to nil in tests.
+type noopCatalog struct{}
+
+func (noopCatalog) LoadCandidates(_ context.Context, _ string) ([]slicersuggest.Candidate, error) {
+	return nil, nil
 }
 
 func ctxWithOrg(org string) (*gin.Context, *httptest.ResponseRecorder) {

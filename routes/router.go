@@ -29,6 +29,8 @@ import (
 	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/profile"
+	"github.com/RodolfoBonis/spooliq/features/slicer"
+	sliceruc "github.com/RodolfoBonis/spooliq/features/slicer/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
@@ -56,6 +58,7 @@ func InitializeRoutes(
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
 	model3dUc model3duc.IModel3DUseCase,
+	slicerUc sliceruc.ISlicerUseCase,
 	uploadsUc uploadsuc.IUploadUseCase,
 	paymentMethodUc *subscriptionuc.PaymentMethodUseCase,
 	subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase,
@@ -91,6 +94,7 @@ func InitializeRoutes(
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	model3d.Routes(root, model3dUc, protectFactory)
+	slicer.Routes(root, slicerUc, protectFactory)
 	preset.SetupRoutes(root, presetHandler, protectFactory)
 	profile.Routes(root, profileHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)

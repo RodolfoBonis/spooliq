@@ -49,6 +49,7 @@ func InitializeRoutes(
 	budgetUc budgetuc.IBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
 	brandingUc companyuc.IBrandingUseCase,
+	subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase,
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
 	materialUc materialuc.IMaterialUseCase,
@@ -81,7 +82,7 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
-	company.Routes(root, companyUc, brandingUc, paymentMethodUc, protectFactory)
+	company.Routes(root, companyUc, brandingUc, subscriptionPaymentsUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)

@@ -192,6 +192,9 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 
 // applyFilamentUpdate copies the non-nil fields of the request onto the entity.
 func applyFilamentUpdate(f *filamentEntities.FilamentEntity, request *filamentEntities.UpdateFilamentRequest) {
+	if request.IsActive != nil {
+		f.IsActive = *request.IsActive
+	}
 	if request.Name != nil {
 		f.Name = *request.Name
 	}

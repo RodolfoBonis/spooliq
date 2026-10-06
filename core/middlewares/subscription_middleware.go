@@ -62,7 +62,11 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				"path": c.Request.URL.Path,
 			})
 			appError := errors.NewAppError(entities.ErrUnauthorized, "Organization ID required", nil, nil)
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			c.JSON(appError.HTTPStatus(), gin.H{
+				"error":   appError.Message,
+				"message": appError.Message,
+				"code":    "organization_required",
+			})
 			c.Abort()
 			return
 		}
@@ -75,7 +79,11 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				"organization_id": organizationID,
 			})
 			appError := errors.NewAppError(entities.ErrDatabase, "Failed to verify subscription status", nil, err)
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			c.JSON(appError.HTTPStatus(), gin.H{
+				"error":   appError.Message,
+				"message": appError.Message,
+				"code":    "subscription_check_failed",
+			})
 			c.Abort()
 			return
 		}
@@ -101,9 +109,10 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				})
 				c.JSON(http.StatusPaymentRequired, gin.H{
 					"error":               "Trial period has expired",
+					"message":             "Please subscribe to continue using the service",
+					"code":                "trial_expired",
 					"subscription_status": "trial_expired",
 					"trial_ended_at":      company.TrialEndsAt.Format("2006-01-02T15:04:05Z07:00"),
-					"message":             "Please subscribe to continue using the service",
 				})
 				c.Abort()
 				return
@@ -123,6 +132,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error":   "Unable to verify subscription status",
 					"message": "Please contact support",
+					"code":    "subscription_check_failed",
 				})
 				c.Abort()
 				return
@@ -149,8 +159,9 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 				})
 				c.JSON(http.StatusPaymentRequired, gin.H{
 					"error":               "Payment required to access this feature",
-					"subscription_status": "payment_pending",
 					"message":             "Your subscription is active but payment is still being processed. You can still access payment-related endpoints to resolve this issue.",
+					"code":                "payment_pending",
+					"subscription_status": "payment_pending",
 					"payment_recovery_endpoints": []string{
 						"/v1/payment-methods",
 						"/v1/subscriptions/subscribe",
@@ -173,9 +184,10 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			})
 			c.JSON(http.StatusPaymentRequired, gin.H{
 				"error":               "Subscription suspended due to payment issues",
+				"message":             "Please update your payment information to reactivate your subscription",
+				"code":                "subscription_suspended",
 				"subscription_status": "suspended",
 				// Note: next_payment_due removed - calculate dynamically from SubscriptionPayments if needed
-				"message": "Please update your payment information to reactivate your subscription",
 			})
 			c.Abort()
 			return
@@ -187,8 +199,9 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			})
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":               "Subscription has been cancelled",
-				"subscription_status": "cancelled",
 				"message":             "Please contact support to reactivate your account",
+				"code":                "subscription_cancelled",
+				"subscription_status": "cancelled",
 			})
 			c.Abort()
 			return
@@ -201,6 +214,7 @@ func (m *SubscriptionMiddleware) CheckSubscription() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "Unable to verify subscription status",
 				"message": "Please contact support",
+				"code":    "subscription_status_unknown",
 			})
 			c.Abort()
 			return

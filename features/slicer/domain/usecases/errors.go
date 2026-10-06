@@ -13,7 +13,7 @@ const (
 	CodeFileRequired = "file_required"
 	// CodeUnsupportedFileFormat (400) — not a .gcode, .3mf or .gcode.3mf.
 	CodeUnsupportedFileFormat = "unsupported_file_format"
-	// CodeFileTooLarge (413) — the file exceeds the 200MB limit.
+	// CodeFileTooLarge (413) — the file exceeds the 95MB limit.
 	CodeFileTooLarge = "file_too_large"
 	// CodeFileNotSliced (422) — the file carries no slicing data.
 	CodeFileNotSliced = "file_not_sliced"
@@ -34,7 +34,7 @@ func errUnsupportedFileFormat() *coreErrors.APIError {
 }
 
 func errFileTooLarge() *coreErrors.APIError {
-	return &coreErrors.APIError{Status: http.StatusRequestEntityTooLarge, Code: CodeFileTooLarge, Message: "O arquivo excede o limite de 200MB"}
+	return &coreErrors.APIError{Status: http.StatusRequestEntityTooLarge, Code: CodeFileTooLarge, Message: "O arquivo excede o limite de 95MB"}
 }
 
 func errFileNotSliced() *coreErrors.APIError {

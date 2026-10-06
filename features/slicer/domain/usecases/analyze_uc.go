@@ -15,12 +15,14 @@ import (
 )
 
 // maxFileSize is the hard cap on an uploaded sliced file.
-const maxFileSize = 200 * 1024 * 1024 // 200MB
+// 95MB: Cloudflare (which fronts the API) rejects request bodies over 100MB, so
+// the limit leaves room for multipart overhead and keeps our pt-BR 413.
+const maxFileSize = 95 * 1024 * 1024 // 95MB
 
 // uploadBodyLimit caps the whole request body so an oversized upload is rejected
 // while streaming, before anything is buffered. Slack covers the multipart
 // envelope. It is a var only so tests can shrink it.
-var uploadBodyLimit int64 = maxFileSize + (1 << 20) // 200MB + 1MB slack
+var uploadBodyLimit int64 = maxFileSize + (1 << 20) // 95MB + 1MB slack
 
 // allowedSuffixes are the accepted file name endings. ".gcode.3mf" is listed so a
 // double extension is accepted as-is.
@@ -43,7 +45,7 @@ func hasAllowedExtension(filename string) bool {
 // @Tags Slicer
 // @Accept multipart/form-data
 // @Produce json
-// @Param file formData file true "Sliced file (.gcode, .3mf or .gcode.3mf, max 200MB)"
+// @Param file formData file true "Sliced file (.gcode, .3mf or .gcode.3mf, max 95MB)"
 // @Success 200 {object} entities.Analysis "Slicer analysis"
 // @Failure 400 {object} errors.APIError
 // @Failure 401 {object} errors.APIError

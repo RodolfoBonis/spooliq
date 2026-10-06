@@ -2,9 +2,10 @@
 package profile
 
 import (
-	"errors"
+	stderrors "errors"
 	"net/http"
 
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/entities"
@@ -13,6 +14,20 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// profileListOptions is the single source of truth for how GET /profiles
+// interprets pagination, search and sort. Default page size is 100; free-text
+// search (q) matches the profile name; sorting is restricted to name/created_at.
+func profileListOptions() helpers.ListQueryOptions {
+	return helpers.ListQueryOptions{
+		DefaultPageSize: 100,
+		SortWhitelist: map[string]string{
+			"name":       "name",
+			"created_at": "created_at",
+		},
+		DefaultSort: "created_at",
+	}
+}
 
 // Handler handles HTTP requests for print profile operations.
 type Handler struct {
@@ -29,7 +44,7 @@ func NewProfileHandler(useCase *usecases.ProfileUseCase) *Handler {
 func requireOrganizationID(c *gin.Context) (string, bool) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreerrors.Respond(c, coreerrors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return "", false
 	}
 	return organizationID, true
@@ -39,17 +54,20 @@ func requireOrganizationID(c *gin.Context) (string, bool) {
 // (including cross-organization access) maps to 404 to avoid leaking existence.
 func respondError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, entities.ErrProfileNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
-	case errors.Is(err, entities.ErrCannotDeleteDefaultProfile),
-		errors.Is(err, entities.ErrDefaultConflict):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-	case errors.Is(err, entities.ErrInvalidMachinePreset),
-		errors.Is(err, entities.ErrInvalidEnergyPreset),
-		errors.Is(err, entities.ErrInvalidCostPreset):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case stderrors.Is(err, gorm.ErrRecordNotFound), stderrors.Is(err, entities.ErrProfileNotFound):
+		coreerrors.Respond(c, coreerrors.NotFoundErr("profile_not_found", "Perfil não encontrado"))
+	case stderrors.Is(err, entities.ErrCannotDeleteDefaultProfile):
+		coreerrors.Respond(c, coreerrors.Conflict("default_profile_cannot_be_deleted", "Perfis padrão não podem ser excluídos"))
+	case stderrors.Is(err, entities.ErrDefaultConflict):
+		coreerrors.Respond(c, coreerrors.Conflict("default_conflict", err.Error()))
+	case stderrors.Is(err, entities.ErrInvalidMachinePreset):
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_machine_preset", err.Error()))
+	case stderrors.Is(err, entities.ErrInvalidEnergyPreset):
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_energy_preset", err.Error()))
+	case stderrors.Is(err, entities.ErrInvalidCostPreset):
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_cost_preset", err.Error()))
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 	}
 }
 
@@ -76,7 +94,12 @@ func Routes(route *gin.RouterGroup, handler *Handler, protectFactory func(handle
 // @Tags Profiles
 // @Accept json
 // @Produce json
-// @Success 200 {array} entities.ProfileResponse "Profiles"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[entities.ProfileResponse] "Paginated profiles"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /profiles [get]
@@ -85,12 +108,13 @@ func (h *Handler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	profiles, err := h.useCase.List(organizationID)
+	q := helpers.ParseListQuery(c, profileListOptions())
+	profiles, total, err := h.useCase.ListPage(organizationID, q)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, profiles)
+	c.JSON(http.StatusOK, helpers.NewPage(profiles, total, q))
 }
 
 // Get retrieves a print profile by ID.
@@ -112,7 +136,7 @@ func (h *Handler) Get(c *gin.Context) {
 	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_profile_id", "ID de perfil inválido"))
 		return
 	}
 	profile, err := h.useCase.Get(id, organizationID)
@@ -142,7 +166,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	var req entities.CreateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 	profile, err := h.useCase.Create(&req, organizationID, helpers.GetUserID(c))
@@ -174,12 +198,12 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_profile_id", "ID de perfil inválido"))
 		return
 	}
 	var req entities.UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 	req.ID = id
@@ -211,7 +235,7 @@ func (h *Handler) Delete(c *gin.Context) {
 	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_profile_id", "ID de perfil inválido"))
 		return
 	}
 	if err := h.useCase.Delete(id, organizationID); err != nil {
@@ -240,7 +264,7 @@ func (h *Handler) SetDefault(c *gin.Context) {
 	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_profile_id", "ID de perfil inválido"))
 		return
 	}
 	profile, err := h.useCase.SetDefault(id, organizationID)
@@ -270,7 +294,7 @@ func (h *Handler) Duplicate(c *gin.Context) {
 	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_profile_id", "ID de perfil inválido"))
 		return
 	}
 	profile, err := h.useCase.Duplicate(id, organizationID)

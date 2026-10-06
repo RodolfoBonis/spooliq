@@ -2,8 +2,10 @@
 package mocks
 
 import (
+	"strings"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/repositories"
 	"github.com/google/uuid"
@@ -74,6 +76,34 @@ func (r *InMemoryProfileRepository) List(organizationID string) ([]*entities.Pro
 		result = append(result, &clone)
 	}
 	return result, nil
+}
+
+// ListPage returns a page of profiles applying search (on name) and pagination.
+func (r *InMemoryProfileRepository) ListPage(organizationID string, q helpers.ListQuery) ([]*entities.ProfileEntity, int64, error) {
+	all, _ := r.List(organizationID)
+	if q.Search != "" {
+		needle := strings.ToLower(q.Search)
+		filtered := make([]*entities.ProfileEntity, 0, len(all))
+		for _, p := range all {
+			if strings.Contains(strings.ToLower(p.Name), needle) {
+				filtered = append(filtered, p)
+			}
+		}
+		all = filtered
+	}
+	total := int64(len(all))
+	off := q.Offset()
+	if off > len(all) {
+		off = len(all)
+	}
+	end := len(all)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(all) {
+			end = len(all)
+		}
+	}
+	return all[off:end], total, nil
 }
 
 // Update updates a profile scoped to its organization.

@@ -19,6 +19,7 @@ func Routes(route *gin.RouterGroup, useCase usecases.IModel3DUseCase, protectFac
 		models.GET("/by-customer/:customer_id", protectFactory(useCase.FindByCustomer, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		models.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		models.GET("/:id/file", protectFactory(useCase.StreamFile, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		models.GET("/:id/slice-analysis", protectFactory(useCase.GetSliceAnalysis, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		models.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole))
 		models.DELETE("/:id", protectFactory(useCase.Delete, roles.OwnerRole, roles.OrgAdminRole))
 	}

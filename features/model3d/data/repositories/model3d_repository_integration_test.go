@@ -77,6 +77,7 @@ func setupModel3DRepo(t *testing.T) (repositories.Model3DRepository, *gorm.DB) {
 			notes text,
 			tags text,
 			owner_user_id varchar(255) NOT NULL,
+			slice_analysis jsonb,
 			created_at timestamptz,
 			updated_at timestamptz,
 			deleted_at timestamptz

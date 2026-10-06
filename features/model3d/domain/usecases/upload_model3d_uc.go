@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	stderrors "errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/RodolfoBonis/spooliq/core/database"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -16,6 +18,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/model3d/domain/entities"
+	slicerentities "github.com/RodolfoBonis/spooliq/features/slicer/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -185,6 +188,21 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 		}
 	}
 
+	// Best-effort slice analysis for sliced 3MF uploads (ext ".3mf" also covers
+	// ".gcode.3mf"). The service is self-bounded (timeout, panic-safe,
+	// concurrency-gated); any failure is logged and ignored so it never blocks an
+	// upload. Suggestions are NOT stored here — they are computed at read time.
+	var sliceAnalysis *slicerentities.Analysis
+	if ext == ".3mf" {
+		analyzeCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		if a, aerr := uc.slicerService.Analyze(analyzeCtx, bytes.NewReader(fileBytes), int64(len(fileBytes)), fileHeader.Filename); aerr != nil {
+			uc.logger.Info(ctx, "Slice analysis skipped for upload", map[string]interface{}{"error": aerr.Error()})
+		} else {
+			sliceAnalysis = a
+		}
+		cancel()
+	}
+
 	model := &entities.Model3DEntity{
 		OrganizationID: organizationID,
 		CustomerID:     customerID,
@@ -199,6 +217,7 @@ func (uc *Model3DUseCase) Upload(c *gin.Context) {
 		Notes:          request.Notes,
 		Tags:           request.Tags,
 		OwnerUserID:    userID,
+		SliceAnalysis:  sliceAnalysis,
 	}
 
 	if err := uc.repository.Create(ctx, model); err != nil {

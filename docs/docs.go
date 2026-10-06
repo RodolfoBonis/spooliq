@@ -6127,6 +6127,68 @@ const docTemplate = `{
                 }
             }
         },
+        "/models3d/{id}/slice-analysis": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the stored slicer analysis (print time and per-color filament usage) for a model, enriched with fresh organization filament suggestions.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models3d"
+                ],
+                "summary": "Get a 3D model's slice analysis",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "3D Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slice analysis with suggestions",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Analysis"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Model or slice analysis not found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/payment-methods": {
             "get": {
                 "security": [
@@ -8285,6 +8347,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/slicer/analyze": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Parses a sliced .gcode, .3mf or .gcode.3mf file and returns print time and per-color filament grams, with suggested organization filaments per slot.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slicer"
+                ],
+                "summary": "Analyze a sliced print file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Sliced file (.gcode, .3mf or .gcode.3mf, max 95MB)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slicer analysis",
+                        "schema": {
+                            "$ref": "#/definitions/entities.Analysis"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "413": {
+                        "description": "File too large",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "422": {
+                        "description": "File not sliced or analysis failed",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/subscriptions/cancel": {
             "delete": {
                 "security": [
@@ -9080,6 +9209,37 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.Analysis": {
+            "type": "object",
+            "properties": {
+                "plates": {
+                    "description": "Plates is one entry per build plate. Plain G-code yields a single plate.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Plate"
+                    }
+                },
+                "slicer": {
+                    "description": "Slicer identifies the program that produced the file (best-effort).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.Slicer"
+                        }
+                    ]
+                },
+                "source": {
+                    "description": "Source is \"gcode\" or \"3mf\".",
+                    "type": "string"
+                },
+                "warnings": {
+                    "description": "Warnings carries non-fatal, user-facing pt-BR notes. Never nil.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -10601,6 +10761,39 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.Filament": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "description": "ColorHex is the slicer-reported color (e.g. \"#FF0000\"), when known.",
+                    "type": "string"
+                },
+                "grams": {
+                    "description": "Grams is the filament weight used in this slot.",
+                    "type": "number"
+                },
+                "length_mm": {
+                    "description": "LengthMM is the filament length used, in millimeters, when known.",
+                    "type": "number"
+                },
+                "material": {
+                    "description": "Material is the slicer-reported material (e.g. \"PLA\"), when known.",
+                    "type": "string"
+                },
+                "slot": {
+                    "description": "Slot is the 1-based extruder/filament slot number.",
+                    "type": "integer"
+                },
+                "suggestion": {
+                    "description": "Suggestion is the best matching org filament, or null when none applies.\nIt is always present as a key (null when there is no suggestion).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.Suggestion"
+                        }
+                    ]
+                }
+            }
+        },
         "entities.FilamentResponse": {
             "type": "object",
             "properties": {
@@ -11171,6 +11364,14 @@ const docTemplate = `{
                 },
                 "owner_user_id": {
                     "type": "string"
+                },
+                "slice_analysis": {
+                    "description": "SliceAnalysis is the stored slicer analysis (without suggestions, which are\ncomputed at read time). Present only for sliced uploads.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.Analysis"
+                        }
+                    ]
                 },
                 "tags": {
                     "type": "string"
@@ -11829,6 +12030,34 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.Plate": {
+            "type": "object",
+            "properties": {
+                "estimated": {
+                    "description": "Estimated is true when the grams were derived (e.g. Cura, from length and\ndensity) rather than reported directly by the slicer.",
+                    "type": "boolean"
+                },
+                "filaments": {
+                    "description": "Filaments is the per-slot usage. Slots with 0g are dropped.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Filament"
+                    }
+                },
+                "index": {
+                    "description": "Index is the plate number (1-based for 3MF; 1 for plain G-code).",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "Name is an optional human label for the plate.",
+                    "type": "string"
+                },
+                "print_time_seconds": {
+                    "description": "PrintTimeSeconds is the estimated print time in seconds.",
+                    "type": "integer"
+                }
+            }
+        },
         "entities.PresetEntity": {
             "type": "object",
             "properties": {
@@ -12219,6 +12448,17 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.Slicer": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.SubscriptionDetailsResponse": {
             "type": "object",
             "properties": {
@@ -12378,6 +12618,31 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.Suggestion": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "confidence": {
+                    "description": "Confidence is \"exact\", \"close\" or \"none\".",
+                    "type": "string"
+                },
+                "distance": {
+                    "description": "Distance is the perceptual color distance to the slot color, when computed.",
+                    "type": "number"
+                },
+                "filament_id": {
+                    "type": "string"
+                },
+                "material": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

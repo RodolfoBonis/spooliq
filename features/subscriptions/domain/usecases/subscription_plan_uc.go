@@ -2,9 +2,9 @@ package usecases
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
@@ -51,7 +51,7 @@ func (uc *SubscriptionPlanUseCase) CreatePlan(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid plan request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -61,12 +61,12 @@ func (uc *SubscriptionPlanUseCase) CreatePlan(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to check existing plan", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check existing plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if existing != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Plan with this name already exists"})
+		coreerrors.Respond(c, coreerrors.Conflict("plan_name_already_exists", "Já existe um plano com este nome"))
 		return
 	}
 
@@ -94,7 +94,7 @@ func (uc *SubscriptionPlanUseCase) CreatePlan(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to create plan", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
@@ -135,7 +135,7 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid plan update request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -146,12 +146,12 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
@@ -189,7 +189,7 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -205,8 +205,10 @@ func (uc *SubscriptionPlanUseCase) UpdatePlan(c *gin.Context) {
 // @Description List all subscription plans including inactive (admin only)
 // @Tags admin-plans
 // @Produce json
-// @Success 200 {array} entities.SubscriptionPlanResponse "Plans list"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} helpers.Page[entities.SubscriptionPlanResponse] "Paginated plans"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Security BearerAuth
 // @Router /admin/subscription-plans [get]
 func (uc *SubscriptionPlanUseCase) ListAllPlans(c *gin.Context) {
@@ -217,7 +219,7 @@ func (uc *SubscriptionPlanUseCase) ListAllPlans(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to list plans", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list plans"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -226,7 +228,7 @@ func (uc *SubscriptionPlanUseCase) ListAllPlans(c *gin.Context) {
 		response[i] = *toPlanResponse(plan)
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, paginatePlanResponses(c, response))
 }
 
 // ListActivePlans lists active subscription plans (public)
@@ -234,8 +236,10 @@ func (uc *SubscriptionPlanUseCase) ListAllPlans(c *gin.Context) {
 // @Description List all active subscription plans available for subscription
 // @Tags plans
 // @Produce json
-// @Success 200 {array} entities.SubscriptionPlanResponse "Plans list"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} helpers.Page[entities.SubscriptionPlanResponse] "Paginated plans"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Router /plans [get]
 func (uc *SubscriptionPlanUseCase) ListActivePlans(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -245,7 +249,7 @@ func (uc *SubscriptionPlanUseCase) ListActivePlans(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to list active plans", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list plans"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -254,7 +258,7 @@ func (uc *SubscriptionPlanUseCase) ListActivePlans(c *gin.Context) {
 		response[i] = *toPlanResponse(plan)
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, paginatePlanResponses(c, response))
 }
 
 // GetPlanByID gets a specific subscription plan by ID (admin only)
@@ -275,7 +279,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanByID(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
@@ -285,12 +289,12 @@ func (uc *SubscriptionPlanUseCase) GetPlanByID(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
@@ -314,7 +318,7 @@ func (uc *SubscriptionPlanUseCase) DeletePlan(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
@@ -325,12 +329,12 @@ func (uc *SubscriptionPlanUseCase) DeletePlan(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
@@ -340,7 +344,7 @@ func (uc *SubscriptionPlanUseCase) DeletePlan(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -369,7 +373,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanStats(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
@@ -380,12 +384,12 @@ func (uc *SubscriptionPlanUseCase) GetPlanStats(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
@@ -395,7 +399,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanStats(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get plan statistics"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -423,25 +427,11 @@ func (uc *SubscriptionPlanUseCase) GetPlanCompanies(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
-	// Parse query parameters
-	page := 1
-	if pageStr := c.Query("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	pageSize := 20
-	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
-		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
-			pageSize = ps
-		}
-	}
-
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
 	statusFilter := c.Query("status")
 
 	// Verify plan exists first
@@ -451,26 +441,26 @@ func (uc *SubscriptionPlanUseCase) GetPlanCompanies(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
-	companies, err := uc.planRepo.GetPlanCompanies(ctx, id, page, pageSize, statusFilter)
+	companies, err := uc.planRepo.GetPlanCompanies(ctx, id, q.Page, q.PageSize, statusFilter)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to get plan companies", map[string]interface{}{
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get companies"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, companies)
+	c.JSON(http.StatusOK, helpers.NewPage(companies.Companies, companies.TotalCount, q))
 }
 
 // GetPlanFinancialReport gets financial report for a specific subscription plan (admin only)
@@ -492,13 +482,13 @@ func (uc *SubscriptionPlanUseCase) GetPlanFinancialReport(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
 	period := c.DefaultQuery("period", "monthly")
 	if period != "monthly" && period != "quarterly" && period != "yearly" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid period. Must be 'monthly', 'quarterly', or 'yearly'"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_period", "Período inválido. Deve ser 'monthly', 'quarterly' ou 'yearly'"))
 		return
 	}
 
@@ -509,12 +499,12 @@ func (uc *SubscriptionPlanUseCase) GetPlanFinancialReport(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
@@ -524,7 +514,7 @@ func (uc *SubscriptionPlanUseCase) GetPlanFinancialReport(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get financial report"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -549,7 +539,7 @@ func (uc *SubscriptionPlanUseCase) CanDeletePlan(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
@@ -560,12 +550,12 @@ func (uc *SubscriptionPlanUseCase) CanDeletePlan(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
@@ -575,7 +565,7 @@ func (uc *SubscriptionPlanUseCase) CanDeletePlan(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check deletion eligibility"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -599,7 +589,7 @@ func (uc *SubscriptionPlanUseCase) BulkUpdatePlans(c *gin.Context) {
 
 	var req adminEntities.BulkUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -612,7 +602,7 @@ func (uc *SubscriptionPlanUseCase) BulkUpdatePlans(c *gin.Context) {
 	for i, id := range req.PlanIDs {
 		planID, err := uuid.Parse(id)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID: " + id})
+			coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido: "+id))
 			return
 		}
 		planIDs[i] = planID
@@ -623,7 +613,7 @@ func (uc *SubscriptionPlanUseCase) BulkUpdatePlans(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to bulk update plans", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to bulk update plans"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -647,7 +637,7 @@ func (uc *SubscriptionPlanUseCase) BulkActivatePlans(c *gin.Context) {
 
 	var req adminEntities.BulkOperationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -660,7 +650,7 @@ func (uc *SubscriptionPlanUseCase) BulkActivatePlans(c *gin.Context) {
 	for i, id := range req.PlanIDs {
 		planID, err := uuid.Parse(id)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID: " + id})
+			coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido: "+id))
 			return
 		}
 		planIDs[i] = planID
@@ -671,7 +661,7 @@ func (uc *SubscriptionPlanUseCase) BulkActivatePlans(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to bulk activate plans", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to bulk activate plans"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -695,7 +685,7 @@ func (uc *SubscriptionPlanUseCase) BulkDeactivatePlans(c *gin.Context) {
 
 	var req adminEntities.BulkOperationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -708,7 +698,7 @@ func (uc *SubscriptionPlanUseCase) BulkDeactivatePlans(c *gin.Context) {
 	for i, id := range req.PlanIDs {
 		planID, err := uuid.Parse(id)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID: " + id})
+			coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido: "+id))
 			return
 		}
 		planIDs[i] = planID
@@ -719,7 +709,7 @@ func (uc *SubscriptionPlanUseCase) BulkDeactivatePlans(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to bulk deactivate plans", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to bulk deactivate plans"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -746,24 +736,11 @@ func (uc *SubscriptionPlanUseCase) GetPlanHistory(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_plan_id", "ID de plano inválido"))
 		return
 	}
 
-	// Parse query parameters
-	page := 1
-	if pageStr := c.Query("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	pageSize := 20
-	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
-		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
-			pageSize = ps
-		}
-	}
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
 
 	// Verify plan exists first
 	plan, err := uc.planRepo.FindByID(ctx, id)
@@ -772,26 +749,26 @@ func (uc *SubscriptionPlanUseCase) GetPlanHistory(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find plan"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Plan not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("plan_not_found", "Plano não encontrado"))
 		return
 	}
 
-	history, err := uc.planRepo.GetPlanHistory(ctx, id, page, pageSize)
+	history, err := uc.planRepo.GetPlanHistory(ctx, id, q.Page, q.PageSize)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to get plan history", map[string]interface{}{
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get plan history"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, history)
+	c.JSON(http.StatusOK, helpers.NewPage(history.Entries, history.TotalCount, q))
 }
 
 // Helper function
@@ -807,4 +784,24 @@ func toPlanResponse(plan *entities.SubscriptionPlanEntity) *entities.Subscriptio
 		CreatedAt:   plan.CreatedAt,
 		UpdatedAt:   plan.UpdatedAt,
 	}
+}
+
+// paginatePlanResponses applies the standard list query (page/page_size) to an
+// already-materialized slice of plan responses, returning the standard envelope.
+// Plans are a small catalog, so pagination happens in memory.
+func paginatePlanResponses(c *gin.Context, items []entities.SubscriptionPlanResponse) helpers.Page[entities.SubscriptionPlanResponse] {
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 100})
+	total := int64(len(items))
+	off := q.Offset()
+	if off > len(items) {
+		off = len(items)
+	}
+	end := len(items)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(items) {
+			end = len(items)
+		}
+	}
+	return helpers.NewPage(items[off:end], total, q)
 }

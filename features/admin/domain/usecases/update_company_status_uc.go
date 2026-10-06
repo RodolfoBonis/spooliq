@@ -6,9 +6,9 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	adminEntities "github.com/RodolfoBonis/spooliq/features/admin/domain/entities"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +16,6 @@ import (
 type UpdateCompanyStatusUseCase struct {
 	companyRepository companyRepositories.CompanyRepository
 	logger            logger.Logger
-	validate          *validator.Validate
 }
 
 // NewUpdateCompanyStatusUseCase creates a new instance of UpdateCompanyStatusUseCase
@@ -27,7 +26,6 @@ func NewUpdateCompanyStatusUseCase(
 	return &UpdateCompanyStatusUseCase{
 		companyRepository: companyRepository,
 		logger:            logger,
-		validate:          validator.New(),
 	}
 }
 
@@ -44,15 +42,15 @@ func (uc *UpdateCompanyStatusUseCase) Execute(ctx context.Context, userRoles []s
 		uc.logger.Error(ctx, "Non-admin user attempted to update company status", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("Only PlatformAdmin can update company status")
+		return nil, errors.Forbidden("platform_admin_required", "Apenas administradores da plataforma podem atualizar o status da empresa")
 	}
 
-	// Validate request
-	if err := uc.validate.Struct(req); err != nil {
+	// Validate request (pt-BR field errors via the shared validator)
+	if err := validation.Validate(req); err != nil {
 		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.BadRequestError("Invalid request data")
+		return nil, err
 	}
 
 	// Fetch company from database
@@ -63,14 +61,14 @@ func (uc *UpdateCompanyStatusUseCase) Execute(ctx context.Context, userRoles []s
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		return nil, errors.InternalServerError("Failed to fetch company")
+		return nil, err
 	}
 
 	if company == nil {
 		uc.logger.Info(ctx, "Company not found", map[string]interface{}{
 			"organization_id": organizationID,
 		})
-		return nil, errors.NotFound("Company not found")
+		return nil, errors.NotFoundErr("company_not_found", "Empresa não encontrada")
 	}
 
 	// Update status
@@ -83,7 +81,7 @@ func (uc *UpdateCompanyStatusUseCase) Execute(ctx context.Context, userRoles []s
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		return nil, errors.InternalServerError("Failed to update company status")
+		return nil, err
 	}
 
 	uc.logger.Info(ctx, "Company status updated successfully", map[string]interface{}{

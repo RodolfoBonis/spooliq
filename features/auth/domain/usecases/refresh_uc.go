@@ -1,11 +1,12 @@
 package usecases
 
 import (
+	stderrors "errors"
 	"net/http"
 	"strings"
 
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/RodolfoBonis/go-otel-agent/logger"
-	coreEntities "github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -32,11 +33,8 @@ func (uc *authUseCaseImpl) RefreshAuthToken(c *gin.Context) {
 	ctx := c.Request.Context()
 	authHeader := c.GetHeader("Authorization")
 	if len(authHeader) < 1 {
-		err := errors.NewAppError(coreEntities.ErrInvalidToken, "Token inválido", nil, nil)
-		httpError := err.ToHTTPError()
-		uc.Logger.LogError(ctx, "Refresh failed: missing token", err)
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		c.Abort()
+		uc.Logger.Warning(ctx, "Refresh failed: missing token", logger.Fields{"ip": c.ClientIP()})
+		errors.AbortWith(c, errors.Unauthorized("invalid_token", "Token inválido"))
 		return
 	}
 	refreshToken := strings.Split(authHeader, " ")[1]
@@ -48,11 +46,15 @@ func (uc *authUseCaseImpl) RefreshAuthToken(c *gin.Context) {
 		uc.KeycloakAccessData.Realm,
 	)
 	if err != nil {
-		currentError := errors.UsecaseError(err.Error())
-		httpError := currentError.ToHTTPError()
-		uc.Logger.LogError(ctx, "Refresh falhou", currentError)
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		c.Abort()
+		uc.Logger.LogError(ctx, "Refresh falhou", err)
+		// Only a rejected token is a 401 (the web logs the user out on 401). A
+		// Keycloak outage or network error stays a retryable 500.
+		var kcErr *gocloak.APIError
+		if stderrors.As(err, &kcErr) && (kcErr.Code == http.StatusBadRequest || kcErr.Code == http.StatusUnauthorized) {
+			errors.AbortWith(c, errors.Unauthorized("invalid_token", "Token inválido ou expirado"))
+			return
+		}
+		errors.AbortWith(c, err)
 		return
 	}
 	uc.Logger.Info(ctx, "Token refreshed successfully", logger.Fields{

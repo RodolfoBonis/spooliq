@@ -3,6 +3,7 @@ package repositories
 import (
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/google/uuid"
 )
@@ -88,6 +89,10 @@ type PresetRepository interface {
 	// ListPresets returns presets for an organization, applying the given
 	// combinable filters (type, active, default, global, user) in a single query.
 	ListPresets(organizationID string, filters entities.PresetFilters) ([]*entities.PresetEntity, error)
+	// ListPresetsPage is the paginated variant used by the GET /presets endpoint.
+	// It applies the same combinable filters plus free-text search (on name),
+	// sorting and pagination, and returns the total count of matching rows.
+	ListPresetsPage(organizationID string, filters entities.PresetFilters, q helpers.ListQuery) ([]*entities.PresetEntity, int64, error)
 	Update(preset *entities.PresetEntity) error
 	Delete(id uuid.UUID, organizationID string) error
 
@@ -114,8 +119,8 @@ type PresetRepository interface {
 	// child in a single, organization-scoped transaction.
 	UpdateMachineWithPreset(preset *entities.PresetEntity, machine *entities.MachinePresetEntity) error
 	// Optimized methods with organization filtering - return ready-to-use responses
-	GetMachinePresets(organizationID string) ([]*MachinePresetResponse, error)
-	GetMachinePresetsByBrand(brand, organizationID string) ([]*MachinePresetResponse, error)
+	GetMachinePresets(organizationID string, q helpers.ListQuery) ([]*MachinePresetResponse, int64, error)
+	GetMachinePresetsByBrand(brand, organizationID string, q helpers.ListQuery) ([]*MachinePresetResponse, int64, error)
 
 	// Energy preset operations
 	CreateEnergy(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error
@@ -127,9 +132,9 @@ type PresetRepository interface {
 	// child in a single, organization-scoped transaction.
 	UpdateEnergyWithPreset(preset *entities.PresetEntity, energy *entities.EnergyPresetEntity) error
 	// Optimized methods with organization filtering - return ready-to-use responses
-	GetEnergyPresets(organizationID string) ([]*EnergyPresetResponse, error)
-	GetEnergyPresetsByLocation(country, state, city, organizationID string) ([]*EnergyPresetResponse, error)
-	GetEnergyPresetsByCurrency(currency, organizationID string) ([]*EnergyPresetResponse, error)
+	GetEnergyPresets(organizationID string, q helpers.ListQuery) ([]*EnergyPresetResponse, int64, error)
+	GetEnergyPresetsByLocation(country, state, city, organizationID string, q helpers.ListQuery) ([]*EnergyPresetResponse, int64, error)
+	GetEnergyPresetsByCurrency(currency, organizationID string, q helpers.ListQuery) ([]*EnergyPresetResponse, int64, error)
 
 	// Cost preset operations
 	CreateCost(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error
@@ -139,5 +144,5 @@ type PresetRepository interface {
 	// in a single, organization-scoped transaction.
 	UpdateCostWithPreset(preset *entities.PresetEntity, cost *entities.CostPresetEntity) error
 	// Optimized methods with organization filtering - return ready-to-use responses
-	GetCostPresets(organizationID string) ([]*CostPresetResponse, error)
+	GetCostPresets(organizationID string, q helpers.ListQuery) ([]*CostPresetResponse, int64, error)
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 )
 
 // ICompanyUseCase defines the interface for company use cases
@@ -20,7 +19,6 @@ type ICompanyUseCase interface {
 type CompanyUseCase struct {
 	repository repositories.CompanyRepository
 	cdnService *services.CDNService
-	validator  *validator.Validate
 	logger     logger.Logger
 }
 
@@ -33,7 +31,6 @@ func NewCompanyUseCase(
 	return &CompanyUseCase{
 		repository: repository,
 		cdnService: cdnService,
-		validator:  validator.New(),
 		logger:     logger,
 	}
 }

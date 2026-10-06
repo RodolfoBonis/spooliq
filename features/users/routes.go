@@ -38,6 +38,32 @@ func NewUserHandler(
 	}
 }
 
+// userListOptions is the single source of truth for how GET /users interprets
+// pagination, search and sort. Free-text search (q) matches name or email;
+// sorting is restricted to name/email/created_at.
+func userListOptions() helpers.ListQueryOptions {
+	return helpers.ListQueryOptions{
+		DefaultPageSize: 20,
+		SortWhitelist: map[string]string{
+			"name":       "name",
+			"email":      "email",
+			"created_at": "created_at",
+		},
+		DefaultSort: "created_at",
+	}
+}
+
+// requireOrganizationID extracts the organization_id from context, writing a 401
+// and returning ok=false when it is missing.
+func requireOrganizationID(c *gin.Context) (string, bool) {
+	organizationID := helpers.GetOrganizationIDString(c)
+	if organizationID == "" {
+		errors.Respond(c, errors.Unauthorized("organization_id_missing", "Organização não encontrada no contexto"))
+		return "", false
+	}
+	return organizationID, true
+}
+
 // SetupRoutes configures user-related HTTP routes
 func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
 	users := route.Group("/users")
@@ -66,88 +92,72 @@ func SetupRoutes(route *gin.RouterGroup, handler *Handler, protectFactory func(h
 // @Security BearerAuth
 // @Param request body entities.CreateUserRequest true "User creation request"
 // @Success 201 {object} entities.UserEntity "User created successfully"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 409 {object} map[string]string "User already exists"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} errors.HTTPError "Invalid request"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 409 {object} errors.HTTPError "User already exists"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Router /users [post]
 func (h *Handler) CreateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Get organization ID from context
-	organizationIDStr := helpers.GetOrganizationIDString(c)
-	if organizationIDStr == "" {
-		appError := errors.UnauthorizedError("Organization ID not found")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
 
-	// Parse request body
 	var req entities.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.BadRequestError("Invalid request body")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	// Execute use case
-	user, err := h.createUserUC.Execute(ctx, organizationIDStr, userRoles, &req)
+	user, err := h.createUserUC.Execute(ctx, organizationID, userRoles, &req)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to create user")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
 	c.JSON(http.StatusCreated, user)
 }
 
-// ListUsers handles listing users
-// @Summary List all users
-// @Description Lists all users within the organization (Owner and OrgAdmin only)
+// ListUsers handles listing users, paginated with the standard envelope.
+// @Summary List users
+// @Description Lists users within the organization (Owner and OrgAdmin only), paginated with the standard envelope.
 // @Tags users
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {array} entities.UserEntity "List of users"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Param q query string false "Free-text search on name or email"
+// @Param sort_by query string false "Sort field: name, email or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[entities.UserEntity] "Paginated users"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Router /users [get]
 func (h *Handler) ListUsers(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Get organization ID from context
-	organizationIDStr := helpers.GetOrganizationIDString(c)
-	if organizationIDStr == "" {
-		appError := errors.UnauthorizedError("Organization ID not found")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	// Get user roles from context
 	userRoles := helpers.GetUserRoles(c)
 
-	// Execute use case
-	users, err := h.listUsersUC.Execute(ctx, organizationIDStr, userRoles)
+	q := helpers.ParseListQuery(c, userListOptions())
+	users, total, err := h.listUsersUC.Execute(ctx, organizationID, userRoles, q)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to list users")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, helpers.NewPage(users, total, q))
 }
 
 // GetUser handles getting a user by ID
@@ -159,45 +169,32 @@ func (h *Handler) ListUsers(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path string true "User ID (UUID)"
 // @Success 200 {object} entities.UserEntity "User details"
-// @Failure 400 {object} map[string]string "Invalid user ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} errors.HTTPError "Invalid user ID"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 404 {object} errors.HTTPError "User not found"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Router /users/{id} [get]
 func (h *Handler) GetUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Parse user ID from URL
-	userIDStr := c.Param("id")
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		appError := errors.BadRequestError("Invalid user ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_user_id", "ID de usuário inválido"))
 		return
 	}
 
-	// Get organization ID from context
-	organizationIDStr := helpers.GetOrganizationIDString(c)
-	if organizationIDStr == "" {
-		appError := errors.UnauthorizedError("Organization ID not found")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	// Get current user ID and roles from context
 	currentUserID := helpers.GetUserID(c)
 	userRoles := helpers.GetUserRoles(c)
 
-	// Execute use case
-	user, err := h.findUserUC.Execute(ctx, userID, organizationIDStr, currentUserID, userRoles)
+	user, err := h.findUserUC.Execute(ctx, userID, organizationID, currentUserID, userRoles)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to get user")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -214,53 +211,38 @@ func (h *Handler) GetUser(c *gin.Context) {
 // @Param id path string true "User ID (UUID)"
 // @Param request body entities.UpdateUserRequest true "User update request"
 // @Success 200 {object} entities.UserEntity "User updated successfully"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} errors.HTTPError "Invalid request"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 404 {object} errors.HTTPError "User not found"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Router /users/{id} [put]
 func (h *Handler) UpdateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Parse user ID from URL
-	userIDStr := c.Param("id")
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		appError := errors.BadRequestError("Invalid user ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_user_id", "ID de usuário inválido"))
 		return
 	}
 
-	// Get organization ID from context
-	organizationIDStr := helpers.GetOrganizationIDString(c)
-	if organizationIDStr == "" {
-		appError := errors.UnauthorizedError("Organization ID not found")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	// Get current user ID and roles from context
 	currentUserID := helpers.GetUserID(c)
 	userRoles := helpers.GetUserRoles(c)
 
-	// Parse request body
 	var req entities.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		appError := errors.BadRequestError("Invalid request body")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	// Execute use case
-	user, err := h.updateUserUC.Execute(ctx, userID, organizationIDStr, currentUserID, userRoles, &req)
+	user, err := h.updateUserUC.Execute(ctx, userID, organizationID, currentUserID, userRoles, &req)
 	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to update user")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -276,45 +258,31 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path string true "User ID (UUID)"
 // @Success 204 "User deleted successfully"
-// @Failure 400 {object} map[string]string "Invalid user ID"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} errors.HTTPError "Invalid user ID"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
+// @Failure 403 {object} errors.HTTPError "Forbidden"
+// @Failure 404 {object} errors.HTTPError "User not found"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Router /users/{id} [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Parse user ID from URL
-	userIDStr := c.Param("id")
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		appError := errors.BadRequestError("Invalid user ID")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, errors.BadRequest("invalid_user_id", "ID de usuário inválido"))
 		return
 	}
 
-	// Get organization ID from context
-	organizationIDStr := helpers.GetOrganizationIDString(c)
-	if organizationIDStr == "" {
-		appError := errors.UnauthorizedError("Organization ID not found")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
 		return
 	}
 
-	// Get current user ID and roles from context
 	currentUserID := helpers.GetUserID(c)
 	userRoles := helpers.GetUserRoles(c)
 
-	// Execute use case
-	err = h.deleteUserUC.Execute(ctx, userID, organizationIDStr, currentUserID, userRoles)
-	if err != nil {
-		if appError, ok := err.(*errors.AppError); ok {
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
-			return
-		}
-		appError := errors.InternalServerError("Failed to delete user")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+	if err := h.deleteUserUC.Execute(ctx, userID, organizationID, currentUserID, userRoles); err != nil {
+		errors.Respond(c, err)
 		return
 	}
 

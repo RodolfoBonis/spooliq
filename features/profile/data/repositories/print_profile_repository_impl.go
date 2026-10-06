@@ -4,6 +4,7 @@ package repositories
 import (
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/profile/data/models"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/repositories"
@@ -88,6 +89,42 @@ func (r *PrintProfileRepositoryImpl) List(organizationID string) ([]*entities.Pr
 		result = append(result, &entity)
 	}
 	return result, nil
+}
+
+// ListPage returns a page of profiles for an organization applying free-text
+// search (on name), sorting and pagination, plus the total count of matches.
+func (r *PrintProfileRepositoryImpl) ListPage(organizationID string, q helpers.ListQuery) ([]*entities.ProfileEntity, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Model(&models.PrintProfileModel{}).Where("organization_id = ?", organizationID)
+		if q.Search != "" {
+			query = query.Where("name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
+
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build()
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	} else {
+		query = query.Order("created_at DESC")
+	}
+
+	var profileModels []models.PrintProfileModel
+	if err := paginate(query, q).Find(&profileModels).Error; err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]*entities.ProfileEntity, 0, len(profileModels))
+	for i := range profileModels {
+		entity := profileModels[i].ToEntity()
+		result = append(result, &entity)
+	}
+	return result, total, nil
 }
 
 // Update updates a profile, scoped to its organization, clearing a sibling
@@ -193,4 +230,15 @@ func (r *PrintProfileRepositoryImpl) Duplicate(id uuid.UUID, organizationID stri
 		return nil, err
 	}
 	return result, nil
+}
+
+// paginate applies the page's offset and limit to a query. A non-positive limit
+// (e.g. a zero-value ListQuery used in tests) means "no limit" instead of gorm's
+// literal LIMIT 0, which would return no rows.
+func paginate(db *gorm.DB, q helpers.ListQuery) *gorm.DB {
+	db = db.Offset(q.Offset())
+	if q.Limit() > 0 {
+		db = db.Limit(q.Limit())
+	}
+	return db
 }

@@ -41,7 +41,7 @@ func (uc *ListSubscriptionsUseCase) Execute(ctx context.Context, userRoles []str
 		uc.logger.Error(ctx, "Non-admin user attempted to list all subscriptions", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("Only PlatformAdmin can list all subscriptions")
+		return nil, errors.Forbidden("platform_admin_required", "Apenas administradores da plataforma podem listar as assinaturas")
 	}
 
 	// Set defaults
@@ -58,7 +58,7 @@ func (uc *ListSubscriptionsUseCase) Execute(ctx context.Context, userRoles []str
 		uc.logger.Error(ctx, "Failed to fetch subscriptions", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.InternalServerError("Failed to fetch subscriptions")
+		return nil, err
 	}
 
 	// Map entities to subscription list items

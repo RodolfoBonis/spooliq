@@ -2,6 +2,7 @@
 package repositories
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/entities"
 	"github.com/google/uuid"
 )
@@ -15,6 +16,10 @@ type PrintProfileRepository interface {
 	Create(profile *entities.ProfileEntity) error
 	GetByID(id uuid.UUID, organizationID string) (*entities.ProfileEntity, error)
 	List(organizationID string) ([]*entities.ProfileEntity, error)
+	// ListPage is the paginated variant used by GET /profiles. It applies
+	// free-text search (on name), sorting and pagination and returns the total
+	// count of matching rows.
+	ListPage(organizationID string, q helpers.ListQuery) ([]*entities.ProfileEntity, int64, error)
 	Update(profile *entities.ProfileEntity) error
 	Delete(id uuid.UUID, organizationID string) error
 

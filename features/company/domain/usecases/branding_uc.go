@@ -6,10 +6,10 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -23,7 +23,6 @@ type IBrandingUseCase interface {
 // BrandingUseCase implements the branding use cases
 type BrandingUseCase struct {
 	repository repositories.BrandingRepository
-	validator  *validator.Validate
 	logger     logger.Logger
 }
 
@@ -34,7 +33,6 @@ func NewBrandingUseCase(
 ) IBrandingUseCase {
 	return &BrandingUseCase{
 		repository: repository,
-		validator:  validator.New(),
 		logger:     logger,
 	}
 }
@@ -55,7 +53,7 @@ func (uc *BrandingUseCase) GetBranding(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		errors.Respond(c, errors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return
 	}
 
@@ -120,7 +118,7 @@ func (uc *BrandingUseCase) UpdateBranding(c *gin.Context) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		errors.Respond(c, errors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return
 	}
 
@@ -133,18 +131,16 @@ func (uc *BrandingUseCase) UpdateBranding(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to bind request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := errors.UsecaseError("Invalid request body")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
-	// Validate request
-	if err := uc.validator.Struct(request); err != nil {
+	// Validate request (pt-BR field errors via the shared validator)
+	if err := validation.Validate(request); err != nil {
 		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := errors.UsecaseError("Invalid color format. All colors must be in HEX format (#RRGGBB)")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		errors.Respond(c, err)
 		return
 	}
 
@@ -176,8 +172,7 @@ func (uc *BrandingUseCase) UpdateBranding(c *gin.Context) {
 			uc.logger.Error(ctx, "Failed to create branding", map[string]interface{}{
 				"error": err.Error(),
 			})
-			appError := errors.RepositoryError("Failed to create branding configuration")
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			errors.Respond(c, err)
 			return
 		}
 
@@ -192,8 +187,7 @@ func (uc *BrandingUseCase) UpdateBranding(c *gin.Context) {
 			uc.logger.Error(ctx, "Failed to update branding", map[string]interface{}{
 				"error": err.Error(),
 			})
-			appError := errors.RepositoryError("Failed to update branding configuration")
-			c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+			errors.Respond(c, err)
 			return
 		}
 
@@ -216,8 +210,10 @@ func (uc *BrandingUseCase) UpdateBranding(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string][]entities.BrandingTemplate
-// @Failure 401 {object} map[string]string "Unauthorized"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} helpers.Page[entities.BrandingTemplate] "Paginated branding templates"
+// @Failure 401 {object} errors.HTTPError "Unauthorized"
 // @Router /company/branding/templates [get]
 func (uc *BrandingUseCase) ListTemplates(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -226,7 +222,20 @@ func (uc *BrandingUseCase) ListTemplates(c *gin.Context) {
 
 	templates := uc.repository.GetTemplates()
 
-	c.JSON(http.StatusOK, gin.H{
-		"templates": templates,
-	})
+	// Branding templates are a small, static catalog; paginate in memory so the
+	// response still uses the standard envelope.
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
+	total := int64(len(templates))
+	off := q.Offset()
+	if off > len(templates) {
+		off = len(templates)
+	}
+	end := len(templates)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(templates) {
+			end = len(templates)
+		}
+	}
+	c.JSON(http.StatusOK, helpers.NewPage(templates[off:end], total, q))
 }

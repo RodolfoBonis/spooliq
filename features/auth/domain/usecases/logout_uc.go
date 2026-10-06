@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
-	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/gin-gonic/gin"
 )
@@ -31,11 +30,8 @@ func (uc *authUseCaseImpl) Logout(c *gin.Context) {
 	ctx := c.Request.Context()
 	authHeader := c.GetHeader("Authorization")
 	if len(authHeader) < 1 {
-		err := errors.NewAppError(entities.ErrInvalidToken, "Token ausente", nil, nil)
-		httpError := err.ToHTTPError()
-		uc.Logger.LogError(ctx, "Logout failed: missing token", err)
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		c.Abort()
+		uc.Logger.Warning(ctx, "Logout failed: missing token", logger.Fields{"ip": c.ClientIP()})
+		errors.AbortWith(c, errors.Unauthorized("missing_token", "Token ausente"))
 		return
 	}
 	refreshToken := strings.Split(authHeader, " ")[1]
@@ -47,11 +43,8 @@ func (uc *authUseCaseImpl) Logout(c *gin.Context) {
 		refreshToken,
 	)
 	if err != nil {
-		currentError := errors.NewAppError(entities.ErrUsecase, err.Error(), nil, err)
-		httpError := currentError.ToHTTPError()
-		uc.Logger.LogError(ctx, "Logout falhou", currentError)
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		c.Abort()
+		uc.Logger.LogError(ctx, "Logout falhou", err)
+		errors.AbortWith(c, err)
 		return
 	}
 	uc.Logger.Info(ctx, "Logout successful", logger.Fields{

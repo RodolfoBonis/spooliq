@@ -3,7 +3,6 @@ package usecases
 import (
 	"net/http"
 
-	coreEntities "github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/features/auth/domain/entities"
 	"github.com/gin-gonic/gin"
@@ -39,15 +38,12 @@ func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 
 	err := c.BindJSON(&loginData)
 	if err != nil {
-		internalError := errors.NewAppError(coreEntities.ErrUsecase, err.Error(), nil, err)
-		httpError := internalError.ToHTTPError()
-
 		// Enhanced logging with automatic trace correlation
 		uc.Logger.Error(ctx, "Invalid login payload", map[string]interface{}{
 			"error": err.Error(),
 		})
 
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		errors.AbortWith(c, errors.BadRequest("invalid_request", "Requisição inválida"))
 		return
 	}
 	jwt, err := uc.KeycloakClient.Login(
@@ -59,9 +55,6 @@ func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 		loginData.Password,
 	)
 	if err != nil {
-		internalError := errors.NewAppError(coreEntities.ErrInvalidCredentials, "Invalid credentials", nil, err)
-		httpError := internalError.ToHTTPError()
-
 		// Enhanced logging with automatic trace correlation
 		uc.Logger.Warning(ctx, "Login failed: invalid credentials", map[string]interface{}{
 			"email": loginData.Email,
@@ -69,7 +62,7 @@ func (uc *authUseCaseImpl) ValidateLogin(c *gin.Context) {
 			"error": err.Error(),
 		})
 
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
+		errors.AbortWith(c, errors.Unauthorized("invalid_credentials", "Credenciais inválidas"))
 		return
 	}
 

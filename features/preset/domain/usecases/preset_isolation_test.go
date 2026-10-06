@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset/mocks"
@@ -87,14 +88,14 @@ func TestListPresets_IsScopedByOrganization(t *testing.T) {
 	seedMachinePreset(repo, orgB, false)
 	seedMachinePreset(repo, orgB, false)
 
-	aPresets, err := findUC.FindPresets(orgA, entities.PresetFilters{})
+	aPresets, _, err := findUC.FindPresets(orgA, entities.PresetFilters{}, helpers.ListQuery{})
 	require.NoError(t, err)
 	assert.Len(t, aPresets, 1)
 	for _, p := range aPresets {
 		assert.Equal(t, orgA, p.OrganizationID)
 	}
 
-	bPresets, err := findUC.FindPresets(orgB, entities.PresetFilters{})
+	bPresets, _, err := findUC.FindPresets(orgB, entities.PresetFilters{}, helpers.ListQuery{})
 	require.NoError(t, err)
 	assert.Len(t, bPresets, 2)
 }
@@ -123,17 +124,17 @@ func TestListPresets_CombinableFilters(t *testing.T) {
 
 	machineType := entities.PresetTypeMachine
 	// type=machine AND active AND default -> only activeDefault
-	result, err := findUC.FindPresets(orgA, entities.PresetFilters{
+	result, _, err := findUC.FindPresets(orgA, entities.PresetFilters{
 		Type:        &machineType,
 		ActiveOnly:  true,
 		DefaultOnly: true,
-	})
+	}, helpers.ListQuery{})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Equal(t, activeDefault.ID, result[0].ID)
 
 	// global only -> excludes the user-owned activeDefault
-	globalResult, err := findUC.FindPresets(orgA, entities.PresetFilters{GlobalOnly: true})
+	globalResult, _, err := findUC.FindPresets(orgA, entities.PresetFilters{GlobalOnly: true}, helpers.ListQuery{})
 	require.NoError(t, err)
 	for _, p := range globalResult {
 		assert.Nil(t, p.UserID)

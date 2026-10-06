@@ -3,6 +3,7 @@ package usecases
 import (
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/profile/domain/entities"
 	"github.com/google/uuid"
 )
@@ -57,6 +58,20 @@ func (uc *ProfileUseCase) List(organizationID string) ([]entities.ProfileRespons
 		responses = append(responses, uc.buildResponse(p))
 	}
 	return responses, nil
+}
+
+// ListPage returns a page of profiles for an organization as API responses,
+// together with the total count of matching rows.
+func (uc *ProfileUseCase) ListPage(organizationID string, q helpers.ListQuery) ([]entities.ProfileResponse, int64, error) {
+	profiles, total, err := uc.profileRepo.ListPage(organizationID, q)
+	if err != nil {
+		return nil, 0, err
+	}
+	responses := make([]entities.ProfileResponse, 0, len(profiles))
+	for _, p := range profiles {
+		responses = append(responses, uc.buildResponse(p))
+	}
+	return responses, total, nil
 }
 
 // Get returns a single profile by id, scoped to the organization.

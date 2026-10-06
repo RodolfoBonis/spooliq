@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	repoimpl "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
@@ -224,11 +225,11 @@ func TestIntegration_TypedGetters_ExcludeSoftDeletedAndCrossOrg(t *testing.T) {
 	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 
 	// GetMachinePresets (optimized) is org-scoped and active-only.
-	resA, err := repo.GetMachinePresets(itOrgA)
+	resA, _, err := repo.GetMachinePresets(itOrgA, helpers.ListQuery{})
 	require.NoError(t, err)
 	assert.Empty(t, resA)
 
-	resB, err := repo.GetMachinePresets(itOrgB)
+	resB, _, err := repo.GetMachinePresets(itOrgB, helpers.ListQuery{})
 	require.NoError(t, err)
 	assert.Len(t, resB, 1)
 }

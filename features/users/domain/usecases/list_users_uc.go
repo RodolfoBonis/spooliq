@@ -5,6 +5,7 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
@@ -39,7 +40,7 @@ func NewListUsersUseCase(
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /users [get]
-func (uc *ListUsersUseCase) Execute(ctx context.Context, organizationID string, userRoles []string) ([]*entities.UserEntity, error) {
+func (uc *ListUsersUseCase) Execute(ctx context.Context, organizationID string, userRoles []string, q helpers.ListQuery) ([]*entities.UserEntity, int64, error) {
 	uc.logger.Info(ctx, "Listing users", map[string]interface{}{
 		"organization_id": organizationID,
 	})
@@ -52,21 +53,22 @@ func (uc *ListUsersUseCase) Execute(ctx context.Context, organizationID string, 
 		uc.logger.Error(ctx, "User does not have permission to list users", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("You do not have permission to list users")
+		return nil, 0, errors.Forbidden("users_list_forbidden", "Você não tem permissão para listar usuários")
 	}
 
-	// Fetch all users for the organization
-	users, err := uc.userRepository.FindAll(ctx, organizationID)
+	// Fetch the requested page of users for the organization
+	users, total, err := uc.userRepository.FindAll(ctx, organizationID, q)
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to fetch users", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.InternalServerError("Failed to fetch users")
+		return nil, 0, err
 	}
 
 	uc.logger.Info(ctx, "Users listed successfully", map[string]interface{}{
 		"count": len(users),
+		"total": total,
 	})
 
-	return users, nil
+	return users, total, nil
 }

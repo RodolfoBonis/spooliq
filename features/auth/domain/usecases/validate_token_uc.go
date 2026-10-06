@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
-	"github.com/RodolfoBonis/spooliq/core/entities"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/gin-gonic/gin"
 )
@@ -42,20 +41,14 @@ func (uc *authUseCaseImpl) ValidateToken(c *gin.Context) {
 		uc.KeycloakAccessData.Realm,
 	)
 	if err != nil {
-		currentError := errors.NewAppError(entities.ErrUsecase, err.Error(), nil, err)
-		httpError := currentError.ToHTTPError()
-		uc.Logger.LogError(ctx, "Token validation failed", currentError)
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		c.Abort()
+		uc.Logger.LogError(ctx, "Token validation failed", err)
+		errors.AbortWith(c, errors.Unauthorized("invalid_token", "Token inválido"))
 		return
 	}
 	isTokenValid := *rptResult.Active
 	if !isTokenValid {
-		currentError := errors.NewAppError(entities.ErrInvalidToken, "Token is invalid", nil, nil)
-		httpError := currentError.ToHTTPError()
-		uc.Logger.LogError(ctx, "Token is invalid", currentError)
-		c.AbortWithStatusJSON(httpError.StatusCode, httpError)
-		c.Abort()
+		uc.Logger.Warning(ctx, "Token is invalid", logger.Fields{"ip": c.ClientIP()})
+		errors.AbortWith(c, errors.Unauthorized("invalid_token", "Token inválido"))
 		return
 	}
 	uc.Logger.Info(ctx, "Token is valid", logger.Fields{

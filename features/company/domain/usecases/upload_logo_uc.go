@@ -29,7 +29,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 	organizationID := getOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found", nil)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID required"})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return
 	}
 
@@ -52,7 +52,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 		uc.logger.Error(ctx, "Request is not multipart/form-data", map[string]interface{}{
 			"content_type": c.Request.Header.Get("Content-Type"),
 		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Request must be multipart/form-data"})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_content_type", "A requisição deve ser multipart/form-data"))
 		return
 	}
 
@@ -69,8 +69,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 				"content_length": c.Request.ContentLength,
 			})
 
-			appError := coreErrors.UsecaseError("Logo file is required or malformed. Please ensure you're sending a valid multipart form with a 'logo' or 'file' field.")
-			c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+			coreErrors.Respond(c, coreErrors.BadRequest("logo_file_required", "Arquivo de logo é obrigatório ou malformado. Envie um multipart válido com o campo 'logo' ou 'file'."))
 			return
 		}
 	}
@@ -92,8 +91,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 			"extension": ext,
 			"filename":  header.Filename,
 		})
-		appError := coreErrors.UsecaseError("Only PNG, JPG, and JPEG files are allowed")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("invalid_file_type", "Apenas arquivos PNG, JPG e JPEG são permitidos"))
 		return
 	}
 
@@ -104,8 +102,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 			"size":     header.Size,
 			"max_size": maxSize,
 		})
-		appError := coreErrors.UsecaseError("Logo file must be less than 5MB")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("file_too_large", "O arquivo de logo deve ter menos de 5MB"))
 		return
 	}
 
@@ -118,8 +115,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 		uc.logger.Error(ctx, "Failed to upload logo to CDN", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("Failed to upload logo to CDN")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -130,8 +126,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := coreErrors.RepositoryError("Company not found")
-		c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 		return
 	}
 
@@ -144,8 +139,7 @@ func (uc *CompanyUseCase) UploadLogo(c *gin.Context) {
 			"cdn_url":    cdnURL,
 			"company_id": company.ID,
 		})
-		appError := coreErrors.RepositoryError("Failed to update company logo")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 

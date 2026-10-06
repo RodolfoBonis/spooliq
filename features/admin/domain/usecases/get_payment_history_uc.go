@@ -45,7 +45,7 @@ func (uc *GetPaymentHistoryUseCase) Execute(ctx context.Context, userRoles []str
 		uc.logger.Error(ctx, "Non-admin user attempted to view payment history", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("Only PlatformAdmin can view payment history")
+		return nil, errors.Forbidden("platform_admin_required", "Apenas administradores da plataforma podem visualizar o histórico de pagamentos")
 	}
 
 	// Validate company exists
@@ -56,14 +56,14 @@ func (uc *GetPaymentHistoryUseCase) Execute(ctx context.Context, userRoles []str
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		return nil, errors.InternalServerError("Failed to fetch company")
+		return nil, err
 	}
 
 	if company == nil {
 		uc.logger.Info(ctx, "Company not found", map[string]interface{}{
 			"organization_id": organizationID,
 		})
-		return nil, errors.NotFound("Company not found")
+		return nil, errors.NotFoundErr("company_not_found", "Empresa não encontrada")
 	}
 
 	// Set defaults
@@ -84,7 +84,7 @@ func (uc *GetPaymentHistoryUseCase) Execute(ctx context.Context, userRoles []str
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		return nil, errors.InternalServerError("Failed to fetch payment history")
+		return nil, err
 	}
 
 	// Get total count
@@ -94,7 +94,7 @@ func (uc *GetPaymentHistoryUseCase) Execute(ctx context.Context, userRoles []str
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		return nil, errors.InternalServerError("Failed to count payments")
+		return nil, err
 	}
 
 	// Map entities to response items

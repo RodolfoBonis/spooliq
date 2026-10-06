@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
@@ -61,7 +62,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid payment method request", map[string]interface{}{
 			"error": err.Error(),
 		})
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -72,12 +73,12 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find company"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 		return
 	}
 
@@ -88,7 +89,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query payment gateway link"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -109,7 +110,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 				"error":           err.Error(),
 				"organization_id": orgID,
 			})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment account"})
+			coreerrors.Respond(c, coreerrors.ExternalServiceError("Falha ao criar conta de pagamento"))
 			return
 		}
 
@@ -126,7 +127,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 				"organization_id": orgID,
 				"customer_id":     asaasCustomer.ID,
 			})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save payment gateway link"})
+			coreerrors.Respond(c, err)
 			return
 		}
 
@@ -161,7 +162,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to tokenize credit card"})
+		coreerrors.Respond(c, coreerrors.ExternalServiceError("Falha ao tokenizar o cartão de crédito"))
 		return
 	}
 
@@ -182,7 +183,7 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save payment method"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -211,8 +212,10 @@ func (uc *PaymentMethodUseCase) AddPaymentMethod(c *gin.Context) {
 // @Description List all payment methods for the organization
 // @Tags payment-methods
 // @Produce json
-// @Success 200 {array} entities.PaymentMethodResponse "Payment methods list"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} helpers.Page[entities.PaymentMethodResponse] "Paginated payment methods"
+// @Failure 500 {object} errors.HTTPError "Internal server error"
 // @Security BearerAuth
 // @Router /payment-methods [get]
 func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
@@ -225,7 +228,7 @@ func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": orgID,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list payment methods"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -234,7 +237,22 @@ func (uc *PaymentMethodUseCase) ListPaymentMethods(c *gin.Context) {
 		response[i] = *toPaymentMethodResponse(pm)
 	}
 
-	c.JSON(http.StatusOK, response)
+	// Payment methods are a small, org-scoped set; paginate in memory so the
+	// response still uses the standard envelope.
+	q := helpers.ParseListQuery(c, helpers.ListQueryOptions{DefaultPageSize: 20})
+	total := int64(len(response))
+	off := q.Offset()
+	if off > len(response) {
+		off = len(response)
+	}
+	end := len(response)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(response) {
+			end = len(response)
+		}
+	}
+	c.JSON(http.StatusOK, helpers.NewPage(response[off:end], total, q))
 }
 
 // SetPrimaryPaymentMethod sets a payment method as primary
@@ -255,7 +273,7 @@ func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payment method ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_payment_method_id", "ID de método de pagamento inválido"))
 		return
 	}
 
@@ -266,17 +284,17 @@ func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find payment method"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if paymentMethod == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Payment method not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("payment_method_not_found", "Método de pagamento não encontrado"))
 		return
 	}
 
 	if paymentMethod.OrganizationID != orgID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Payment method does not belong to your organization"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("payment_method_not_found", "Método de pagamento não encontrado"))
 		return
 	}
 
@@ -286,7 +304,7 @@ func (uc *PaymentMethodUseCase) SetPrimaryPaymentMethod(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set payment method as primary"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -316,7 +334,7 @@ func (uc *PaymentMethodUseCase) DeletePaymentMethod(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payment method ID"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_payment_method_id", "ID de método de pagamento inválido"))
 		return
 	}
 
@@ -327,17 +345,17 @@ func (uc *PaymentMethodUseCase) DeletePaymentMethod(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find payment method"})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	if paymentMethod == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Payment method not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("payment_method_not_found", "Método de pagamento não encontrado"))
 		return
 	}
 
 	if paymentMethod.OrganizationID != orgID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Payment method does not belong to your organization"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("payment_method_not_found", "Método de pagamento não encontrado"))
 		return
 	}
 
@@ -345,7 +363,7 @@ func (uc *PaymentMethodUseCase) DeletePaymentMethod(c *gin.Context) {
 	if paymentMethod.IsPrimary {
 		allMethods, err := uc.paymentMethodRepo.FindByOrganizationID(ctx, orgID)
 		if err == nil && len(allMethods) > 1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete primary payment method. Set another as primary first."})
+			coreerrors.Respond(c, coreerrors.BadRequest("cannot_delete_primary_payment_method", "Não é possível excluir o método de pagamento principal. Defina outro como principal primeiro."))
 			return
 		}
 	}
@@ -356,7 +374,7 @@ func (uc *PaymentMethodUseCase) DeletePaymentMethod(c *gin.Context) {
 			"error": err.Error(),
 			"id":    id,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete payment method"})
+		coreerrors.Respond(c, err)
 		return
 	}
 

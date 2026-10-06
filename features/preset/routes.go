@@ -1,10 +1,12 @@
 package preset
 
 import (
-	"errors"
+	stderrors "errors"
 	"net/http"
+	"strings"
 	"time"
 
+	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
@@ -45,12 +47,26 @@ func NewPresetHandler(
 	}
 }
 
+// presetListOptions is the single source of truth for how preset list endpoints
+// interpret pagination, search and sort. Default page size is 100; free-text
+// search (q) matches the preset name; sorting is restricted to name/created_at.
+func presetListOptions() helpers.ListQueryOptions {
+	return helpers.ListQueryOptions{
+		DefaultPageSize: 100,
+		SortWhitelist: map[string]string{
+			"name":       "presets.name",
+			"created_at": "presets.created_at",
+		},
+		DefaultSort: "created_at",
+	}
+}
+
 // requireOrganizationID extracts the organization_id from context, writing a
 // 400 response and returning ok=false when it is missing.
 func requireOrganizationID(c *gin.Context) (string, bool) {
 	organizationID := helpers.GetOrganizationID(c)
 	if organizationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Organization ID not found"})
+		coreerrors.Respond(c, coreerrors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return "", false
 	}
 	return organizationID, true
@@ -71,22 +87,27 @@ func authenticatedUserID(c *gin.Context) *uuid.UUID {
 	return &parsed
 }
 
-// respondPresetError maps domain/repository errors to appropriate HTTP status
-// codes. Not-found (including cross-organization access) maps to 404 to avoid
-// leaking the existence of other tenants' presets.
+// respondPresetError maps domain/repository errors to the standard error
+// envelope. Not-found (including cross-organization access and wrong-type reads)
+// maps to 404 to avoid leaking the existence of other tenants' presets. Anything
+// unmapped goes through coreerrors.Respond, which logs and returns a clean 500.
 func respondPresetError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, entities.ErrPresetNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "Preset not found"})
-	case errors.Is(err, entities.ErrCannotDeleteDefaultPreset),
-		errors.Is(err, entities.ErrPresetInUseByProfile),
-		errors.Is(err, entities.ErrDefaultConflict):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-	case errors.Is(err, entities.ErrInvalidPresetType):
+	case stderrors.Is(err, gorm.ErrRecordNotFound), stderrors.Is(err, entities.ErrPresetNotFound):
+		coreerrors.Respond(c, coreerrors.NotFoundErr("preset_not_found", "Preset não encontrado"))
+	case stderrors.Is(err, entities.ErrInvalidPresetType):
 		// Requesting a resource of the wrong kind is treated as not found.
-		c.JSON(http.StatusNotFound, gin.H{"error": "Preset not found"})
+		coreerrors.Respond(c, coreerrors.NotFoundErr("preset_not_found", "Preset não encontrado"))
+	case stderrors.Is(err, entities.ErrCannotDeleteDefaultPreset):
+		coreerrors.Respond(c, coreerrors.Conflict("default_preset_cannot_be_deleted", "Presets padrão não podem ser excluídos"))
+	case stderrors.Is(err, entities.ErrPresetInUseByProfile):
+		coreerrors.Respond(c, coreerrors.Conflict("preset_in_use_by_profile", err.Error()))
+	case stderrors.Is(err, entities.ErrDefaultConflict):
+		coreerrors.Respond(c, coreerrors.Conflict("default_conflict", err.Error()))
+	case stderrors.Is(err, entities.ErrPresetNameRequired):
+		coreerrors.Respond(c, coreerrors.BadRequest("preset_name_required", "Nome do preset é obrigatório"))
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 	}
 }
 
@@ -142,9 +163,9 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 	}
 }
 
-// GetPresets retrieves presets with optional filters
+// GetPresets retrieves presets with optional filters, paginated with the standard envelope.
 // @Summary Get presets with filters
-// @Description Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope.
+// @Description Retrieve presets with optional, combinable filters including type, active status, default status, global status, and user ID. All filters are applied together within the caller's organization scope. Results are paginated with the standard envelope.
 // @Tags Presets
 // @Accept json
 // @Produce json
@@ -153,7 +174,12 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 // @Param default query boolean false "Filter only default presets"
 // @Param global query boolean false "Filter only global presets"
 // @Param user_id query string false "Filter presets by user ID (UUID format)"
-// @Success 200 {object} interface{} "Successfully retrieved presets"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[entities.PresetEntity] "Paginated presets"
 // @Failure 400 {object} errors.HTTPError "Bad Request - Invalid user ID format"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
@@ -184,7 +210,7 @@ func (h *Handler) GetPresets(c *gin.Context) {
 	if userIDStr != "" {
 		userID, parseErr := uuid.Parse(userIDStr)
 		if parseErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+			coreerrors.Respond(c, coreerrors.BadRequest("invalid_user_id", "ID de usuário inválido"))
 			return
 		}
 		filters.UserID = &userID
@@ -196,13 +222,14 @@ func (h *Handler) GetPresets(c *gin.Context) {
 		filters.ActiveOnly = true
 	}
 
-	presets, err := h.findUC.FindPresets(organizationID, filters)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindPresets(organizationID, filters, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
 // GetPresetByID retrieves a preset by ID
@@ -223,10 +250,9 @@ func (h *Handler) GetPresetByID(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
@@ -259,10 +285,9 @@ func (h *Handler) DeletePreset(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
@@ -307,7 +332,7 @@ func (h *Handler) DeletePreset(c *gin.Context) {
 func (h *Handler) CreateMachinePreset(c *gin.Context) {
 	var req usecases.CreateMachinePresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -318,7 +343,7 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 
 	preset, err := h.createUC.CreateMachinePreset(&req, organizationID, authenticatedUserID(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -336,13 +361,18 @@ func (h *Handler) CreateMachinePreset(c *gin.Context) {
 	})
 }
 
-// GetMachinePresets retrieves all machine presets
-// @Summary Get all machine presets
-// @Description Retrieve all available machine presets with their specifications
+// GetMachinePresets retrieves machine presets, paginated with the standard envelope.
+// @Summary Get machine presets
+// @Description Retrieve machine presets with their specifications, paginated with the standard envelope.
 // @Tags Machine Presets
 // @Accept json
 // @Produce json
-// @Success 200 {array} usecases.MachinePresetResponse "Successfully retrieved machine presets"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[usecases.MachinePresetResponse] "Paginated machine presets"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/machines [get]
@@ -352,13 +382,14 @@ func (h *Handler) GetMachinePresets(c *gin.Context) {
 		return
 	}
 
-	presets, err := h.findUC.FindAllMachinePresets(organizationID)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindAllMachinePresets(organizationID, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
 // GetMachinePresetByID retrieves a machine preset with full details
@@ -379,10 +410,9 @@ func (h *Handler) GetMachinePresetByID(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
@@ -415,16 +445,15 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
 	var req usecases.UpdateMachinePresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 	req.ID = id
@@ -449,14 +478,19 @@ func (h *Handler) UpdateMachinePreset(c *gin.Context) {
 	})
 }
 
-// GetMachinePresetsByBrand retrieves machine presets by brand
+// GetMachinePresetsByBrand retrieves machine presets by brand, paginated with the standard envelope.
 // @Summary Get machine presets by brand
-// @Description Retrieve all machine presets from a specific brand
+// @Description Retrieve machine presets from a specific brand, paginated with the standard envelope.
 // @Tags Machine Presets
 // @Accept json
 // @Produce json
 // @Param brand path string true "Machine brand name"
-// @Success 200 {array} entities.MachinePresetEntity "Successfully retrieved machine presets by brand"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[usecases.MachinePresetResponse] "Paginated machine presets by brand"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/machines/brand/{brand} [get]
@@ -468,13 +502,14 @@ func (h *Handler) GetMachinePresetsByBrand(c *gin.Context) {
 		return
 	}
 
-	presets, err := h.findUC.FindMachinePresetsByBrand(brand, organizationID)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindMachinePresetsByBrand(brand, organizationID, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
 // CreateEnergyPreset creates a new energy preset
@@ -492,7 +527,7 @@ func (h *Handler) GetMachinePresetsByBrand(c *gin.Context) {
 func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 	var req usecases.CreateEnergyPresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -503,7 +538,7 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 
 	preset, err := h.createUC.CreateEnergyPreset(&req, organizationID, authenticatedUserID(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -521,13 +556,18 @@ func (h *Handler) CreateEnergyPreset(c *gin.Context) {
 	})
 }
 
-// GetEnergyPresets retrieves all energy presets
-// @Summary Get all energy presets
-// @Description Retrieve all available energy presets with pricing and location data
+// GetEnergyPresets retrieves energy presets, paginated with the standard envelope.
+// @Summary Get energy presets
+// @Description Retrieve energy presets with pricing and location data, paginated with the standard envelope.
 // @Tags Energy Presets
 // @Accept json
 // @Produce json
-// @Success 200 {array} entities.PresetEntity "Successfully retrieved energy presets"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[usecases.EnergyPresetResponse] "Paginated energy presets"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/energy [get]
@@ -537,13 +577,14 @@ func (h *Handler) GetEnergyPresets(c *gin.Context) {
 		return
 	}
 
-	presets, err := h.findUC.FindAllEnergyPresets(organizationID)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindAllEnergyPresets(organizationID, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
 // GetEnergyPresetByID retrieves an energy preset with full details
@@ -564,10 +605,9 @@ func (h *Handler) GetEnergyPresetByID(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
@@ -600,16 +640,15 @@ func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
 	var req usecases.UpdateEnergyPresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 	req.ID = id
@@ -634,16 +673,21 @@ func (h *Handler) UpdateEnergyPreset(c *gin.Context) {
 	})
 }
 
-// GetEnergyPresetsByLocation retrieves energy presets by location
+// GetEnergyPresetsByLocation retrieves energy presets by location, paginated with the standard envelope.
 // @Summary Get energy presets by location
-// @Description Retrieve energy presets filtered by country, state, and/or city
+// @Description Retrieve energy presets filtered by country, state, and/or city, paginated with the standard envelope.
 // @Tags Energy Presets
 // @Accept json
 // @Produce json
 // @Param country query string false "Filter by country"
 // @Param state query string false "Filter by state/province"
 // @Param city query string false "Filter by city"
-// @Success 200 {array} entities.EnergyPresetEntity "Successfully retrieved energy presets by location"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[usecases.EnergyPresetResponse] "Paginated energy presets by location"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/energy/location [get]
@@ -657,23 +701,29 @@ func (h *Handler) GetEnergyPresetsByLocation(c *gin.Context) {
 		return
 	}
 
-	presets, err := h.findUC.FindEnergyPresetsByLocation(country, state, city, organizationID)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindEnergyPresetsByLocation(country, state, city, organizationID, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
-// GetEnergyPresetsByCurrency retrieves energy presets by currency
+// GetEnergyPresetsByCurrency retrieves energy presets by currency, paginated with the standard envelope.
 // @Summary Get energy presets by currency
-// @Description Retrieve energy presets that use a specific currency (3-letter currency code)
+// @Description Retrieve energy presets that use a specific currency (3-letter currency code), paginated with the standard envelope.
 // @Tags Energy Presets
 // @Accept json
 // @Produce json
 // @Param currency path string true "Currency code (3 letters, e.g., USD, EUR, BRL)"
-// @Success 200 {array} entities.EnergyPresetEntity "Successfully retrieved energy presets by currency"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[usecases.EnergyPresetResponse] "Paginated energy presets by currency"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/energy/currency/{currency} [get]
@@ -685,13 +735,14 @@ func (h *Handler) GetEnergyPresetsByCurrency(c *gin.Context) {
 		return
 	}
 
-	presets, err := h.findUC.FindEnergyPresetsByCurrency(currency, organizationID)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindEnergyPresetsByCurrency(currency, organizationID, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
 // CreateCostPreset creates a new cost preset
@@ -709,7 +760,7 @@ func (h *Handler) GetEnergyPresetsByCurrency(c *gin.Context) {
 func (h *Handler) CreateCostPreset(c *gin.Context) {
 	var req usecases.CreateCostPresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
@@ -720,7 +771,7 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 
 	preset, err := h.createUC.CreateCostPreset(&req, organizationID, authenticatedUserID(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -738,13 +789,18 @@ func (h *Handler) CreateCostPreset(c *gin.Context) {
 	})
 }
 
-// GetCostPresets retrieves all cost presets
-// @Summary Get all cost presets
-// @Description Retrieve all available cost presets with pricing and margin configurations
+// GetCostPresets retrieves cost presets, paginated with the standard envelope.
+// @Summary Get cost presets
+// @Description Retrieve cost presets with pricing and margin configurations, paginated with the standard envelope.
 // @Tags Cost Presets
 // @Accept json
 // @Produce json
-// @Success 200 {array} entities.PresetEntity "Successfully retrieved cost presets"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Param sort_by query string false "Sort field: name or created_at"
+// @Param sort_dir query string false "Sort direction: asc or desc"
+// @Success 200 {object} helpers.Page[usecases.CostPresetResponse] "Paginated cost presets"
 // @Failure 500 {object} errors.HTTPError "Internal Server Error"
 // @Security BearerAuth
 // @Router /presets/costs [get]
@@ -754,13 +810,14 @@ func (h *Handler) GetCostPresets(c *gin.Context) {
 		return
 	}
 
-	presets, err := h.findUC.FindAllCostPresets(organizationID)
+	q := helpers.ParseListQuery(c, presetListOptions())
+	presets, total, err := h.findUC.FindAllCostPresets(organizationID, q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presets)
+	c.JSON(http.StatusOK, helpers.NewPage(presets, total, q))
 }
 
 // GetCostPresetByID retrieves a cost preset with full details
@@ -781,10 +838,9 @@ func (h *Handler) GetCostPresetByID(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
@@ -817,16 +873,15 @@ func (h *Handler) UpdateCostPreset(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
 	var req usecases.UpdateCostPresetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 	req.ID = id
@@ -865,32 +920,62 @@ func (h *Handler) UpdateCostPreset(c *gin.Context) {
 func (h *Handler) SuggestName(c *gin.Context) {
 	var req usecases.SuggestNameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, err)
 		return
 	}
 
 	name, err := h.manageUC.SuggestName(&req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_type", "Tipo de preset inválido"))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"name": name})
 }
 
-// GetTemplates returns the static preset templates catalog.
+// GetTemplates returns the static preset templates catalog, paginated with the standard envelope.
 // @Summary List preset templates
-// @Description Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type.
+// @Description Retrieve the static catalog of preset templates (approximate starting points to adjust), optionally filtered by type, paginated with the standard envelope.
 // @Tags Presets
 // @Accept json
 // @Produce json
 // @Param type query string false "Template type filter (machine, energy, cost)"
-// @Success 200 {array} entities.PresetTemplate "Templates"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 100, max 100)"
+// @Param q query string false "Free-text search on name"
+// @Success 200 {object} helpers.Page[entities.PresetTemplate] "Paginated templates"
 // @Security BearerAuth
 // @Router /presets/templates [get]
 func (h *Handler) GetTemplates(c *gin.Context) {
 	presetType := entities.PresetType(c.Query("type"))
-	c.JSON(http.StatusOK, entities.TemplatesByType(presetType))
+	templates := entities.TemplatesByType(presetType)
+
+	q := helpers.ParseListQuery(c, presetListOptions())
+	if q.Search != "" {
+		needle := strings.ToLower(q.Search)
+		filtered := make([]entities.PresetTemplate, 0, len(templates))
+		for _, t := range templates {
+			if strings.Contains(strings.ToLower(t.Name), needle) {
+				filtered = append(filtered, t)
+			}
+		}
+		templates = filtered
+	}
+
+	total := int64(len(templates))
+	off := q.Offset()
+	if off > len(templates) {
+		off = len(templates)
+	}
+	end := len(templates)
+	if q.Limit() > 0 {
+		end = off + q.Limit()
+		if end > len(templates) {
+			end = len(templates)
+		}
+	}
+
+	c.JSON(http.StatusOK, helpers.NewPage(templates[off:end], total, q))
 }
 
 // CreateFromTemplate creates an organization preset from a template.
@@ -921,11 +1006,11 @@ func (h *Handler) CreateFromTemplate(c *gin.Context) {
 
 	preset, err := h.createUC.CreateFromTemplate(key, overrides, organizationID, authenticatedUserID(c))
 	if err != nil {
-		if errors.Is(err, entities.ErrTemplateNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		if stderrors.Is(err, entities.ErrTemplateNotFound) {
+			coreerrors.Respond(c, coreerrors.NotFoundErr("preset_template_not_found", "Template de preset não encontrado"))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondPresetError(c, err)
 		return
 	}
 
@@ -963,7 +1048,7 @@ func (h *Handler) SetDefault(c *gin.Context) {
 
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 
@@ -1007,7 +1092,7 @@ func (h *Handler) Duplicate(c *gin.Context) {
 
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		coreerrors.Respond(c, coreerrors.BadRequest("invalid_preset_id", "ID de preset inválido"))
 		return
 	}
 

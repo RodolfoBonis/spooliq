@@ -3,6 +3,7 @@ package repositories
 import (
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/preset/domain/repositories"
@@ -135,6 +136,55 @@ func (r *PresetRepositoryImpl) ListPresets(organizationID string, filters entiti
 	}
 
 	return entitiesList, nil
+}
+
+// ListPresetsPage is the paginated variant used by the GET /presets endpoint.
+func (r *PresetRepositoryImpl) ListPresetsPage(organizationID string, filters entities.PresetFilters, q helpers.ListQuery) ([]*entities.PresetEntity, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Model(&models.PresetModel{}).Where("organization_id = ?", organizationID)
+		if filters.Type != nil {
+			query = query.Where("type = ?", string(*filters.Type))
+		}
+		if filters.ActiveOnly {
+			query = query.Where("is_active = ?", true)
+		}
+		if filters.DefaultOnly {
+			query = query.Where("is_default = ?", true)
+		}
+		if filters.GlobalOnly {
+			query = query.Where("user_id IS NULL")
+		}
+		if filters.UserID != nil {
+			query = query.Where("user_id = ?", *filters.UserID)
+		}
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
+
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build()
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	}
+
+	var presetModels []models.PresetModel
+	if err := paginate(query, q).Find(&presetModels).Error; err != nil {
+		return nil, 0, err
+	}
+
+	entitiesList := make([]*entities.PresetEntity, 0, len(presetModels))
+	for i := range presetModels {
+		entity := presetModels[i].ToEntity()
+		entitiesList = append(entitiesList, &entity)
+	}
+
+	return entitiesList, total, nil
 }
 
 // updateBasePreset updates the base preset row within the given db/tx handle,
@@ -618,12 +668,25 @@ func (r *PresetRepositoryImpl) UpdateCostWithPreset(preset *entities.PresetEntit
 
 // OPTIMIZED METHODS WITH ORGANIZATION FILTERING AND JOINS
 
-// GetMachinePresets retrieves all machine presets with base data in a single query
-func (r *PresetRepositoryImpl) GetMachinePresets(organizationID string) ([]*repositories.MachinePresetResponse, error) {
-	var results []*repositories.MachinePresetResponse
+// GetMachinePresets retrieves a page of machine presets with base data in a
+// single query, applying free-text search (on name), sorting and pagination.
+func (r *PresetRepositoryImpl) GetMachinePresets(organizationID string, q helpers.ListQuery) ([]*repositories.MachinePresetResponse, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Table("machine_presets").
+			Joins("INNER JOIN presets ON machine_presets.id = presets.id").
+			Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true)
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
 
-	err := r.db.Table("machine_presets").
-		Select(`
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build().Select(`
 			presets.id,
 			presets.name,
 			presets.description,
@@ -646,20 +709,35 @@ func (r *PresetRepositoryImpl) GetMachinePresets(organizationID string) ([]*repo
 			machine_presets.extruder_temperature_max,
 			machine_presets.filament_diameter,
 			machine_presets.cost_per_hour
-		`).
-		Joins("INNER JOIN presets ON machine_presets.id = presets.id").
-		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true).
-		Scan(&results).Error
+		`)
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	}
 
-	return results, err
+	var results []*repositories.MachinePresetResponse
+	err := paginate(query, q).Scan(&results).Error
+	return results, total, err
 }
 
-// GetMachinePresetsByBrand retrieves machine presets by brand with base data
-func (r *PresetRepositoryImpl) GetMachinePresetsByBrand(brand, organizationID string) ([]*repositories.MachinePresetResponse, error) {
-	var results []*repositories.MachinePresetResponse
+// GetMachinePresetsByBrand retrieves a page of machine presets by brand with
+// base data, applying free-text search (on name), sorting and pagination.
+func (r *PresetRepositoryImpl) GetMachinePresetsByBrand(brand, organizationID string, q helpers.ListQuery) ([]*repositories.MachinePresetResponse, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Table("machine_presets").
+			Joins("INNER JOIN presets ON machine_presets.id = presets.id").
+			Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ? AND machine_presets.brand = ?", organizationID, true, brand)
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
 
-	err := r.db.Table("machine_presets").
-		Select(`
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build().Select(`
 			presets.id,
 			presets.name,
 			presets.description,
@@ -682,20 +760,35 @@ func (r *PresetRepositoryImpl) GetMachinePresetsByBrand(brand, organizationID st
 			machine_presets.extruder_temperature_max,
 			machine_presets.filament_diameter,
 			machine_presets.cost_per_hour
-		`).
-		Joins("INNER JOIN presets ON machine_presets.id = presets.id").
-		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ? AND machine_presets.brand = ?", organizationID, true, brand).
-		Scan(&results).Error
+		`)
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	}
 
-	return results, err
+	var results []*repositories.MachinePresetResponse
+	err := paginate(query, q).Scan(&results).Error
+	return results, total, err
 }
 
-// GetEnergyPresets retrieves all energy presets with base data in a single query
-func (r *PresetRepositoryImpl) GetEnergyPresets(organizationID string) ([]*repositories.EnergyPresetResponse, error) {
-	var results []*repositories.EnergyPresetResponse
+// GetEnergyPresets retrieves a page of energy presets with base data, applying
+// free-text search (on name), sorting and pagination.
+func (r *PresetRepositoryImpl) GetEnergyPresets(organizationID string, q helpers.ListQuery) ([]*repositories.EnergyPresetResponse, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Table("energy_presets").
+			Joins("INNER JOIN presets ON energy_presets.id = presets.id").
+			Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true)
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
 
-	err := r.db.Table("energy_presets").
-		Select(`
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build().Select(`
 			presets.id,
 			presets.name,
 			presets.description,
@@ -713,20 +806,44 @@ func (r *PresetRepositoryImpl) GetEnergyPresets(organizationID string) ([]*repos
 			energy_presets.tariff_type,
 			energy_presets.peak_hour_multiplier,
 			energy_presets.off_peak_hour_multiplier
-		`).
-		Joins("INNER JOIN presets ON energy_presets.id = presets.id").
-		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true).
-		Scan(&results).Error
+		`)
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	}
 
-	return results, err
+	var results []*repositories.EnergyPresetResponse
+	err := paginate(query, q).Scan(&results).Error
+	return results, total, err
 }
 
-// GetEnergyPresetsByLocation retrieves energy presets by location with base data
-func (r *PresetRepositoryImpl) GetEnergyPresetsByLocation(country, state, city, organizationID string) ([]*repositories.EnergyPresetResponse, error) {
-	var results []*repositories.EnergyPresetResponse
+// GetEnergyPresetsByLocation retrieves a page of energy presets by location with
+// base data, applying free-text search (on name), sorting and pagination.
+func (r *PresetRepositoryImpl) GetEnergyPresetsByLocation(country, state, city, organizationID string, q helpers.ListQuery) ([]*repositories.EnergyPresetResponse, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Table("energy_presets").
+			Joins("INNER JOIN presets ON energy_presets.id = presets.id").
+			Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true)
+		if country != "" {
+			query = query.Where("energy_presets.country = ?", country)
+		}
+		if state != "" {
+			query = query.Where("energy_presets.state = ?", state)
+		}
+		if city != "" {
+			query = query.Where("energy_presets.city = ?", city)
+		}
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
 
-	query := r.db.Table("energy_presets").
-		Select(`
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build().Select(`
 			presets.id,
 			presets.name,
 			presets.description,
@@ -744,30 +861,35 @@ func (r *PresetRepositoryImpl) GetEnergyPresetsByLocation(country, state, city, 
 			energy_presets.tariff_type,
 			energy_presets.peak_hour_multiplier,
 			energy_presets.off_peak_hour_multiplier
-		`).
-		Joins("INNER JOIN presets ON energy_presets.id = presets.id").
-		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true)
-
-	if country != "" {
-		query = query.Where("energy_presets.country = ?", country)
-	}
-	if state != "" {
-		query = query.Where("energy_presets.state = ?", state)
-	}
-	if city != "" {
-		query = query.Where("energy_presets.city = ?", city)
+		`)
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
 	}
 
-	err := query.Scan(&results).Error
-	return results, err
+	var results []*repositories.EnergyPresetResponse
+	err := paginate(query, q).Scan(&results).Error
+	return results, total, err
 }
 
-// GetEnergyPresetsByCurrency retrieves energy presets by currency with base data
-func (r *PresetRepositoryImpl) GetEnergyPresetsByCurrency(currency, organizationID string) ([]*repositories.EnergyPresetResponse, error) {
-	var results []*repositories.EnergyPresetResponse
+// GetEnergyPresetsByCurrency retrieves a page of energy presets by currency with
+// base data, applying free-text search (on name), sorting and pagination.
+func (r *PresetRepositoryImpl) GetEnergyPresetsByCurrency(currency, organizationID string, q helpers.ListQuery) ([]*repositories.EnergyPresetResponse, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Table("energy_presets").
+			Joins("INNER JOIN presets ON energy_presets.id = presets.id").
+			Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ? AND energy_presets.currency = ?", organizationID, true, currency)
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
 
-	err := r.db.Table("energy_presets").
-		Select(`
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build().Select(`
 			presets.id,
 			presets.name,
 			presets.description,
@@ -785,20 +907,35 @@ func (r *PresetRepositoryImpl) GetEnergyPresetsByCurrency(currency, organization
 			energy_presets.tariff_type,
 			energy_presets.peak_hour_multiplier,
 			energy_presets.off_peak_hour_multiplier
-		`).
-		Joins("INNER JOIN presets ON energy_presets.id = presets.id").
-		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ? AND energy_presets.currency = ?", organizationID, true, currency).
-		Scan(&results).Error
+		`)
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	}
 
-	return results, err
+	var results []*repositories.EnergyPresetResponse
+	err := paginate(query, q).Scan(&results).Error
+	return results, total, err
 }
 
-// GetCostPresets retrieves all cost presets with base data in a single query
-func (r *PresetRepositoryImpl) GetCostPresets(organizationID string) ([]*repositories.CostPresetResponse, error) {
-	var results []*repositories.CostPresetResponse
+// GetCostPresets retrieves a page of cost presets with base data, applying
+// free-text search (on name), sorting and pagination.
+func (r *PresetRepositoryImpl) GetCostPresets(organizationID string, q helpers.ListQuery) ([]*repositories.CostPresetResponse, int64, error) {
+	build := func() *gorm.DB {
+		query := r.db.Table("cost_presets").
+			Joins("INNER JOIN presets ON cost_presets.id = presets.id").
+			Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true)
+		if q.Search != "" {
+			query = query.Where("presets.name ILIKE ?", "%"+q.Search+"%")
+		}
+		return query
+	}
 
-	err := r.db.Table("cost_presets").
-		Select(`
+	var total int64
+	if err := build().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	query := build().Select(`
 			presets.id,
 			presets.name,
 			presets.description,
@@ -816,12 +953,14 @@ func (r *PresetRepositoryImpl) GetCostPresets(organizationID string) ([]*reposit
 			cost_presets.post_processing_cost_per_hour,
 			cost_presets.support_removal_cost_per_hour,
 			cost_presets.quality_control_cost_per_item
-		`).
-		Joins("INNER JOIN presets ON cost_presets.id = presets.id").
-		Where("presets.organization_id = ? AND presets.deleted_at IS NULL AND presets.is_active = ?", organizationID, true).
-		Scan(&results).Error
+		`)
+	if order := q.OrderClause(); order != "" {
+		query = query.Order(order)
+	}
 
-	return results, err
+	var results []*repositories.CostPresetResponse
+	err := paginate(query, q).Scan(&results).Error
+	return results, total, err
 }
 
 // IsReferencedByProfile reports whether any non-deleted print profile in the
@@ -841,4 +980,15 @@ func (r *PresetRepositoryImpl) IsReferencedByProfile(presetID uuid.UUID, organiz
 		return false, err
 	}
 	return exists, nil
+}
+
+// paginate applies the page's offset and limit to a query. A non-positive limit
+// (e.g. a zero-value ListQuery used in tests) means "no limit" instead of gorm's
+// literal LIMIT 0, which would return no rows.
+func paginate(db *gorm.DB, q helpers.ListQuery) *gorm.DB {
+	db = db.Offset(q.Offset())
+	if q.Limit() > 0 {
+		db = db.Limit(q.Limit())
+	}
+	return db
 }

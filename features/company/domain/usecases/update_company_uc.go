@@ -5,6 +5,7 @@ import (
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/company/domain/entities"
 	"github.com/gin-gonic/gin"
 )
@@ -33,8 +34,7 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 	organizationID := getOrganizationID(c)
 	if organizationID == "" {
 		uc.logger.Error(ctx, "Organization ID not found in context", nil)
-		appError := coreErrors.UsecaseError("Organization ID not found in context")
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, coreErrors.BadRequest("organization_id_missing", "Organização não encontrada no contexto"))
 		return
 	}
 
@@ -45,8 +45,7 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 			uc.logger.Error(ctx, "Company not found", map[string]interface{}{
 				"organization_id": organizationID,
 			})
-			appError := coreErrors.UsecaseError(err.Error())
-			c.JSON(http.StatusNotFound, gin.H{"error": appError.Message})
+			coreErrors.Respond(c, coreErrors.NotFoundErr("company_not_found", "Empresa não encontrada"))
 			return
 		}
 
@@ -54,8 +53,7 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 			"error":           err.Error(),
 			"organization_id": organizationID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -64,17 +62,15 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 		uc.logger.Error(ctx, "Invalid company update payload", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("Invalid request format")
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
-	if err := uc.validator.Struct(request); err != nil {
+	if err := validation.Validate(request); err != nil {
 		uc.logger.Error(ctx, "Company update validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		appError := coreErrors.UsecaseError("Validation failed: " + err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 
@@ -126,8 +122,7 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 			"error":      err.Error(),
 			"company_id": company.ID,
 		})
-		appError := coreErrors.RepositoryError(err.Error())
-		c.JSON(appError.HTTPStatus(), gin.H{"error": appError.Message})
+		coreErrors.Respond(c, err)
 		return
 	}
 

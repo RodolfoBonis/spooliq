@@ -6,9 +6,9 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/roles"
+	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/users/domain/repositories"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +16,6 @@ import (
 type UpdateUserUseCase struct {
 	userRepository repositories.UserRepository
 	logger         logger.Logger
-	validate       *validator.Validate
 }
 
 // NewUpdateUserUseCase creates a new instance of UpdateUserUseCase
@@ -27,7 +26,6 @@ func NewUpdateUserUseCase(
 	return &UpdateUserUseCase{
 		userRepository: userRepository,
 		logger:         logger,
-		validate:       validator.New(),
 	}
 }
 
@@ -54,11 +52,11 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 	})
 
 	// 1. Validate request
-	if err := uc.validate.Struct(req); err != nil {
+	if err := validation.Validate(req); err != nil {
 		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, errors.BadRequestError("Invalid request data")
+		return nil, err
 	}
 
 	// 2. Check permissions
@@ -69,7 +67,7 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 		uc.logger.Error(ctx, "User does not have permission to update users", map[string]interface{}{
 			"roles": userRoles,
 		})
-		return nil, errors.ForbiddenError("You do not have permission to update users")
+		return nil, errors.Forbidden("users_update_forbidden", "Você não tem permissão para atualizar usuários")
 	}
 
 	// 3. Fetch the user to be updated
@@ -79,14 +77,14 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 			"error":   err.Error(),
 			"user_id": userID,
 		})
-		return nil, errors.InternalServerError("Failed to fetch user")
+		return nil, err
 	}
 
 	if targetUser == nil {
 		uc.logger.Info(ctx, "User not found", map[string]interface{}{
 			"user_id": userID,
 		})
-		return nil, errors.NotFound("User not found")
+		return nil, errors.NotFoundErr("user_not_found", "Usuário não encontrado")
 	}
 
 	// 4. Check hierarchical permissions
@@ -97,11 +95,11 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 			uc.logger.Error(ctx, "OrgAdmin cannot update owner or other admins", map[string]interface{}{
 				"target_user_type": targetUser.UserType,
 			})
-			return nil, errors.ForbiddenError("You can only update regular users")
+			return nil, errors.Forbidden("org_admin_users_only", "Você só pode atualizar usuários comuns")
 		}
 		if targetUser.ID.String() == currentUserID {
 			uc.logger.Error(ctx, "OrgAdmin cannot update self", nil)
-			return nil, errors.ForbiddenError("You cannot update your own user")
+			return nil, errors.Forbidden("org_admin_cannot_update_self", "Você não pode atualizar o seu próprio usuário")
 		}
 	}
 
@@ -119,7 +117,7 @@ func (uc *UpdateUserUseCase) Execute(ctx context.Context, userID uuid.UUID, orga
 			"error":   err.Error(),
 			"user_id": userID,
 		})
-		return nil, errors.InternalServerError("Failed to update user")
+		return nil, err
 	}
 
 	uc.logger.Info(ctx, "User updated successfully", map[string]interface{}{

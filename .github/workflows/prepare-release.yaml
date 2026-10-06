@@ -95,7 +95,7 @@ jobs:
           echo "Fetching main branch..."
           git fetch origin main
 
-          echo "Merging main into ${{ inputs.source_branch }}..."
+          echo "Merging main into ${{ inputs.from_branch }}..."
           git merge origin/main --no-edit -m "chore: sync with main before release" || {
             echo "Merge conflict detected. Auto-resolving by preferring main's version..."
             # Auto-resolve conflicts by preferring main's versions of version.txt and CHANGELOG.md

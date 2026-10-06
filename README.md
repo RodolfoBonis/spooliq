@@ -37,7 +37,9 @@
 | `POST /api/v1/auth/refresh`     | Refresh JWT token                              |
 | `POST /api/v1/auth/logout`      | User logout                                    |
 | `GET /api/v1/system/status`     | System status and information                  |
-| `GET /health`                   | Health check endpoint                          |
+| `GET /v1/health/live`           | Liveness probe (process is up)                 |
+| `GET /v1/health/ready`          | Readiness probe (dependencies are reachable)   |
+| `GET /v1/health_check`           | Legacy aggregate health check                  |
 | `GET /docs/index.html`          | Swagger API documentation                      |
 
 ---
@@ -166,9 +168,16 @@ curl -X POST http://localhost:8000/api/v1/auth/refresh \
 curl http://localhost:8000/api/v1/system/status
 ```
 
-### Health Check
+### Health Checks
 ```bash
-curl http://localhost:8000/health
+# Liveness: process is running
+curl http://localhost:8000/v1/health/live
+
+# Readiness: dependencies (DB, cache, ...) are reachable
+curl http://localhost:8000/v1/health/ready
+
+# Legacy aggregate health check
+curl http://localhost:8000/v1/health_check
 ```
 
 ---
@@ -204,6 +213,10 @@ This project uses a `Makefile` to streamline common development tasks.
   ```bash
   make lint
   ```
+  Runs `gofmt`, `go vet`, `staticcheck` and `goimports` via `.config/scripts/lint.sh`.
+  `staticcheck` and `goimports` are pinned and executed with `go run`, so no global
+  installs are required and CI uses the exact same versions. The command exits
+  non-zero only when there are real findings.
 
 - **Clean build artifacts:**
   ```bash

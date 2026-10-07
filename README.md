@@ -311,6 +311,10 @@ CLIENT_ID=your_client_id
 CLIENT_SECRET=your_client_secret
 REALM=your_realm
 KEYCLOAK_HOST=your_keycloak_host
+# Admin REST API service account (confidential client `spooliq-admin-svc`).
+# Used for the client_credentials grant on REALM; distinct from CLIENT_ID/CLIENT_SECRET above.
+KEYCLOAK_CLIENT_ID=your_admin_service_client_id
+KEYCLOAK_CLIENT_SECRET=your_admin_service_client_secret
 ```
 
 ---

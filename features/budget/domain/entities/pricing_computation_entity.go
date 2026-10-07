@@ -19,19 +19,31 @@ type PricingItemSpec struct {
 	PrintTimeMinutes        int
 	SetupTimeMinutes        int
 	ManualLaborMinutesTotal int
+	PostProcessingMinutes   int
+	SupportRemovalMinutes   int
 	CostPresetID            *uuid.UUID
 	Filaments               []PricingFilamentSpec
 }
 
 // PricingComputationInput is everything the repository needs to load the
-// org-scoped rates (filament prices, machine/energy/cost presets) and run the
-// pure pricing engine, WITHOUT persisting anything.
+// org-scoped rates (filament prices, machine/energy/cost presets, company default
+// tax rate) and run the pure pricing engine, WITHOUT persisting anything.
 type PricingComputationInput struct {
 	OrganizationID     string
 	IncludeEnergyCost  bool
 	IncludeWasteCost   bool
+	IncludeMachineCost bool
 	MachinePresetID    *uuid.UUID
 	EnergyPresetID     *uuid.UUID
 	BudgetCostPresetID *uuid.UUID
 	Items              []PricingItemSpec
+
+	// Discount / shipping / tax inputs (budget-level).
+	DiscountType          string
+	DiscountValue         float64
+	IncludeShipping       bool
+	ShippingOverrideCents *int64
+	// TaxRate is the budget-level tax rate (percent). When nil the repository uses the
+	// company's default_tax_rate.
+	TaxRate *float64
 }

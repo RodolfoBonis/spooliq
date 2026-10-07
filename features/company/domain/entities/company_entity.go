@@ -25,6 +25,9 @@ type CompanyEntity struct {
 	State          *string   `json:"state,omitempty"`
 	ZipCode        *string   `json:"zip_code,omitempty"`
 
+	// DefaultTaxRate is the organization's default "por dentro" tax rate (percent).
+	DefaultTaxRate float64 `json:"default_tax_rate"`
+
 	// Subscription fields
 	SubscriptionStatus    string                                       `json:"subscription_status"`
 	SubscriptionPlanID    *uuid.UUID                                   `json:"subscription_plan_id,omitempty"` // FK to subscription_plans

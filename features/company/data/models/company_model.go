@@ -27,6 +27,10 @@ type CompanyModel struct {
 	State          *string   `gorm:"type:varchar(100)" json:"state"`
 	ZipCode        *string   `gorm:"type:varchar(20)" json:"zip_code"`
 
+	// DefaultTaxRate is the organization's default "por dentro" tax rate (percent),
+	// used by budget pricing when a budget does not set its own tax_rate. Default 0.
+	DefaultTaxRate float64 `gorm:"type:double precision;not null;default:0" json:"default_tax_rate"`
+
 	// Subscription fields
 	SubscriptionStatus    string     `gorm:"type:varchar(20);not null;default:'trial';index" json:"subscription_status"`
 	SubscriptionPlanID    *uuid.UUID `gorm:"type:uuid;index" json:"subscription_plan_id"` // FK to subscription_plans(id) - Nullable for trial
@@ -87,6 +91,7 @@ func (c *CompanyModel) ToEntity() *entities.CompanyEntity {
 		City:                  c.City,
 		State:                 c.State,
 		ZipCode:               c.ZipCode,
+		DefaultTaxRate:        c.DefaultTaxRate,
 		SubscriptionStatus:    c.SubscriptionStatus,
 		SubscriptionPlanID:    c.SubscriptionPlanID,
 		StatusUpdatedAt:       c.StatusUpdatedAt,
@@ -123,6 +128,7 @@ func (c *CompanyModel) FromEntity(entity *entities.CompanyEntity) {
 	c.City = entity.City
 	c.State = entity.State
 	c.ZipCode = entity.ZipCode
+	c.DefaultTaxRate = entity.DefaultTaxRate
 	c.SubscriptionStatus = entity.SubscriptionStatus
 	c.SubscriptionPlanID = entity.SubscriptionPlanID
 	c.StatusUpdatedAt = entity.StatusUpdatedAt

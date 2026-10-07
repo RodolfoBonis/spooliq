@@ -114,6 +114,9 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 	if request.ZipCode != nil {
 		company.ZipCode = request.ZipCode
 	}
+	if request.DefaultTaxRate != nil {
+		company.DefaultTaxRate = *request.DefaultTaxRate
+	}
 
 	company.UpdatedAt = time.Now()
 
@@ -147,6 +150,7 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 		City:           company.City,
 		State:          company.State,
 		ZipCode:        company.ZipCode,
+		DefaultTaxRate: company.DefaultTaxRate,
 		CreatedAt:      company.CreatedAt,
 		UpdatedAt:      company.UpdatedAt,
 	})

@@ -29,6 +29,8 @@ const (
 	EntityBudget   ActivityEntityType = "budget"
 	EntityPreset   ActivityEntityType = "preset"
 	EntityModel3D  ActivityEntityType = "model3d"
+	// EntityStockMovement is a filament stock ledger entry (Phase 4C).
+	EntityStockMovement ActivityEntityType = "stock_movement"
 )
 
 // ActivityEntity represents a recorded activity.

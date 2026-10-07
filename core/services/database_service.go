@@ -23,6 +23,7 @@ import (
 	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
 	profiles "github.com/RodolfoBonis/spooliq/features/profile/data/models"
 	profileRepos "github.com/RodolfoBonis/spooliq/features/profile/data/repositories"
+	stocks "github.com/RodolfoBonis/spooliq/features/stock/data/models"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"gorm.io/driver/postgres"
@@ -450,6 +451,68 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_FILAMENT MIGRATION: %s", err.Error()))
 	}
 
+	// 18.1. Filament Stock Movements (Phase 4C). FK: OrganizationID -> Companies,
+	// FilamentID -> Filaments CASCADE, BudgetID -> Budgets SET NULL. Migrated after
+	// filaments and budgets exist; the non-org FKs are added idempotently below.
+	if err := Connector.AutoMigrate(&stocks.StockMovementModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING FILAMENT_STOCK_MOVEMENT MIGRATION: %s", err.Error()))
+	}
+
+	// 18.2. filament_stock_movements.filament_id FK -> filaments(id) ON DELETE CASCADE,
+	// and budget_id FK -> budgets(id) ON DELETE SET NULL. FK creation is disabled during
+	// AutoMigrate (see newGormConfig), so add them here, idempotently.
+	{
+		var tableExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'filament_stock_movements')").Scan(&tableExists)
+		if tableExists {
+			var filamentFKExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'filament_stock_movements' AND constraint_name = 'fk_stock_movements_filament'
+				)
+			`).Scan(&filamentFKExists)
+			if !filamentFKExists {
+				sql := `
+					ALTER TABLE filament_stock_movements
+					ADD CONSTRAINT fk_stock_movements_filament
+					FOREIGN KEY (filament_id)
+					REFERENCES filaments(id)
+					ON UPDATE CASCADE
+					ON DELETE CASCADE
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for filament_stock_movements.filament_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for filament_stock_movements.filament_id")
+				}
+			}
+
+			var budgetFKExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'filament_stock_movements' AND constraint_name = 'fk_stock_movements_budget'
+				)
+			`).Scan(&budgetFKExists)
+			if !budgetFKExists {
+				sql := `
+					ALTER TABLE filament_stock_movements
+					ADD CONSTRAINT fk_stock_movements_budget
+					FOREIGN KEY (budget_id)
+					REFERENCES budgets(id)
+					ON UPDATE CASCADE
+					ON DELETE SET NULL
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for filament_stock_movements.budget_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for filament_stock_movements.budget_id")
+				}
+			}
+		}
+	}
+
 	// 17.1. budget_items.model_3d_id FK -> models_3d(id) ON DELETE SET NULL. Added
 	// here (after both budget_items and models_3d exist), idempotently: only when the
 	// constraint is not already present. Deleting a model simply detaches it from the
@@ -503,7 +566,7 @@ func RunMigrations() {
 		"customers": true, "models_3d": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
-		"print_profiles": true,
+		"print_profiles": true, "filament_stock_movements": true,
 	}
 
 	for table := range orgFKTables {
@@ -615,6 +678,17 @@ func RunMigrations() {
 			// Public share token is globally unique (partial: only non-NULL tokens).
 			"uq_budgets_public_token",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_public_token ON budgets(public_token) WHERE public_token IS NOT NULL",
+		},
+		{
+			// Ledger lookups: newest movement first, per filament within an org.
+			"idx_stock_movements_org_filament_created",
+			"CREATE INDEX IF NOT EXISTS idx_stock_movements_org_filament_created ON filament_stock_movements(organization_id, filament_id, created_at DESC)",
+		},
+		{
+			// Idempotency guard for auto-deduction: at most one consumption movement
+			// per (budget, filament). Partial so purchases/adjustments/waste are free.
+			"uq_stock_movements_budget_filament_consumption",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_stock_movements_budget_filament_consumption ON filament_stock_movements(budget_id, filament_id) WHERE type = 'consumption'",
 		},
 	}
 

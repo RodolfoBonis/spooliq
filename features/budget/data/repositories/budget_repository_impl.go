@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -31,6 +32,84 @@ func (r *budgetRepositoryImpl) WithTransaction(ctx context.Context, fn func(repo
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return fn(&budgetRepositoryImpl{db: tx})
 	})
+}
+
+// UnderlyingTx exposes the *gorm.DB this repository is bound to (the transaction
+// handle inside a WithTransaction callback). See the interface doc.
+func (r *budgetRepositoryImpl) UnderlyingTx() *gorm.DB {
+	return r.db
+}
+
+// stockWarningRow is the join projection behind the stock-warning queries.
+type stockWarningRow struct {
+	ID         uuid.UUID `gorm:"column:id"`
+	Name       string    `gorm:"column:name"`
+	Color      string    `gorm:"column:color"`
+	StockGrams int64     `gorm:"column:stock_grams"`
+	Required   float64   `gorm:"column:required"`
+}
+
+// GetStockWarnings computes, for a stored budget, the tracked filaments whose stock is
+// below the budget's requirement, in a single org-scoped query.
+func (r *budgetRepositoryImpl) GetStockWarnings(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]entities.StockWarning, error) {
+	var rows []stockWarningRow
+	if err := r.db.WithContext(ctx).
+		Table("budget_item_filaments AS bif").
+		Select("f.id AS id, f.name AS name, f.color AS color, f.stock_grams AS stock_grams, SUM(bif.quantity) AS required").
+		Joins("JOIN budget_items bi ON bi.id = bif.budget_item_id").
+		Joins("JOIN filaments f ON f.id = bif.filament_id AND f.organization_id = bif.organization_id AND f.deleted_at IS NULL").
+		Where("bi.budget_id = ? AND bif.organization_id = ? AND f.track_stock = ?", budgetID, organizationID, true).
+		Group("f.id, f.name, f.color, f.stock_grams").
+		Order("f.name").
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to compute stock warnings: %w", err)
+	}
+	return warningsFromRows(rows), nil
+}
+
+// GetStockWarningsForRequest computes stock warnings for a preview from the required
+// grams per filament, in one org-scoped query.
+func (r *budgetRepositoryImpl) GetStockWarningsForRequest(ctx context.Context, organizationID string, requiredByFilament map[uuid.UUID]float64) ([]entities.StockWarning, error) {
+	if len(requiredByFilament) == 0 {
+		return []entities.StockWarning{}, nil
+	}
+	ids := make([]uuid.UUID, 0, len(requiredByFilament))
+	for id := range requiredByFilament {
+		ids = append(ids, id)
+	}
+
+	var rows []stockWarningRow
+	if err := r.db.WithContext(ctx).
+		Table("filaments AS f").
+		Select("f.id AS id, f.name AS name, f.color AS color, f.stock_grams AS stock_grams").
+		Where("f.organization_id = ? AND f.track_stock = ? AND f.deleted_at IS NULL AND f.id IN ?", organizationID, true, ids).
+		Order("f.name").
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to compute preview stock warnings: %w", err)
+	}
+	for i := range rows {
+		rows[i].Required = requiredByFilament[rows[i].ID]
+	}
+	return warningsFromRows(rows), nil
+}
+
+// warningsFromRows keeps only the rows where the rounded requirement exceeds the
+// on-hand stock, mapping them to the response shape.
+func warningsFromRows(rows []stockWarningRow) []entities.StockWarning {
+	warnings := make([]entities.StockWarning, 0, len(rows))
+	for _, row := range rows {
+		required := int64(math.Round(row.Required))
+		if required > row.StockGrams {
+			warnings = append(warnings, entities.StockWarning{
+				FilamentID:     row.ID.String(),
+				FilamentName:   row.Name,
+				Color:          row.Color,
+				RequiredGrams:  required,
+				AvailableGrams: row.StockGrams,
+			})
+		}
+	}
+	return warnings
 }
 
 func (r *budgetRepositoryImpl) Create(ctx context.Context, budget *entities.BudgetEntity) error {

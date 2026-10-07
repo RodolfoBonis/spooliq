@@ -784,3 +784,23 @@ func (r *DashboardRepositoryImpl) GetGoalsAlerts(organizationID string) (*entiti
 		Alerts: alerts,
 	}, nil
 }
+
+// GetLowStockFilaments returns tracked filaments at or below their alert threshold,
+// ordered by the shortfall (stock_grams - threshold) ascending so the most depleted
+// come first, capped at limit. It joins brands/materials for display names.
+func (r *DashboardRepositoryImpl) GetLowStockFilaments(organizationID string, limit int) ([]entities.LowStockFilament, error) {
+	var rows []entities.LowStockFilament
+	err := r.db.
+		Table("filaments AS f").
+		Select("f.id AS id, f.name AS name, f.color AS color, f.color_hex AS color_hex, b.name AS brand_name, m.name AS material_name, f.stock_grams AS stock_grams, f.low_stock_threshold_grams AS low_stock_threshold_grams").
+		Joins("LEFT JOIN brands b ON b.id = f.brand_id").
+		Joins("LEFT JOIN materials m ON m.id = f.material_id").
+		Where("f.organization_id = ? AND f.deleted_at IS NULL AND f.track_stock = ? AND f.low_stock_threshold_grams IS NOT NULL AND f.stock_grams <= f.low_stock_threshold_grams", organizationID, true).
+		Order("(f.stock_grams - f.low_stock_threshold_grams) ASC").
+		Limit(limit).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to query low stock filaments: %w", err)
+	}
+	return rows, nil
+}

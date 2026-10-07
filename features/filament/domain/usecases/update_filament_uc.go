@@ -1,8 +1,10 @@
 package usecases
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -146,6 +148,18 @@ func (uc *FilamentUseCase) Update(c *gin.Context) {
 
 	applyFilamentUpdate(existingFilament, &request)
 
+	// Stock control. track_stock toggles tracking; the alert threshold uses a raw
+	// JSON value so absent / explicit-null / number are distinguishable. stock_grams
+	// is never updated here — it changes only through movements.
+	if request.TrackStock != nil {
+		existingFilament.TrackStock = *request.TrackStock
+	}
+	if err := applyThresholdUpdate(existingFilament, request.LowStockThresholdGrams); err != nil {
+		uc.logger.Error(ctx, "Invalid low stock threshold", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
+
 	// Regenerate color preview if color data changed.
 	if request.ColorType != nil && request.ColorData != nil && len(*request.ColorData) > 0 {
 		if colorData, err := filamentEntities.ParseColorData(*request.ColorType, *request.ColorData); err == nil {
@@ -237,4 +251,29 @@ func applyFilamentUpdate(f *filamentEntities.FilamentEntity, request *filamentEn
 	if request.BedTemperature != nil {
 		f.BedTemperature = request.BedTemperature
 	}
+}
+
+// applyThresholdUpdate interprets the raw low_stock_threshold_grams value from an
+// update request. Absent (nil/empty) leaves the stored threshold untouched; an
+// explicit JSON null or a negative number (-1) clears it (no alert); a number >= 0
+// sets it. A malformed value yields a 400 so the client learns its payload is wrong.
+func applyThresholdUpdate(f *filamentEntities.FilamentEntity, raw []byte) error {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return nil
+	}
+	if string(trimmed) == "null" {
+		f.LowStockThresholdGrams = nil
+		return nil
+	}
+	v, err := strconv.Atoi(string(trimmed))
+	if err != nil {
+		return coreErrors.BadRequest("invalid_low_stock_threshold", "Limite de estoque baixo inválido")
+	}
+	if v < 0 {
+		f.LowStockThresholdGrams = nil
+		return nil
+	}
+	f.LowStockThresholdGrams = &v
+	return nil
 }

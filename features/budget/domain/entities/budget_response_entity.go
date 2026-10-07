@@ -45,6 +45,17 @@ type FilamentUsageInfo struct {
 	Order    int     `json:"order"`
 }
 
+// StockWarning flags a tracked filament whose on-hand stock is below what this
+// budget requires. required_grams is the rounded total grams the budget needs for
+// the filament; available_grams is the filament's current stock balance.
+type StockWarning struct {
+	FilamentID     string `json:"filament_id"`
+	FilamentName   string `json:"filament_name"`
+	Color          string `json:"color"`
+	RequiredGrams  int64  `json:"required_grams"`
+	AvailableGrams int64  `json:"available_grams"`
+}
+
 // PresetInfo represents simplified preset information
 type PresetInfo struct {
 	ID   string `json:"id"`
@@ -155,6 +166,11 @@ type BudgetResponse struct {
 	TotalPrintTimeHours   int    `json:"total_print_time_hours"`
 	TotalPrintTimeMinutes int    `json:"total_print_time_minutes"`
 	TotalPrintTimeDisplay string `json:"total_print_time_display"` // "14h15m"
+
+	// StockWarnings lists tracked filaments whose on-hand stock is below this budget's
+	// requirement (empty when none, or when the budget is already completed and its
+	// stock was deducted). Computed on the detail and preview responses only.
+	StockWarnings []StockWarning `json:"stock_warnings"`
 }
 
 // ListBudgetsResponse represents the response for listing budgets

@@ -1,13 +1,19 @@
 package budget
 
 import (
+	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/roles"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
 	"github.com/gin-gonic/gin"
 )
 
+// statusInvalidateGroups are the cache groups a status change can make stale:
+// completing a budget auto-deducts filament stock (filaments) and moves the
+// dashboard aggregates.
+var statusInvalidateGroups = []string{"filaments", "dashboard"}
+
 // Routes registers all budget routes
-func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc) {
+func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware) {
 	budgetRoutes := route.Group("/budgets")
 	{
 		// All users can manage budgets
@@ -17,7 +23,7 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		budgetRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
-		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(statusInvalidateGroups...))
 		budgetRoutes.POST("/:id/duplicate", protectFactory(useCase.Duplicate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Public share link management (create/return token, revoke).
 		budgetRoutes.POST("/:id/share", protectFactory(useCase.Share, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))

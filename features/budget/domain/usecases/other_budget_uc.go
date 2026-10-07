@@ -164,6 +164,13 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 
 	// Persist the whole copy atomically.
 	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		// A duplicate gets a brand-new quote number; public_token, valid_until and the
+		// customer-response fields are left nil (reset) and the status stays draft.
+		quoteNumber, qerr := repo.AllocateQuoteNumber(ctx, organizationID)
+		if qerr != nil {
+			return qerr
+		}
+		newBudget.QuoteNumber = &quoteNumber
 		if err := repo.Create(ctx, newBudget); err != nil {
 			return err
 		}

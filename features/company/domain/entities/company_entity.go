@@ -28,6 +28,11 @@ type CompanyEntity struct {
 	// DefaultTaxRate is the organization's default "por dentro" tax rate (percent).
 	DefaultTaxRate float64 `json:"default_tax_rate"`
 
+	// DefaultQuoteValidityDays is the default number of days a sent quote stays valid.
+	DefaultQuoteValidityDays int `json:"default_quote_validity_days"`
+	// DefaultPaymentTerms is the organization's default payment terms.
+	DefaultPaymentTerms *string `json:"default_payment_terms,omitempty"`
+
 	// Subscription fields
 	SubscriptionStatus    string                                       `json:"subscription_status"`
 	SubscriptionPlanID    *uuid.UUID                                   `json:"subscription_plan_id,omitempty"` // FK to subscription_plans

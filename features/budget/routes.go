@@ -19,6 +19,9 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.POST("/:id/duplicate", protectFactory(useCase.Duplicate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Public share link management (create/return token, revoke).
+		budgetRoutes.POST("/:id/share", protectFactory(useCase.Share, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.DELETE("/:id/share", protectFactory(useCase.RevokeShare, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Recalculate (mutates stored costs) is a POST and only allowed for drafts.
 		budgetRoutes.POST("/:id/recalculate", protectFactory(useCase.Recalculate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Deprecated: read-only view of stored costs (kept for backward compatibility).
@@ -28,5 +31,18 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		budgetRoutes.GET("/:id/pdf", protectFactory(useCase.GeneratePDF, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Only Owner and OrgAdmin can delete budgets
 		budgetRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.OwnerRole, roles.OrgAdminRole))
+	}
+}
+
+// PublicRoutes registers the customer-facing public budget routes. These are mounted
+// WITHOUT the auth or subscription middleware: the share token is the only
+// credential, and abuse is mitigated by a per-IP rate limit inside the use case.
+func PublicRoutes(route *gin.RouterGroup, publicUseCase usecases.IPublicBudgetUseCase) {
+	public := route.Group("/public/budgets")
+	{
+		public.GET("/:token", publicUseCase.GetByToken)
+		public.GET("/:token/pdf", publicUseCase.GetPDF)
+		public.POST("/:token/approve", publicUseCase.Approve)
+		public.POST("/:token/reject", publicUseCase.Reject)
 	}
 }

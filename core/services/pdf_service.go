@@ -13,6 +13,15 @@ import (
 	"github.com/jung-kurt/gofpdf/v2"
 )
 
+// pdfSaoPaulo is the timezone used to render quote validity dates (date-only).
+var pdfSaoPaulo = func() *time.Location {
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}()
+
 // PDFService handles PDF generation and upload
 type PDFService struct {
 	cdnService *CDNService
@@ -192,6 +201,18 @@ func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEnt
 	pdf.SetTextColor(r, g, b)
 	pdf.Cell(0, 6, s.convertUTF8(budget.Name))
 	pdf.Ln(4)
+
+	// Quote number ("Orçamento nº 0001") and validity ("Válido até dd/mm/yyyy").
+	if budget.QuoteNumber != nil {
+		pdf.SetFont("Arial", "", 9)
+		pdf.Cell(0, 5, s.convertUTF8(fmt.Sprintf("Orçamento nº %04d", *budget.QuoteNumber)))
+		pdf.Ln(4)
+	}
+	if budget.ValidUntil != nil {
+		pdf.SetFont("Arial", "", 9)
+		pdf.Cell(0, 5, s.convertUTF8("Válido até "+budget.ValidUntil.In(pdfSaoPaulo).Format("02/01/2006")))
+		pdf.Ln(4)
+	}
 
 	if budget.Description != "" {
 		pdf.SetFont("Arial", "I", 9)

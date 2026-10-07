@@ -1,6 +1,10 @@
 package entities
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // BudgetItemFilamentRequest represents a filament in a budget item request
 type BudgetItemFilamentRequest struct {
@@ -85,6 +89,10 @@ type CreateBudgetRequest struct {
 	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
 	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
 
+	// ValidUntil is the optional quote validity date (date-only semantics; stored at
+	// end of day in America/Sao_Paulo). When omitted it is computed on first send.
+	ValidUntil *time.Time `json:"valid_until,omitempty"`
+
 	// Items (products)
 	Items []BudgetItemRequest `json:"items" validate:"required,min=1,dive"`
 }
@@ -127,12 +135,16 @@ type UpdateBudgetRequest struct {
 	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
 	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
 
+	// ValidUntil is the optional quote validity date (date-only; stored end of day,
+	// America/Sao_Paulo). Settable on update.
+	ValidUntil *time.Time `json:"valid_until,omitempty"`
+
 	// Items (optional - if provided, replaces all items)
 	Items *[]BudgetItemRequest `json:"items,omitempty" validate:"omitempty,min=1,dive"`
 }
 
 // UpdateStatusRequest represents the request to update budget status
 type UpdateStatusRequest struct {
-	Status BudgetStatus `json:"status" validate:"required,oneof=draft sent approved rejected printing completed"`
+	Status BudgetStatus `json:"status" validate:"required,oneof=draft sent approved rejected printing completed expired cancelled"`
 	Notes  string       `json:"notes,omitempty" validate:"omitempty,max=500"`
 }

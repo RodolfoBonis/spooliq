@@ -13,6 +13,8 @@ const (
 	ActionUpdated       ActivityAction = "updated"
 	ActionDeleted       ActivityAction = "deleted"
 	ActionStatusChanged ActivityAction = "status_changed"
+	ActionApproved      ActivityAction = "approved"
+	ActionRejected      ActivityAction = "rejected"
 )
 
 // ActivityEntityType represents the type of entity affected.
@@ -27,6 +29,8 @@ const (
 	EntityBudget   ActivityEntityType = "budget"
 	EntityPreset   ActivityEntityType = "preset"
 	EntityModel3D  ActivityEntityType = "model3d"
+	// EntityStockMovement is a filament stock ledger entry (Phase 4C).
+	EntityStockMovement ActivityEntityType = "stock_movement"
 )
 
 // ActivityEntity represents a recorded activity.

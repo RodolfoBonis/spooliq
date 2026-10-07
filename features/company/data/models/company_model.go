@@ -27,6 +27,23 @@ type CompanyModel struct {
 	State          *string   `gorm:"type:varchar(100)" json:"state"`
 	ZipCode        *string   `gorm:"type:varchar(20)" json:"zip_code"`
 
+	// DefaultTaxRate is the organization's default "por dentro" tax rate (percent),
+	// used by budget pricing when a budget does not set its own tax_rate. Default 0.
+	DefaultTaxRate float64 `gorm:"type:double precision;not null;default:0" json:"default_tax_rate"`
+
+	// NextQuoteNumber is the per-organization counter used to atomically allocate the
+	// next sequential budget quote number. Intentionally NOT exposed on the entity so
+	// a company Update (Updates(struct), which skips zero values) never clobbers it.
+	NextQuoteNumber int `gorm:"type:integer;not null;default:1" json:"-"`
+
+	// DefaultQuoteValidityDays is the default number of days a sent quote stays valid
+	// (used to compute valid_until). Default 15.
+	DefaultQuoteValidityDays int `gorm:"type:integer;not null;default:15" json:"default_quote_validity_days"`
+
+	// DefaultPaymentTerms is the organization's default payment terms, copied onto a
+	// budget at create time when the request omits payment_terms.
+	DefaultPaymentTerms *string `gorm:"type:varchar(500)" json:"default_payment_terms"`
+
 	// Subscription fields
 	SubscriptionStatus    string     `gorm:"type:varchar(20);not null;default:'trial';index" json:"subscription_status"`
 	SubscriptionPlanID    *uuid.UUID `gorm:"type:uuid;index" json:"subscription_plan_id"` // FK to subscription_plans(id) - Nullable for trial
@@ -72,30 +89,33 @@ func (c *CompanyModel) BeforeCreate(tx *gorm.DB) error {
 // ToEntity converts the GORM model to domain entity
 func (c *CompanyModel) ToEntity() *entities.CompanyEntity {
 	entity := &entities.CompanyEntity{
-		ID:                    c.ID,
-		OrganizationID:        c.OrganizationID,
-		Name:                  c.Name,
-		TradeName:             c.TradeName,
-		Document:              c.Document,
-		Email:                 c.Email,
-		Phone:                 c.Phone,
-		WhatsApp:              c.WhatsApp,
-		Instagram:             c.Instagram,
-		Website:               c.Website,
-		LogoURL:               c.LogoURL,
-		Address:               c.Address,
-		City:                  c.City,
-		State:                 c.State,
-		ZipCode:               c.ZipCode,
-		SubscriptionStatus:    c.SubscriptionStatus,
-		SubscriptionPlanID:    c.SubscriptionPlanID,
-		StatusUpdatedAt:       c.StatusUpdatedAt,
-		IsPlatformCompany:     c.IsPlatformCompany,
-		TrialEndsAt:           c.TrialEndsAt,
-		SubscriptionStartedAt: c.SubscriptionStartedAt,
-		CreatedAt:             c.CreatedAt,
-		UpdatedAt:             c.UpdatedAt,
-		DeletedAt:             getDeletedAt(c.DeletedAt),
+		ID:                       c.ID,
+		OrganizationID:           c.OrganizationID,
+		Name:                     c.Name,
+		TradeName:                c.TradeName,
+		Document:                 c.Document,
+		Email:                    c.Email,
+		Phone:                    c.Phone,
+		WhatsApp:                 c.WhatsApp,
+		Instagram:                c.Instagram,
+		Website:                  c.Website,
+		LogoURL:                  c.LogoURL,
+		Address:                  c.Address,
+		City:                     c.City,
+		State:                    c.State,
+		ZipCode:                  c.ZipCode,
+		DefaultTaxRate:           c.DefaultTaxRate,
+		DefaultQuoteValidityDays: c.DefaultQuoteValidityDays,
+		DefaultPaymentTerms:      c.DefaultPaymentTerms,
+		SubscriptionStatus:       c.SubscriptionStatus,
+		SubscriptionPlanID:       c.SubscriptionPlanID,
+		StatusUpdatedAt:          c.StatusUpdatedAt,
+		IsPlatformCompany:        c.IsPlatformCompany,
+		TrialEndsAt:              c.TrialEndsAt,
+		SubscriptionStartedAt:    c.SubscriptionStartedAt,
+		CreatedAt:                c.CreatedAt,
+		UpdatedAt:                c.UpdatedAt,
+		DeletedAt:                getDeletedAt(c.DeletedAt),
 	}
 
 	// Convert CurrentPlan if available
@@ -123,6 +143,9 @@ func (c *CompanyModel) FromEntity(entity *entities.CompanyEntity) {
 	c.City = entity.City
 	c.State = entity.State
 	c.ZipCode = entity.ZipCode
+	c.DefaultTaxRate = entity.DefaultTaxRate
+	c.DefaultQuoteValidityDays = entity.DefaultQuoteValidityDays
+	c.DefaultPaymentTerms = entity.DefaultPaymentTerms
 	c.SubscriptionStatus = entity.SubscriptionStatus
 	c.SubscriptionPlanID = entity.SubscriptionPlanID
 	c.StatusUpdatedAt = entity.StatusUpdatedAt

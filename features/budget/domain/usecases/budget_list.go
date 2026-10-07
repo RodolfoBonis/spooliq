@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,14 +47,20 @@ func budgetListQuery(c *gin.Context) helpers.ListQuery {
 func parseBudgetFilters(c *gin.Context, search string) (map[string]interface{}, *coreErrors.APIError) {
 	filters := map[string]interface{}{}
 
+	// Free-text search: when q is a plain integer it is an EXACT quote_number match;
+	// otherwise it is a case-insensitive match on the budget name.
 	if search != "" {
-		filters["name"] = search
+		if n, err := strconv.Atoi(strings.TrimSpace(search)); err == nil {
+			filters["quote_number"] = n
+		} else {
+			filters["name"] = search
+		}
 	}
 
 	if status := strings.TrimSpace(c.Query("status")); status != "" {
 		if !entities.IsKnownStatus(status) {
 			return nil, coreErrors.BadRequest(CodeInvalidStatusFilter,
-				"Status de filtro inválido. Valores aceitos: draft, sent, approved, rejected, printing, completed")
+				"Status de filtro inválido. Valores aceitos: draft, sent, approved, rejected, printing, completed, expired, cancelled")
 		}
 		filters["status"] = status
 	}

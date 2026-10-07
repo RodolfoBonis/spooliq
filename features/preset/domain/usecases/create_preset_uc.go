@@ -84,6 +84,9 @@ type CreateCostPresetRequest struct {
 	PostProcessingCostPerHour float32    `json:"post_processing_cost_per_hour" binding:"min=0"`
 	SupportRemovalCostPerHour float32    `json:"support_removal_cost_per_hour" binding:"min=0"`
 	QualityControlCostPerItem float32    `json:"quality_control_cost_per_item" binding:"min=0"`
+	FailureRatePercentage     float32    `json:"failure_rate_percentage" binding:"min=0,max=100"`
+	// WasteGramsPerColorChange defaults to 15 when omitted (0) to match the engine default.
+	WasteGramsPerColorChange float32 `json:"waste_grams_per_color_change" binding:"min=0"`
 }
 
 // CreateMachinePreset creates a new machine preset. The owning user is taken
@@ -230,6 +233,13 @@ func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, or
 		return nil, err
 	}
 
+	// Default waste-per-color-change to the engine constant (15g) when omitted, so a
+	// new preset reproduces the legacy waste behaviour unless explicitly configured.
+	wasteGrams := req.WasteGramsPerColorChange
+	if wasteGrams == 0 {
+		wasteGrams = 15
+	}
+
 	cost := &entities.CostPresetEntity{
 		ID:                        preset.ID,
 		OrganizationID:            organizationID,
@@ -242,6 +252,8 @@ func (uc *CreatePresetUseCase) CreateCostPreset(req *CreateCostPresetRequest, or
 		PostProcessingCostPerHour: req.PostProcessingCostPerHour,
 		SupportRemovalCostPerHour: req.SupportRemovalCostPerHour,
 		QualityControlCostPerItem: req.QualityControlCostPerItem,
+		FailureRatePercentage:     req.FailureRatePercentage,
+		WasteGramsPerColorChange:  wasteGrams,
 	}
 
 	if err := cost.Validate(); err != nil {

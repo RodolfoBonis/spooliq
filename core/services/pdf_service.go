@@ -13,6 +13,15 @@ import (
 	"github.com/jung-kurt/gofpdf/v2"
 )
 
+// pdfSaoPaulo is the timezone used to render quote validity dates (date-only).
+var pdfSaoPaulo = func() *time.Location {
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}()
+
 // PDFService handles PDF generation and upload
 type PDFService struct {
 	cdnService *CDNService
@@ -29,6 +38,9 @@ type BudgetPDFData struct {
 	Branding              *companyEntities.CompanyBrandingEntity // Branding configuration
 	TotalPrintTimeHours   int                                    // Total print time (sum of all items)
 	TotalPrintTimeMinutes int                                    // Total print time (sum of all items)
+	// PublicView, when true, renders the sanitized customer-facing PDF: the customer
+	// block shows the NAME only (no email/phone/document). The org PDF leaves it false.
+	PublicView bool
 }
 
 // NewPDFService creates a new PDF service instance
@@ -70,7 +82,7 @@ func (s *PDFService) GenerateBudgetPDF(ctx context.Context, data BudgetPDFData) 
 	s.addTitle(pdf, data.Budget, data.Branding)
 
 	// Add customer info
-	s.addCustomerInfo(pdf, data.Customer, data.Branding)
+	s.addCustomerInfo(pdf, data.Customer, data.Branding, data.PublicView)
 
 	// Add items table
 	s.addItemsTable(pdf, data.Items, data.Budget, data.Branding)
@@ -193,6 +205,18 @@ func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEnt
 	pdf.Cell(0, 6, s.convertUTF8(budget.Name))
 	pdf.Ln(4)
 
+	// Quote number ("Orçamento nº 0001") and validity ("Válido até dd/mm/yyyy").
+	if budget.QuoteNumber != nil {
+		pdf.SetFont("Arial", "", 9)
+		pdf.Cell(0, 5, s.convertUTF8(fmt.Sprintf("Orçamento nº %04d", *budget.QuoteNumber)))
+		pdf.Ln(4)
+	}
+	if budget.ValidUntil != nil {
+		pdf.SetFont("Arial", "", 9)
+		pdf.Cell(0, 5, s.convertUTF8("Válido até "+budget.ValidUntil.In(pdfSaoPaulo).Format("02/01/2006")))
+		pdf.Ln(4)
+	}
+
 	if budget.Description != "" {
 		pdf.SetFont("Arial", "I", 9)
 		pdf.MultiCell(0, 5, s.convertUTF8(budget.Description), "", "", false)
@@ -201,8 +225,28 @@ func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEnt
 	pdf.Ln(6)
 }
 
+// customerDetailLines returns the customer contact lines rendered BELOW the name.
+// In publicView (the customer-facing PDF) it returns no lines, so email, phone and
+// CPF/CNPJ never appear. In the org PDF it returns the populated contact lines.
+func customerDetailLines(customer *budgetEntities.CustomerInfo, publicView bool) []string {
+	if publicView || customer == nil {
+		return nil
+	}
+	var lines []string
+	if customer.Email != nil && *customer.Email != "" {
+		lines = append(lines, "Email: "+*customer.Email)
+	}
+	if customer.Phone != nil && *customer.Phone != "" {
+		lines = append(lines, "Telefone: "+*customer.Phone)
+	}
+	if customer.Document != nil && *customer.Document != "" {
+		lines = append(lines, "CPF/CNPJ: "+*customer.Document)
+	}
+	return lines
+}
+
 // addCustomerInfo adds customer information
-func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.CustomerInfo, branding *companyEntities.CompanyBrandingEntity) {
+func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.CustomerInfo, branding *companyEntities.CompanyBrandingEntity, publicView bool) {
 	pdf.SetFont("Arial", "B", 11)
 	r, g, b := s.hexToRGB(branding.SecondaryColor)
 	pdf.SetTextColor(r, g, b)
@@ -213,25 +257,16 @@ func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.
 	r, g, b = s.hexToRGB(branding.BodyTextColor)
 	pdf.SetTextColor(r, g, b)
 
-	// Name
+	// Name (always shown)
 	pdf.Cell(0, 5, s.convertUTF8(customer.Name))
 	pdf.Ln(4)
 
-	// Email
-	if customer.Email != nil && *customer.Email != "" {
-		pdf.Cell(0, 5, s.convertUTF8("Email: "+*customer.Email))
+	// Contact details (email/phone/document) are internal and are omitted from the
+	// public, customer-facing PDF (publicView). The decision lives in the pure
+	// customerDetailLines helper so it is directly unit-testable.
+	for _, line := range customerDetailLines(customer, publicView) {
+		pdf.Cell(0, 5, s.convertUTF8(line))
 		pdf.Ln(4)
-	}
-
-	// Phone
-	if customer.Phone != nil && *customer.Phone != "" {
-		pdf.Cell(0, 5, s.convertUTF8("Telefone: "+*customer.Phone))
-		pdf.Ln(4)
-	}
-
-	// Document
-	if customer.Document != nil && *customer.Document != "" {
-		pdf.Cell(0, 5, s.convertUTF8("CPF/CNPJ: "+*customer.Document))
 	}
 
 	pdf.Ln(8)
@@ -299,19 +334,50 @@ func (s *PDFService) addItemsTable(pdf *gofpdf.Fpdf, items []budgetEntities.Budg
 	pdf.Ln(3) // Reduced from 4 to 3
 }
 
-// addCostSummary adds the cost summary section
+// addCostSummary adds the cost summary section: the pre-adjustment subtotal
+// (base price), then discount (when > 0), shipping (when included) and taxes
+// (when > 0), and finally the total. These reconcile as
+// base - discount + shipping + tax = total (taxes are "por dentro"). The per-item
+// rows above already sum to total - shipping (see pricing.DistributeMarkup).
 func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEntity, branding *companyEntities.CompanyBrandingEntity) {
 	pdf.Ln(2)
 
-	// Total
-	pdf.SetFont("Arial", "B", 11) // Reduced from 12
-	r, g, b := s.hexToRGB(branding.AccentColor)
+	r, g, b := s.hexToRGB(branding.BodyTextColor)
+
+	// Subtotal (sale price before discount/shipping/tax).
+	pdf.SetFont("Arial", "", 10)
 	pdf.SetTextColor(r, g, b)
-	pdf.Cell(120, 6, s.convertUTF8("TOTAL:")) // Reduced height from 8 to 6
-	pdf.SetFont("Arial", "B", 13)             // Reduced from 14
+	pdf.Cell(120, 6, s.convertUTF8("Subtotal:"))
+	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.BasePrice())/100.0))
+	pdf.Ln(5)
+
+	if budget.DiscountAmount > 0 {
+		pdf.Cell(120, 6, s.convertUTF8("Desconto:"))
+		pdf.Cell(0, 6, fmt.Sprintf("- R$ %.2f", float64(budget.DiscountAmount)/100.0))
+		pdf.Ln(5)
+	}
+
+	if budget.IncludeShipping {
+		pdf.Cell(120, 6, s.convertUTF8("Frete:"))
+		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.ShippingCost)/100.0))
+		pdf.Ln(5)
+	}
+
+	if budget.TaxAmount > 0 {
+		pdf.Cell(120, 6, s.convertUTF8("Impostos:"))
+		pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.TaxAmount)/100.0))
+		pdf.Ln(5)
+	}
+
+	// Total.
+	pdf.SetFont("Arial", "B", 11)
+	ar, ag, ab := s.hexToRGB(branding.AccentColor)
+	pdf.SetTextColor(ar, ag, ab)
+	pdf.Cell(120, 6, s.convertUTF8("TOTAL:"))
+	pdf.SetFont("Arial", "B", 13)
 	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.TotalCost)/100.0))
 
-	pdf.Ln(6) // Reduced from 8 to 6
+	pdf.Ln(6)
 }
 
 // addAdditionalInfo adds delivery, payment and notes

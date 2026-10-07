@@ -45,6 +45,17 @@ type FilamentUsageInfo struct {
 	Order    int     `json:"order"`
 }
 
+// StockWarning flags a tracked filament whose on-hand stock is below what this
+// budget requires. required_grams is the rounded total grams the budget needs for
+// the filament; available_grams is the filament's current stock balance.
+type StockWarning struct {
+	FilamentID     string `json:"filament_id"`
+	FilamentName   string `json:"filament_name"`
+	Color          string `json:"color"`
+	RequiredGrams  int64  `json:"required_grams"`
+	AvailableGrams int64  `json:"available_grams"`
+}
+
 // PresetInfo represents simplified preset information
 type PresetInfo struct {
 	ID   string `json:"id"`
@@ -87,6 +98,8 @@ type BudgetItemResponse struct {
 	// Labor breakdown for this item
 	SetupTimeMinutes        int `json:"setup_time_minutes"`         // Setup time for this product (minutes)
 	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
+	PostProcessingMinutes   int `json:"post_processing_minutes"`    // Post-processing time for this item (minutes)
+	SupportRemovalMinutes   int `json:"support_removal_minutes"`    // Support-removal time for this item (minutes)
 
 	// Cost preset and additional notes
 	CostPresetID    *string        `json:"cost_preset_id,omitempty"`
@@ -97,18 +110,25 @@ type BudgetItemResponse struct {
 	Model3DID *string `json:"model_3d_id,omitempty"`
 
 	// Calculated costs for this item
-	FilamentCost    int64 `json:"filament_cost"`     // cents
-	WasteCost       int64 `json:"waste_cost"`        // cents
-	EnergyCost      int64 `json:"energy_cost"`       // cents
-	SetupCost       int64 `json:"setup_cost"`        // cents
-	ManualLaborCost int64 `json:"manual_labor_cost"` // cents
-	ItemTotalCost   int64 `json:"item_total_cost"`   // cents (sum of all)
-	UnitPrice       int64 `json:"unit_price"`        // cents per unit (COST, no markup) - kept for compatibility
+	FilamentCost       int64 `json:"filament_cost"`        // cents
+	WasteCost          int64 `json:"waste_cost"`           // cents
+	EnergyCost         int64 `json:"energy_cost"`          // cents
+	MachineCost        int64 `json:"machine_cost"`         // cents
+	SetupCost          int64 `json:"setup_cost"`           // cents
+	ManualLaborCost    int64 `json:"manual_labor_cost"`    // cents
+	PostProcessingCost int64 `json:"post_processing_cost"` // cents
+	SupportRemovalCost int64 `json:"support_removal_cost"` // cents
+	PackagingCost      int64 `json:"packaging_cost"`       // cents
+	QualityControlCost int64 `json:"quality_control_cost"` // cents
+	FailureCost        int64 `json:"failure_cost"`         // cents
+	ItemTotalCost      int64 `json:"item_total_cost"`      // cents (sum of all)
+	UnitPrice          int64 `json:"unit_price"`           // cents per unit (COST, no markup) - kept for compatibility
 
 	// Customer-facing SALE values: the item cost plus its proportional share of the
-	// budget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY
-	// to the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may
-	// differ from SaleTotal by a few cents.
+	// budget-wide markup. SaleTotal values across items sum EXACTLY to the budget total
+	// MINUS shipping (so the item sale totals plus shipping reconcile to the total).
+	// SaleUnitPrice is rounded, so SaleUnitPrice * quantity may differ from SaleTotal by
+	// a few cents.
 	SaleUnitPrice int64 `json:"sale_unit_price"` // cents per unit (with markup)
 	SaleTotal     int64 `json:"sale_total"`      // cents (with markup)
 
@@ -126,6 +146,11 @@ type BudgetResponse struct {
 	// Embed all BudgetEntity fields directly
 	*BudgetEntity
 
+	// BasePrice is the sale price before discount/shipping/tax (subtotal + overhead +
+	// profit), derived from the stored totals. TaxRateApplied is exposed via the
+	// embedded entity.
+	BasePrice int64 `json:"base_price"`
+
 	Customer      *CustomerInfo        `json:"customer"`
 	Items         []BudgetItemResponse `json:"items"`
 	MachinePreset *PresetInfo          `json:"machine_preset,omitempty"`
@@ -141,6 +166,11 @@ type BudgetResponse struct {
 	TotalPrintTimeHours   int    `json:"total_print_time_hours"`
 	TotalPrintTimeMinutes int    `json:"total_print_time_minutes"`
 	TotalPrintTimeDisplay string `json:"total_print_time_display"` // "14h15m"
+
+	// StockWarnings lists tracked filaments whose on-hand stock is below this budget's
+	// requirement (empty when none, or when the budget is already completed and its
+	// stock was deducted). Computed on the detail and preview responses only.
+	StockWarnings []StockWarning `json:"stock_warnings"`
 }
 
 // ListBudgetsResponse represents the response for listing budgets
@@ -169,14 +199,18 @@ type BudgetCalculationResponse struct {
 	} `json:"items_breakdown"`
 }
 
-// CompanyInfo represents simplified company information for PDF generation
+// CompanyInfo represents simplified company information for PDF generation and the
+// public customer-facing budget view.
 type CompanyInfo struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
+	TradeName *string `json:"trade_name,omitempty"`
 	Email     *string `json:"email,omitempty"`
 	Phone     *string `json:"phone,omitempty"`
 	WhatsApp  *string `json:"whatsapp,omitempty"`
 	Instagram *string `json:"instagram,omitempty"`
 	Website   *string `json:"website,omitempty"`
 	LogoURL   *string `json:"logo_url,omitempty"`
+	City      *string `json:"city,omitempty"`
+	State     *string `json:"state,omitempty"`
 }

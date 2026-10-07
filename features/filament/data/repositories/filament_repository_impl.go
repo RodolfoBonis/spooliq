@@ -59,7 +59,10 @@ var filamentUpdatableColumns = []string{
 	"name", "description", "brand_id", "material_id",
 	"color", "color_hex", "color_type", "color_data", "color_preview",
 	"diameter", "weight", "price_per_kg", "url",
-	"print_temperature", "bed_temperature", "is_active", "updated_at",
+	"print_temperature", "bed_temperature", "is_active",
+	// Stock control: track_stock and the alert threshold are editable via PUT.
+	// stock_grams is intentionally absent — it changes only through movements.
+	"track_stock", "low_stock_threshold_grams", "updated_at",
 }
 
 // Update updates an existing filament. The update is organization-scoped and
@@ -173,6 +176,13 @@ func applyFilamentFilters(query *gorm.DB, filters map[string]interface{}) *gorm.
 	}
 	if maxPrice, ok := filters["max_price"]; ok {
 		query = query.Where("filaments.price_per_kg <= ?", maxPrice)
+	}
+	// low_stock=true keeps only tracked filaments at or below their (non-null)
+	// alert threshold, mirroring FilamentEntity.IsLowStock.
+	if lowStock, ok := filters["low_stock"]; ok {
+		if v, isBool := lowStock.(bool); isBool && v {
+			query = query.Where("filaments.track_stock = ? AND filaments.low_stock_threshold_grams IS NOT NULL AND filaments.stock_grams <= filaments.low_stock_threshold_grams", true)
+		}
 	}
 	return query
 }

@@ -13,6 +13,8 @@ const (
 	ActionUpdated       ActivityAction = "updated"
 	ActionDeleted       ActivityAction = "deleted"
 	ActionStatusChanged ActivityAction = "status_changed"
+	ActionApproved      ActivityAction = "approved"
+	ActionRejected      ActivityAction = "rejected"
 )
 
 // ActivityEntityType represents the type of entity affected.

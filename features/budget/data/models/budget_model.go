@@ -20,6 +20,26 @@ type BudgetModel struct {
 	Name           string    `gorm:"type:varchar(255);not null" json:"name"`
 	Description    string    `gorm:"type:text" json:"description"`
 
+	// QuoteNumber is the sequential per-organization quote number. Nullable at the
+	// column level: it is backfilled for legacy rows and assigned on create/duplicate.
+	// A partial unique index (organization_id, quote_number) is added in RunMigrations.
+	QuoteNumber *int `gorm:"type:integer;index:idx_budget_quote_number" json:"quote_number"`
+
+	// ValidUntil is the quote validity instant (timestamptz, end-of-day Sao_Paulo).
+	ValidUntil *time.Time `gorm:"type:timestamptz" json:"valid_until"`
+
+	// Public share token. No GORM default tag: the token is written explicitly by the
+	// share use case. A partial unique index on public_token is added in RunMigrations.
+	PublicToken          *string    `gorm:"type:varchar(43)" json:"public_token"`
+	PublicTokenCreatedAt *time.Time `gorm:"type:timestamptz" json:"public_token_created_at"`
+
+	// Customer response (recorded via the public approve/reject endpoints).
+	CustomerResponseAt        *time.Time `gorm:"type:timestamptz" json:"customer_response_at"`
+	CustomerResponseName      *string    `gorm:"type:varchar(120)" json:"customer_response_name"`
+	CustomerResponseIP        *string    `gorm:"type:varchar(45)" json:"customer_response_ip"`
+	CustomerResponseUserAgent *string    `gorm:"type:varchar(255)" json:"customer_response_user_agent"`
+	RejectionReason           *string    `gorm:"type:text" json:"rejection_reason"`
+
 	// Foreign key to Customer
 	CustomerID uuid.UUID `gorm:"type:uuid;not null;index" json:"customer_id"`
 
@@ -127,51 +147,60 @@ func (b *BudgetModel) BeforeCreate(tx *gorm.DB) error {
 // ToEntity converts the GORM model to domain entity
 func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 	return &entities.BudgetEntity{
-		ID:                 b.ID,
-		OrganizationID:     b.OrganizationID,
-		Name:               b.Name,
-		Description:        b.Description,
-		CustomerID:         b.CustomerID,
-		Status:             entities.BudgetStatus(b.Status),
-		PrintTimeHours:     b.PrintTimeHours,
-		PrintTimeMinutes:   b.PrintTimeMinutes,
-		ProfileID:          b.ProfileID,
-		MachinePresetID:    b.MachinePresetID,
-		EnergyPresetID:     b.EnergyPresetID,
-		CostPresetID:       b.CostPresetID,
-		IncludeEnergyCost:  b.IncludeEnergyCost,
-		IncludeWasteCost:   b.IncludeWasteCost,
-		IncludeMachineCost: b.IncludeMachineCost,
-		DiscountType:       b.DiscountType,
-		DiscountValue:      b.DiscountValue,
-		IncludeShipping:    b.IncludeShipping,
-		ShippingOverride:   b.ShippingOverride,
-		TaxRate:            b.TaxRate,
-		FilamentCost:       b.FilamentCost,
-		WasteCost:          b.WasteCost,
-		EnergyCost:         b.EnergyCost,
-		MachineCost:        b.MachineCost,
-		SetupCost:          b.SetupCost,
-		LaborCost:          b.LaborCost,
-		PostProcessingCost: b.PostProcessingCost,
-		PackagingCost:      b.PackagingCost,
-		QualityControlCost: b.QualityControlCost,
-		FailureCost:        b.FailureCost,
-		OverheadCost:       b.OverheadCost,
-		ProfitAmount:       b.ProfitAmount,
-		DiscountAmount:     b.DiscountAmount,
-		ShippingCost:       b.ShippingCost,
-		TaxAmount:          b.TaxAmount,
-		TaxRateApplied:     b.TaxRateApplied,
-		TotalCost:          b.TotalCost,
-		DeliveryDays:       b.DeliveryDays,
-		PaymentTerms:       b.PaymentTerms,
-		Notes:              b.Notes,
-		PDFUrl:             b.PDFUrl,
-		OwnerUserID:        b.OwnerUserID,
-		CreatedAt:          b.CreatedAt,
-		UpdatedAt:          b.UpdatedAt,
-		DeletedAt:          getDeletedAt(b.DeletedAt),
+		ID:                        b.ID,
+		OrganizationID:            b.OrganizationID,
+		Name:                      b.Name,
+		Description:               b.Description,
+		CustomerID:                b.CustomerID,
+		Status:                    entities.BudgetStatus(b.Status),
+		QuoteNumber:               b.QuoteNumber,
+		ValidUntil:                b.ValidUntil,
+		PublicToken:               b.PublicToken,
+		PublicTokenCreatedAt:      b.PublicTokenCreatedAt,
+		CustomerResponseAt:        b.CustomerResponseAt,
+		CustomerResponseName:      b.CustomerResponseName,
+		CustomerResponseIP:        b.CustomerResponseIP,
+		CustomerResponseUserAgent: b.CustomerResponseUserAgent,
+		RejectionReason:           b.RejectionReason,
+		PrintTimeHours:            b.PrintTimeHours,
+		PrintTimeMinutes:          b.PrintTimeMinutes,
+		ProfileID:                 b.ProfileID,
+		MachinePresetID:           b.MachinePresetID,
+		EnergyPresetID:            b.EnergyPresetID,
+		CostPresetID:              b.CostPresetID,
+		IncludeEnergyCost:         b.IncludeEnergyCost,
+		IncludeWasteCost:          b.IncludeWasteCost,
+		IncludeMachineCost:        b.IncludeMachineCost,
+		DiscountType:              b.DiscountType,
+		DiscountValue:             b.DiscountValue,
+		IncludeShipping:           b.IncludeShipping,
+		ShippingOverride:          b.ShippingOverride,
+		TaxRate:                   b.TaxRate,
+		FilamentCost:              b.FilamentCost,
+		WasteCost:                 b.WasteCost,
+		EnergyCost:                b.EnergyCost,
+		MachineCost:               b.MachineCost,
+		SetupCost:                 b.SetupCost,
+		LaborCost:                 b.LaborCost,
+		PostProcessingCost:        b.PostProcessingCost,
+		PackagingCost:             b.PackagingCost,
+		QualityControlCost:        b.QualityControlCost,
+		FailureCost:               b.FailureCost,
+		OverheadCost:              b.OverheadCost,
+		ProfitAmount:              b.ProfitAmount,
+		DiscountAmount:            b.DiscountAmount,
+		ShippingCost:              b.ShippingCost,
+		TaxAmount:                 b.TaxAmount,
+		TaxRateApplied:            b.TaxRateApplied,
+		TotalCost:                 b.TotalCost,
+		DeliveryDays:              b.DeliveryDays,
+		PaymentTerms:              b.PaymentTerms,
+		Notes:                     b.Notes,
+		PDFUrl:                    b.PDFUrl,
+		OwnerUserID:               b.OwnerUserID,
+		CreatedAt:                 b.CreatedAt,
+		UpdatedAt:                 b.UpdatedAt,
+		DeletedAt:                 getDeletedAt(b.DeletedAt),
 	}
 }
 
@@ -191,6 +220,15 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.Description = entity.Description
 	b.CustomerID = entity.CustomerID
 	b.Status = string(entity.Status)
+	b.QuoteNumber = entity.QuoteNumber
+	b.ValidUntil = entity.ValidUntil
+	b.PublicToken = entity.PublicToken
+	b.PublicTokenCreatedAt = entity.PublicTokenCreatedAt
+	b.CustomerResponseAt = entity.CustomerResponseAt
+	b.CustomerResponseName = entity.CustomerResponseName
+	b.CustomerResponseIP = entity.CustomerResponseIP
+	b.CustomerResponseUserAgent = entity.CustomerResponseUserAgent
+	b.RejectionReason = entity.RejectionReason
 	b.PrintTimeHours = entity.PrintTimeHours
 	b.PrintTimeMinutes = entity.PrintTimeMinutes
 	b.ProfileID = entity.ProfileID

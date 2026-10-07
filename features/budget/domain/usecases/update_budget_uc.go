@@ -179,6 +179,9 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.Notes != nil {
 		budget.Notes = request.Notes
 	}
+	if request.ValidUntil != nil {
+		budget.ValidUntil = normalizeValidUntil(request.ValidUntil)
+	}
 
 	budget.UpdatedAt = time.Now()
 

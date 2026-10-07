@@ -111,6 +111,7 @@ func (r *budgetRepositoryImpl) Update(ctx context.Context, budget *entities.Budg
 		"delivery_days":        model.DeliveryDays,
 		"payment_terms":        model.PaymentTerms,
 		"notes":                model.Notes,
+		"valid_until":          model.ValidUntil,
 		"pdf_url":              model.PDFUrl,
 		"updated_at":           model.UpdatedAt,
 	}
@@ -184,6 +185,142 @@ func (r *budgetRepositoryImpl) Delete(ctx context.Context, id uuid.UUID, organiz
 	return nil
 }
 
+// AllocateQuoteNumber atomically increments the organization's quote counter and
+// returns the value that was just consumed. The UPDATE ... RETURNING runs as a
+// single statement so concurrent creates each get a distinct number even without a
+// separate lock. It must be called inside the create/duplicate transaction.
+func (r *budgetRepositoryImpl) AllocateQuoteNumber(ctx context.Context, organizationID string) (int, error) {
+	var allocated int
+	res := r.db.WithContext(ctx).Raw(
+		`UPDATE companies SET next_quote_number = next_quote_number + 1
+		 WHERE organization_id = ? AND deleted_at IS NULL
+		 RETURNING next_quote_number - 1`,
+		organizationID,
+	).Scan(&allocated)
+	if res.Error != nil {
+		return 0, fmt.Errorf("failed to allocate quote number: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return 0, fmt.Errorf("%w: no company found for organization %s", entities.ErrBudgetNotFound, organizationID)
+	}
+	return allocated, nil
+}
+
+// FindByPublicToken returns the live budget carrying the given public share token.
+// The lookup is exact-match and NOT org-scoped (the token is the credential). An
+// empty token or no match returns ErrBudgetNotFound so unknown and revoked tokens
+// are indistinguishable to the caller.
+func (r *budgetRepositoryImpl) FindByPublicToken(ctx context.Context, token string) (*entities.BudgetEntity, error) {
+	if token == "" {
+		return nil, entities.ErrBudgetNotFound
+	}
+	model := &models.BudgetModel{}
+	if err := r.db.WithContext(ctx).
+		Preload("Items").
+		Where("public_token = ?", token).
+		First(model).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, entities.ErrBudgetNotFound
+		}
+		return nil, fmt.Errorf("failed to find budget by token: %w", err)
+	}
+	return model.ToEntity(), nil
+}
+
+// SetShareToken writes the public share token and its created_at, org-scoped.
+func (r *budgetRepositoryImpl) SetShareToken(ctx context.Context, budgetID uuid.UUID, organizationID string, token string, createdAt time.Time) error {
+	result := r.db.WithContext(ctx).
+		Model(&models.BudgetModel{}).
+		Where("id = ? AND organization_id = ?", budgetID, organizationID).
+		Updates(map[string]interface{}{
+			"public_token":            token,
+			"public_token_created_at": createdAt,
+			"updated_at":              time.Now(),
+		})
+	if result.Error != nil {
+		return fmt.Errorf("failed to set share token: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrBudgetNotFound
+	}
+	return nil
+}
+
+// RevokeShareToken clears the public share token (and its created_at), org-scoped.
+func (r *budgetRepositoryImpl) RevokeShareToken(ctx context.Context, budgetID uuid.UUID, organizationID string) error {
+	result := r.db.WithContext(ctx).
+		Model(&models.BudgetModel{}).
+		Where("id = ? AND organization_id = ?", budgetID, organizationID).
+		Updates(map[string]interface{}{
+			"public_token":            nil,
+			"public_token_created_at": nil,
+			"updated_at":              time.Now(),
+		})
+	if result.Error != nil {
+		return fmt.Errorf("failed to revoke share token: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrBudgetNotFound
+	}
+	return nil
+}
+
+// SetValidUntil writes only the valid_until column (and updated_at), org-scoped. A
+// nil validUntil clears it (so the next send recomputes it).
+func (r *budgetRepositoryImpl) SetValidUntil(ctx context.Context, budgetID uuid.UUID, organizationID string, validUntil *time.Time) error {
+	result := r.db.WithContext(ctx).
+		Model(&models.BudgetModel{}).
+		Where("id = ? AND organization_id = ?", budgetID, organizationID).
+		Updates(map[string]interface{}{
+			"valid_until": validUntil,
+			"updated_at":  time.Now(),
+		})
+	if result.Error != nil {
+		return fmt.Errorf("failed to set valid_until: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrBudgetNotFound
+	}
+	return nil
+}
+
+// ExpireOverdue marks every overdue sent budget as expired in a single statement
+// and returns how many rows were updated.
+func (r *budgetRepositoryImpl) ExpireOverdue(ctx context.Context) (int64, error) {
+	result := r.db.WithContext(ctx).Exec(
+		`UPDATE budgets SET status = 'expired', updated_at = now()
+		 WHERE status = 'sent' AND valid_until < now() AND deleted_at IS NULL`,
+	)
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to expire overdue budgets: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// RespondToPublicBudget applies a customer response (approve/reject) with a
+// race-safe conditional UPDATE: the row is only touched while it is still 'sent'
+// and not expired, so two concurrent approves can only let one win. It returns the
+// number of affected rows (0 => the caller must re-read and map the precise error).
+func (r *budgetRepositoryImpl) RespondToPublicBudget(ctx context.Context, budgetID uuid.UUID, newStatus entities.BudgetStatus, name, ip, userAgent string, reason *string, respondedAt time.Time) (int64, error) {
+	updates := map[string]interface{}{
+		"status":                       string(newStatus),
+		"customer_response_at":         respondedAt,
+		"customer_response_name":       name,
+		"customer_response_ip":         ip,
+		"customer_response_user_agent": userAgent,
+		"rejection_reason":             reason,
+		"updated_at":                   respondedAt,
+	}
+	result := r.db.WithContext(ctx).
+		Model(&models.BudgetModel{}).
+		Where("id = ? AND status = 'sent' AND (valid_until IS NULL OR valid_until >= now())", budgetID).
+		Updates(updates)
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to record customer response: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
 // SearchBudgets returns a filtered, sorted, org-scoped page of budgets WITHOUT any
 // relationship preloads. The list response is assembled by the use case from the
 // batch loaders below, so a page of N budgets costs a constant number of queries.
@@ -205,6 +342,9 @@ func (r *budgetRepositoryImpl) SearchBudgets(ctx context.Context, organizationID
 	}
 	if status, ok := filters["status"].(string); ok && status != "" {
 		query = query.Where("status = ?", status)
+	}
+	if quoteNumber, ok := filters["quote_number"].(int); ok {
+		query = query.Where("quote_number = ?", quoteNumber)
 	}
 	if startDate, ok := filters["start_date"].(time.Time); ok && !startDate.IsZero() {
 		query = query.Where("created_at >= ?", startDate)
@@ -1337,17 +1477,20 @@ func (r *budgetRepositoryImpl) GetCompanyByOrganizationID(ctx context.Context, o
 	var company struct {
 		ID        uuid.UUID `gorm:"column:id"`
 		Name      string    `gorm:"column:name"`
+		TradeName *string   `gorm:"column:trade_name"`
 		Email     *string   `gorm:"column:email"`
 		Phone     *string   `gorm:"column:phone"`
 		WhatsApp  *string   `gorm:"column:whats_app"`
 		Instagram *string   `gorm:"column:instagram"`
 		Website   *string   `gorm:"column:website"`
 		LogoURL   *string   `gorm:"column:logo_url"`
+		City      *string   `gorm:"column:city"`
+		State     *string   `gorm:"column:state"`
 	}
 
 	if err := r.db.WithContext(ctx).
 		Table("companies").
-		Select("id, name, email, phone, whats_app, instagram, website, logo_url").
+		Select("id, name, trade_name, email, phone, whats_app, instagram, website, logo_url, city, state").
 		Where("organization_id = ?", organizationID).
 		Where("deleted_at IS NULL").
 		First(&company).Error; err != nil {
@@ -1360,13 +1503,39 @@ func (r *budgetRepositoryImpl) GetCompanyByOrganizationID(ctx context.Context, o
 	return &entities.CompanyInfo{
 		ID:        company.ID.String(),
 		Name:      company.Name,
+		TradeName: company.TradeName,
 		Email:     company.Email,
 		Phone:     company.Phone,
 		WhatsApp:  company.WhatsApp,
 		Instagram: company.Instagram,
 		Website:   company.Website,
 		LogoURL:   company.LogoURL,
+		City:      company.City,
+		State:     company.State,
 	}, nil
+}
+
+// GetCompanyQuoteDefaults returns the organization's default quote validity (days)
+// and default payment terms. Missing/zero validity falls back to 15.
+func (r *budgetRepositoryImpl) GetCompanyQuoteDefaults(ctx context.Context, organizationID string) (int, *string, error) {
+	var row struct {
+		DefaultQuoteValidityDays int     `gorm:"column:default_quote_validity_days"`
+		DefaultPaymentTerms      *string `gorm:"column:default_payment_terms"`
+	}
+	if err := r.db.WithContext(ctx).
+		Table("companies").
+		Select("default_quote_validity_days, default_payment_terms").
+		Where("organization_id = ? AND deleted_at IS NULL", organizationID).
+		First(&row).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return 15, nil, nil
+		}
+		return 0, nil, fmt.Errorf("failed to load company quote defaults: %w", err)
+	}
+	if row.DefaultQuoteValidityDays <= 0 {
+		row.DefaultQuoteValidityDays = 15
+	}
+	return row.DefaultQuoteValidityDays, row.DefaultPaymentTerms, nil
 }
 
 // FindItemsByBudgetID retrieves all items for a budget

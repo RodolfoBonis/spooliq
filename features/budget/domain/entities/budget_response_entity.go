@@ -183,14 +183,18 @@ type BudgetCalculationResponse struct {
 	} `json:"items_breakdown"`
 }
 
-// CompanyInfo represents simplified company information for PDF generation
+// CompanyInfo represents simplified company information for PDF generation and the
+// public customer-facing budget view.
 type CompanyInfo struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
+	TradeName *string `json:"trade_name,omitempty"`
 	Email     *string `json:"email,omitempty"`
 	Phone     *string `json:"phone,omitempty"`
 	WhatsApp  *string `json:"whatsapp,omitempty"`
 	Instagram *string `json:"instagram,omitempty"`
 	Website   *string `json:"website,omitempty"`
 	LogoURL   *string `json:"logo_url,omitempty"`
+	City      *string `json:"city,omitempty"`
+	State     *string `json:"state,omitempty"`
 }

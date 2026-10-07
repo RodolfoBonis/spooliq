@@ -2986,6 +2986,115 @@ const docTemplate = `{
                 }
             }
         },
+        "/budgets/{id}/share": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create or return the public share token for a budget. Idempotent:\nrepeated calls return the same token. A draft is transitioned to sent\n(with the same valid_until side effect as UpdateStatus).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Share budget publicly",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "public_token, status, valid_until",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke the public share token for a budget (sets it to NULL).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Revoke budget public share",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/budgets/{id}/status": {
             "patch": {
                 "security": [
@@ -8224,6 +8333,230 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/budgets/{token}": {
+            "get": {
+                "description": "Public, sanitized budget view for a customer share link. No authentication.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget view",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/approve": {
+            "post": {
+                "description": "Customer approves a shared budget. No authentication.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget approve",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Approval payload: name",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/pdf": {
+            "get": {
+                "description": "Streams the budget PDF for a customer share link. No authentication.",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "application/pdf",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/reject": {
+            "post": {
+                "description": "Customer rejects a shared budget. No authentication.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget reject",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rejection payload: name, reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/refresh": {
             "post": {
                 "description": "Refresh the user's access and refresh tokens",
@@ -9101,13 +9434,17 @@ const docTemplate = `{
                 "created",
                 "updated",
                 "deleted",
-                "status_changed"
+                "status_changed",
+                "approved",
+                "rejected"
             ],
             "x-enum-varnames": [
                 "ActionCreated",
                 "ActionUpdated",
                 "ActionDeleted",
-                "ActionStatusChanged"
+                "ActionStatusChanged",
+                "ActionApproved",
+                "ActionRejected"
             ]
         },
         "entities.ActivityEntity": {
@@ -9591,6 +9928,13 @@ const docTemplate = `{
                 "customer_id": {
                     "type": "string"
                 },
+                "customer_response_at": {
+                    "description": "Customer response (recorded via the public approve/reject endpoints).",
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
                 "deleted_at": {
                     "type": "string"
                 },
@@ -9727,9 +10071,23 @@ const docTemplate = `{
                     "description": "cents - Profit margin calculated",
                     "type": "integer"
                 },
+                "public_token": {
+                    "description": "Public share token fields. PublicToken is a base64url (unpadded) random token\nused by the customer-facing public link; nil when the budget was never shared\nor the token was revoked.",
+                    "type": "string"
+                },
+                "public_token_created_at": {
+                    "type": "string"
+                },
                 "quality_control_cost": {
                     "description": "cents - Sum of all items quality-control costs",
                     "type": "integer"
+                },
+                "quote_number": {
+                    "description": "QuoteNumber is the sequential, per-organization quote number (starts at 1),\nassigned on create and duplicate. Nil only for rows not yet backfilled.",
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
                 },
                 "setup_cost": {
                     "description": "cents - Sum of all items setup costs",
@@ -9782,6 +10140,10 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string"
                 },
+                "valid_until": {
+                    "description": "ValidUntil is the date (stored as timestamptz, end-of-day in America/Sao_Paulo)\nafter which a sent budget is considered expired. Nil when no validity is set.",
+                    "type": "string"
+                },
                 "waste_cost": {
                     "description": "cents - Sum of all items waste costs",
                     "type": "integer"
@@ -9796,12 +10158,16 @@ const docTemplate = `{
                 "approved",
                 "rejected",
                 "printing",
-                "completed"
+                "completed",
+                "expired",
+                "cancelled"
             ],
             "x-enum-comments": {
                 "StatusApproved": "StatusApproved represents an approved budget",
+                "StatusCancelled": "StatusCancelled represents a cancelled budget",
                 "StatusCompleted": "StatusCompleted represents a completed budget",
                 "StatusDraft": "StatusDraft represents a budget in draft state",
+                "StatusExpired": "StatusExpired represents a sent budget whose validity has passed",
                 "StatusPrinting": "StatusPrinting represents a budget currently being printed",
                 "StatusRejected": "StatusRejected represents a rejected budget",
                 "StatusSent": "StatusSent represents a budget sent to customer"
@@ -9812,7 +10178,9 @@ const docTemplate = `{
                 "StatusApproved represents an approved budget",
                 "StatusRejected represents a rejected budget",
                 "StatusPrinting represents a budget currently being printed",
-                "StatusCompleted represents a completed budget"
+                "StatusCompleted represents a completed budget",
+                "StatusExpired represents a sent budget whose validity has passed",
+                "StatusCancelled represents a cancelled budget"
             ],
             "x-enum-varnames": [
                 "StatusDraft",
@@ -9820,7 +10188,9 @@ const docTemplate = `{
                 "StatusApproved",
                 "StatusRejected",
                 "StatusPrinting",
-                "StatusCompleted"
+                "StatusCompleted",
+                "StatusExpired",
+                "StatusCancelled"
             ]
         },
         "entities.BudgetStatusCount": {
@@ -10167,6 +10537,14 @@ const docTemplate = `{
                 "current_plan": {
                     "$ref": "#/definitions/entities.SubscriptionPlanResponse"
                 },
+                "default_payment_terms": {
+                    "description": "DefaultPaymentTerms is the organization's default payment terms.",
+                    "type": "string"
+                },
+                "default_quote_validity_days": {
+                    "description": "DefaultQuoteValidityDays is the default number of days a sent quote stays valid.",
+                    "type": "integer"
+                },
                 "default_tax_rate": {
                     "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent).",
                     "type": "number"
@@ -10438,6 +10816,10 @@ const docTemplate = `{
                     "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
                     "type": "number",
                     "minimum": 0
+                },
+                "valid_until": {
+                    "description": "ValidUntil is the optional quote validity date (date-only semantics; stored at\nend of day in America/Sao_Paulo). When omitted it is computed on first send.",
+                    "type": "string"
                 }
             }
         },
@@ -12440,6 +12822,151 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.PublicBudgetCompany": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "trade_name": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetCustomer": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetItem": {
+            "type": "object",
+            "properties": {
+                "product_description": {
+                    "type": "string"
+                },
+                "product_dimensions": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "product_quantity": {
+                    "type": "integer"
+                },
+                "total_price": {
+                    "description": "cents (sale, with markup)",
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "description": "cents (sale, with markup)",
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PublicBudgetView": {
+            "type": "object",
+            "properties": {
+                "base_price": {
+                    "type": "integer"
+                },
+                "can_respond": {
+                    "type": "boolean"
+                },
+                "company": {
+                    "$ref": "#/definitions/entities.PublicBudgetCompany"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/entities.PublicBudgetCustomer"
+                },
+                "customer_response_at": {
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "discount_amount": {
+                    "type": "integer"
+                },
+                "is_expired": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PublicBudgetItem"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_terms": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
+                },
+                "shipping_cost": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tax_amount": {
+                    "type": "integer"
+                },
+                "tax_rate_applied": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "valid_until": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.RecentActivityItem": {
             "type": "object",
             "properties": {
@@ -13010,6 +13537,10 @@ const docTemplate = `{
                     "description": "TaxRate (optional, percent 0..\u003c100).",
                     "type": "number",
                     "minimum": 0
+                },
+                "valid_until": {
+                    "description": "ValidUntil is the optional quote validity date (date-only; stored end of day,\nAmerica/Sao_Paulo). Settable on update.",
+                    "type": "string"
                 }
             }
         },
@@ -13023,6 +13554,17 @@ const docTemplate = `{
                 "city": {
                     "type": "string",
                     "maxLength": 100
+                },
+                "default_payment_terms": {
+                    "description": "DefaultPaymentTerms is the organization's default payment terms (max 500).",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "default_quote_validity_days": {
+                    "description": "DefaultQuoteValidityDays is the default quote validity in days (1..365).",
+                    "type": "integer",
+                    "maximum": 365,
+                    "minimum": 1
                 },
                 "default_tax_rate": {
                     "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent, 0..\u003c100).",
@@ -13404,7 +13946,9 @@ const docTemplate = `{
                         "approved",
                         "rejected",
                         "printing",
-                        "completed"
+                        "completed",
+                        "expired",
+                        "cancelled"
                     ],
                     "allOf": [
                         {

@@ -605,6 +605,17 @@ func RunMigrations() {
 			"uq_models_3d_org_file_hash",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_models_3d_org_file_hash ON models_3d(organization_id, file_hash) WHERE deleted_at IS NULL",
 		},
+		{
+			// Sequential quote number is unique per organization (partial so legacy
+			// NULLs and soft-deleted rows do not collide).
+			"uq_budgets_org_quote_number",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_org_quote_number ON budgets(organization_id, quote_number) WHERE deleted_at IS NULL AND quote_number IS NOT NULL",
+		},
+		{
+			// Public share token is globally unique (partial: only non-NULL tokens).
+			"uq_budgets_public_token",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_public_token ON budgets(public_token) WHERE public_token IS NOT NULL",
+		},
 	}
 
 	for _, idx := range dashboardIndexes {
@@ -638,6 +649,34 @@ var dataMigrations = []struct{ name, sql string }{
 		// stored totals are not changed; new budgets keep the TRUE default going forward.
 		"2026-10-07_backfill_budget_include_machine_cost_false",
 		"UPDATE budgets SET include_machine_cost = false",
+	},
+	{
+		// Phase 4B added budgets.quote_number (sequential per organization). Backfill
+		// existing rows deterministically in (created_at, id) order so every org's
+		// quotes are numbered 1..N. Runs once; new budgets allocate via the companies
+		// counter going forward.
+		"2026-10-08_backfill_budget_quote_number",
+		`UPDATE budgets b SET quote_number = n.rn
+		 FROM (
+			SELECT id, ROW_NUMBER() OVER (PARTITION BY organization_id ORDER BY created_at, id) AS rn
+			FROM budgets
+			WHERE quote_number IS NULL
+		 ) n
+		 WHERE b.id = n.id AND b.quote_number IS NULL`,
+	},
+	{
+		// After backfilling quote_number, align each company's next_quote_number to
+		// max(quote_number)+1 so freshly allocated numbers never collide with backfilled
+		// ones. Companies with no budgets keep the default (1).
+		"2026-10-08_init_company_next_quote_number",
+		`UPDATE companies c SET next_quote_number = sub.max_qn + 1
+		 FROM (
+			SELECT organization_id, MAX(quote_number) AS max_qn
+			FROM budgets
+			WHERE quote_number IS NOT NULL
+			GROUP BY organization_id
+		 ) sub
+		 WHERE c.organization_id = sub.organization_id AND sub.max_qn >= c.next_quote_number`,
 	},
 }
 

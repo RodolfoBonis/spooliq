@@ -25,6 +25,8 @@ type IBudgetUseCase interface {
 	FindByCustomer(c *gin.Context)
 	GetHistory(c *gin.Context)
 	GeneratePDF(c *gin.Context)
+	Share(c *gin.Context)
+	RevokeShare(c *gin.Context)
 }
 
 // BudgetUseCase implements the budget use cases

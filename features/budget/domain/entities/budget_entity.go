@@ -17,6 +17,8 @@ const (
 	StatusRejected  BudgetStatus = "rejected"  // StatusRejected represents a rejected budget
 	StatusPrinting  BudgetStatus = "printing"  // StatusPrinting represents a budget currently being printed
 	StatusCompleted BudgetStatus = "completed" // StatusCompleted represents a completed budget
+	StatusExpired   BudgetStatus = "expired"   // StatusExpired represents a sent budget whose validity has passed
+	StatusCancelled BudgetStatus = "cancelled" // StatusCancelled represents a cancelled budget
 )
 
 // Discount type constants for BudgetEntity.DiscountType.
@@ -35,6 +37,8 @@ func KnownStatuses() []BudgetStatus {
 		StatusRejected,
 		StatusPrinting,
 		StatusCompleted,
+		StatusExpired,
+		StatusCancelled,
 	}
 }
 
@@ -56,6 +60,29 @@ type BudgetEntity struct {
 	Description    string       `json:"description,omitempty"`
 	CustomerID     uuid.UUID    `json:"customer_id"`
 	Status         BudgetStatus `json:"status"`
+
+	// QuoteNumber is the sequential, per-organization quote number (starts at 1),
+	// assigned on create and duplicate. Nil only for rows not yet backfilled.
+	QuoteNumber *int `json:"quote_number,omitempty"`
+
+	// ValidUntil is the date (stored as timestamptz, end-of-day in America/Sao_Paulo)
+	// after which a sent budget is considered expired. Nil when no validity is set.
+	ValidUntil *time.Time `json:"valid_until,omitempty"`
+
+	// Public share token fields. PublicToken is a base64url (unpadded) random token
+	// used by the customer-facing public link; nil when the budget was never shared
+	// or the token was revoked.
+	PublicToken          *string    `json:"public_token,omitempty"`
+	PublicTokenCreatedAt *time.Time `json:"public_token_created_at,omitempty"`
+
+	// Customer response (recorded via the public approve/reject endpoints).
+	CustomerResponseAt   *time.Time `json:"customer_response_at,omitempty"`
+	CustomerResponseName *string    `json:"customer_response_name,omitempty"`
+	// CustomerResponseIP / CustomerResponseUserAgent are stored for audit only and
+	// are intentionally NOT exposed in API responses.
+	CustomerResponseIP        *string `json:"-"`
+	CustomerResponseUserAgent *string `json:"-"`
+	RejectionReason           *string `json:"rejection_reason,omitempty"`
 
 	// Print time (manual input for now)
 	PrintTimeHours   int `json:"print_time_hours"`
@@ -132,17 +159,43 @@ func (b *BudgetEntity) BasePrice() int64 {
 	return b.TotalCost + b.DiscountAmount - b.ShippingCost - b.TaxAmount
 }
 
+// IsExpired reports whether the budget's validity has passed as of now. It is a
+// pure check on valid_until and does not consider the stored status, so public
+// endpoints can report expiry without depending on the background expiry job.
+func (b *BudgetEntity) IsExpired(now time.Time) bool {
+	return b.ValidUntil != nil && now.After(*b.ValidUntil)
+}
+
+// EffectiveStatus returns the status as the customer should see it: a sent budget
+// whose valid_until has passed reports as expired even if the background job has
+// not run yet.
+func (b *BudgetEntity) EffectiveStatus(now time.Time) BudgetStatus {
+	if b.Status == StatusSent && b.IsExpired(now) {
+		return StatusExpired
+	}
+	return b.Status
+}
+
+// CanRespond reports whether the customer may still approve/reject the budget:
+// only a sent budget that has not expired is answerable.
+func (b *BudgetEntity) CanRespond(now time.Time) bool {
+	return b.Status == StatusSent && !b.IsExpired(now)
+}
+
+// validTransitions is the single source of truth for allowed status transitions.
+var validTransitions = map[BudgetStatus][]BudgetStatus{
+	StatusDraft:     {StatusSent, StatusCancelled},
+	StatusSent:      {StatusApproved, StatusRejected, StatusExpired, StatusCancelled},
+	StatusApproved:  {StatusPrinting, StatusCancelled},
+	StatusRejected:  {StatusDraft},
+	StatusExpired:   {StatusDraft},
+	StatusCancelled: {StatusDraft},
+	StatusPrinting:  {StatusCompleted},
+	StatusCompleted: {},
+}
+
 // IsValidTransition checks if a status transition is valid
 func (b *BudgetEntity) IsValidTransition(newStatus BudgetStatus) bool {
-	validTransitions := map[BudgetStatus][]BudgetStatus{
-		StatusDraft:     {StatusSent},
-		StatusSent:      {StatusApproved, StatusRejected},
-		StatusApproved:  {StatusPrinting},
-		StatusRejected:  {StatusDraft}, // Allow reopening
-		StatusPrinting:  {StatusCompleted},
-		StatusCompleted: {}, // No transitions from completed
-	}
-
 	allowedTransitions, exists := validTransitions[b.Status]
 	if !exists {
 		return false

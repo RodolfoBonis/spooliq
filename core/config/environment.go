@@ -30,12 +30,14 @@ func EnvPort() string {
 // EnvKeyCloak returns the Keycloak configuration from environment variables.
 func EnvKeyCloak() entities.KeyCloakDataEntity {
 	return entities.KeyCloakDataEntity{
-		ClientID:      GetEnv("CLIENT_ID", ""),
-		ClientSecret:  GetEnv("CLIENT_SECRET", ""),
-		Realm:         GetEnv("REALM", ""),
-		Host:          GetEnv("KEYCLOAK_HOST", ""),
-		AdminUsername: GetEnv("KEYCLOAK_ADMIN_USERNAME", "admin"),
-		AdminPassword: GetEnv("KEYCLOAK_ADMIN_PASSWORD", "admin123"),
+		ClientID:     GetEnv("CLIENT_ID", ""),
+		ClientSecret: GetEnv("CLIENT_SECRET", ""),
+		Realm:        GetEnv("REALM", ""),
+		Host:         GetEnv("KEYCLOAK_HOST", ""),
+		// Service-account client for the Admin REST API (client_credentials grant).
+		// Distinct from CLIENT_ID / CLIENT_SECRET, which are used for user login.
+		AdminClientID:     GetEnv("KEYCLOAK_CLIENT_ID", ""),
+		AdminClientSecret: GetEnv("KEYCLOAK_CLIENT_SECRET", ""),
 	}
 }
 

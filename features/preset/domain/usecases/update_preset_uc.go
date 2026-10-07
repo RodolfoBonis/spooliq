@@ -77,6 +77,8 @@ type UpdateCostPresetRequest struct {
 	PostProcessingCostPerHour *float32  `json:"post_processing_cost_per_hour"`
 	SupportRemovalCostPerHour *float32  `json:"support_removal_cost_per_hour"`
 	QualityControlCostPerItem *float32  `json:"quality_control_cost_per_item"`
+	FailureRatePercentage     *float32  `json:"failure_rate_percentage"`
+	WasteGramsPerColorChange  *float32  `json:"waste_grams_per_color_change"`
 }
 
 // UpdateMachinePreset updates an existing machine preset within the organization scope.
@@ -314,6 +316,12 @@ func (uc *UpdatePresetUseCase) UpdateCostPreset(req *UpdateCostPresetRequest, or
 	}
 	if req.QualityControlCostPerItem != nil {
 		cost.QualityControlCostPerItem = *req.QualityControlCostPerItem
+	}
+	if req.FailureRatePercentage != nil {
+		cost.FailureRatePercentage = *req.FailureRatePercentage
+	}
+	if req.WasteGramsPerColorChange != nil {
+		cost.WasteGramsPerColorChange = *req.WasteGramsPerColorChange
 	}
 
 	// Validate updated entities

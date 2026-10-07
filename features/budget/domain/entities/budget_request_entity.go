@@ -149,10 +149,11 @@ type UpdateBudgetRequest struct {
 	// the budget-level rate so the company default applies. Value: a rate in [0, 100).
 	TaxRate coreTypes.Optional[float64] `json:"tax_rate,omitempty" swaggertype:"number"`
 
-	// Additional fields for PDF
-	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`
-	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
-	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
+	// Additional fields for PDF. DeliveryDays is tri-state: absent keeps it, explicit
+	// null clears it, a value (>= 0) sets it.
+	DeliveryDays coreTypes.Optional[int] `json:"delivery_days,omitempty" swaggertype:"integer"`
+	PaymentTerms *string                 `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
+	Notes        *string                 `json:"notes,omitempty" validate:"omitempty,max=2000"`
 
 	// ValidUntil is the tri-state quote validity date (date-only; stored end of day,
 	// America/Sao_Paulo). Absent: unchanged. Explicit null: clears the validity date.

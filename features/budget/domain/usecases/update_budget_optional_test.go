@@ -18,7 +18,9 @@ func draftWithTriState(id uuid.UUID) *entities.BudgetEntity {
 	discVal := 5.0
 	var ship int64 = 1500
 	vu := time.Date(2026, 1, 2, 23, 59, 59, 0, time.UTC)
+	days := 7
 	return &entities.BudgetEntity{
+		DeliveryDays:     &days,
 		ID:               id,
 		OrganizationID:   "org-a",
 		Status:           entities.StatusDraft,
@@ -226,5 +228,25 @@ func TestUpdate_Discount_ValueOnly_WithStoredType_OK(t *testing.T) {
 	}
 	if b.DiscountType == nil || *b.DiscountType != entities.DiscountTypePercent || b.DiscountValue == nil || *b.DiscountValue != 12 {
 		t.Errorf("want percent/12, got type=%v value=%v", b.DiscountType, b.DiscountValue)
+	}
+}
+
+// --- delivery_days --------------------------------------------------------------
+
+func TestUpdate_DeliveryDays_TriState(t *testing.T) {
+	b, code := runUpdate(t, draftWithTriState(uuid.New()), `{"name":"x"}`)
+	if code != http.StatusOK || b.DeliveryDays == nil || *b.DeliveryDays != 7 {
+		t.Fatalf("absent: code=%d days=%v, want unchanged 7", code, b.DeliveryDays)
+	}
+	b, code = runUpdate(t, draftWithTriState(uuid.New()), `{"delivery_days":null}`)
+	if code != http.StatusOK || b.DeliveryDays != nil {
+		t.Fatalf("null: code=%d days=%v, want cleared", code, b.DeliveryDays)
+	}
+	b, code = runUpdate(t, draftWithTriState(uuid.New()), `{"delivery_days":12}`)
+	if code != http.StatusOK || b.DeliveryDays == nil || *b.DeliveryDays != 12 {
+		t.Fatalf("value: code=%d days=%v, want 12", code, b.DeliveryDays)
+	}
+	if _, code = runUpdate(t, draftWithTriState(uuid.New()), `{"delivery_days":-1}`); code != http.StatusBadRequest {
+		t.Fatalf("negative: code=%d, want 400", code)
 	}
 }

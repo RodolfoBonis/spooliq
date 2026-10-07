@@ -4178,6 +4178,52 @@
                 }
             }
         },
+        "/dashboard/low-stock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns tracked filaments at or below their alert threshold, ordered by shortfall (stock - threshold) ascending, limited to 20.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get low-stock filaments",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.LowStockResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/operational-insights": {
             "get": {
                 "security": [
@@ -4722,6 +4768,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Only filaments at or below their low-stock threshold",
+                        "name": "low_stock",
+                        "in": "query"
+                    },
+                    {
                         "enum": [
                             "name",
                             "created_at",
@@ -4899,6 +4951,12 @@
                         "type": "number",
                         "description": "Maximum price per kg",
                         "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only filaments at or below their low-stock threshold",
+                        "name": "low_stock",
                         "in": "query"
                     },
                     {
@@ -5151,6 +5209,182 @@
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/{id}/stock-movements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List the stock movement ledger for a filament, newest first, paginated and filterable by type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Stock"
+                ],
+                "summary": "List filament stock movements",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "purchase",
+                            "adjustment",
+                            "waste",
+                            "consumption"
+                        ],
+                        "type": "string",
+                        "description": "Filter by movement type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated movement ledger",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListMovementsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Record a manual stock movement (purchase, adjustment or waste) for a filament. Any manual movement enables stock tracking for the filament.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Stock"
+                ],
+                "summary": "Create filament stock movement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Stock movement data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateMovementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Movement recorded and filament balance refreshed",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateMovementResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/errors.APIError"
                         }
@@ -9485,7 +9719,8 @@
                 "material",
                 "budget",
                 "preset",
-                "model3d"
+                "model3d",
+                "stock_movement"
             ],
             "x-enum-varnames": [
                 "EntityBrand",
@@ -9494,7 +9729,8 @@
                 "EntityMaterial",
                 "EntityBudget",
                 "EntityPreset",
-                "EntityModel3D"
+                "EntityModel3D",
+                "EntityStockMovement"
             ]
         },
         "entities.AdminStats": {
@@ -10101,6 +10337,13 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
+                    }
+                },
+                "stock_warnings": {
+                    "description": "StockWarnings lists tracked filaments whose on-hand stock is below this budget's\nrequirement (empty when none, or when the budget is already completed and its\nstock was deducted). Computed on the detail and preview responses only.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.StockWarning"
                     }
                 },
                 "tax_amount": {
@@ -11016,6 +11259,41 @@
                 }
             }
         },
+        "entities.CreateMovementRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "grams": {
+                    "description": "Grams is the movement size. Sign/positivity rules depend on Type and are\nvalidated in the use case (see ValidateCreate).",
+                    "type": "integer"
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.MovementType"
+                },
+                "unit_price_per_kg": {
+                    "description": "UnitPricePerKg is accepted only for purchase movements (cents, \u003e= 0).",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "entities.CreateMovementResponse": {
+            "type": "object",
+            "properties": {
+                "filament": {
+                    "$ref": "#/definitions/entities.FilamentStockSummary"
+                },
+                "movement": {
+                    "$ref": "#/definitions/entities.StockMovementResponse"
+                }
+            }
+        },
         "entities.CreateProfileRequest": {
             "type": "object",
             "required": [
@@ -11367,6 +11645,12 @@
                 "is_active": {
                     "type": "boolean"
                 },
+                "is_low_stock": {
+                    "type": "boolean"
+                },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
                 "material": {
                     "$ref": "#/definitions/entities.MaterialInfo"
                 },
@@ -11391,6 +11675,13 @@
                     "description": "Technical specifications",
                     "type": "integer"
                 },
+                "stock_grams": {
+                    "type": "integer"
+                },
+                "track_stock": {
+                    "description": "Stock control (Phase 4C). TrackStock enables inventory tracking for this\nfilament; any manual stock movement turns it on. StockGrams is the current\nbalance in grams and MAY go negative (consumption is never blocked). It is\nNOT editable through the filament update endpoint — it changes only through\nstock movements. LowStockThresholdGrams is the optional alert threshold:\nnil means no alert. IsLowStock is a computed convenience flag.",
+                    "type": "boolean"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -11400,6 +11691,26 @@
                 },
                 "weight": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.FilamentStockSummary": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "is_low_stock": {
+                    "type": "boolean"
+                },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
+                "stock_grams": {
+                    "type": "integer"
+                },
+                "track_stock": {
+                    "type": "boolean"
                 }
             }
         },
@@ -11641,6 +11952,29 @@
                 }
             }
         },
+        "entities.ListMovementsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.StockMovementResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.ListPlanCompaniesResponse": {
             "type": "object",
             "properties": {
@@ -11679,6 +12013,46 @@
                 "refreshToken": {
                     "description": "Token to refresh Access Token",
                     "type": "string"
+                }
+            }
+        },
+        "entities.LowStockFilament": {
+            "type": "object",
+            "properties": {
+                "brand_name": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
+                "material_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "stock_grams": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.LowStockResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.LowStockFilament"
+                    }
                 }
             }
         },
@@ -11901,6 +12275,21 @@
                     "type": "string"
                 }
             }
+        },
+        "entities.MovementType": {
+            "type": "string",
+            "enum": [
+                "purchase",
+                "adjustment",
+                "waste",
+                "consumption"
+            ],
+            "x-enum-varnames": [
+                "MovementPurchase",
+                "MovementAdjustment",
+                "MovementWaste",
+                "MovementConsumption"
+            ]
         },
         "entities.NullableString": {
             "type": "object",
@@ -13150,6 +13539,61 @@
                 }
             }
         },
+        "entities.StockMovementResponse": {
+            "type": "object",
+            "properties": {
+                "budget_id": {
+                    "type": "string"
+                },
+                "budget_quote_number": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "filament_id": {
+                    "type": "string"
+                },
+                "grams": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.MovementType"
+                },
+                "unit_price_per_kg": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.StockWarning": {
+            "type": "object",
+            "properties": {
+                "available_grams": {
+                    "type": "integer"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "filament_id": {
+                    "type": "string"
+                },
+                "filament_name": {
+                    "type": "string"
+                },
+                "required_grams": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.SubscriptionDetailsResponse": {
             "type": "object",
             "properties": {
@@ -13695,6 +14139,9 @@
                     "description": "Status",
                     "type": "boolean"
                 },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
                 "material_id": {
                     "type": "string"
                 },
@@ -13712,6 +14159,10 @@
                     "type": "integer",
                     "maximum": 500,
                     "minimum": 0
+                },
+                "track_stock": {
+                    "description": "Stock control (Phase 4C). TrackStock, when present, turns inventory tracking\non or off. LowStockThresholdGrams is an optional JSON number carried as raw\nbytes so three cases can be told apart:\n  - field ABSENT        -\u003e threshold unchanged\n  - explicit null OR -1 -\u003e threshold cleared (no alert)\n  - number \u003e= 0         -\u003e threshold set to that value\nStockGrams is intentionally NOT accepted here; it changes only via movements.",
+                    "type": "boolean"
                 },
                 "url": {
                     "description": "Additional properties",

@@ -91,7 +91,7 @@ func InitializeRoutes(
 	activity.Routes(root, activityService, protectFactory)
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
-	budget.Routes(root, budgetUc, protectFactory)
+	budget.Routes(root, budgetUc, protectFactory, cacheMiddleware)
 	budget.PublicRoutes(root, publicBudgetUc)
 	company.Routes(root, companyUc, brandingUc, subscriptionPaymentsUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)

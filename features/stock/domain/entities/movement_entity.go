@@ -25,6 +25,11 @@ const (
 
 // IsManual reports whether a movement type may be created through the public
 // stock-movement endpoint. consumption is excluded (system only).
+// IsKnown reports whether t is any valid movement type (manual or system).
+func (t MovementType) IsKnown() bool {
+	return t.IsManual() || t == MovementConsumption
+}
+
 func (t MovementType) IsManual() bool {
 	switch t {
 	case MovementPurchase, MovementAdjustment, MovementWaste:

@@ -212,6 +212,10 @@ func (uc *StockUseCase) ListMovements(c *gin.Context) {
 	})
 
 	typeFilter := c.Query("type")
+	if typeFilter != "" && !entities.MovementType(typeFilter).IsKnown() {
+		coreErrors.Respond(c, coreErrors.BadRequest(entities.CodeInvalidMovementType, "Tipo de movimentação inválido"))
+		return
+	}
 
 	movements, total, err := uc.repository.ListMovements(ctx, filamentID, organizationID, typeFilter, q.OrderClause(), q.Limit(), q.Offset())
 	if err != nil {

@@ -57,7 +57,7 @@ func (r *budgetRepositoryImpl) GetStockWarnings(ctx context.Context, budgetID uu
 		Table("budget_item_filaments AS bif").
 		Select("f.id AS id, f.name AS name, f.color AS color, f.stock_grams AS stock_grams, SUM(bif.quantity) AS required").
 		Joins("JOIN budget_items bi ON bi.id = bif.budget_item_id").
-		Joins("JOIN filaments f ON f.id = bif.filament_id AND f.organization_id = bif.organization_id").
+		Joins("JOIN filaments f ON f.id = bif.filament_id AND f.organization_id = bif.organization_id AND f.deleted_at IS NULL").
 		Where("bi.budget_id = ? AND bif.organization_id = ? AND f.track_stock = ?", budgetID, organizationID, true).
 		Group("f.id, f.name, f.color, f.stock_grams").
 		Order("f.name").

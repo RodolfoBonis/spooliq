@@ -51,3 +51,14 @@ func TestIsManual(t *testing.T) {
 		}
 	}
 }
+
+func TestMovementType_IsKnown(t *testing.T) {
+	for _, tc := range []struct {
+		in   MovementType
+		want bool
+	}{{MovementPurchase, true}, {MovementAdjustment, true}, {MovementWaste, true}, {MovementConsumption, true}, {"bogus", false}, {"", false}} {
+		if got := tc.in.IsKnown(); got != tc.want {
+			t.Errorf("IsKnown(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}

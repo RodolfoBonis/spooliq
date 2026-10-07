@@ -70,7 +70,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			cost_preset_id uuid,
 			include_energy_cost boolean DEFAULT false,
 			include_waste_cost boolean DEFAULT false,
-			include_machine_cost boolean DEFAULT true,
+			include_machine_cost boolean NOT NULL DEFAULT false,
 			discount_type varchar(10),
 			discount_value double precision,
 			include_shipping boolean DEFAULT false,

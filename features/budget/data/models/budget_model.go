@@ -43,9 +43,11 @@ type BudgetModel struct {
 	// Configuration flags
 	IncludeEnergyCost bool `gorm:"default:false" json:"include_energy_cost"`
 	IncludeWasteCost  bool `gorm:"default:false" json:"include_waste_cost"`
-	// IncludeMachineCost defaults TRUE for new budgets; existing rows are backfilled to
-	// FALSE by an explicit data migration so stored budgets are not reinterpreted.
-	IncludeMachineCost bool `gorm:"default:true" json:"include_machine_cost"`
+	// IncludeMachineCost defaults TRUE for new budgets at the use-case level
+	// (resolveIncludeMachineCost). The DB default must stay FALSE: GORM omits zero-valued
+	// fields that carry a default tag from INSERT, so default:true would silently turn an
+	// explicit false into true. Existing rows keep FALSE so stored budgets are not reinterpreted.
+	IncludeMachineCost bool `gorm:"default:false" json:"include_machine_cost"`
 
 	// Discount configuration (nullable).
 	DiscountType  *string  `gorm:"type:varchar(10)" json:"discount_type"`

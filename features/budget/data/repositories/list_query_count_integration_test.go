@@ -39,7 +39,7 @@ func createListSchema(t *testing.T, db *gorm.DB) {
 			print_time_hours integer NOT NULL DEFAULT 0, print_time_minutes integer NOT NULL DEFAULT 0,
 			profile_id uuid, machine_preset_id uuid, energy_preset_id uuid, cost_preset_id uuid,
 			include_energy_cost boolean DEFAULT false, include_waste_cost boolean DEFAULT false,
-			include_machine_cost boolean DEFAULT true,
+			include_machine_cost boolean NOT NULL DEFAULT false,
 			discount_type varchar(10), discount_value double precision,
 			include_shipping boolean DEFAULT false, shipping_override bigint, tax_rate double precision,
 			filament_cost bigint DEFAULT 0, waste_cost bigint DEFAULT 0, energy_cost bigint DEFAULT 0,

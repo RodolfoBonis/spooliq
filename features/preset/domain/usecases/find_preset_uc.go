@@ -161,6 +161,8 @@ func (uc *FindPresetUseCase) FindCostPresetByID(id uuid.UUID, organizationID str
 		PostProcessingCostPerHour: cost.PostProcessingCostPerHour,
 		SupportRemovalCostPerHour: cost.SupportRemovalCostPerHour,
 		QualityControlCostPerItem: cost.QualityControlCostPerItem,
+		FailureRatePercentage:     cost.FailureRatePercentage,
+		WasteGramsPerColorChange:  cost.WasteGramsPerColorChange,
 	}, nil
 }
 

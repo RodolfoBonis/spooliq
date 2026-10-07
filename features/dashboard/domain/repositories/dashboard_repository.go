@@ -16,4 +16,7 @@ type DashboardRepository interface {
 	GetTopFilaments(organizationID string, start, end time.Time, limit int) (*entities.TopFilamentsResponse, error)
 	GetTopMaterials(organizationID string, start, end time.Time, limit int) (*entities.TopMaterialsResponse, error)
 	GetGoalsAlerts(organizationID string) (*entities.GoalsAlertsResponse, error)
+	// GetLowStockFilaments returns tracked filaments at or below their alert threshold,
+	// ordered by how far below (stock - threshold) ascending, capped at limit.
+	GetLowStockFilaments(organizationID string, limit int) ([]entities.LowStockFilament, error)
 }

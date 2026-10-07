@@ -12,8 +12,13 @@ import (
 // expiryJobInterval is how often the budget expiry sweep runs.
 const expiryJobInterval = time.Hour
 
+// expiryJobInitialDelay postpones the first sweep. Migrations run in an OnStart hook
+// registered after this module's, so sweeping immediately would hit the schema before
+// new columns (e.g. valid_until) exist on the first deploy of a release.
+const expiryJobInitialDelay = time.Minute
+
 // RegisterExpiryJob wires a background goroutine that periodically marks overdue
-// "sent" budgets as "expired". It runs once right after start and then every hour,
+// "sent" budgets as "expired". It runs once shortly after start and then every hour,
 // and is stopped cleanly via the OnStop context so it never leaks past shutdown.
 //
 // The public endpoints also check valid_until directly, so correctness never
@@ -37,7 +42,12 @@ func RegisterExpiryJob(lc fx.Lifecycle, repo budgetRepos.BudgetRepository, log l
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
 			go func() {
-				runOnce() // one run on start
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(expiryJobInitialDelay):
+					runOnce()
+				}
 				for {
 					select {
 					case <-ctx.Done():

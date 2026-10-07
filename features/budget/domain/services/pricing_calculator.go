@@ -1,6 +1,10 @@
 package services
 
-import "math"
+import (
+	"math"
+
+	"github.com/google/uuid"
+)
 
 // WasteGramsPerColorChange is the DEFAULT amount of filament (in grams) assumed to
 // be purged/wasted on every color change in a multi-color (AMS) print. A print
@@ -165,14 +169,105 @@ type PricingResult struct {
 	Total int64 // BasePrice - DiscountAmount + ShippingCost + TaxAmount
 }
 
-// wasteGramsPerChange returns the grams purged per color change for an item: the
-// item's cost preset value when positive, otherwise the package default. This keeps
-// budgets priced without a configured preset byte-identical to the legacy constant.
-func wasteGramsPerChange(cp *CostPresetInput) float64 {
-	if cp != nil && cp.WasteGramsPerColorChange > 0 {
-		return cp.WasteGramsPerColorChange
+// WasteGramsPerChangeOrDefault resolves the grams purged per color change from a raw
+// configured value: the value itself when positive, otherwise the package default
+// (WasteGramsPerColorChange). A zero/negative/absent configuration therefore keeps the
+// legacy 15 g behaviour, so budgets priced without a preset stay byte-identical.
+func WasteGramsPerChangeOrDefault(wastePerChange float64) float64 {
+	if wastePerChange > 0 {
+		return wastePerChange
 	}
 	return WasteGramsPerColorChange
+}
+
+// wasteGramsPerChange returns the grams purged per color change for an item: the
+// item's cost preset value when positive, otherwise the package default.
+func wasteGramsPerChange(cp *CostPresetInput) float64 {
+	var v float64
+	if cp != nil {
+		v = cp.WasteGramsPerColorChange
+	}
+	return WasteGramsPerChangeOrDefault(v)
+}
+
+// ItemWasteGrams returns the TOTAL grams of filament purged on color changes for a
+// single item: the per-change waste (the item's cost preset value when positive, else
+// the package default) times the number of color changes (filamentCount-1). An item
+// with fewer than two filaments has no color change and therefore no waste. This is the
+// single source of truth the pricing engine and the stock requirement aggregation both
+// use, so a cost's waste grams and a filament's physical waste requirement never drift.
+func ItemWasteGrams(cp *CostPresetInput, filamentCount int) float64 {
+	if filamentCount < 2 {
+		return 0
+	}
+	return wasteGramsPerChange(cp) * float64(filamentCount-1)
+}
+
+// RequirementFilament is one filament row of an item for stock-requirement aggregation.
+type RequirementFilament struct {
+	FilamentID uuid.UUID
+	Quantity   float64
+}
+
+// RequirementItem is a single budget item for stock-requirement aggregation: its
+// per-color-change waste (0 means "use the WasteGramsPerColorChange default") and the
+// filament rows it consumes.
+type RequirementItem struct {
+	// WasteGramsPerChange is the item's effective cost preset waste_grams_per_color_change
+	// (the item's own preset, falling back to the budget's). 0 selects the default.
+	WasteGramsPerChange float64
+	Filaments           []RequirementFilament
+}
+
+// itemWasteShare is the color-change purge waste apportioned EQUALLY to each of an
+// item's filament rows: total item waste (ItemWasteGrams) divided by the row count. An
+// item with fewer than two filaments has no color change, so the share is zero.
+func itemWasteShare(item RequirementItem) float64 {
+	n := len(item.Filaments)
+	if n < 2 {
+		return 0
+	}
+	var cp *CostPresetInput
+	if item.WasteGramsPerChange > 0 {
+		cp = &CostPresetInput{WasteGramsPerColorChange: item.WasteGramsPerChange}
+	}
+	return ItemWasteGrams(cp, n) / float64(n)
+}
+
+// FilamentRequirements aggregates, per filament, the PHYSICAL grams a set of items needs:
+// each filament row's quantity PLUS its equal share (waste/N) of its item's color-change
+// purge waste, summed across every item.
+//
+// The purge waste is counted whenever an item has N > 1 filaments, REGARDLESS of the
+// budget's include_waste_cost flag: the mass is physically consumed on the print bed, so
+// stock must account for it even when the operator chose not to bill it. Rounding is left
+// to the caller (done once per filament), matching the pricing engine's rounding policy.
+func FilamentRequirements(items []RequirementItem) map[uuid.UUID]float64 {
+	req := make(map[uuid.UUID]float64)
+	for _, item := range items {
+		share := itemWasteShare(item)
+		for _, f := range item.Filaments {
+			req[f.FilamentID] += f.Quantity + share
+		}
+	}
+	return req
+}
+
+// FilamentWasteGrams returns ONLY the color-change purge waste apportioned per filament
+// across the given items (the waste portion of FilamentRequirements). It is used to
+// annotate consumption movements with how much of the deducted mass is purge.
+func FilamentWasteGrams(items []RequirementItem) map[uuid.UUID]float64 {
+	waste := make(map[uuid.UUID]float64)
+	for _, item := range items {
+		share := itemWasteShare(item)
+		if share == 0 {
+			continue
+		}
+		for _, f := range item.Filaments {
+			waste[f.FilamentID] += share
+		}
+	}
+	return waste
 }
 
 // Calculate computes every budget cost from pure in-memory inputs (no DB access).
@@ -220,7 +315,7 @@ func Calculate(in PricingInput) (PricingResult, error) {
 		var wasteCost int64
 		if in.IncludeWasteCost && len(item.Filaments) > 1 {
 			avgPrice := priceSum / float64(len(item.Filaments))
-			wasteGrams := wasteGramsPerChange(item.CostPreset) * float64(len(item.Filaments)-1)
+			wasteGrams := ItemWasteGrams(item.CostPreset, len(item.Filaments))
 			wasteCost = WasteCostCents(wasteGrams, avgPrice)
 		}
 

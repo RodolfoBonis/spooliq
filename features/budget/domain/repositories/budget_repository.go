@@ -161,8 +161,10 @@ type BudgetRepository interface {
 	GetStockWarnings(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]entities.StockWarning, error)
 
 	// GetStockWarningsForRequest computes stock warnings for a NON-persisted budget
-	// (preview) from the required grams per filament. It issues ONE org-scoped query
-	// over the given filament IDs and returns warnings only for tracked filaments whose
-	// stock is below the requirement.
-	GetStockWarningsForRequest(ctx context.Context, organizationID string, requiredByFilament map[uuid.UUID]float64) ([]entities.StockWarning, error)
+	// (preview) from the request items plus the budget-level cost preset ID. It derives
+	// the PHYSICAL requirement per filament (quantity plus the apportioned color-change
+	// purge waste of every multi-filament item, using each item's effective cost preset),
+	// loads the waste-per-change values in ONE org-scoped query, then issues a single
+	// filament stock lookup and returns warnings only for tracked, under-stocked filaments.
+	GetStockWarningsForRequest(ctx context.Context, organizationID string, items []entities.PricingItemSpec, budgetCostPresetID *uuid.UUID) ([]entities.StockWarning, error)
 }

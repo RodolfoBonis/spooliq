@@ -50,26 +50,100 @@ type stockWarningRow struct {
 }
 
 // GetStockWarnings computes, for a stored budget, the tracked filaments whose stock is
-// below the budget's requirement, in a single org-scoped query.
+// below the budget's requirement. The requirement is the PHYSICAL grams the budget
+// consumes: each filament's quantity PLUS its equal share of the color-change purge
+// waste of every multi-filament item (counted regardless of the budget's
+// include_waste_cost flag — see pricing.FilamentRequirements). It uses two queries: the
+// shared requirement loader plus a single filament stock lookup.
 func (r *budgetRepositoryImpl) GetStockWarnings(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]entities.StockWarning, error) {
-	var rows []stockWarningRow
-	if err := r.db.WithContext(ctx).
-		Table("budget_item_filaments AS bif").
-		Select("f.id AS id, f.name AS name, f.color AS color, f.stock_grams AS stock_grams, SUM(bif.quantity) AS required").
-		Joins("JOIN budget_items bi ON bi.id = bif.budget_item_id").
-		Joins("JOIN filaments f ON f.id = bif.filament_id AND f.organization_id = bif.organization_id AND f.deleted_at IS NULL").
-		Where("bi.budget_id = ? AND bif.organization_id = ? AND f.track_stock = ?", budgetID, organizationID, true).
-		Group("f.id, f.name, f.color, f.stock_grams").
-		Order("f.name").
-		Scan(&rows).Error; err != nil {
+	items, err := LoadBudgetRequirementItems(ctx, r.db, budgetID, organizationID)
+	if err != nil {
 		return nil, fmt.Errorf("failed to compute stock warnings: %w", err)
 	}
-	return warningsFromRows(rows), nil
+	return r.stockWarningsForRequirements(ctx, organizationID, pricing.FilamentRequirements(items))
 }
 
-// GetStockWarningsForRequest computes stock warnings for a preview from the required
-// grams per filament, in one org-scoped query.
-func (r *budgetRepositoryImpl) GetStockWarningsForRequest(ctx context.Context, organizationID string, requiredByFilament map[uuid.UUID]float64) ([]entities.StockWarning, error) {
+// GetStockWarningsForRequest computes stock warnings for a NON-persisted budget
+// (preview). It mirrors the stored-budget requirement: each filament's quantity PLUS its
+// equal share of every multi-filament item's color-change purge waste, using the item's
+// effective cost preset (the item's own cost_preset_id, falling back to the budget-level
+// preset). The waste-per-change values are loaded in ONE org-scoped query over the
+// referenced cost presets; a single filament stock lookup follows.
+func (r *budgetRepositoryImpl) GetStockWarningsForRequest(ctx context.Context, organizationID string, items []entities.PricingItemSpec, budgetCostPresetID *uuid.UUID) ([]entities.StockWarning, error) {
+	if len(items) == 0 {
+		return []entities.StockWarning{}, nil
+	}
+
+	wasteByPreset, err := r.loadCostPresetWaste(ctx, organizationID, items, budgetCostPresetID)
+	if err != nil {
+		return nil, err
+	}
+
+	reqItems := make([]pricing.RequirementItem, len(items))
+	for i, item := range items {
+		effectiveID := item.CostPresetID
+		if effectiveID == nil {
+			effectiveID = budgetCostPresetID
+		}
+		var wastePerChange float64
+		if effectiveID != nil {
+			wastePerChange = wasteByPreset[*effectiveID]
+		}
+		fils := make([]pricing.RequirementFilament, len(item.Filaments))
+		for j, f := range item.Filaments {
+			fils[j] = pricing.RequirementFilament{FilamentID: f.FilamentID, Quantity: f.Quantity}
+		}
+		reqItems[i] = pricing.RequirementItem{WasteGramsPerChange: wastePerChange, Filaments: fils}
+	}
+
+	return r.stockWarningsForRequirements(ctx, organizationID, pricing.FilamentRequirements(reqItems))
+}
+
+// loadCostPresetWaste loads waste_grams_per_color_change for every distinct cost preset
+// referenced by the preview items (their own cost preset, falling back to the budget
+// preset) in ONE org-scoped query. A preset that does not resolve is simply absent (0),
+// which the aggregation treats as the default.
+func (r *budgetRepositoryImpl) loadCostPresetWaste(ctx context.Context, organizationID string, items []entities.PricingItemSpec, budgetCostPresetID *uuid.UUID) (map[uuid.UUID]float64, error) {
+	idSet := make(map[uuid.UUID]struct{})
+	for _, item := range items {
+		id := item.CostPresetID
+		if id == nil {
+			id = budgetCostPresetID
+		}
+		if id != nil {
+			idSet[*id] = struct{}{}
+		}
+	}
+	out := make(map[uuid.UUID]float64, len(idSet))
+	if len(idSet) == 0 {
+		return out, nil
+	}
+	ids := make([]uuid.UUID, 0, len(idSet))
+	for id := range idSet {
+		ids = append(ids, id)
+	}
+
+	var rows []struct {
+		ID    uuid.UUID `gorm:"column:id"`
+		Waste float64   `gorm:"column:waste_grams_per_color_change"`
+	}
+	if err := r.db.WithContext(ctx).
+		Table("cost_presets").
+		Select("id, waste_grams_per_color_change").
+		Where("organization_id = ? AND id IN ?", organizationID, ids).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load preview cost preset waste: %w", err)
+	}
+	for _, row := range rows {
+		out[row.ID] = row.Waste
+	}
+	return out, nil
+}
+
+// stockWarningsForRequirements loads, in a single org-scoped query, the on-hand stock of
+// every tracked, non-deleted filament in requiredByFilament and returns a warning for
+// each one whose rounded requirement exceeds its stock.
+func (r *budgetRepositoryImpl) stockWarningsForRequirements(ctx context.Context, organizationID string, requiredByFilament map[uuid.UUID]float64) ([]entities.StockWarning, error) {
 	if len(requiredByFilament) == 0 {
 		return []entities.StockWarning{}, nil
 	}
@@ -85,7 +159,7 @@ func (r *budgetRepositoryImpl) GetStockWarningsForRequest(ctx context.Context, o
 		Where("f.organization_id = ? AND f.track_stock = ? AND f.deleted_at IS NULL AND f.id IN ?", organizationID, true, ids).
 		Order("f.name").
 		Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("failed to compute preview stock warnings: %w", err)
+		return nil, fmt.Errorf("failed to compute stock warnings: %w", err)
 	}
 	for i := range rows {
 		rows[i].Required = requiredByFilament[rows[i].ID]

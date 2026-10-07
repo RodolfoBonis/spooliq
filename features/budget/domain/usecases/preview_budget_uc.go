@@ -8,7 +8,6 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // Preview calculates a budget's full cost breakdown WITHOUT persisting anything.
@@ -262,15 +261,11 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		TotalPrintTimeDisplay: formatPrintTime(totalHours, totalMins),
 	}
 
-	// Stock warnings for the (non-persisted) preview: sum the required grams per
-	// filament across items and flag tracked filaments whose stock is below it.
-	requiredByFilament := make(map[uuid.UUID]float64)
-	for _, item := range request.Items {
-		for _, f := range item.Filaments {
-			requiredByFilament[f.FilamentID] += f.Quantity
-		}
-	}
-	if warnings, werr := uc.budgetRepository.GetStockWarningsForRequest(ctx, organizationID, requiredByFilament); werr == nil {
+	// Stock warnings for the (non-persisted) preview: the requirement per filament is its
+	// quantity plus the apportioned color-change purge waste of every multi-filament item
+	// (using the item's effective cost preset: its own, else the budget-level preset). The
+	// repository derives and aggregates this from the same specs used for pricing.
+	if warnings, werr := uc.budgetRepository.GetStockWarningsForRequest(ctx, organizationID, specs, resolved.CostPresetID); werr == nil {
 		response.StockWarnings = warnings
 	} else {
 		uc.logger.Error(ctx, "Failed to compute preview stock warnings", map[string]interface{}{"error": werr.Error()})

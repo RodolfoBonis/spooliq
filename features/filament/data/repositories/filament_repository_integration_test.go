@@ -118,6 +118,9 @@ func setupFilamentRepo(t *testing.T) (repositories.FilamentRepository, *gorm.DB,
 			is_active boolean,
 			print_temperature integer,
 			bed_temperature integer,
+			track_stock boolean NOT NULL DEFAULT false,
+			stock_grams bigint NOT NULL DEFAULT 0,
+			low_stock_threshold_grams integer,
 			created_at timestamptz,
 			updated_at timestamptz,
 			deleted_at timestamptz
@@ -306,4 +309,91 @@ func TestFilamentCrossOrgNoLeak(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), total)
 	assert.Len(t, rows, 0)
+}
+
+// Regression: search JOINs brands/materials; the scan must keep the filament's
+// own columns (id, name, price, color) instead of the joined tables' ones.
+func TestFilamentSearchReturnsFilamentColumns(t *testing.T) {
+	repo, db, _ := setupFilamentRepo(t)
+	ctx := context.Background()
+
+	brand := seedBrand(t, db, itOrgA, "Voolt 3D")
+	mat := seedMaterial(t, db, itOrgA, "PLA Premium", 60, 210)
+	seedFilament(t, repo, itOrgA, "PLA Preto Velvet", brand, mat, 11990)
+
+	all, _, err := repo.FindAll(ctx, itOrgA, "", "filaments.created_at desc", 20, 0)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
+	want := all[0]
+
+	for _, q := range []string{"preto", "voolt", "premium"} {
+		rows, total, err := repo.SearchFilaments(ctx, itOrgA, nil, q, "filaments.created_at desc", 20, 0)
+		require.NoError(t, err, q)
+		require.Equal(t, int64(1), total, q)
+		require.Len(t, rows, 1, q)
+		got := rows[0]
+		assert.Equal(t, want.ID, got.ID, "id for q=%s", q)
+		assert.Equal(t, "PLA Preto Velvet", got.Name, "name for q=%s", q)
+		assert.Equal(t, want.PricePerKg, got.PricePerKg, "price for q=%s", q)
+		assert.Equal(t, want.CreatedAt.Unix(), got.CreatedAt.Unix(), "created_at for q=%s", q)
+	}
+}
+
+// seedStockFilament inserts a filament with explicit stock-control fields.
+func seedStockFilament(t *testing.T, repo repositories.FilamentRepository, org, name string, brandID, materialID uuid.UUID, track bool, stock int64, threshold *int) {
+	t.Helper()
+	owner := "owner"
+	require.NoError(t, repo.Create(context.Background(), &entities.FilamentEntity{
+		ID:                     uuid.New(),
+		OrganizationID:         org,
+		Name:                   name,
+		BrandID:                brandID,
+		MaterialID:             materialID,
+		Color:                  "Preto",
+		Diameter:               1.75,
+		PricePerKg:             100,
+		OwnerUserID:            &owner,
+		IsActive:               true,
+		TrackStock:             track,
+		StockGrams:             stock,
+		LowStockThresholdGrams: threshold,
+		CreatedAt:              time.Now(),
+		UpdatedAt:              time.Now(),
+	}))
+}
+
+// TestFilamentLowStockFilter proves the low_stock filter keeps only tracked filaments
+// at/below their threshold and is organization-scoped.
+func TestFilamentLowStockFilter(t *testing.T) {
+	repo, db, _ := setupFilamentRepo(t)
+	ctx := context.Background()
+
+	brandA := seedBrand(t, db, itOrgA, "BrandA")
+	matA := seedMaterial(t, db, itOrgA, "PLA", 60, 210)
+	brandB := seedBrand(t, db, itOrgB, "BrandB")
+	matB := seedMaterial(t, db, itOrgB, "PLA", 60, 210)
+
+	th := func(v int) *int { return &v }
+
+	// org A: one low, one healthy, one untracked-below, one tracked-no-threshold.
+	seedStockFilament(t, repo, itOrgA, "A-low", brandA, matA, true, 50, th(100))       // low
+	seedStockFilament(t, repo, itOrgA, "A-ok", brandA, matA, true, 500, th(100))       // ok
+	seedStockFilament(t, repo, itOrgA, "A-untracked", brandA, matA, false, 0, th(100)) // untracked -> excluded
+	seedStockFilament(t, repo, itOrgA, "A-nothresh", brandA, matA, true, 0, nil)       // no threshold -> excluded
+	// org B: a low filament that must NOT leak into org A results.
+	seedStockFilament(t, repo, itOrgB, "B-low", brandB, matB, true, 10, th(100))
+
+	filters := map[string]interface{}{"low_stock": true}
+	results, total, err := repo.SearchFilaments(ctx, itOrgA, filters, "", "filaments.created_at desc", 50, 0)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), total, "only A-low qualifies in org A")
+	require.Len(t, results, 1)
+	require.Equal(t, "A-low", results[0].Name)
+	require.True(t, results[0].IsLowStock)
+
+	// org B sees only its own low filament.
+	resultsB, totalB, err := repo.SearchFilaments(ctx, itOrgB, filters, "", "filaments.created_at desc", 50, 0)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), totalB)
+	require.Equal(t, "B-low", resultsB[0].Name)
 }

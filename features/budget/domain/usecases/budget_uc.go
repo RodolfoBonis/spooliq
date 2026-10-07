@@ -25,6 +25,8 @@ type IBudgetUseCase interface {
 	FindByCustomer(c *gin.Context)
 	GetHistory(c *gin.Context)
 	GeneratePDF(c *gin.Context)
+	Share(c *gin.Context)
+	RevokeShare(c *gin.Context)
 }
 
 // BudgetUseCase implements the budget use cases
@@ -41,6 +43,9 @@ type BudgetUseCase struct {
 	// profile and preset repositories, keeping the dependency one-directional.
 	profileProvider ProfilePresetProvider
 	presetProvider  DefaultPresetProvider
+	// stockDeductor decrements filament stock when a budget is completed. It runs in
+	// the same transaction as the status change. Injected via FX (stock feature).
+	stockDeductor StockDeductor
 }
 
 // NewBudgetUseCase creates a new instance of BudgetUseCase
@@ -54,6 +59,7 @@ func NewBudgetUseCase(
 	activityService activityUc.IActivityService,
 	profileProvider ProfilePresetProvider,
 	presetProvider DefaultPresetProvider,
+	stockDeductor StockDeductor,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
@@ -65,6 +71,7 @@ func NewBudgetUseCase(
 		activityService:    activityService,
 		profileProvider:    profileProvider,
 		presetProvider:     presetProvider,
+		stockDeductor:      stockDeductor,
 	}
 }
 

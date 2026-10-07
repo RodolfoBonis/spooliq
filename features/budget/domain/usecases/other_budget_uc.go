@@ -59,28 +59,35 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	now := time.Now()
 
 	// Create new budget as draft, copying ALL relevant fields (including the
-	// PDF-facing ones that used to be dropped: delivery days, payment terms, notes).
+	// PDF-facing ones and the Phase-4A cost flags: machine cost, discount, shipping
+	// and tax). Calculated costs are recomputed by CalculateCosts.
 	newBudget := &entities.BudgetEntity{
-		ID:                uuid.New(),
-		OrganizationID:    organizationID,
-		Name:              originalBudget.Name + " (Copy)",
-		Description:       originalBudget.Description,
-		CustomerID:        originalBudget.CustomerID,
-		Status:            entities.StatusDraft,
-		PrintTimeHours:    originalBudget.PrintTimeHours,
-		PrintTimeMinutes:  originalBudget.PrintTimeMinutes,
-		ProfileID:         originalBudget.ProfileID,
-		MachinePresetID:   originalBudget.MachinePresetID,
-		EnergyPresetID:    originalBudget.EnergyPresetID,
-		CostPresetID:      originalBudget.CostPresetID,
-		IncludeEnergyCost: originalBudget.IncludeEnergyCost,
-		IncludeWasteCost:  originalBudget.IncludeWasteCost,
-		DeliveryDays:      originalBudget.DeliveryDays,
-		PaymentTerms:      originalBudget.PaymentTerms,
-		Notes:             originalBudget.Notes,
-		OwnerUserID:       userID,
-		CreatedAt:         now,
-		UpdatedAt:         now,
+		ID:                 uuid.New(),
+		OrganizationID:     organizationID,
+		Name:               originalBudget.Name + " (Copy)",
+		Description:        originalBudget.Description,
+		CustomerID:         originalBudget.CustomerID,
+		Status:             entities.StatusDraft,
+		PrintTimeHours:     originalBudget.PrintTimeHours,
+		PrintTimeMinutes:   originalBudget.PrintTimeMinutes,
+		ProfileID:          originalBudget.ProfileID,
+		MachinePresetID:    originalBudget.MachinePresetID,
+		EnergyPresetID:     originalBudget.EnergyPresetID,
+		CostPresetID:       originalBudget.CostPresetID,
+		IncludeEnergyCost:  originalBudget.IncludeEnergyCost,
+		IncludeWasteCost:   originalBudget.IncludeWasteCost,
+		IncludeMachineCost: originalBudget.IncludeMachineCost,
+		DiscountType:       originalBudget.DiscountType,
+		DiscountValue:      originalBudget.DiscountValue,
+		IncludeShipping:    originalBudget.IncludeShipping,
+		ShippingOverride:   originalBudget.ShippingOverride,
+		TaxRate:            originalBudget.TaxRate,
+		DeliveryDays:       originalBudget.DeliveryDays,
+		PaymentTerms:       originalBudget.PaymentTerms,
+		Notes:              originalBudget.Notes,
+		OwnerUserID:        userID,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 
 	// Read the original items + filaments and prepare fully-populated copies.
@@ -119,6 +126,8 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 			PrintTimeMinutes:        original.PrintTimeMinutes,
 			SetupTimeMinutes:        original.SetupTimeMinutes,
 			ManualLaborMinutesTotal: original.ManualLaborMinutesTotal,
+			PostProcessingMinutes:   original.PostProcessingMinutes,
+			SupportRemovalMinutes:   original.SupportRemovalMinutes,
 			CostPresetID:            original.CostPresetID,
 			AdditionalNotes:         original.AdditionalNotes,
 			Model3DID:               original.Model3DID,
@@ -155,6 +164,13 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 
 	// Persist the whole copy atomically.
 	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		// A duplicate gets a brand-new quote number; public_token, valid_until and the
+		// customer-response fields are left nil (reset) and the status stays draft.
+		quoteNumber, qerr := repo.AllocateQuoteNumber(ctx, organizationID)
+		if qerr != nil {
+			return qerr
+		}
+		newBudget.QuoteNumber = &quoteNumber
 		if err := repo.Create(ctx, newBudget); err != nil {
 			return err
 		}

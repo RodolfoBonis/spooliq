@@ -55,12 +55,20 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 		Model3DID:               model3dIDStr,
 		SetupTimeMinutes:        item.SetupTimeMinutes,
 		ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+		PostProcessingMinutes:   item.PostProcessingMinutes,
+		SupportRemovalMinutes:   item.SupportRemovalMinutes,
 		AdditionalNotes:         item.AdditionalNotes,
 		FilamentCost:            item.FilamentCost,
 		WasteCost:               item.WasteCost,
 		EnergyCost:              item.EnergyCost,
+		MachineCost:             item.MachineCost,
 		SetupCost:               item.SetupCost,
 		ManualLaborCost:         item.ManualLaborCost,
+		PostProcessingCost:      item.PostProcessingCost,
+		SupportRemovalCost:      item.SupportRemovalCost,
+		PackagingCost:           item.PackagingCost,
+		QualityControlCost:      item.QualityControlCost,
+		FailureCost:             item.FailureCost,
 		ItemTotalCost:           item.ItemTotalCost,
 		UnitPrice:               item.UnitPrice,
 		SaleTotal:               saleTotal,
@@ -72,24 +80,26 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 	}, printMinutes
 }
 
-// saleTotalsFor distributes the budget-wide overhead+profit markup
-// (budgetTotal - sum of item costs) across items proportionally to each item's
-// direct cost, so the per-item shares sum EXACTLY to budgetTotal.
-func saleTotalsFor(items []*entities.BudgetItemEntity, budgetTotal int64) []int64 {
+// saleTotalsFor distributes the budget-wide markup across items proportionally to
+// each item's direct cost, so the per-item shares sum EXACTLY to the sale target.
+// The sale target is the budget total MINUS shipping, so item sale totals plus
+// shipping reconcile to the total.
+func saleTotalsFor(items []*entities.BudgetItemEntity, saleTarget int64) []int64 {
 	itemCosts := make([]int64, len(items))
 	for i, item := range items {
 		itemCosts[i] = item.ItemTotalCost
 	}
-	return pricing.DistributeMarkup(itemCosts, budgetTotal)
+	return pricing.DistributeMarkup(itemCosts, saleTarget)
 }
 
 // buildBudgetItemResponses maps stored budget items into API responses for a SINGLE
 // budget, resolving each item's filament usage and cost-preset name directly from
 // the repository. It is used by the detail endpoint and the PDF generator (one
 // budget at a time); the list endpoint uses the batched path instead. It returns the
-// item responses plus the summed print time (hours, minutes).
-func buildBudgetItemResponses(ctx context.Context, repo repositories.BudgetRepository, items []*entities.BudgetItemEntity, budgetTotal int64, organizationID string) ([]entities.BudgetItemResponse, int, int) {
-	saleTotals := saleTotalsFor(items, budgetTotal)
+// item responses plus the summed print time (hours, minutes). saleTarget is the
+// budget total minus shipping (see saleTotalsFor).
+func buildBudgetItemResponses(ctx context.Context, repo repositories.BudgetRepository, items []*entities.BudgetItemEntity, saleTarget int64, organizationID string) ([]entities.BudgetItemResponse, int, int) {
+	saleTotals := saleTotalsFor(items, saleTarget)
 
 	// Resolve cost-preset names once per distinct preset.
 	presetNameCache := make(map[uuid.UUID]*entities.CostPresetRef)
@@ -123,9 +133,10 @@ func buildBudgetItemResponses(ctx context.Context, repo repositories.BudgetRepos
 // assembleItemResponsesFromMaps builds the item responses for a budget from already
 // batch-loaded data (filament usage keyed by item ID, cost-preset names keyed by
 // preset ID), performing NO per-item queries. It is the list-path counterpart of
-// buildBudgetItemResponses and emits an identical response shape.
-func assembleItemResponsesFromMaps(items []*entities.BudgetItemEntity, budgetTotal int64, filamentsByItem map[uuid.UUID][]entities.FilamentUsageInfo, costPresetNames map[uuid.UUID]string) ([]entities.BudgetItemResponse, int, int) {
-	saleTotals := saleTotalsFor(items, budgetTotal)
+// buildBudgetItemResponses and emits an identical response shape. saleTarget is the
+// budget total minus shipping (see saleTotalsFor).
+func assembleItemResponsesFromMaps(items []*entities.BudgetItemEntity, saleTarget int64, filamentsByItem map[uuid.UUID][]entities.FilamentUsageInfo, costPresetNames map[uuid.UUID]string) ([]entities.BudgetItemResponse, int, int) {
+	saleTotals := saleTotalsFor(items, saleTarget)
 
 	responses := make([]entities.BudgetItemResponse, len(items))
 	var totalPrintMinutes int
@@ -192,11 +203,24 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 	customerInfo, _ := uc.budgetRepository.GetCustomerInfo(ctx, budget.CustomerID, organizationID)
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
-	itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
+	saleTarget := budget.TotalCost - budget.ShippingCost
+	itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, saleTarget, organizationID)
 	profileRef, costRef := uc.budgetLevelRefs(ctx, budget)
+
+	// Stock warnings (detail only, one batched query). Skip for completed budgets:
+	// their stock was already deducted, so a shortfall is expected and not a warning.
+	stockWarnings := []entities.StockWarning{}
+	if budget.Status != entities.StatusCompleted {
+		if w, werr := uc.budgetRepository.GetStockWarnings(ctx, budget.ID, organizationID); werr == nil {
+			stockWarnings = w
+		} else {
+			uc.logger.Error(ctx, "Failed to load stock warnings", map[string]interface{}{"error": werr.Error(), "budget_id": budget.ID})
+		}
+	}
 
 	return &entities.BudgetResponse{
 		BudgetEntity:          budget,
+		BasePrice:             budget.BasePrice(),
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		Profile:               profileRef,
@@ -204,6 +228,7 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 		TotalPrintTimeHours:   totalHours,
 		TotalPrintTimeMinutes: totalMins,
 		TotalPrintTimeDisplay: formatPrintTime(totalHours, totalMins),
+		StockWarnings:         stockWarnings,
 	}, nil
 }
 
@@ -271,7 +296,8 @@ func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets [
 
 	for _, budget := range budgets {
 		items := itemsByBudget[budget.ID]
-		itemResponses, totalHours, totalMins := assembleItemResponsesFromMaps(items, budget.TotalCost, filamentsByItem, costPresetNames)
+		saleTarget := budget.TotalCost - budget.ShippingCost
+		itemResponses, totalHours, totalMins := assembleItemResponsesFromMaps(items, saleTarget, filamentsByItem, costPresetNames)
 
 		var profileRef *entities.ProfileRef
 		if budget.ProfileID != nil {
@@ -284,6 +310,7 @@ func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets [
 
 		responses = append(responses, entities.BudgetResponse{
 			BudgetEntity:          budget,
+			BasePrice:             budget.BasePrice(),
 			Customer:              customers[budget.CustomerID],
 			Items:                 itemResponses,
 			Profile:               profileRef,

@@ -43,6 +43,13 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
+	// Cross-field discount validation (percent cap + paired presence).
+	if err := validateDiscountInput(request.DiscountType, request.DiscountValue); err != nil {
+		uc.logger.Error(ctx, "Invalid discount", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
+
 	// Validate that each item has at least one filament
 	for i, item := range request.Items {
 		if len(item.Filaments) == 0 {
@@ -102,24 +109,30 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 
 	// Create budget entity (without global print time - now calculated from items)
 	budget := &entities.BudgetEntity{
-		ID:                uuid.New(),
-		OrganizationID:    organizationID,
-		Name:              request.Name,
-		Description:       request.Description,
-		CustomerID:        request.CustomerID,
-		Status:            entities.StatusDraft,
-		ProfileID:         resolved.ProfileID,
-		MachinePresetID:   resolved.MachinePresetID,
-		EnergyPresetID:    resolved.EnergyPresetID,
-		CostPresetID:      resolved.CostPresetID,
-		IncludeEnergyCost: request.IncludeEnergyCost,
-		IncludeWasteCost:  request.IncludeWasteCost,
-		DeliveryDays:      request.DeliveryDays,
-		PaymentTerms:      request.PaymentTerms,
-		Notes:             request.Notes,
-		OwnerUserID:       userID,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		ID:                 uuid.New(),
+		OrganizationID:     organizationID,
+		Name:               request.Name,
+		Description:        request.Description,
+		CustomerID:         request.CustomerID,
+		Status:             entities.StatusDraft,
+		ProfileID:          resolved.ProfileID,
+		MachinePresetID:    resolved.MachinePresetID,
+		EnergyPresetID:     resolved.EnergyPresetID,
+		CostPresetID:       resolved.CostPresetID,
+		IncludeEnergyCost:  request.IncludeEnergyCost,
+		IncludeWasteCost:   request.IncludeWasteCost,
+		IncludeMachineCost: resolveIncludeMachineCost(request.IncludeMachineCost),
+		DiscountType:       request.DiscountType,
+		DiscountValue:      request.DiscountValue,
+		IncludeShipping:    request.IncludeShipping,
+		ShippingOverride:   request.ShippingOverride,
+		TaxRate:            request.TaxRate,
+		DeliveryDays:       request.DeliveryDays,
+		PaymentTerms:       request.PaymentTerms,
+		Notes:              request.Notes,
+		OwnerUserID:        userID,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
 	}
 
 	// Record initial status history for the draft status

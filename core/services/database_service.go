@@ -630,6 +630,15 @@ var dataMigrations = []struct{ name, sql string }{
 		"2026-10-06_activate_legacy_filaments",
 		"UPDATE filaments SET is_active = true WHERE is_active = false",
 	},
+	{
+		// Phase 4A added budgets.include_machine_cost with a column DEFAULT of TRUE so
+		// that NEW budgets charge machine time. AutoMigrate's ADD COLUMN ... DEFAULT true
+		// backfills EXISTING rows to TRUE, which would silently reinterpret already-quoted
+		// budgets. This one-time fix flips every pre-existing budget back to FALSE so
+		// stored totals are not changed; new budgets keep the TRUE default going forward.
+		"2026-10-07_backfill_budget_include_machine_cost_false",
+		"UPDATE budgets SET include_machine_cost = false",
+	},
 }
 
 // runDataMigrations applies pending dataMigrations, each in its own transaction

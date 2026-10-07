@@ -32,4 +32,6 @@ type UpdateCompanyRequest struct {
 	City      *string `json:"city,omitempty" validate:"omitempty,max=100"`
 	State     *string `json:"state,omitempty" validate:"omitempty,max=100"`
 	ZipCode   *string `json:"zip_code,omitempty" validate:"omitempty,max=20"`
+	// DefaultTaxRate is the organization's default "por dentro" tax rate (percent, 0..<100).
+	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty" validate:"omitempty,gte=0,lt=100"`
 }

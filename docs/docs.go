@@ -9352,7 +9352,7 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "cost_preset_id": {
-                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor rates — see the pricing input mapping.",
+                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor/post-processing/packaging/QC/failure rates.",
                     "type": "string"
                 },
                 "filaments": {
@@ -9374,6 +9374,11 @@ const docTemplate = `{
                 },
                 "order": {
                     "description": "Order in the budget",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "post_processing_minutes": {
+                    "description": "Post-processing time for this item (minutes)",
                     "type": "integer",
                     "minimum": 0
                 },
@@ -9408,6 +9413,11 @@ const docTemplate = `{
                     "description": "Labor breakdown for this item",
                     "type": "integer",
                     "minimum": 0
+                },
+                "support_removal_minutes": {
+                    "description": "Support-removal time for this item (minutes)",
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -9439,6 +9449,10 @@ const docTemplate = `{
                     "description": "cents",
                     "type": "integer"
                 },
+                "failure_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "filament_cost": {
                     "description": "Calculated costs for this item",
                     "type": "integer"
@@ -9457,6 +9471,10 @@ const docTemplate = `{
                     "description": "cents (sum of all)",
                     "type": "integer"
                 },
+                "machine_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "manual_labor_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -9470,6 +9488,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
+                    "type": "integer"
+                },
+                "packaging_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "post_processing_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "post_processing_minutes": {
+                    "description": "Post-processing time for this item (minutes)",
                     "type": "integer"
                 },
                 "print_time_display": {
@@ -9496,12 +9526,16 @@ const docTemplate = `{
                 "product_quantity": {
                     "type": "integer"
                 },
+                "quality_control_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "sale_total": {
                     "description": "cents (with markup)",
                     "type": "integer"
                 },
                 "sale_unit_price": {
-                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY\nto the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may\ndiffer from SaleTotal by a few cents.",
+                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide markup. SaleTotal values across items sum EXACTLY to the budget total\nMINUS shipping (so the item sale totals plus shipping reconcile to the total).\nSaleUnitPrice is rounded, so SaleUnitPrice * quantity may differ from SaleTotal by\na few cents.",
                     "type": "integer"
                 },
                 "setup_cost": {
@@ -9510,6 +9544,14 @@ const docTemplate = `{
                 },
                 "setup_time_minutes": {
                     "description": "Labor breakdown for this item",
+                    "type": "integer"
+                },
+                "support_removal_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "support_removal_minutes": {
+                    "description": "Support-removal time for this item (minutes)",
                     "type": "integer"
                 },
                 "unit_price": {
@@ -9528,6 +9570,10 @@ const docTemplate = `{
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "base_price": {
+                    "description": "BasePrice is the sale price before discount/shipping/tax (subtotal + overhead +\nprofit), derived from the stored totals. TaxRateApplied is exposed via the\nembedded entity.",
+                    "type": "integer"
+                },
                 "cost_preset": {
                     "$ref": "#/definitions/entities.CostPresetRef"
                 },
@@ -9555,6 +9601,17 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "discount_amount": {
+                    "description": "Discount/shipping/tax results (cents, except TaxRateApplied which is a percent).",
+                    "type": "integer"
+                },
+                "discount_type": {
+                    "description": "Discount configuration (nullable). DiscountType is \"percent\" or \"fixed\";\nDiscountValue is a 0-100 percent or a reais amount accordingly.",
+                    "type": "string"
+                },
+                "discount_value": {
+                    "type": "number"
+                },
                 "energy_cost": {
                     "description": "cents - Sum of all items energy costs",
                     "type": "integer"
@@ -9565,6 +9622,10 @@ const docTemplate = `{
                 "energy_preset_id": {
                     "type": "string"
                 },
+                "failure_cost": {
+                    "description": "cents - Sum of all items failure-rate costs",
+                    "type": "integer"
+                },
                 "filament_cost": {
                     "description": "Calculated costs (in cents for precision)",
                     "type": "integer"
@@ -9574,6 +9635,14 @@ const docTemplate = `{
                 },
                 "include_energy_cost": {
                     "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "description": "charge per-item machine time (cost_per_hour)",
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping configuration. When IncludeShipping is set the shipping cost is\nShippingOverride (cents) when provided, else computed from the budget cost preset.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -9587,6 +9656,10 @@ const docTemplate = `{
                 },
                 "labor_cost": {
                     "description": "cents - Sum of all items manual labor costs",
+                    "type": "integer"
+                },
+                "machine_cost": {
+                    "description": "cents - Sum of all items machine-time costs",
                     "type": "integer"
                 },
                 "machine_preset": {
@@ -9608,12 +9681,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "overhead_cost": {
-                    "description": "cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)",
+                    "description": "cents - Overhead calculated on subtotal",
                     "type": "integer"
                 },
                 "owner_user_id": {
                     "description": "Ownership",
                     "type": "string"
+                },
+                "packaging_cost": {
+                    "description": "cents - Sum of all items packaging costs",
+                    "type": "integer"
                 },
                 "payment_terms": {
                     "description": "condições de pagamento",
@@ -9622,6 +9699,10 @@ const docTemplate = `{
                 "pdf_url": {
                     "description": "URL do PDF gerado",
                     "type": "string"
+                },
+                "post_processing_cost": {
+                    "description": "cents - Sum of all items post-processing costs",
+                    "type": "integer"
                 },
                 "print_time_hours": {
                     "description": "Print time (manual input for now)",
@@ -9643,11 +9724,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "profit_amount": {
-                    "description": "cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)",
+                    "description": "cents - Profit margin calculated",
+                    "type": "integer"
+                },
+                "quality_control_cost": {
+                    "description": "cents - Sum of all items quality-control costs",
                     "type": "integer"
                 },
                 "setup_cost": {
                     "description": "cents - Sum of all items setup costs",
+                    "type": "integer"
+                },
+                "shipping_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "shipping_override": {
+                    "description": "cents",
                     "type": "integer"
                 },
                 "status": {
@@ -9659,8 +9752,20 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
                     }
                 },
+                "tax_amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "tax_rate": {
+                    "description": "TaxRate is the budget-level \"por dentro\" tax rate (percent). When nil the\ncompany default_tax_rate is used. TaxRateApplied records the rate actually used.",
+                    "type": "number"
+                },
+                "tax_rate_applied": {
+                    "description": "percent actually applied",
+                    "type": "number"
+                },
                 "total_cost": {
-                    "description": "cents - Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit",
+                    "description": "cents - Final total (base - discount + shipping + tax)",
                     "type": "integer"
                 },
                 "total_print_time_display": {
@@ -10062,6 +10167,10 @@ const docTemplate = `{
                 "current_plan": {
                     "$ref": "#/definitions/entities.SubscriptionPlanResponse"
                 },
+                "default_tax_rate": {
+                    "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent).",
+                    "type": "number"
+                },
                 "document": {
                     "type": "string"
                 },
@@ -10172,6 +10281,9 @@ const docTemplate = `{
         "entities.CostPresetEntity": {
             "type": "object",
             "properties": {
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -10204,6 +10316,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "waste_grams_per_color_change": {
                     "type": "number"
                 }
             }
@@ -10257,11 +10372,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional). DiscountType ∈ {\"percent\",\"fixed\"}; DiscountValue is a\n0-100 percent for \"percent\" or a reais amount (\u003e= 0) for \"fixed\".",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
-                    "description": "Configuration flags",
+                    "description": "Configuration flags. IncludeMachineCost defaults to TRUE when omitted.",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -10295,6 +10429,15 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -12183,11 +12326,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional). DiscountType ∈ {\"percent\",\"fixed\"}.",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
-                    "description": "Configuration flags",
+                    "description": "Configuration flags. IncludeMachineCost defaults to TRUE when omitted.",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -12220,6 +12382,15 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -12773,11 +12944,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional).",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
                     "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -12811,6 +13001,15 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. Presets are ONLY re-resolved from the profile/org\ndefaults when profile_id is explicitly provided in the update; otherwise the\nstored preset values are kept (partial-update semantics).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100).",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -12824,6 +13023,11 @@ const docTemplate = `{
                 "city": {
                     "type": "string",
                     "maxLength": 100
+                },
+                "default_tax_rate": {
+                    "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent, 0..\u003c100).",
+                    "type": "number",
+                    "minimum": 0
                 },
                 "document": {
                     "type": "string",
@@ -13656,6 +13860,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -13700,6 +13907,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "waste_grams_per_color_change": {
+                    "type": "number"
                 }
             }
         },
@@ -13708,6 +13918,11 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "failure_rate_percentage": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
                 },
                 "is_default": {
                     "type": "boolean"
@@ -13756,6 +13971,11 @@ const docTemplate = `{
                 "user_id": {
                     "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
+                },
+                "waste_grams_per_color_change": {
+                    "description": "WasteGramsPerColorChange defaults to 15 when omitted (0) to match the engine default.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -14207,6 +14427,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
@@ -14245,6 +14468,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "waste_grams_per_color_change": {
                     "type": "number"
                 }
             }

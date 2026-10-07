@@ -93,20 +93,26 @@ func (r *budgetRepositoryImpl) Update(ctx context.Context, budget *entities.Budg
 	model.FromEntity(budget)
 
 	updates := map[string]interface{}{
-		"name":                model.Name,
-		"description":         model.Description,
-		"customer_id":         model.CustomerID,
-		"profile_id":          model.ProfileID,
-		"machine_preset_id":   model.MachinePresetID,
-		"energy_preset_id":    model.EnergyPresetID,
-		"cost_preset_id":      model.CostPresetID,
-		"include_energy_cost": model.IncludeEnergyCost,
-		"include_waste_cost":  model.IncludeWasteCost,
-		"delivery_days":       model.DeliveryDays,
-		"payment_terms":       model.PaymentTerms,
-		"notes":               model.Notes,
-		"pdf_url":             model.PDFUrl,
-		"updated_at":          model.UpdatedAt,
+		"name":                 model.Name,
+		"description":          model.Description,
+		"customer_id":          model.CustomerID,
+		"profile_id":           model.ProfileID,
+		"machine_preset_id":    model.MachinePresetID,
+		"energy_preset_id":     model.EnergyPresetID,
+		"cost_preset_id":       model.CostPresetID,
+		"include_energy_cost":  model.IncludeEnergyCost,
+		"include_waste_cost":   model.IncludeWasteCost,
+		"include_machine_cost": model.IncludeMachineCost,
+		"discount_type":        model.DiscountType,
+		"discount_value":       model.DiscountValue,
+		"include_shipping":     model.IncludeShipping,
+		"shipping_override":    model.ShippingOverride,
+		"tax_rate":             model.TaxRate,
+		"delivery_days":        model.DeliveryDays,
+		"payment_terms":        model.PaymentTerms,
+		"notes":                model.Notes,
+		"pdf_url":              model.PDFUrl,
+		"updated_at":           model.UpdatedAt,
 	}
 
 	result := r.db.WithContext(ctx).
@@ -463,14 +469,20 @@ func (r *budgetRepositoryImpl) RemoveItem(ctx context.Context, itemID uuid.UUID)
 // by organization as defense-in-depth.
 func (r *budgetRepositoryImpl) UpdateItem(ctx context.Context, item *entities.BudgetItemEntity) error {
 	updates := map[string]interface{}{
-		"filament_cost":     item.FilamentCost,
-		"waste_cost":        item.WasteCost,
-		"energy_cost":       item.EnergyCost,
-		"setup_cost":        item.SetupCost,
-		"manual_labor_cost": item.ManualLaborCost,
-		"item_total_cost":   item.ItemTotalCost,
-		"unit_price":        item.UnitPrice,
-		"updated_at":        time.Now(),
+		"filament_cost":        item.FilamentCost,
+		"waste_cost":           item.WasteCost,
+		"energy_cost":          item.EnergyCost,
+		"machine_cost":         item.MachineCost,
+		"setup_cost":           item.SetupCost,
+		"manual_labor_cost":    item.ManualLaborCost,
+		"post_processing_cost": item.PostProcessingCost,
+		"support_removal_cost": item.SupportRemovalCost,
+		"packaging_cost":       item.PackagingCost,
+		"quality_control_cost": item.QualityControlCost,
+		"failure_cost":         item.FailureCost,
+		"item_total_cost":      item.ItemTotalCost,
+		"unit_price":           item.UnitPrice,
+		"updated_at":           time.Now(),
 	}
 
 	if err := r.db.WithContext(ctx).
@@ -709,19 +721,27 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			PrintTimeMinutes:        item.PrintTimeMinutes,
 			SetupTimeMinutes:        item.SetupTimeMinutes,
 			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+			PostProcessingMinutes:   item.PostProcessingMinutes,
+			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			CostPresetID:            item.CostPresetID,
 			Filaments:               gramsByItem[item.ID],
 		}
 	}
 
 	result, err := r.ComputeBudgetPricing(ctx, entities.PricingComputationInput{
-		OrganizationID:     organizationID,
-		IncludeEnergyCost:  budget.IncludeEnergyCost,
-		IncludeWasteCost:   budget.IncludeWasteCost,
-		MachinePresetID:    budget.MachinePresetID,
-		EnergyPresetID:     budget.EnergyPresetID,
-		BudgetCostPresetID: budget.CostPresetID,
-		Items:              specs,
+		OrganizationID:        organizationID,
+		IncludeEnergyCost:     budget.IncludeEnergyCost,
+		IncludeWasteCost:      budget.IncludeWasteCost,
+		IncludeMachineCost:    budget.IncludeMachineCost,
+		MachinePresetID:       budget.MachinePresetID,
+		EnergyPresetID:        budget.EnergyPresetID,
+		BudgetCostPresetID:    budget.CostPresetID,
+		DiscountType:          strValue(budget.DiscountType),
+		DiscountValue:         floatValue(budget.DiscountValue),
+		IncludeShipping:       budget.IncludeShipping,
+		ShippingOverrideCents: budget.ShippingOverride,
+		TaxRate:               budget.TaxRate,
+		Items:                 specs,
 	})
 	if err != nil {
 		return err
@@ -734,8 +754,14 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		item.FilamentCost = res.FilamentCost
 		item.WasteCost = res.WasteCost
 		item.EnergyCost = res.EnergyCost
+		item.MachineCost = res.MachineCost
 		item.SetupCost = res.SetupCost
 		item.ManualLaborCost = res.ManualLaborCost
+		item.PostProcessingCost = res.PostProcessingCost
+		item.SupportRemovalCost = res.SupportRemovalCost
+		item.PackagingCost = res.PackagingCost
+		item.QualityControlCost = res.QualityControlCost
+		item.FailureCost = res.FailureCost
 		item.ItemTotalCost = res.ItemTotalCost
 		item.UnitPrice = res.UnitCost
 		if err := r.UpdateItem(ctx, item); err != nil {
@@ -748,14 +774,23 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		Model(&models.BudgetModel{}).
 		Where("id = ? AND organization_id = ?", budgetID, organizationID).
 		Updates(map[string]interface{}{
-			"filament_cost": result.FilamentCost,
-			"waste_cost":    result.WasteCost,
-			"energy_cost":   result.EnergyCost,
-			"setup_cost":    result.SetupCost,
-			"labor_cost":    result.LaborCost,
-			"overhead_cost": result.Overhead,
-			"profit_amount": result.Profit,
-			"total_cost":    result.Total,
+			"filament_cost":        result.FilamentCost,
+			"waste_cost":           result.WasteCost,
+			"energy_cost":          result.EnergyCost,
+			"machine_cost":         result.MachineCost,
+			"setup_cost":           result.SetupCost,
+			"labor_cost":           result.LaborCost,
+			"post_processing_cost": result.PostProcessingCost,
+			"packaging_cost":       result.PackagingCost,
+			"quality_control_cost": result.QualityControlCost,
+			"failure_cost":         result.FailureCost,
+			"overhead_cost":        result.Overhead,
+			"profit_amount":        result.Profit,
+			"discount_amount":      result.DiscountAmount,
+			"shipping_cost":        result.ShippingCost,
+			"tax_amount":           result.TaxAmount,
+			"tax_rate_applied":     result.TaxRateApplied,
+			"total_cost":           result.Total,
 		}).Error; err != nil {
 		return fmt.Errorf("failed to update budget costs: %w", err)
 	}
@@ -763,11 +798,20 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 	return nil
 }
 
+// costPresetRates carries every rate loaded from a cost preset that the pricing
+// engine needs: the per-item CostPresetInput plus the budget-level shipping rates
+// (the shipping rates are only consumed from the BUDGET cost preset).
+type costPresetRates struct {
+	preset          pricing.CostPresetInput
+	shippingBase    float64
+	shippingPerGram float64
+}
+
 // ComputeBudgetPricing loads the org-scoped rates for the given input (filament
-// prices in ONE batched query, distinct cost presets in ONE batched query, and the
-// machine/energy presets once) and runs the pure pricing engine WITHOUT persisting
-// anything. It is shared by CalculateCosts (which persists afterwards) and the
-// stateless preview endpoint.
+// prices in ONE batched query, distinct cost presets in ONE batched query, the
+// machine/energy presets and the company default tax rate) and runs the pure
+// pricing engine WITHOUT persisting anything. It is shared by CalculateCosts (which
+// persists afterwards) and the stateless preview endpoint.
 //
 // All lookups are scoped by organization so cross-tenant references cannot leak in;
 // a referenced filament or cost preset that does not resolve inside the org is an
@@ -815,15 +859,48 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 		}
 	}
 
+	// Machine cost per hour is only needed when the budget charges machine time.
+	var machineCostPerHour float64
+	if in.IncludeMachineCost && in.MachinePresetID != nil {
+		res := r.db.WithContext(ctx).
+			Table("machine_presets").
+			Select("cost_per_hour").
+			Where("id = ? AND organization_id = ?", *in.MachinePresetID, in.OrganizationID).
+			Scan(&machineCostPerHour)
+		if res.Error != nil {
+			return zero, fmt.Errorf("failed to load machine cost per hour: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return zero, fmt.Errorf("%w: machine preset %s not found for organization", entities.ErrInvalidPresetReference, *in.MachinePresetID)
+		}
+	}
+
+	// Resolve the effective tax rate: the budget-level rate when provided, else the
+	// company default_tax_rate (0 when the company has no default or no row).
+	taxRate, err := r.resolveTaxRate(ctx, in)
+	if err != nil {
+		return zero, err
+	}
+
 	pin := pricing.PricingInput{
-		IncludeWasteCost:  in.IncludeWasteCost,
-		EnergyEnabled:     energyEnabled,
-		MachinePowerWatts: powerWatts,
-		EnergyPricePerKwh: energyPrice,
+		IncludeWasteCost:      in.IncludeWasteCost,
+		EnergyEnabled:         energyEnabled,
+		MachinePowerWatts:     powerWatts,
+		EnergyPricePerKwh:     energyPrice,
+		IncludeMachineCost:    in.IncludeMachineCost,
+		MachineCostPerHour:    machineCostPerHour,
+		DiscountType:          in.DiscountType,
+		DiscountValue:         in.DiscountValue,
+		IncludeShipping:       in.IncludeShipping,
+		ShippingOverrideCents: in.ShippingOverrideCents,
+		TaxRatePercent:        taxRate,
 	}
 	if in.BudgetCostPresetID != nil {
-		cp := costPresetByID[*in.BudgetCostPresetID]
+		rates := costPresetByID[*in.BudgetCostPresetID]
+		cp := rates.preset
 		pin.BudgetCostPreset = &cp
+		pin.ShippingCostBase = rates.shippingBase
+		pin.ShippingCostPerGram = rates.shippingPerGram
 	}
 	pin.Items = make([]pricing.PricingItemInput, len(in.Items))
 	for i, item := range in.Items {
@@ -846,7 +923,7 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 			effectiveCostPresetID = in.BudgetCostPresetID
 		}
 		if effectiveCostPresetID != nil {
-			v := costPresetByID[*effectiveCostPresetID]
+			v := costPresetByID[*effectiveCostPresetID].preset
 			cp = &v
 		}
 		pin.Items[i] = pricing.PricingItemInput{
@@ -855,12 +932,33 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 			PrintTimeMinutes:        item.PrintTimeMinutes,
 			SetupTimeMinutes:        item.SetupTimeMinutes,
 			ManualLaborMinutesTotal: item.ManualLaborMinutesTotal,
+			PostProcessingMinutes:   item.PostProcessingMinutes,
+			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			CostPreset:              cp,
 			Filaments:               filaments,
 		}
 	}
 
 	return pricing.Calculate(pin)
+}
+
+// resolveTaxRate returns the effective "por dentro" tax rate for the computation:
+// the budget-level rate when provided, otherwise the organization's company default
+// (0 when the company has no default or no row). Scoped by organization.
+func (r *budgetRepositoryImpl) resolveTaxRate(ctx context.Context, in entities.PricingComputationInput) (float64, error) {
+	if in.TaxRate != nil {
+		return *in.TaxRate, nil
+	}
+	var rate float64
+	res := r.db.WithContext(ctx).
+		Table("companies").
+		Select("default_tax_rate").
+		Where("organization_id = ? AND deleted_at IS NULL", in.OrganizationID).
+		Scan(&rate)
+	if res.Error != nil {
+		return 0, fmt.Errorf("failed to load company default tax rate: %w", res.Error)
+	}
+	return rate, nil
 }
 
 // loadItemFilamentSpecs batch-loads the filaments (grams) of every given item in a
@@ -940,11 +1038,12 @@ func (r *budgetRepositoryImpl) loadFilamentPrices(ctx context.Context, items []e
 	return out, nil
 }
 
-// loadCostPresets batch-loads the labor rate and overhead/profit percentages of
-// every distinct cost preset referenced by the input (budget-level + each item) in
-// a single org-scoped query. A referenced preset that does not resolve inside the
-// organization is an error (not a silent zero).
-func (r *budgetRepositoryImpl) loadCostPresets(ctx context.Context, in entities.PricingComputationInput) (map[uuid.UUID]pricing.CostPresetInput, error) {
+// loadCostPresets batch-loads every rate of every distinct cost preset referenced by
+// the input (budget-level + each item) in a single org-scoped query. A referenced
+// preset that does not resolve inside the organization is an error (not a silent
+// zero). The returned map carries the full per-item rate set plus the budget-level
+// shipping rates.
+func (r *budgetRepositoryImpl) loadCostPresets(ctx context.Context, in entities.PricingComputationInput) (map[uuid.UUID]costPresetRates, error) {
 	seen := make(map[uuid.UUID]struct{})
 	ids := make([]uuid.UUID, 0)
 	add := func(id *uuid.UUID) {
@@ -962,35 +1061,73 @@ func (r *budgetRepositoryImpl) loadCostPresets(ctx context.Context, in entities.
 		add(item.CostPresetID)
 	}
 
-	out := make(map[uuid.UUID]pricing.CostPresetInput, len(ids))
+	out := make(map[uuid.UUID]costPresetRates, len(ids))
 	if len(ids) == 0 {
 		return out, nil
 	}
 
 	var rows []struct {
-		ID                     uuid.UUID
-		LaborCostPerHour       float64
-		OverheadPercentage     float64
-		ProfitMarginPercentage float64
+		ID                        uuid.UUID
+		LaborCostPerHour          float64
+		OverheadPercentage        float64
+		ProfitMarginPercentage    float64
+		PostProcessingCostPerHour float64
+		SupportRemovalCostPerHour float64
+		PackagingCostPerItem      float64
+		QualityControlCostPerItem float64
+		FailureRatePercentage     float64
+		WasteGramsPerColorChange  float64
+		ShippingCostBase          float64
+		ShippingCostPerGram       float64
 	}
 	if err := r.db.WithContext(ctx).
 		Table("cost_presets").
-		Select("id, labor_cost_per_hour, overhead_percentage, profit_margin_percentage").
+		Select(`id, labor_cost_per_hour, overhead_percentage, profit_margin_percentage,
+			post_processing_cost_per_hour, support_removal_cost_per_hour,
+			packaging_cost_per_item, quality_control_cost_per_item,
+			failure_rate_percentage, waste_grams_per_color_change,
+			shipping_cost_base, shipping_cost_per_gram`).
 		Where("id IN ? AND organization_id = ?", ids, in.OrganizationID).
 		Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("failed to load cost presets: %w", err)
 	}
 	for _, row := range rows {
-		out[row.ID] = pricing.CostPresetInput{
-			LaborRatePerHour:       row.LaborCostPerHour,
-			OverheadPercentage:     row.OverheadPercentage,
-			ProfitMarginPercentage: row.ProfitMarginPercentage,
+		out[row.ID] = costPresetRates{
+			preset: pricing.CostPresetInput{
+				LaborRatePerHour:          row.LaborCostPerHour,
+				OverheadPercentage:        row.OverheadPercentage,
+				ProfitMarginPercentage:    row.ProfitMarginPercentage,
+				PostProcessingCostPerHour: row.PostProcessingCostPerHour,
+				SupportRemovalCostPerHour: row.SupportRemovalCostPerHour,
+				PackagingCostPerItem:      row.PackagingCostPerItem,
+				QualityControlCostPerItem: row.QualityControlCostPerItem,
+				FailureRatePercentage:     row.FailureRatePercentage,
+				WasteGramsPerColorChange:  row.WasteGramsPerColorChange,
+			},
+			shippingBase:    row.ShippingCostBase,
+			shippingPerGram: row.ShippingCostPerGram,
 		}
 	}
 	if len(out) != len(ids) {
 		return nil, fmt.Errorf("%w: one or more referenced cost presets do not belong to your organization", entities.ErrInvalidPresetReference)
 	}
 	return out, nil
+}
+
+// strValue dereferences a *string, returning "" when nil.
+func strValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// floatValue dereferences a *float64, returning 0 when nil.
+func floatValue(f *float64) float64 {
+	if f == nil {
+		return 0
+	}
+	return *f
 }
 
 // ValidateFilamentsInOrg ensures every filament ID belongs to the given

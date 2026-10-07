@@ -207,6 +207,17 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 	itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, saleTarget, organizationID)
 	profileRef, costRef := uc.budgetLevelRefs(ctx, budget)
 
+	// Stock warnings (detail only, one batched query). Skip for completed budgets:
+	// their stock was already deducted, so a shortfall is expected and not a warning.
+	stockWarnings := []entities.StockWarning{}
+	if budget.Status != entities.StatusCompleted {
+		if w, werr := uc.budgetRepository.GetStockWarnings(ctx, budget.ID, organizationID); werr == nil {
+			stockWarnings = w
+		} else {
+			uc.logger.Error(ctx, "Failed to load stock warnings", map[string]interface{}{"error": werr.Error(), "budget_id": budget.ID})
+		}
+	}
+
 	return &entities.BudgetResponse{
 		BudgetEntity:          budget,
 		BasePrice:             budget.BasePrice(),
@@ -217,6 +228,7 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 		TotalPrintTimeHours:   totalHours,
 		TotalPrintTimeMinutes: totalMins,
 		TotalPrintTimeDisplay: formatPrintTime(totalHours, totalMins),
+		StockWarnings:         stockWarnings,
 	}, nil
 }
 

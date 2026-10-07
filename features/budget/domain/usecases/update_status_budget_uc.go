@@ -147,7 +147,18 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 				return err
 			}
 		}
-		return repo.AddStatusHistory(ctx, history)
+		if err := repo.AddStatusHistory(ctx, history); err != nil {
+			return err
+		}
+		// On completion, deduct filament stock in the SAME transaction so the status
+		// change and the consumption movements are atomic. The deduction is idempotent
+		// (partial unique index), so a retry never double-counts.
+		if request.Status == entities.StatusCompleted && uc.stockDeductor != nil {
+			if err := uc.stockDeductor.DeductForCompletedBudget(ctx, repo.UnderlyingTx(), budget.ID, organizationID, userID); err != nil {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		if errors.Is(err, entities.ErrBudgetStatusConflict) {
 			uc.logger.Warning(ctx, "Budget status changed concurrently", map[string]interface{}{

@@ -7,6 +7,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // BudgetRepository defines the interface for budget data operations
@@ -15,6 +16,13 @@ type BudgetRepository interface {
 	// The repository passed to fn is bound to the transaction; any returned
 	// error rolls back all changes made within fn.
 	WithTransaction(ctx context.Context, fn func(repo BudgetRepository) error) error
+
+	// UnderlyingTx returns the *gorm.DB this repository is bound to. On a repository
+	// handed to a WithTransaction callback it is the transaction handle, which lets a
+	// cross-aggregate operation (filament stock deduction on budget completion) run in
+	// the SAME transaction as the status change. Outside a transaction it is the base
+	// connection.
+	UnderlyingTx() *gorm.DB
 
 	// Basic CRUD operations
 	Create(ctx context.Context, budget *entities.BudgetEntity) error
@@ -145,4 +153,16 @@ type BudgetRepository interface {
 	// and default payment terms, used when creating budgets and computing valid_until.
 	GetCompanyQuoteDefaults(ctx context.Context, organizationID string) (validityDays int, paymentTerms *string, err error)
 	FindItemsByBudgetID(ctx context.Context, budgetID uuid.UUID) ([]*entities.BudgetItemEntity, error)
+
+	// GetStockWarnings returns, for a STORED budget, the tracked filaments whose
+	// current stock is below the grams this budget requires. It is a single org-scoped
+	// query joining budget_item_filaments -> budget_items -> filaments. The caller is
+	// responsible for skipping already-completed budgets.
+	GetStockWarnings(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]entities.StockWarning, error)
+
+	// GetStockWarningsForRequest computes stock warnings for a NON-persisted budget
+	// (preview) from the required grams per filament. It issues ONE org-scoped query
+	// over the given filament IDs and returns warnings only for tracked filaments whose
+	// stock is below the requirement.
+	GetStockWarningsForRequest(ctx context.Context, organizationID string, requiredByFilament map[uuid.UUID]float64) ([]entities.StockWarning, error)
 }

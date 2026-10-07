@@ -605,6 +605,17 @@ func RunMigrations() {
 			"uq_models_3d_org_file_hash",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_models_3d_org_file_hash ON models_3d(organization_id, file_hash) WHERE deleted_at IS NULL",
 		},
+		{
+			// Sequential quote number is unique per organization (partial so legacy
+			// NULLs and soft-deleted rows do not collide).
+			"uq_budgets_org_quote_number",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_org_quote_number ON budgets(organization_id, quote_number) WHERE deleted_at IS NULL AND quote_number IS NOT NULL",
+		},
+		{
+			// Public share token is globally unique (partial: only non-NULL tokens).
+			"uq_budgets_public_token",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_public_token ON budgets(public_token) WHERE public_token IS NOT NULL",
+		},
 	}
 
 	for _, idx := range dashboardIndexes {
@@ -616,4 +627,88 @@ func RunMigrations() {
 	}
 
 	fmt.Println("Dashboard indexes setup completed")
+
+	runDataMigrations()
+}
+
+// dataMigrations are one-off data fixes. Each runs exactly once per database:
+// its name is recorded in data_migrations after it succeeds.
+var dataMigrations = []struct{ name, sql string }{
+	{
+		// Filaments were created with is_active=false since the module was added
+		// (no default, and create/update ignored the field). Nothing ever let users
+		// deactivate a filament, so every existing row is meant to be active.
+		"2026-10-06_activate_legacy_filaments",
+		"UPDATE filaments SET is_active = true WHERE is_active = false",
+	},
+	{
+		// Phase 4A added budgets.include_machine_cost with a column DEFAULT of TRUE so
+		// that NEW budgets charge machine time. AutoMigrate's ADD COLUMN ... DEFAULT true
+		// backfills EXISTING rows to TRUE, which would silently reinterpret already-quoted
+		// budgets. This one-time fix flips every pre-existing budget back to FALSE so
+		// stored totals are not changed; new budgets keep the TRUE default going forward.
+		"2026-10-07_backfill_budget_include_machine_cost_false",
+		"UPDATE budgets SET include_machine_cost = false",
+	},
+	{
+		// Phase 4B added budgets.quote_number (sequential per organization). Backfill
+		// existing rows deterministically in (created_at, id) order so every org's
+		// quotes are numbered 1..N. Runs once; new budgets allocate via the companies
+		// counter going forward.
+		"2026-10-08_backfill_budget_quote_number",
+		`UPDATE budgets b SET quote_number = n.rn
+		 FROM (
+			SELECT id, ROW_NUMBER() OVER (PARTITION BY organization_id ORDER BY created_at, id) AS rn
+			FROM budgets
+			WHERE quote_number IS NULL
+		 ) n
+		 WHERE b.id = n.id AND b.quote_number IS NULL`,
+	},
+	{
+		// After backfilling quote_number, align each company's next_quote_number to
+		// max(quote_number)+1 so freshly allocated numbers never collide with backfilled
+		// ones. Companies with no budgets keep the default (1).
+		"2026-10-08_init_company_next_quote_number",
+		`UPDATE companies c SET next_quote_number = sub.max_qn + 1
+		 FROM (
+			SELECT organization_id, MAX(quote_number) AS max_qn
+			FROM budgets
+			WHERE quote_number IS NOT NULL
+			GROUP BY organization_id
+		 ) sub
+		 WHERE c.organization_id = sub.organization_id AND sub.max_qn >= c.next_quote_number`,
+	},
+}
+
+// runDataMigrations applies pending dataMigrations, each in its own transaction
+// together with its marker row, so a failure leaves it pending for the next start.
+func runDataMigrations() {
+	if err := Connector.Exec(`CREATE TABLE IF NOT EXISTS data_migrations (
+		name varchar(255) PRIMARY KEY,
+		applied_at timestamptz NOT NULL DEFAULT now()
+	)`).Error; err != nil {
+		fmt.Printf("Warning: data_migrations table creation failed: %v\n", err)
+		return
+	}
+	for _, m := range dataMigrations {
+		var applied int64
+		if err := Connector.Raw("SELECT count(*) FROM data_migrations WHERE name = ?", m.name).Scan(&applied).Error; err != nil {
+			fmt.Printf("Warning: data migration %s check failed: %v\n", m.name, err)
+			continue
+		}
+		if applied > 0 {
+			continue
+		}
+		err := Connector.Transaction(func(tx *gorm.DB) error {
+			res := tx.Exec(m.sql)
+			if res.Error != nil {
+				return res.Error
+			}
+			fmt.Printf("Data migration %s applied (%d rows)\n", m.name, res.RowsAffected)
+			return tx.Exec("INSERT INTO data_migrations (name) VALUES (?) ON CONFLICT (name) DO NOTHING", m.name).Error
+		})
+		if err != nil {
+			fmt.Printf("Warning: data migration %s failed: %v\n", m.name, err)
+		}
+	}
 }

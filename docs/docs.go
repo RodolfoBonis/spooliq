@@ -2986,6 +2986,115 @@ const docTemplate = `{
                 }
             }
         },
+        "/budgets/{id}/share": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create or return the public share token for a budget. Idempotent:\nrepeated calls return the same token. A draft is transitioned to sent\n(with the same valid_until side effect as UpdateStatus).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Share budget publicly",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "public_token, status, valid_until",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke the public share token for a budget (sets it to NULL).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Revoke budget public share",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/budgets/{id}/status": {
             "patch": {
                 "security": [
@@ -8224,6 +8333,230 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/budgets/{token}": {
+            "get": {
+                "description": "Public, sanitized budget view for a customer share link. No authentication.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget view",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/approve": {
+            "post": {
+                "description": "Customer approves a shared budget. No authentication.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget approve",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Approval payload: name",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/pdf": {
+            "get": {
+                "description": "Streams the budget PDF for a customer share link. No authentication.",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "application/pdf",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/reject": {
+            "post": {
+                "description": "Customer rejects a shared budget. No authentication.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget reject",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rejection payload: name, reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/refresh": {
             "post": {
                 "description": "Refresh the user's access and refresh tokens",
@@ -9101,13 +9434,17 @@ const docTemplate = `{
                 "created",
                 "updated",
                 "deleted",
-                "status_changed"
+                "status_changed",
+                "approved",
+                "rejected"
             ],
             "x-enum-varnames": [
                 "ActionCreated",
                 "ActionUpdated",
                 "ActionDeleted",
-                "ActionStatusChanged"
+                "ActionStatusChanged",
+                "ActionApproved",
+                "ActionRejected"
             ]
         },
         "entities.ActivityEntity": {
@@ -9352,7 +9689,7 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "cost_preset_id": {
-                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor rates — see the pricing input mapping.",
+                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor/post-processing/packaging/QC/failure rates.",
                     "type": "string"
                 },
                 "filaments": {
@@ -9374,6 +9711,11 @@ const docTemplate = `{
                 },
                 "order": {
                     "description": "Order in the budget",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "post_processing_minutes": {
+                    "description": "Post-processing time for this item (minutes)",
                     "type": "integer",
                     "minimum": 0
                 },
@@ -9408,6 +9750,11 @@ const docTemplate = `{
                     "description": "Labor breakdown for this item",
                     "type": "integer",
                     "minimum": 0
+                },
+                "support_removal_minutes": {
+                    "description": "Support-removal time for this item (minutes)",
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -9439,6 +9786,10 @@ const docTemplate = `{
                     "description": "cents",
                     "type": "integer"
                 },
+                "failure_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "filament_cost": {
                     "description": "Calculated costs for this item",
                     "type": "integer"
@@ -9457,6 +9808,10 @@ const docTemplate = `{
                     "description": "cents (sum of all)",
                     "type": "integer"
                 },
+                "machine_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "manual_labor_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -9470,6 +9825,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
+                    "type": "integer"
+                },
+                "packaging_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "post_processing_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "post_processing_minutes": {
+                    "description": "Post-processing time for this item (minutes)",
                     "type": "integer"
                 },
                 "print_time_display": {
@@ -9496,12 +9863,16 @@ const docTemplate = `{
                 "product_quantity": {
                     "type": "integer"
                 },
+                "quality_control_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "sale_total": {
                     "description": "cents (with markup)",
                     "type": "integer"
                 },
                 "sale_unit_price": {
-                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY\nto the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may\ndiffer from SaleTotal by a few cents.",
+                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide markup. SaleTotal values across items sum EXACTLY to the budget total\nMINUS shipping (so the item sale totals plus shipping reconcile to the total).\nSaleUnitPrice is rounded, so SaleUnitPrice * quantity may differ from SaleTotal by\na few cents.",
                     "type": "integer"
                 },
                 "setup_cost": {
@@ -9510,6 +9881,14 @@ const docTemplate = `{
                 },
                 "setup_time_minutes": {
                     "description": "Labor breakdown for this item",
+                    "type": "integer"
+                },
+                "support_removal_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "support_removal_minutes": {
+                    "description": "Support-removal time for this item (minutes)",
                     "type": "integer"
                 },
                 "unit_price": {
@@ -9528,6 +9907,10 @@ const docTemplate = `{
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "base_price": {
+                    "description": "BasePrice is the sale price before discount/shipping/tax (subtotal + overhead +\nprofit), derived from the stored totals. TaxRateApplied is exposed via the\nembedded entity.",
+                    "type": "integer"
+                },
                 "cost_preset": {
                     "$ref": "#/definitions/entities.CostPresetRef"
                 },
@@ -9545,6 +9928,13 @@ const docTemplate = `{
                 "customer_id": {
                     "type": "string"
                 },
+                "customer_response_at": {
+                    "description": "Customer response (recorded via the public approve/reject endpoints).",
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
                 "deleted_at": {
                     "type": "string"
                 },
@@ -9554,6 +9944,17 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "discount_amount": {
+                    "description": "Discount/shipping/tax results (cents, except TaxRateApplied which is a percent).",
+                    "type": "integer"
+                },
+                "discount_type": {
+                    "description": "Discount configuration (nullable). DiscountType is \"percent\" or \"fixed\";\nDiscountValue is a 0-100 percent or a reais amount accordingly.",
+                    "type": "string"
+                },
+                "discount_value": {
+                    "type": "number"
                 },
                 "energy_cost": {
                     "description": "cents - Sum of all items energy costs",
@@ -9565,6 +9966,10 @@ const docTemplate = `{
                 "energy_preset_id": {
                     "type": "string"
                 },
+                "failure_cost": {
+                    "description": "cents - Sum of all items failure-rate costs",
+                    "type": "integer"
+                },
                 "filament_cost": {
                     "description": "Calculated costs (in cents for precision)",
                     "type": "integer"
@@ -9574,6 +9979,14 @@ const docTemplate = `{
                 },
                 "include_energy_cost": {
                     "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "description": "charge per-item machine time (cost_per_hour)",
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping configuration. When IncludeShipping is set the shipping cost is\nShippingOverride (cents) when provided, else computed from the budget cost preset.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -9587,6 +10000,10 @@ const docTemplate = `{
                 },
                 "labor_cost": {
                     "description": "cents - Sum of all items manual labor costs",
+                    "type": "integer"
+                },
+                "machine_cost": {
+                    "description": "cents - Sum of all items machine-time costs",
                     "type": "integer"
                 },
                 "machine_preset": {
@@ -9608,12 +10025,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "overhead_cost": {
-                    "description": "cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)",
+                    "description": "cents - Overhead calculated on subtotal",
                     "type": "integer"
                 },
                 "owner_user_id": {
                     "description": "Ownership",
                     "type": "string"
+                },
+                "packaging_cost": {
+                    "description": "cents - Sum of all items packaging costs",
+                    "type": "integer"
                 },
                 "payment_terms": {
                     "description": "condições de pagamento",
@@ -9622,6 +10043,10 @@ const docTemplate = `{
                 "pdf_url": {
                     "description": "URL do PDF gerado",
                     "type": "string"
+                },
+                "post_processing_cost": {
+                    "description": "cents - Sum of all items post-processing costs",
+                    "type": "integer"
                 },
                 "print_time_hours": {
                     "description": "Print time (manual input for now)",
@@ -9643,11 +10068,37 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "profit_amount": {
-                    "description": "cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)",
+                    "description": "cents - Profit margin calculated",
                     "type": "integer"
+                },
+                "public_token": {
+                    "description": "Public share token fields. PublicToken is a base64url (unpadded) random token\nused by the customer-facing public link; nil when the budget was never shared\nor the token was revoked.",
+                    "type": "string"
+                },
+                "public_token_created_at": {
+                    "type": "string"
+                },
+                "quality_control_cost": {
+                    "description": "cents - Sum of all items quality-control costs",
+                    "type": "integer"
+                },
+                "quote_number": {
+                    "description": "QuoteNumber is the sequential, per-organization quote number (starts at 1),\nassigned on create and duplicate. Nil only for rows not yet backfilled.",
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
                 },
                 "setup_cost": {
                     "description": "cents - Sum of all items setup costs",
+                    "type": "integer"
+                },
+                "shipping_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "shipping_override": {
+                    "description": "cents",
                     "type": "integer"
                 },
                 "status": {
@@ -9659,8 +10110,20 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
                     }
                 },
+                "tax_amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "tax_rate": {
+                    "description": "TaxRate is the budget-level \"por dentro\" tax rate (percent). When nil the\ncompany default_tax_rate is used. TaxRateApplied records the rate actually used.",
+                    "type": "number"
+                },
+                "tax_rate_applied": {
+                    "description": "percent actually applied",
+                    "type": "number"
+                },
                 "total_cost": {
-                    "description": "cents - Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit",
+                    "description": "cents - Final total (base - discount + shipping + tax)",
                     "type": "integer"
                 },
                 "total_print_time_display": {
@@ -9677,6 +10140,10 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string"
                 },
+                "valid_until": {
+                    "description": "ValidUntil is the date (stored as timestamptz, end-of-day in America/Sao_Paulo)\nafter which a sent budget is considered expired. Nil when no validity is set.",
+                    "type": "string"
+                },
                 "waste_cost": {
                     "description": "cents - Sum of all items waste costs",
                     "type": "integer"
@@ -9691,12 +10158,16 @@ const docTemplate = `{
                 "approved",
                 "rejected",
                 "printing",
-                "completed"
+                "completed",
+                "expired",
+                "cancelled"
             ],
             "x-enum-comments": {
                 "StatusApproved": "StatusApproved represents an approved budget",
+                "StatusCancelled": "StatusCancelled represents a cancelled budget",
                 "StatusCompleted": "StatusCompleted represents a completed budget",
                 "StatusDraft": "StatusDraft represents a budget in draft state",
+                "StatusExpired": "StatusExpired represents a sent budget whose validity has passed",
                 "StatusPrinting": "StatusPrinting represents a budget currently being printed",
                 "StatusRejected": "StatusRejected represents a rejected budget",
                 "StatusSent": "StatusSent represents a budget sent to customer"
@@ -9707,7 +10178,9 @@ const docTemplate = `{
                 "StatusApproved represents an approved budget",
                 "StatusRejected represents a rejected budget",
                 "StatusPrinting represents a budget currently being printed",
-                "StatusCompleted represents a completed budget"
+                "StatusCompleted represents a completed budget",
+                "StatusExpired represents a sent budget whose validity has passed",
+                "StatusCancelled represents a cancelled budget"
             ],
             "x-enum-varnames": [
                 "StatusDraft",
@@ -9715,7 +10188,9 @@ const docTemplate = `{
                 "StatusApproved",
                 "StatusRejected",
                 "StatusPrinting",
-                "StatusCompleted"
+                "StatusCompleted",
+                "StatusExpired",
+                "StatusCancelled"
             ]
         },
         "entities.BudgetStatusCount": {
@@ -10062,6 +10537,18 @@ const docTemplate = `{
                 "current_plan": {
                     "$ref": "#/definitions/entities.SubscriptionPlanResponse"
                 },
+                "default_payment_terms": {
+                    "description": "DefaultPaymentTerms is the organization's default payment terms.",
+                    "type": "string"
+                },
+                "default_quote_validity_days": {
+                    "description": "DefaultQuoteValidityDays is the default number of days a sent quote stays valid.",
+                    "type": "integer"
+                },
+                "default_tax_rate": {
+                    "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent).",
+                    "type": "number"
+                },
                 "document": {
                     "type": "string"
                 },
@@ -10172,6 +10659,9 @@ const docTemplate = `{
         "entities.CostPresetEntity": {
             "type": "object",
             "properties": {
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -10204,6 +10694,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "waste_grams_per_color_change": {
                     "type": "number"
                 }
             }
@@ -10257,11 +10750,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional). DiscountType ∈ {\"percent\",\"fixed\"}; DiscountValue is a\n0-100 percent for \"percent\" or a reais amount (\u003e= 0) for \"fixed\".",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
-                    "description": "Configuration flags",
+                    "description": "Configuration flags. IncludeMachineCost defaults to TRUE when omitted.",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -10294,6 +10806,19 @@ const docTemplate = `{
                 },
                 "profile_id": {
                     "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
+                    "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "valid_until": {
+                    "description": "ValidUntil is the optional quote validity date (date-only semantics; stored at\nend of day in America/Sao_Paulo). When omitted it is computed on first send.",
                     "type": "string"
                 }
             }
@@ -12183,11 +12708,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional). DiscountType ∈ {\"percent\",\"fixed\"}.",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
-                    "description": "Configuration flags",
+                    "description": "Configuration flags. IncludeMachineCost defaults to TRUE when omitted.",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -12220,6 +12764,15 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -12265,6 +12818,151 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetCompany": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "trade_name": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetCustomer": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetItem": {
+            "type": "object",
+            "properties": {
+                "product_description": {
+                    "type": "string"
+                },
+                "product_dimensions": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "product_quantity": {
+                    "type": "integer"
+                },
+                "total_price": {
+                    "description": "cents (sale, with markup)",
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "description": "cents (sale, with markup)",
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PublicBudgetView": {
+            "type": "object",
+            "properties": {
+                "base_price": {
+                    "type": "integer"
+                },
+                "can_respond": {
+                    "type": "boolean"
+                },
+                "company": {
+                    "$ref": "#/definitions/entities.PublicBudgetCompany"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/entities.PublicBudgetCustomer"
+                },
+                "customer_response_at": {
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "discount_amount": {
+                    "type": "integer"
+                },
+                "is_expired": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PublicBudgetItem"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_terms": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
+                },
+                "shipping_cost": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tax_amount": {
+                    "type": "integer"
+                },
+                "tax_rate_applied": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "valid_until": {
                     "type": "string"
                 }
             }
@@ -12773,11 +13471,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional).",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
                     "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -12811,6 +13528,19 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. Presets are ONLY re-resolved from the profile/org\ndefaults when profile_id is explicitly provided in the update; otherwise the\nstored preset values are kept (partial-update semantics).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100).",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "valid_until": {
+                    "description": "ValidUntil is the optional quote validity date (date-only; stored end of day,\nAmerica/Sao_Paulo). Settable on update.",
+                    "type": "string"
                 }
             }
         },
@@ -12824,6 +13554,22 @@ const docTemplate = `{
                 "city": {
                     "type": "string",
                     "maxLength": 100
+                },
+                "default_payment_terms": {
+                    "description": "DefaultPaymentTerms is the organization's default payment terms (max 500).",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "default_quote_validity_days": {
+                    "description": "DefaultQuoteValidityDays is the default quote validity in days (1..365).",
+                    "type": "integer",
+                    "maximum": 365,
+                    "minimum": 1
+                },
+                "default_tax_rate": {
+                    "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent, 0..\u003c100).",
+                    "type": "number",
+                    "minimum": 0
                 },
                 "document": {
                     "type": "string",
@@ -13200,7 +13946,9 @@ const docTemplate = `{
                         "approved",
                         "rejected",
                         "printing",
-                        "completed"
+                        "completed",
+                        "expired",
+                        "cancelled"
                     ],
                     "allOf": [
                         {
@@ -13656,6 +14404,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -13700,6 +14451,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "waste_grams_per_color_change": {
+                    "type": "number"
                 }
             }
         },
@@ -13708,6 +14462,11 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "failure_rate_percentage": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
                 },
                 "is_default": {
                     "type": "boolean"
@@ -13756,6 +14515,11 @@ const docTemplate = `{
                 "user_id": {
                     "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
+                },
+                "waste_grams_per_color_change": {
+                    "description": "WasteGramsPerColorChange defaults to 15 when omitted (0) to match the engine default.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -14207,6 +14971,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
@@ -14245,6 +15012,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "waste_grams_per_color_change": {
                     "type": "number"
                 }
             }

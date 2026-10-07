@@ -1,6 +1,10 @@
 package entities
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // BudgetItemFilamentRequest represents a filament in a budget item request
 type BudgetItemFilamentRequest struct {
@@ -24,13 +28,15 @@ type BudgetItemRequest struct {
 	// Labor breakdown for this item
 	SetupTimeMinutes        int `json:"setup_time_minutes" validate:"gte=0"`         // Setup time for this product (minutes)
 	ManualLaborMinutesTotal int `json:"manual_labor_minutes_total" validate:"gte=0"` // Total manual labor time for ALL units (minutes)
+	PostProcessingMinutes   int `json:"post_processing_minutes" validate:"gte=0"`    // Post-processing time for this item (minutes)
+	SupportRemovalMinutes   int `json:"support_removal_minutes" validate:"gte=0"`    // Support-removal time for this item (minutes)
 
 	// Filaments used in this item (1:N relationship)
 	Filaments []BudgetItemFilamentRequest `json:"filaments" validate:"required,min=1,dive"`
 
 	// Optional: specific cost preset for this item. When omitted, the budget-level
 	// cost preset (resolved from the request/profile/org defaults) is used for this
-	// item's setup/labor rates — see the pricing input mapping.
+	// item's setup/labor/post-processing/packaging/QC/failure rates.
 	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
 	// Optional: notes specific to this item
@@ -61,14 +67,31 @@ type CreateBudgetRequest struct {
 	// setup/labor rate fallback for items without their own cost preset).
 	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
-	// Configuration flags
-	IncludeEnergyCost bool `json:"include_energy_cost"`
-	IncludeWasteCost  bool `json:"include_waste_cost"`
+	// Configuration flags. IncludeMachineCost defaults to TRUE when omitted.
+	IncludeEnergyCost  bool  `json:"include_energy_cost"`
+	IncludeWasteCost   bool  `json:"include_waste_cost"`
+	IncludeMachineCost *bool `json:"include_machine_cost,omitempty"`
+
+	// Discount (optional). DiscountType ∈ {"percent","fixed"}; DiscountValue is a
+	// 0-100 percent for "percent" or a reais amount (>= 0) for "fixed".
+	DiscountType  *string  `json:"discount_type,omitempty" validate:"omitempty,oneof=percent fixed"`
+	DiscountValue *float64 `json:"discount_value,omitempty" validate:"omitempty,gte=0"`
+
+	// Shipping (optional). ShippingOverride is in cents.
+	IncludeShipping  bool   `json:"include_shipping"`
+	ShippingOverride *int64 `json:"shipping_override,omitempty" validate:"omitempty,gte=0"`
+
+	// TaxRate (optional, percent 0..<100). When omitted the company default is used.
+	TaxRate *float64 `json:"tax_rate,omitempty" validate:"omitempty,gte=0,lt=100"`
 
 	// Additional fields for PDF
 	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`
 	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
 	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
+
+	// ValidUntil is the optional quote validity date (date-only semantics; stored at
+	// end of day in America/Sao_Paulo). When omitted it is computed on first send.
+	ValidUntil *time.Time `json:"valid_until,omitempty"`
 
 	// Items (products)
 	Items []BudgetItemRequest `json:"items" validate:"required,min=1,dive"`
@@ -92,13 +115,29 @@ type UpdateBudgetRequest struct {
 	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
 	// Configuration flags
-	IncludeEnergyCost *bool `json:"include_energy_cost,omitempty"`
-	IncludeWasteCost  *bool `json:"include_waste_cost,omitempty"`
+	IncludeEnergyCost  *bool `json:"include_energy_cost,omitempty"`
+	IncludeWasteCost   *bool `json:"include_waste_cost,omitempty"`
+	IncludeMachineCost *bool `json:"include_machine_cost,omitempty"`
+
+	// Discount (optional).
+	DiscountType  *string  `json:"discount_type,omitempty" validate:"omitempty,oneof=percent fixed"`
+	DiscountValue *float64 `json:"discount_value,omitempty" validate:"omitempty,gte=0"`
+
+	// Shipping (optional). ShippingOverride is in cents.
+	IncludeShipping  *bool  `json:"include_shipping,omitempty"`
+	ShippingOverride *int64 `json:"shipping_override,omitempty" validate:"omitempty,gte=0"`
+
+	// TaxRate (optional, percent 0..<100).
+	TaxRate *float64 `json:"tax_rate,omitempty" validate:"omitempty,gte=0,lt=100"`
 
 	// Additional fields for PDF
 	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`
 	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
 	Notes        *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
+
+	// ValidUntil is the optional quote validity date (date-only; stored end of day,
+	// America/Sao_Paulo). Settable on update.
+	ValidUntil *time.Time `json:"valid_until,omitempty"`
 
 	// Items (optional - if provided, replaces all items)
 	Items *[]BudgetItemRequest `json:"items,omitempty" validate:"omitempty,min=1,dive"`
@@ -106,6 +145,6 @@ type UpdateBudgetRequest struct {
 
 // UpdateStatusRequest represents the request to update budget status
 type UpdateStatusRequest struct {
-	Status BudgetStatus `json:"status" validate:"required,oneof=draft sent approved rejected printing completed"`
+	Status BudgetStatus `json:"status" validate:"required,oneof=draft sent approved rejected printing completed expired cancelled"`
 	Notes  string       `json:"notes,omitempty" validate:"omitempty,max=500"`
 }

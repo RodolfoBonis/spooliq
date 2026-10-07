@@ -23,5 +23,8 @@ var Module = fx.Module(
 			return NewDefaultPresetProvider(repo)
 		},
 		usecases.NewBudgetUseCase,
+		usecases.NewPublicBudgetUseCase,
 	),
+	// Background job: periodically expire overdue sent budgets.
+	fx.Invoke(RegisterExpiryJob),
 )

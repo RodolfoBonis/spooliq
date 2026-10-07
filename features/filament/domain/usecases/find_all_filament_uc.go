@@ -30,6 +30,7 @@ import (
 // @Param diameter query number false "Filter by diameter (exact match)"
 // @Param min_price query number false "Minimum price per kg"
 // @Param max_price query number false "Maximum price per kg"
+// @Param low_stock query boolean false "Only filaments at or below their low-stock threshold"
 // @Param sort_by query string false "Sort field" Enums(name, created_at, price_per_kg) default(created_at)
 // @Param sort_dir query string false "Sort direction" Enums(asc, desc) default(desc)
 // @Success 200 {object} entities.FindAllFilamentsResponse "Paginated list of filaments"

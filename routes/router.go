@@ -31,6 +31,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/profile"
 	"github.com/RodolfoBonis/spooliq/features/slicer"
 	sliceruc "github.com/RodolfoBonis/spooliq/features/slicer/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/stock"
+	stockuc "github.com/RodolfoBonis/spooliq/features/stock/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
@@ -51,11 +53,13 @@ func InitializeRoutes(
 	registerUc *authuc.RegisterUseCase,
 	brandUc branduc.IBrandUseCase,
 	budgetUc budgetuc.IBudgetUseCase,
+	publicBudgetUc budgetuc.IPublicBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
 	brandingUc companyuc.IBrandingUseCase,
 	subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase,
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
+	stockUc stockuc.IStockUseCase,
 	materialUc materialuc.IMaterialUseCase,
 	model3dUc model3duc.IModel3DUseCase,
 	slicerUc sliceruc.ISlicerUseCase,
@@ -87,11 +91,13 @@ func InitializeRoutes(
 	activity.Routes(root, activityService, protectFactory)
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
-	budget.Routes(root, budgetUc, protectFactory)
+	budget.Routes(root, budgetUc, protectFactory, cacheMiddleware)
+	budget.PublicRoutes(root, publicBudgetUc)
 	company.Routes(root, companyUc, brandingUc, subscriptionPaymentsUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
+	stock.Routes(root, stockUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	model3d.Routes(root, model3dUc, protectFactory)
 	slicer.Routes(root, slicerUc, protectFactory)

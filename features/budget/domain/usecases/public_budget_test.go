@@ -23,6 +23,11 @@ type publicFake struct {
 	stored        *entities.BudgetEntity
 	token         string
 	customerEmail string
+	items         []*entities.BudgetItemEntity
+}
+
+func (p *publicFake) GetItems(_ context.Context, _ uuid.UUID) ([]*entities.BudgetItemEntity, error) {
+	return p.items, nil
 }
 
 func (p *publicFake) FindByPublicToken(_ context.Context, token string) (*entities.BudgetEntity, error) {
@@ -260,5 +265,54 @@ func TestRateLimiter_MiniredisEnforcesLimit(t *testing.T) {
 	// A different IP has its own counter.
 	if !uc.allowRequest(ctx, "post", "8.8.8.8", limit) {
 		t.Fatal("a different IP must have an independent bucket")
+	}
+}
+
+func TestPublicGet_ItemSaleValuesReconcileToBasePrice(t *testing.T) {
+	future := time.Now().Add(24 * time.Hour)
+	// base_price = total + discount - shipping - tax = 11000 + 1000 - 2000 - 500 = 9500
+	b := &entities.BudgetEntity{
+		ID:             uuid.New(),
+		OrganizationID: "org-a",
+		Name:           "X",
+		Status:         entities.StatusSent,
+		ValidUntil:     &future,
+		TotalCost:      11000,
+		DiscountAmount: 1000,
+		ShippingCost:   2000,
+		TaxAmount:      500,
+	}
+	repo := newPublicFake(b, "tok")
+	repo.items = []*entities.BudgetItemEntity{
+		{ID: uuid.New(), ProductQuantity: 1, ItemTotalCost: 3000},
+		{ID: uuid.New(), ProductQuantity: 2, ItemTotalCost: 1000},
+	}
+	uc := newPublicUC(repo)
+
+	c, w := newJSONContext(http.MethodGet, "/v1/public/budgets/tok", "", gin.Params{{Key: "token", Value: "tok"}})
+	uc.GetByToken(c)
+	if w.Code != http.StatusOK {
+		t.Fatalf("got status %d body %s", w.Code, w.Body.String())
+	}
+
+	var view entities.PublicBudgetView
+	if err := json.Unmarshal(w.Body.Bytes(), &view); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	var sum int64
+	for _, it := range view.Items {
+		sum += it.TotalPrice
+	}
+	if sum != view.BasePrice {
+		t.Errorf("sum(item total_price)=%d must equal base_price=%d", sum, view.BasePrice)
+	}
+	if view.BasePrice != 9500 {
+		t.Errorf("base_price: got %d want 9500", view.BasePrice)
+	}
+	// And the customer-facing identity holds: Subtotal - discount + shipping + tax == total.
+	if view.BasePrice-view.DiscountAmount+view.ShippingCost+view.TaxAmount != view.Total {
+		t.Errorf("reconciliation failed: base=%d disc=%d ship=%d tax=%d total=%d",
+			view.BasePrice, view.DiscountAmount, view.ShippingCost, view.TaxAmount, view.Total)
 	}
 }

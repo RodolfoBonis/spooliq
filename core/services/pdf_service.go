@@ -38,6 +38,9 @@ type BudgetPDFData struct {
 	Branding              *companyEntities.CompanyBrandingEntity // Branding configuration
 	TotalPrintTimeHours   int                                    // Total print time (sum of all items)
 	TotalPrintTimeMinutes int                                    // Total print time (sum of all items)
+	// PublicView, when true, renders the sanitized customer-facing PDF: the customer
+	// block shows the NAME only (no email/phone/document). The org PDF leaves it false.
+	PublicView bool
 }
 
 // NewPDFService creates a new PDF service instance
@@ -79,7 +82,7 @@ func (s *PDFService) GenerateBudgetPDF(ctx context.Context, data BudgetPDFData) 
 	s.addTitle(pdf, data.Budget, data.Branding)
 
 	// Add customer info
-	s.addCustomerInfo(pdf, data.Customer, data.Branding)
+	s.addCustomerInfo(pdf, data.Customer, data.Branding, data.PublicView)
 
 	// Add items table
 	s.addItemsTable(pdf, data.Items, data.Budget, data.Branding)
@@ -222,8 +225,28 @@ func (s *PDFService) addTitle(pdf *gofpdf.Fpdf, budget *budgetEntities.BudgetEnt
 	pdf.Ln(6)
 }
 
+// customerDetailLines returns the customer contact lines rendered BELOW the name.
+// In publicView (the customer-facing PDF) it returns no lines, so email, phone and
+// CPF/CNPJ never appear. In the org PDF it returns the populated contact lines.
+func customerDetailLines(customer *budgetEntities.CustomerInfo, publicView bool) []string {
+	if publicView || customer == nil {
+		return nil
+	}
+	var lines []string
+	if customer.Email != nil && *customer.Email != "" {
+		lines = append(lines, "Email: "+*customer.Email)
+	}
+	if customer.Phone != nil && *customer.Phone != "" {
+		lines = append(lines, "Telefone: "+*customer.Phone)
+	}
+	if customer.Document != nil && *customer.Document != "" {
+		lines = append(lines, "CPF/CNPJ: "+*customer.Document)
+	}
+	return lines
+}
+
 // addCustomerInfo adds customer information
-func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.CustomerInfo, branding *companyEntities.CompanyBrandingEntity) {
+func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.CustomerInfo, branding *companyEntities.CompanyBrandingEntity, publicView bool) {
 	pdf.SetFont("Arial", "B", 11)
 	r, g, b := s.hexToRGB(branding.SecondaryColor)
 	pdf.SetTextColor(r, g, b)
@@ -234,25 +257,16 @@ func (s *PDFService) addCustomerInfo(pdf *gofpdf.Fpdf, customer *budgetEntities.
 	r, g, b = s.hexToRGB(branding.BodyTextColor)
 	pdf.SetTextColor(r, g, b)
 
-	// Name
+	// Name (always shown)
 	pdf.Cell(0, 5, s.convertUTF8(customer.Name))
 	pdf.Ln(4)
 
-	// Email
-	if customer.Email != nil && *customer.Email != "" {
-		pdf.Cell(0, 5, s.convertUTF8("Email: "+*customer.Email))
+	// Contact details (email/phone/document) are internal and are omitted from the
+	// public, customer-facing PDF (publicView). The decision lives in the pure
+	// customerDetailLines helper so it is directly unit-testable.
+	for _, line := range customerDetailLines(customer, publicView) {
+		pdf.Cell(0, 5, s.convertUTF8(line))
 		pdf.Ln(4)
-	}
-
-	// Phone
-	if customer.Phone != nil && *customer.Phone != "" {
-		pdf.Cell(0, 5, s.convertUTF8("Telefone: "+*customer.Phone))
-		pdf.Ln(4)
-	}
-
-	// Document
-	if customer.Document != nil && *customer.Document != "" {
-		pdf.Cell(0, 5, s.convertUTF8("CPF/CNPJ: "+*customer.Document))
 	}
 
 	pdf.Ln(8)

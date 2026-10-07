@@ -60,17 +60,22 @@ func TestAllocateQuoteNumber_ConcurrentSequentialPerOrg(t *testing.T) {
 
 	const n = 50
 	results := make([]int, n)
+	errs := make([]error, n)
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
 			v, err := repo.AllocateQuoteNumber(ctx, "org-a")
-			require.NoError(t, err)
 			results[idx] = v
+			errs[idx] = err
 		}(i)
 	}
 	wg.Wait()
+
+	for i, err := range errs {
+		require.NoErrorf(t, err, "allocation %d", i)
+	}
 
 	seen := make(map[int]bool, n)
 	for _, v := range results {
@@ -194,24 +199,27 @@ func TestRespondToPublicBudget_Race(t *testing.T) {
 	).Error)
 
 	const racers = 8
+	rowsOut := make([]int64, racers)
+	errsOut := make([]error, racers)
 	var wg sync.WaitGroup
-	var mu sync.Mutex
-	successes := 0
 	for i := 0; i < racers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(idx int) {
 			defer wg.Done()
 			rows, err := repo.RespondToPublicBudget(context.Background(), id, entities.StatusApproved, "Alice", "1.2.3.4", "ua", nil, time.Now())
-			require.NoError(t, err)
-			if rows == 1 {
-				mu.Lock()
-				successes++
-				mu.Unlock()
-			}
-		}()
+			rowsOut[idx] = rows
+			errsOut[idx] = err
+		}(i)
 	}
 	wg.Wait()
 
+	successes := 0
+	for i := 0; i < racers; i++ {
+		require.NoErrorf(t, errsOut[i], "racer %d", i)
+		if rowsOut[i] == 1 {
+			successes++
+		}
+	}
 	require.Equal(t, 1, successes, "exactly one concurrent approve must win")
 
 	var status string

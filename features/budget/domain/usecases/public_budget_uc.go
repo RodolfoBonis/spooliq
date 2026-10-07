@@ -2,9 +2,11 @@ package usecases
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -99,7 +101,7 @@ func (uc *PublicBudgetUseCase) allowRequest(ctx context.Context, bucket, ip stri
 // @Router /public/budgets/{token} [get]
 func (uc *PublicBudgetUseCase) GetByToken(c *gin.Context) {
 	ctx := c.Request.Context()
-	if !uc.allowRequest(ctx, "get", c.ClientIP(), publicGetRateLimit) {
+	if !uc.allowRequest(ctx, "get", publicClientIP(c), publicGetRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests(CodeRateLimited, "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -132,7 +134,7 @@ func (uc *PublicBudgetUseCase) GetByToken(c *gin.Context) {
 // @Router /public/budgets/{token}/pdf [get]
 func (uc *PublicBudgetUseCase) GetPDF(c *gin.Context) {
 	ctx := c.Request.Context()
-	if !uc.allowRequest(ctx, "get", c.ClientIP(), publicGetRateLimit) {
+	if !uc.allowRequest(ctx, "get", publicClientIP(c), publicGetRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests(CodeRateLimited, "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -158,8 +160,9 @@ func (uc *PublicBudgetUseCase) GetPDF(c *gin.Context) {
 		return
 	}
 
-	// Mirror generate_pdf_uc exactly: the PDF distributes markup over budget.TotalCost.
-	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
+	// Customer-facing documents distribute the markup over base_price so the per-item
+	// totals reconcile with the Subtotal line (see generate_pdf_uc).
+	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
 
 	company, err := uc.budgetRepository.GetCompanyByOrganizationID(ctx, organizationID)
 	if err != nil {
@@ -180,6 +183,7 @@ func (uc *PublicBudgetUseCase) GetPDF(c *gin.Context) {
 		Branding:              branding,
 		TotalPrintTimeHours:   totalHours,
 		TotalPrintTimeMinutes: totalMins,
+		PublicView:            true,
 	})
 	if err != nil {
 		uc.logger.Error(ctx, "Failed to generate public PDF", map[string]interface{}{"error": err.Error()})
@@ -237,7 +241,7 @@ func (uc *PublicBudgetUseCase) Reject(c *gin.Context) {
 // respond is the shared approve/reject handler. newStatus is approved or rejected.
 func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.BudgetStatus) {
 	ctx := c.Request.Context()
-	if !uc.allowRequest(ctx, "post", c.ClientIP(), publicPostRateLimit) {
+	if !uc.allowRequest(ctx, "post", publicClientIP(c), publicPostRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests(CodeRateLimited, "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -249,7 +253,7 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 	}
 
 	name := strings.TrimSpace(request.Name)
-	if len(name) < 2 || len(name) > 120 {
+	if n := utf8.RuneCountInString(name); n < 2 || n > 120 {
 		coreErrors.Respond(c, coreErrors.BadRequest(coreErrors.CodeValidationError, "Informe seu nome (entre 2 e 120 caracteres)"))
 		return
 	}
@@ -257,7 +261,7 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 	var reason *string
 	if newStatus == entities.StatusRejected {
 		trimmed := strings.TrimSpace(request.Reason)
-		if len(trimmed) > 1000 {
+		if utf8.RuneCountInString(trimmed) > 1000 {
 			coreErrors.Respond(c, coreErrors.BadRequest(coreErrors.CodeValidationError, "O motivo deve ter no máximo 1000 caracteres"))
 			return
 		}
@@ -278,10 +282,10 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 		return
 	}
 
-	ip := c.ClientIP()
+	ip := publicClientIP(c)
 	userAgent := c.Request.UserAgent()
-	if len(userAgent) > maxUserAgentLength {
-		userAgent = userAgent[:maxUserAgentLength]
+	if utf8.RuneCountInString(userAgent) > maxUserAgentLength {
+		userAgent = string([]rune(userAgent)[:maxUserAgentLength])
 	}
 
 	rows, err := uc.budgetRepository.RespondToPublicBudget(ctx, budget.ID, newStatus, name, ip, userAgent, reason, now)
@@ -353,8 +357,9 @@ func mapNotRespondableError(budget *entities.BudgetEntity, now time.Time) *coreE
 }
 
 // buildPublicView assembles the sanitized public view for a budget. It performs NO
-// writes. The per-item sale values mirror the PDF (markup distributed over
-// budget.TotalCost, as in generate_pdf_uc).
+// writes. The per-item sale values mirror the PDF: the markup is distributed over
+// base_price, so the item total_price values sum EXACTLY to base_price (the
+// "Subtotal") and Subtotal - discount + shipping + tax == total.
 func (uc *PublicBudgetUseCase) buildPublicView(ctx context.Context, budget *entities.BudgetEntity) (*entities.PublicBudgetView, error) {
 	now := time.Now()
 	organizationID := budget.OrganizationID
@@ -373,7 +378,7 @@ func (uc *PublicBudgetUseCase) buildPublicView(ctx context.Context, budget *enti
 	if err != nil {
 		return nil, err
 	}
-	itemResponses, _, _ := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
+	itemResponses, _, _ := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
 
 	publicItems := make([]entities.PublicBudgetItem, 0, len(itemResponses))
 	for _, it := range itemResponses {
@@ -424,4 +429,39 @@ func (uc *PublicBudgetUseCase) buildPublicView(ctx context.Context, budget *enti
 		Notes:          budget.Notes,
 	}
 	return view, nil
+}
+
+// publicClientIP resolves the real client IP for the public endpoints behind the
+// Cloudflare -> Traefik -> pod chain. Global trusted proxies stay empty (so
+// c.ClientIP() returns the ingress pod IP, which would collapse every visitor into
+// one rate-limit bucket), so here we prefer the edge-provided headers:
+//  1. CF-Connecting-IP (set by Cloudflare),
+//  2. the first valid IP of X-Forwarded-For,
+//  3. c.ClientIP() as a last resort.
+//
+// These headers are client-settable, so a caller can spoof them to pick its own
+// bucket (and its own recorded customer_response_ip). That is no worse than the
+// current single-bucket behavior, and it never grants access: the share token
+// remains the only credential.
+func publicClientIP(c *gin.Context) string {
+	if ip := firstValidIP(c.GetHeader("CF-Connecting-IP")); ip != "" {
+		return ip
+	}
+	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+		for _, part := range strings.Split(xff, ",") {
+			if ip := firstValidIP(part); ip != "" {
+				return ip
+			}
+		}
+	}
+	return c.ClientIP()
+}
+
+// firstValidIP trims s and returns it when it parses as an IP address, else "".
+func firstValidIP(s string) string {
+	s = strings.TrimSpace(s)
+	if net.ParseIP(s) != nil {
+		return s
+	}
+	return ""
 }

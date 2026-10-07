@@ -100,9 +100,10 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	}
 
 	// Build items response (with the shared per-item sale distribution) plus the
-	// total print time. Using the same builder as the API guarantees the PDF shows
-	// identical per-item sale values.
-	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.TotalCost, organizationID)
+	// total print time. Customer-facing documents distribute the markup over
+	// base_price so the per-item totals sum to the "Subtotal" line and
+	// Subtotal - desconto + frete + impostos == TOTAL exactly.
+	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
 
 	// Get company info
 	company, err := uc.budgetRepository.GetCompanyByOrganizationID(ctx, organizationID)

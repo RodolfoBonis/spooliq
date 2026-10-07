@@ -51,6 +51,7 @@ func InitializeRoutes(
 	registerUc *authuc.RegisterUseCase,
 	brandUc branduc.IBrandUseCase,
 	budgetUc budgetuc.IBudgetUseCase,
+	publicBudgetUc budgetuc.IPublicBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
 	brandingUc companyuc.IBrandingUseCase,
 	subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase,
@@ -88,6 +89,7 @@ func InitializeRoutes(
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory)
+	budget.PublicRoutes(root, publicBudgetUc)
 	company.Routes(root, companyUc, brandingUc, subscriptionPaymentsUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)

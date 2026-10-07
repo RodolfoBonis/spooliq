@@ -18,10 +18,11 @@ type CostPresetModel struct {
 	PostProcessingCostPerHour float32   `gorm:"type:float" json:"post_processing_cost_per_hour"`
 	SupportRemovalCostPerHour float32   `gorm:"type:float" json:"support_removal_cost_per_hour"`
 	QualityControlCostPerItem float32   `gorm:"type:float" json:"quality_control_cost_per_item"`
-
-	// GORM v2 Relationships - BelongsTo Preset (1:1 relationship via same ID)
-	// Preset *PresetModel `gorm:"foreignKey:ID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"preset,omitempty"`
-	// Commented out to avoid circular import - relationship enforced by shared ID
+	// FailureRatePercentage surcharges (filament+waste+energy+machine) per item. Default 0.
+	FailureRatePercentage float32 `gorm:"type:float;default:0" json:"failure_rate_percentage"`
+	// WasteGramsPerColorChange replaces the engine's legacy 15g constant when set.
+	// Defaults to 15 so existing rows keep the legacy behaviour after AutoMigrate.
+	WasteGramsPerColorChange float32 `gorm:"type:float;default:15" json:"waste_grams_per_color_change"`
 }
 
 // TableName returns the table name for the cost preset model
@@ -40,6 +41,8 @@ func (c *CostPresetModel) FromEntity(entity *entities.CostPresetEntity) {
 	c.PostProcessingCostPerHour = entity.PostProcessingCostPerHour
 	c.SupportRemovalCostPerHour = entity.SupportRemovalCostPerHour
 	c.QualityControlCostPerItem = entity.QualityControlCostPerItem
+	c.FailureRatePercentage = entity.FailureRatePercentage
+	c.WasteGramsPerColorChange = entity.WasteGramsPerColorChange
 }
 
 // ToEntity converts the CostPresetModel to a CostPresetEntity
@@ -56,5 +59,7 @@ func (c *CostPresetModel) ToEntity() entities.CostPresetEntity {
 		PostProcessingCostPerHour: c.PostProcessingCostPerHour,
 		SupportRemovalCostPerHour: c.SupportRemovalCostPerHour,
 		QualityControlCostPerItem: c.QualityControlCostPerItem,
+		FailureRatePercentage:     c.FailureRatePercentage,
+		WasteGramsPerColorChange:  c.WasteGramsPerColorChange,
 	}
 }

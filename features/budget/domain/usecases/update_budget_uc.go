@@ -206,8 +206,19 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		coreErrors.Respond(c, err)
 		return
 	}
-	if request.DeliveryDays != nil {
-		budget.DeliveryDays = request.DeliveryDays
+	// DeliveryDays: null clears it; a value sets it (>= 0, explicit check because the
+	// Optional field carries no `validate:` tag).
+	if request.DeliveryDays.IsClear() {
+		budget.DeliveryDays = nil
+	} else if request.DeliveryDays.HasValue() {
+		v := request.DeliveryDays.Value
+		if v < 0 {
+			verr := coreErrors.Validation(map[string]string{"delivery_days": "não pode ser negativo"})
+			uc.logger.Error(ctx, "Invalid delivery days", map[string]interface{}{"error": verr.Error()})
+			coreErrors.Respond(c, verr)
+			return
+		}
+		budget.DeliveryDays = &v
 	}
 	if request.PaymentTerms != nil {
 		budget.PaymentTerms = request.PaymentTerms

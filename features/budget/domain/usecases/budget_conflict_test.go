@@ -102,6 +102,9 @@ type fakeBudgetRepo struct {
 	stockWarnings            []entities.StockWarning
 	getStockWarningsCalls    int
 	getStockWarningsForReqCt int
+	// Captured args of the last GetStockWarningsForRequest call (waste-aware preview).
+	lastStockWarningItems        []entities.PricingItemSpec
+	lastStockWarningBudgetPreset *uuid.UUID
 }
 
 var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
@@ -218,8 +221,10 @@ func (f *fakeBudgetRepo) GetStockWarnings(_ context.Context, _ uuid.UUID, _ stri
 	f.getStockWarningsCalls++
 	return f.stockWarnings, nil
 }
-func (f *fakeBudgetRepo) GetStockWarningsForRequest(_ context.Context, _ string, _ map[uuid.UUID]float64) ([]entities.StockWarning, error) {
+func (f *fakeBudgetRepo) GetStockWarningsForRequest(_ context.Context, _ string, items []entities.PricingItemSpec, budgetCostPresetID *uuid.UUID) ([]entities.StockWarning, error) {
 	f.getStockWarningsForReqCt++
+	f.lastStockWarningItems = items
+	f.lastStockWarningBudgetPreset = budgetCostPresetID
 	return f.stockWarnings, nil
 }
 func (f *fakeBudgetRepo) FindItemsByBudgetID(_ context.Context, _ uuid.UUID) ([]*entities.BudgetItemEntity, error) {

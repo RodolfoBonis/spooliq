@@ -11,6 +11,7 @@ import (
 
 	repoimpl "github.com/RodolfoBonis/spooliq/features/stock/data/repositories"
 	"github.com/RodolfoBonis/spooliq/features/stock/domain/entities"
+	stockrepos "github.com/RodolfoBonis/spooliq/features/stock/domain/repositories"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/postgres"
@@ -97,15 +98,22 @@ func createStockSchema(t *testing.T, db *gorm.DB) {
 			updated_at timestamptz NOT NULL DEFAULT now(),
 			deleted_at timestamptz
 		)`,
+		`CREATE TABLE cost_presets (
+			id uuid PRIMARY KEY,
+			organization_id varchar(255) NOT NULL,
+			waste_grams_per_color_change numeric NOT NULL DEFAULT 0
+		)`,
 		`CREATE TABLE budgets (
 			id uuid PRIMARY KEY,
 			organization_id varchar(255) NOT NULL,
-			quote_number integer
+			quote_number integer,
+			cost_preset_id uuid
 		)`,
 		`CREATE TABLE budget_items (
 			id uuid PRIMARY KEY,
 			budget_id uuid NOT NULL,
-			organization_id varchar(255) NOT NULL
+			organization_id varchar(255) NOT NULL,
+			cost_preset_id uuid
 		)`,
 		`CREATE TABLE budget_item_filaments (
 			id uuid PRIMARY KEY,
@@ -236,7 +244,9 @@ func TestIntegration_Deduct_OnceAndIdempotent_SkipsUntracked(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, quote_number) VALUES (?,?,?)`, budgetID, orgA, 7).Error)
 	item := uuid.New()
 	require.NoError(t, db.Exec(`INSERT INTO budget_items (id, budget_id, organization_id) VALUES (?,?,?)`, item, budgetID, orgA).Error)
-	// 800g of tracked + 300g of untracked (sum across two rows for tracked => 800).
+	// One item with THREE filament rows (no cost preset => default 15g/change). N=3 => 2
+	// color changes => 30g purge, split equally = 10g per row. "tracked" occupies two rows
+	// so it takes 800g quantity + 20g purge = 820g; "untracked" is skipped.
 	require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (id, budget_item_id, filament_id, organization_id, quantity) VALUES (?,?,?,?,?)`, uuid.New(), item, tracked, orgA, 500.0).Error)
 	require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (id, budget_item_id, filament_id, organization_id, quantity) VALUES (?,?,?,?,?)`, uuid.New(), item, tracked, orgA, 300.0).Error)
 	require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (id, budget_item_id, filament_id, organization_id, quantity) VALUES (?,?,?,?,?)`, uuid.New(), item, untracked, orgA, 300.0).Error)
@@ -248,12 +258,18 @@ func TestIntegration_Deduct_OnceAndIdempotent_SkipsUntracked(t *testing.T) {
 	}
 
 	deduct()
-	require.Equal(t, int64(200), stockOf(t, db, tracked), "tracked decremented by 800 once")
+	require.Equal(t, int64(180), stockOf(t, db, tracked), "tracked decremented by 820 (800 + 20g purge) once")
 	require.Equal(t, int64(1000), stockOf(t, db, untracked), "untracked skipped")
+
+	// The consumption note records the purge grams included in the deduction.
+	var note *string
+	require.NoError(t, db.Raw(`SELECT note FROM filament_stock_movements WHERE budget_id = ? AND filament_id = ? AND type = 'consumption'`, budgetID, tracked).Scan(&note).Error)
+	require.NotNil(t, note)
+	require.Equal(t, "Consumo do orçamento (inclui 20 g de purga)", *note)
 
 	// Retry must not double-deduct.
 	deduct()
-	require.Equal(t, int64(200), stockOf(t, db, tracked), "retry must not double-deduct")
+	require.Equal(t, int64(180), stockOf(t, db, tracked), "retry must not double-deduct")
 
 	var consumptionCount int64
 	require.NoError(t, db.Raw(`SELECT count(*) FROM filament_stock_movements WHERE budget_id = ? AND type = 'consumption'`, budgetID).Scan(&consumptionCount).Error)
@@ -298,4 +314,72 @@ func TestIntegration_ListMovements_FilterAndQuoteNumber(t *testing.T) {
 	}
 	require.NotNil(t, foundQuote)
 	require.Equal(t, 42, *foundQuote)
+}
+
+// deductItemWithPresets builds a one-item budget with two tracked filaments (100g each)
+// and the given item/budget cost preset IDs, deducts it, and returns the two filaments.
+func deductItemWithPresets(t *testing.T, db *gorm.DB, repo stockrepos.StockRepository, itemPreset, budgetPreset *uuid.UUID) (uuid.UUID, uuid.UUID) {
+	t.Helper()
+	a := insertFilament(t, db, orgA, 1000, true, nil)
+	b := insertFilament(t, db, orgA, 1000, true, nil)
+
+	budgetID := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, quote_number, cost_preset_id) VALUES (?,?,?,?)`, budgetID, orgA, 1, budgetPreset).Error)
+	item := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budget_items (id, budget_id, organization_id, cost_preset_id) VALUES (?,?,?,?)`, item, budgetID, orgA, itemPreset).Error)
+	require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (id, budget_item_id, filament_id, organization_id, quantity) VALUES (?,?,?,?,?)`, uuid.New(), item, a, orgA, 100.0).Error)
+	require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (id, budget_item_id, filament_id, organization_id, quantity) VALUES (?,?,?,?,?)`, uuid.New(), item, b, orgA, 100.0).Error)
+
+	require.NoError(t, db.Transaction(func(tx *gorm.DB) error {
+		return repo.DeductForCompletedBudget(context.Background(), tx, budgetID, orgA, "sys")
+	}))
+	return a, b
+}
+
+func insertCostPreset(t *testing.T, db *gorm.DB, waste float64) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO cost_presets (id, organization_id, waste_grams_per_color_change) VALUES (?,?,?)`, id, orgA, waste).Error)
+	return id
+}
+
+// TestIntegration_Deduct_WasteUsesItemPreset proves the item's own cost preset waste wins
+// over the budget-level preset: a 2-filament item with an item preset of 40g/change purges
+// 40g (20g per filament).
+func TestIntegration_Deduct_WasteUsesItemPreset(t *testing.T) {
+	db := openStockTestDB(t)
+	repo := repoimpl.NewStockRepository(db)
+
+	itemPreset := insertCostPreset(t, db, 40)   // effective
+	budgetPreset := insertCostPreset(t, db, 10) // ignored because the item has its own
+	a, b := deductItemWithPresets(t, db, repo, &itemPreset, &budgetPreset)
+
+	require.Equal(t, int64(880), stockOf(t, db, a), "100g + 20g purge")
+	require.Equal(t, int64(880), stockOf(t, db, b), "100g + 20g purge")
+}
+
+// TestIntegration_Deduct_WasteFallsBackToBudgetPreset proves an item with no preset of its
+// own uses the budget-level preset: 30g/change => 30g purge (15g per filament).
+func TestIntegration_Deduct_WasteFallsBackToBudgetPreset(t *testing.T) {
+	db := openStockTestDB(t)
+	repo := repoimpl.NewStockRepository(db)
+
+	budgetPreset := insertCostPreset(t, db, 30)
+	a, b := deductItemWithPresets(t, db, repo, nil, &budgetPreset)
+
+	require.Equal(t, int64(885), stockOf(t, db, a), "100g + 15g purge")
+	require.Equal(t, int64(885), stockOf(t, db, b), "100g + 15g purge")
+}
+
+// TestIntegration_Deduct_WasteDefaultsWhenNoPreset proves that with neither an item nor a
+// budget preset the default 15g/change applies (15g purge => 7.5g per filament, rounded
+// once per filament to 8g on 100g).
+func TestIntegration_Deduct_WasteDefaultsWhenNoPreset(t *testing.T) {
+	db := openStockTestDB(t)
+	repo := repoimpl.NewStockRepository(db)
+
+	a, b := deductItemWithPresets(t, db, repo, nil, nil)
+
+	require.Equal(t, int64(892), stockOf(t, db, a), "round(100 + 7.5) = 108")
+	require.Equal(t, int64(892), stockOf(t, db, b), "round(100 + 7.5) = 108")
 }

@@ -1,11 +1,15 @@
 package repositories
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
+	budgetrepo "github.com/RodolfoBonis/spooliq/features/budget/data/repositories"
+	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/RodolfoBonis/spooliq/features/stock/data/models"
 	"github.com/RodolfoBonis/spooliq/features/stock/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/stock/domain/repositories"
@@ -165,37 +169,35 @@ func (r *stockRepositoryImpl) ListMovements(ctx context.Context, filamentID uuid
 	return out, total, nil
 }
 
-// budgetRequirement is the per-filament total grams a budget needs.
-type budgetRequirement struct {
-	FilamentID uuid.UUID `gorm:"column:filament_id"`
-	Grams      float64   `gorm:"column:grams"`
-}
-
 // DeductForCompletedBudget writes idempotent consumption movements for a completed
 // budget inside the provided transaction. See the interface doc for the contract.
 func (r *stockRepositoryImpl) DeductForCompletedBudget(ctx context.Context, tx *gorm.DB, budgetID uuid.UUID, organizationID, userID string) error {
 	tx = tx.WithContext(ctx)
 
-	// 1. Total grams required per filament across all of the budget's items.
-	var reqs []budgetRequirement
-	if err := tx.
-		Table("budget_item_filaments AS bif").
-		Select("bif.filament_id AS filament_id, SUM(bif.quantity) AS grams").
-		Joins("JOIN budget_items bi ON bi.id = bif.budget_item_id").
-		Where("bi.budget_id = ? AND bif.organization_id = ?", budgetID, organizationID).
-		Group("bif.filament_id").
-		Order("bif.filament_id").
-		Scan(&reqs).Error; err != nil {
-		return fmt.Errorf("failed to load budget filament requirements: %w", err)
+	// 1. PHYSICAL grams required per filament across the budget's items: each filament's
+	// quantity PLUS its equal share of the color-change purge waste of every
+	// multi-filament item. The waste is counted whenever an item has N > 1 filaments,
+	// REGARDLESS of the budget's include_waste_cost flag, because the mass is physically
+	// purged on the print bed and must leave stock even when it was not billed. The shared
+	// budget loader + aggregator are the single source of truth so stock and pricing never
+	// disagree on what a budget consumes.
+	items, err := budgetrepo.LoadBudgetRequirementItems(ctx, tx, budgetID, organizationID)
+	if err != nil {
+		return err
 	}
-	if len(reqs) == 0 {
+	required := pricing.FilamentRequirements(items)
+	if len(required) == 0 {
 		return nil
 	}
+	wasteByFilament := pricing.FilamentWasteGrams(items)
 
-	ids := make([]uuid.UUID, 0, len(reqs))
-	for _, req := range reqs {
-		ids = append(ids, req.FilamentID)
+	ids := make([]uuid.UUID, 0, len(required))
+	for id := range required {
+		ids = append(ids, id)
 	}
+	// Iterate in a consistent (sorted) order to avoid deadlocks with concurrent manual
+	// movements; the bulk lock below uses the same ordering.
+	sort.Slice(ids, func(i, j int) bool { return bytes.Compare(ids[i][:], ids[j][:]) < 0 })
 
 	// 2. Lock every referenced filament row in a consistent (sorted) order to avoid
 	// deadlocks with concurrent manual movements, and learn which ones are tracked.
@@ -219,22 +221,30 @@ func (r *stockRepositoryImpl) DeductForCompletedBudget(ctx context.Context, tx *
 
 	// 3. For each tracked filament: insert the consumption movement (idempotent via
 	// the partial unique index) and decrement stock only when the insert happened.
-	for _, req := range reqs {
-		if !tracked[req.FilamentID] {
+	for _, id := range ids {
+		if !tracked[id] {
 			continue // untracked filaments are skipped
 		}
-		grams := int64(math.Round(req.Grams))
+		grams := int64(math.Round(required[id]))
 		if grams <= 0 {
 			continue
 		}
 		signed := -grams
 
+		// pt-BR consumption note: when purge waste is part of the deduction, record how
+		// many grams of the total are purge so the ledger explains the extra consumption.
+		var note *string
+		if w := int64(math.Round(wasteByFilament[id])); w > 0 {
+			n := fmt.Sprintf("Consumo do orçamento (inclui %d g de purga)", w)
+			note = &n
+		}
+
 		res := tx.Exec(`
 			INSERT INTO filament_stock_movements
-				(id, organization_id, filament_id, type, grams, budget_id, created_by, created_at)
-			VALUES (gen_random_uuid(), ?, ?, 'consumption', ?, ?, ?, now())
+				(id, organization_id, filament_id, type, grams, budget_id, note, created_by, created_at)
+			VALUES (gen_random_uuid(), ?, ?, 'consumption', ?, ?, ?, ?, now())
 			ON CONFLICT (budget_id, filament_id) WHERE type = 'consumption' DO NOTHING
-		`, organizationID, req.FilamentID, signed, budgetID, userID)
+		`, organizationID, id, signed, budgetID, note, userID)
 		if res.Error != nil {
 			return fmt.Errorf("failed to insert consumption movement: %w", res.Error)
 		}
@@ -245,7 +255,7 @@ func (r *stockRepositoryImpl) DeductForCompletedBudget(ctx context.Context, tx *
 		if err := tx.Exec(`
 			UPDATE filaments SET stock_grams = stock_grams + ?, updated_at = now()
 			WHERE id = ? AND organization_id = ?
-		`, signed, req.FilamentID, organizationID).Error; err != nil {
+		`, signed, id, organizationID).Error; err != nil {
 			return fmt.Errorf("failed to decrement filament stock: %w", err)
 		}
 	}

@@ -147,21 +147,57 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.IncludeMachineCost != nil {
 		budget.IncludeMachineCost = *request.IncludeMachineCost
 	}
-	// Discount / shipping / tax (partial update: only applied when provided).
-	if request.DiscountType != nil {
-		budget.DiscountType = request.DiscountType
-	}
-	if request.DiscountValue != nil {
-		budget.DiscountValue = request.DiscountValue
+	// Discount / shipping / tax are tri-state (coreTypes.Optional): absent leaves the
+	// stored value unchanged, an explicit JSON null clears it, a value sets it.
+	//
+	// Discount is a paired field: an explicit null on EITHER discount_type OR
+	// discount_value clears BOTH columns ("null wins", even when the other side
+	// carries a value). Otherwise each provided value is merged over the stored pair
+	// and the resulting pair is validated together below.
+	if request.DiscountType.IsClear() || request.DiscountValue.IsClear() {
+		budget.DiscountType = nil
+		budget.DiscountValue = nil
+	} else {
+		if request.DiscountType.HasValue() {
+			v := request.DiscountType.Value
+			budget.DiscountType = &v
+		}
+		if request.DiscountValue.HasValue() {
+			v := request.DiscountValue.Value
+			budget.DiscountValue = &v
+		}
 	}
 	if request.IncludeShipping != nil {
 		budget.IncludeShipping = *request.IncludeShipping
 	}
-	if request.ShippingOverride != nil {
-		budget.ShippingOverride = request.ShippingOverride
+	// ShippingOverride: null clears the override (computed shipping applies); a value
+	// sets it (cents, >= 0). The non-negative check is explicit because the Optional
+	// field carries no `validate:` tag.
+	if request.ShippingOverride.IsClear() {
+		budget.ShippingOverride = nil
+	} else if request.ShippingOverride.HasValue() {
+		v := request.ShippingOverride.Value
+		if v < 0 {
+			verr := coreErrors.Validation(map[string]string{"shipping_override": "não pode ser negativo"})
+			uc.logger.Error(ctx, "Invalid shipping override", map[string]interface{}{"error": verr.Error()})
+			coreErrors.Respond(c, verr)
+			return
+		}
+		budget.ShippingOverride = &v
 	}
-	if request.TaxRate != nil {
-		budget.TaxRate = request.TaxRate
+	// TaxRate: null clears the budget-level rate (company default applies); a value
+	// sets it and must be in [0, 100). Explicit range check (no `validate:` tag).
+	if request.TaxRate.IsClear() {
+		budget.TaxRate = nil
+	} else if request.TaxRate.HasValue() {
+		v := request.TaxRate.Value
+		if v < 0 || v >= 100 {
+			verr := coreErrors.Validation(map[string]string{"tax_rate": "deve ser maior ou igual a 0 e menor que 100"})
+			uc.logger.Error(ctx, "Invalid tax rate", map[string]interface{}{"error": verr.Error()})
+			coreErrors.Respond(c, verr)
+			return
+		}
+		budget.TaxRate = &v
 	}
 	// Validate the resulting discount state (post-merge), so a partial update that
 	// only touches one of type/value is checked against the effective pair.
@@ -179,8 +215,12 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 	if request.Notes != nil {
 		budget.Notes = request.Notes
 	}
-	if request.ValidUntil != nil {
-		budget.ValidUntil = normalizeValidUntil(request.ValidUntil)
+	// ValidUntil: null clears the date; a value is normalized to end of day (SP).
+	if request.ValidUntil.IsClear() {
+		budget.ValidUntil = nil
+	} else if request.ValidUntil.HasValue() {
+		v := request.ValidUntil.Value
+		budget.ValidUntil = normalizeValidUntil(&v)
 	}
 
 	budget.UpdatedAt = time.Now()

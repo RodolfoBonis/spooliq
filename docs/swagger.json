@@ -13909,7 +13909,7 @@
                     "maxLength": 1000
                 },
                 "discount_type": {
-                    "description": "Discount (optional).",
+                    "description": "DiscountType is tri-state. Absent: unchanged. Explicit null: clears BOTH\ndiscount_type AND discount_value (removes the discount). Value (\"percent\" or\n\"fixed\"): sets the type; the resulting type/value pair is validated together\n(see validateDiscountInput). If either discount_type OR discount_value is null,\nboth are cleared (\"null wins\" even when the other carries a value).",
                     "type": "string",
                     "enum": [
                         "percent",
@@ -13917,8 +13917,8 @@
                     ]
                 },
                 "discount_value": {
-                    "type": "number",
-                    "minimum": 0
+                    "description": "DiscountValue is tri-state (see DiscountType). Absent: unchanged. Explicit null:\nclears BOTH. Value: 0-100 for a \"percent\" discount, or a non-negative reais\namount for a \"fixed\" discount. Sending only discount_value while no type is\nstored yields a 400 (type and value must be provided together).",
+                    "type": "number"
                 },
                 "energy_preset_id": {
                     "type": "string"
@@ -13931,7 +13931,7 @@
                     "type": "boolean"
                 },
                 "include_shipping": {
-                    "description": "Shipping (optional). ShippingOverride is in cents.",
+                    "description": "Shipping (optional). ShippingOverride is tri-state and in cents. Absent:\nunchanged. Explicit null: clears the override so computed shipping applies.\nValue: a non-negative cents amount that overrides the computed shipping.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -13967,17 +13967,16 @@
                     "type": "string"
                 },
                 "shipping_override": {
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "tax_rate": {
-                    "description": "TaxRate (optional, percent 0..\u003c100).",
-                    "type": "number",
-                    "minimum": 0
+                    "description": "TaxRate is tri-state (percent 0..\u003c100). Absent: unchanged. Explicit null: clears\nthe budget-level rate so the company default applies. Value: a rate in [0, 100).",
+                    "type": "number"
                 },
                 "valid_until": {
-                    "description": "ValidUntil is the optional quote validity date (date-only; stored end of day,\nAmerica/Sao_Paulo). Settable on update.",
-                    "type": "string"
+                    "description": "ValidUntil is the tri-state quote validity date (date-only; stored end of day,\nAmerica/Sao_Paulo). Absent: unchanged. Explicit null: clears the validity date.\nValue: sets it (normalized to end of day).",
+                    "type": "string",
+                    "format": "date-time"
                 }
             }
         },

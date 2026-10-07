@@ -19,6 +19,12 @@ const (
 	StatusCompleted BudgetStatus = "completed" // StatusCompleted represents a completed budget
 )
 
+// Discount type constants for BudgetEntity.DiscountType.
+const (
+	DiscountTypePercent = "percent" // DiscountTypePercent: DiscountValue is a 0-100 percentage of base_price
+	DiscountTypeFixed   = "fixed"   // DiscountTypeFixed: DiscountValue is a fixed amount in reais
+)
+
 // KnownStatuses returns every valid budget status, in lifecycle order. It is the
 // single source of truth for validating a status filter on the list endpoint.
 func KnownStatuses() []BudgetStatus {
@@ -64,18 +70,45 @@ type BudgetEntity struct {
 	CostPresetID    *uuid.UUID `json:"cost_preset_id,omitempty"` // For overhead/profit percentages
 
 	// Configuration flags
-	IncludeEnergyCost bool `json:"include_energy_cost"`
-	IncludeWasteCost  bool `json:"include_waste_cost"`
+	IncludeEnergyCost  bool `json:"include_energy_cost"`
+	IncludeWasteCost   bool `json:"include_waste_cost"`
+	IncludeMachineCost bool `json:"include_machine_cost"` // charge per-item machine time (cost_per_hour)
+
+	// Discount configuration (nullable). DiscountType is "percent" or "fixed";
+	// DiscountValue is a 0-100 percent or a reais amount accordingly.
+	DiscountType  *string  `json:"discount_type,omitempty"`
+	DiscountValue *float64 `json:"discount_value,omitempty"`
+
+	// Shipping configuration. When IncludeShipping is set the shipping cost is
+	// ShippingOverride (cents) when provided, else computed from the budget cost preset.
+	IncludeShipping  bool   `json:"include_shipping"`
+	ShippingOverride *int64 `json:"shipping_override,omitempty"` // cents
+
+	// TaxRate is the budget-level "por dentro" tax rate (percent). When nil the
+	// company default_tax_rate is used. TaxRateApplied records the rate actually used.
+	TaxRate *float64 `json:"tax_rate,omitempty"`
 
 	// Calculated costs (in cents for precision)
-	FilamentCost int64 `json:"filament_cost"` // cents - Sum of all items filament costs
-	WasteCost    int64 `json:"waste_cost"`    // cents - Sum of all items waste costs
-	EnergyCost   int64 `json:"energy_cost"`   // cents - Sum of all items energy costs
-	SetupCost    int64 `json:"setup_cost"`    // cents - Sum of all items setup costs
-	LaborCost    int64 `json:"labor_cost"`    // cents - Sum of all items manual labor costs
-	OverheadCost int64 `json:"overhead_cost"` // cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)
-	ProfitAmount int64 `json:"profit_amount"` // cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)
-	TotalCost    int64 `json:"total_cost"`    // cents - Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit
+	FilamentCost       int64 `json:"filament_cost"`        // cents - Sum of all items filament costs
+	WasteCost          int64 `json:"waste_cost"`           // cents - Sum of all items waste costs
+	EnergyCost         int64 `json:"energy_cost"`          // cents - Sum of all items energy costs
+	MachineCost        int64 `json:"machine_cost"`         // cents - Sum of all items machine-time costs
+	SetupCost          int64 `json:"setup_cost"`           // cents - Sum of all items setup costs
+	LaborCost          int64 `json:"labor_cost"`           // cents - Sum of all items manual labor costs
+	PostProcessingCost int64 `json:"post_processing_cost"` // cents - Sum of all items post-processing costs
+	PackagingCost      int64 `json:"packaging_cost"`       // cents - Sum of all items packaging costs
+	QualityControlCost int64 `json:"quality_control_cost"` // cents - Sum of all items quality-control costs
+	FailureCost        int64 `json:"failure_cost"`         // cents - Sum of all items failure-rate costs
+	OverheadCost       int64 `json:"overhead_cost"`        // cents - Overhead calculated on subtotal
+	ProfitAmount       int64 `json:"profit_amount"`        // cents - Profit margin calculated
+
+	// Discount/shipping/tax results (cents, except TaxRateApplied which is a percent).
+	DiscountAmount int64   `json:"discount_amount"`  // cents
+	ShippingCost   int64   `json:"shipping_cost"`    // cents
+	TaxAmount      int64   `json:"tax_amount"`       // cents
+	TaxRateApplied float64 `json:"tax_rate_applied"` // percent actually applied
+
+	TotalCost int64 `json:"total_cost"` // cents - Final total (base - discount + shipping + tax)
 
 	// Additional fields for PDF generation
 	DeliveryDays *int    `json:"delivery_days,omitempty"` // prazo de entrega em dias
@@ -90,6 +123,13 @@ type BudgetEntity struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+}
+
+// BasePrice returns the sale price before discount/shipping/tax adjustments,
+// derived from the stored total: base = total + discount - shipping - tax. It is
+// the figure the PDF/response show as the pre-adjustment subtotal.
+func (b *BudgetEntity) BasePrice() int64 {
+	return b.TotalCost + b.DiscountAmount - b.ShippingCost - b.TaxAmount
 }
 
 // IsValidTransition checks if a status transition is valid

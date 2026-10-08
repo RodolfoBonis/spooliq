@@ -34,7 +34,7 @@ env:
 jobs:
   lint_go:
     name: Lint Go Code
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq]
     outputs:
       status: ${{ steps.lint.outputs.status }}
     steps:
@@ -104,7 +104,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -163,7 +163,7 @@ jobs:
 
   check_vulnerabilities:
     name: Security Vulnerability Check
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -238,7 +238,7 @@ jobs:
 
   notify_success:
     name: Notify Success
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq]
     needs: [lint_go, test, check_vulnerabilities]
     if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' }}
     steps:
@@ -304,7 +304,7 @@ jobs:
 
   notify_failure:
     name: Notify Failure
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     needs: [lint_go, test, check_vulnerabilities]
     if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' }}
     steps:

@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   dependabot-auto-merge:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     if: github.actor == 'dependabot[bot]'
     steps:
       - name: Checkout
@@ -45,7 +45,7 @@ jobs:
             --body "⚠️ **Major version update detected!** This requires manual review due to potential breaking changes."
 
   backport-auto-merge:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     if: |
       github.event.pull_request.head.ref &&
       startsWith(github.event.pull_request.head.ref, 'backport/')
@@ -86,7 +86,7 @@ jobs:
   # This ensures conscious review of production deployments
 
   cleanup-branches:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     if: github.event.pull_request.merged == true
     steps:
       - name: Delete merged branch

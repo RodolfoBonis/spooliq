@@ -25,7 +25,7 @@ env:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     outputs:
       version: ${{ steps.validate.outputs.version }}
       tag: ${{ steps.validate.outputs.tag }}
@@ -82,7 +82,7 @@ jobs:
 
   release:
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     timeout-minutes: 30
     steps:
       - name: Checkout tag
@@ -263,7 +263,7 @@ jobs:
 
   backport:
     needs: [validate, release]
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     if: success()
     steps:
       - name: Checkout main

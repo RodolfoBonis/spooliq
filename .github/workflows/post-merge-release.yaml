@@ -16,7 +16,7 @@ jobs:
       github.event.pull_request.merged == true &&
       (startsWith(github.event.pull_request.head.ref, 'release/') ||
        startsWith(github.event.pull_request.head.ref, 'hotfix/'))
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
       tag: ${{ steps.extract-version.outputs.tag }}

@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   prepare-release:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

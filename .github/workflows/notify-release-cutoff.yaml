@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   notify-cutoff:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq
     if: github.event.ref_type == 'branch' && (startsWith(github.event.ref, 'release/') || startsWith(github.event.ref, 'hotfix/'))
     steps:
       - name: Extract version from branch

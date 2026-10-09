@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.16.0 - 2026-10-09
+
+### Changes
+- chore: bump version to 2.16.0 (62fd6f3)
+- feat(csv): export budgets and customers, import customers from CSV (#108) (f7eab43)
+- feat(notification): in-app notifications for budget responses, expiry, low stock and payments (#107) (fa2437b)
+- feat(account): forgot password, own profile and password change; record cancel reason (#106) (3308005)
+
+
 ## v2.6.2 - 2026-07-02
 
 ### Changes

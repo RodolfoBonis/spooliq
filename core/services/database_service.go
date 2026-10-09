@@ -19,10 +19,12 @@ import (
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	models3d "github.com/RodolfoBonis/spooliq/features/model3d/data/models"
+	notifications "github.com/RodolfoBonis/spooliq/features/notification/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
 	profiles "github.com/RodolfoBonis/spooliq/features/profile/data/models"
 	profileRepos "github.com/RodolfoBonis/spooliq/features/profile/data/repositories"
+	stocks "github.com/RodolfoBonis/spooliq/features/stock/data/models"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"gorm.io/driver/postgres"
@@ -280,6 +282,11 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING ACTIVITY MIGRATION: %s", err.Error()))
 	}
 
+	// 5.2. Notifications (FK: OrganizationID -> Companies)
+	if err := Connector.AutoMigrate(&notifications.NotificationModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING NOTIFICATION MIGRATION: %s", err.Error()))
+	}
+
 	// 6. Brands (FK: OrganizationID -> Companies, referenced by FilamentModel)
 	if err := Connector.AutoMigrate(&brands.BrandModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING BRAND MIGRATION: %s", err.Error()))
@@ -450,6 +457,68 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_FILAMENT MIGRATION: %s", err.Error()))
 	}
 
+	// 18.1. Filament Stock Movements (Phase 4C). FK: OrganizationID -> Companies,
+	// FilamentID -> Filaments CASCADE, BudgetID -> Budgets SET NULL. Migrated after
+	// filaments and budgets exist; the non-org FKs are added idempotently below.
+	if err := Connector.AutoMigrate(&stocks.StockMovementModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING FILAMENT_STOCK_MOVEMENT MIGRATION: %s", err.Error()))
+	}
+
+	// 18.2. filament_stock_movements.filament_id FK -> filaments(id) ON DELETE CASCADE,
+	// and budget_id FK -> budgets(id) ON DELETE SET NULL. FK creation is disabled during
+	// AutoMigrate (see newGormConfig), so add them here, idempotently.
+	{
+		var tableExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'filament_stock_movements')").Scan(&tableExists)
+		if tableExists {
+			var filamentFKExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'filament_stock_movements' AND constraint_name = 'fk_stock_movements_filament'
+				)
+			`).Scan(&filamentFKExists)
+			if !filamentFKExists {
+				sql := `
+					ALTER TABLE filament_stock_movements
+					ADD CONSTRAINT fk_stock_movements_filament
+					FOREIGN KEY (filament_id)
+					REFERENCES filaments(id)
+					ON UPDATE CASCADE
+					ON DELETE CASCADE
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for filament_stock_movements.filament_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for filament_stock_movements.filament_id")
+				}
+			}
+
+			var budgetFKExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'filament_stock_movements' AND constraint_name = 'fk_stock_movements_budget'
+				)
+			`).Scan(&budgetFKExists)
+			if !budgetFKExists {
+				sql := `
+					ALTER TABLE filament_stock_movements
+					ADD CONSTRAINT fk_stock_movements_budget
+					FOREIGN KEY (budget_id)
+					REFERENCES budgets(id)
+					ON UPDATE CASCADE
+					ON DELETE SET NULL
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for filament_stock_movements.budget_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for filament_stock_movements.budget_id")
+				}
+			}
+		}
+	}
+
 	// 17.1. budget_items.model_3d_id FK -> models_3d(id) ON DELETE SET NULL. Added
 	// here (after both budget_items and models_3d exist), idempotently: only when the
 	// constraint is not already present. Deleting a model simply detaches it from the
@@ -499,11 +568,11 @@ func RunMigrations() {
 	fmt.Println("Adding organization_id foreign key constraints...")
 
 	orgFKTables := map[string]bool{
-		"activities": true, "users": true, "brands": true, "materials": true, "filaments": true,
+		"activities": true, "notifications": true, "users": true, "brands": true, "materials": true, "filaments": true,
 		"customers": true, "models_3d": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
-		"print_profiles": true,
+		"print_profiles": true, "filament_stock_movements": true,
 	}
 
 	for table := range orgFKTables {
@@ -605,6 +674,28 @@ func RunMigrations() {
 			"uq_models_3d_org_file_hash",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_models_3d_org_file_hash ON models_3d(organization_id, file_hash) WHERE deleted_at IS NULL",
 		},
+		{
+			// Sequential quote number is unique per organization (partial so legacy
+			// NULLs and soft-deleted rows do not collide).
+			"uq_budgets_org_quote_number",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_org_quote_number ON budgets(organization_id, quote_number) WHERE deleted_at IS NULL AND quote_number IS NOT NULL",
+		},
+		{
+			// Public share token is globally unique (partial: only non-NULL tokens).
+			"uq_budgets_public_token",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_public_token ON budgets(public_token) WHERE public_token IS NOT NULL",
+		},
+		{
+			// Ledger lookups: newest movement first, per filament within an org.
+			"idx_stock_movements_org_filament_created",
+			"CREATE INDEX IF NOT EXISTS idx_stock_movements_org_filament_created ON filament_stock_movements(organization_id, filament_id, created_at DESC)",
+		},
+		{
+			// Idempotency guard for auto-deduction: at most one consumption movement
+			// per (budget, filament). Partial so purchases/adjustments/waste are free.
+			"uq_stock_movements_budget_filament_consumption",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_stock_movements_budget_filament_consumption ON filament_stock_movements(budget_id, filament_id) WHERE type = 'consumption'",
+		},
 	}
 
 	for _, idx := range dashboardIndexes {
@@ -616,4 +707,88 @@ func RunMigrations() {
 	}
 
 	fmt.Println("Dashboard indexes setup completed")
+
+	runDataMigrations()
+}
+
+// dataMigrations are one-off data fixes. Each runs exactly once per database:
+// its name is recorded in data_migrations after it succeeds.
+var dataMigrations = []struct{ name, sql string }{
+	{
+		// Filaments were created with is_active=false since the module was added
+		// (no default, and create/update ignored the field). Nothing ever let users
+		// deactivate a filament, so every existing row is meant to be active.
+		"2026-10-06_activate_legacy_filaments",
+		"UPDATE filaments SET is_active = true WHERE is_active = false",
+	},
+	{
+		// Phase 4A added budgets.include_machine_cost with a column DEFAULT of TRUE so
+		// that NEW budgets charge machine time. AutoMigrate's ADD COLUMN ... DEFAULT true
+		// backfills EXISTING rows to TRUE, which would silently reinterpret already-quoted
+		// budgets. This one-time fix flips every pre-existing budget back to FALSE so
+		// stored totals are not changed; new budgets keep the TRUE default going forward.
+		"2026-10-07_backfill_budget_include_machine_cost_false",
+		"UPDATE budgets SET include_machine_cost = false",
+	},
+	{
+		// Phase 4B added budgets.quote_number (sequential per organization). Backfill
+		// existing rows deterministically in (created_at, id) order so every org's
+		// quotes are numbered 1..N. Runs once; new budgets allocate via the companies
+		// counter going forward.
+		"2026-10-08_backfill_budget_quote_number",
+		`UPDATE budgets b SET quote_number = n.rn
+		 FROM (
+			SELECT id, ROW_NUMBER() OVER (PARTITION BY organization_id ORDER BY created_at, id) AS rn
+			FROM budgets
+			WHERE quote_number IS NULL
+		 ) n
+		 WHERE b.id = n.id AND b.quote_number IS NULL`,
+	},
+	{
+		// After backfilling quote_number, align each company's next_quote_number to
+		// max(quote_number)+1 so freshly allocated numbers never collide with backfilled
+		// ones. Companies with no budgets keep the default (1).
+		"2026-10-08_init_company_next_quote_number",
+		`UPDATE companies c SET next_quote_number = sub.max_qn + 1
+		 FROM (
+			SELECT organization_id, MAX(quote_number) AS max_qn
+			FROM budgets
+			WHERE quote_number IS NOT NULL
+			GROUP BY organization_id
+		 ) sub
+		 WHERE c.organization_id = sub.organization_id AND sub.max_qn >= c.next_quote_number`,
+	},
+}
+
+// runDataMigrations applies pending dataMigrations, each in its own transaction
+// together with its marker row, so a failure leaves it pending for the next start.
+func runDataMigrations() {
+	if err := Connector.Exec(`CREATE TABLE IF NOT EXISTS data_migrations (
+		name varchar(255) PRIMARY KEY,
+		applied_at timestamptz NOT NULL DEFAULT now()
+	)`).Error; err != nil {
+		fmt.Printf("Warning: data_migrations table creation failed: %v\n", err)
+		return
+	}
+	for _, m := range dataMigrations {
+		var applied int64
+		if err := Connector.Raw("SELECT count(*) FROM data_migrations WHERE name = ?", m.name).Scan(&applied).Error; err != nil {
+			fmt.Printf("Warning: data migration %s check failed: %v\n", m.name, err)
+			continue
+		}
+		if applied > 0 {
+			continue
+		}
+		err := Connector.Transaction(func(tx *gorm.DB) error {
+			res := tx.Exec(m.sql)
+			if res.Error != nil {
+				return res.Error
+			}
+			fmt.Printf("Data migration %s applied (%d rows)\n", m.name, res.RowsAffected)
+			return tx.Exec("INSERT INTO data_migrations (name) VALUES (?) ON CONFLICT (name) DO NOTHING", m.name).Error
+		})
+		if err != nil {
+			fmt.Printf("Warning: data migration %s failed: %v\n", m.name, err)
+		}
+	}
 }

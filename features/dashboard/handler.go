@@ -368,3 +368,36 @@ func (h *Handler) GetGoalsAlerts(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// lowStockLimit caps the low-stock widget at the 20 most depleted filaments.
+const lowStockLimit = 20
+
+// GetLowStock godoc
+// @Summary Get low-stock filaments
+// @Description Returns tracked filaments at or below their alert threshold, ordered by shortfall (stock - threshold) ascending, limited to 20.
+// @Tags Dashboard
+// @Accept json
+// @Produce json
+// @Success 200 {object} entities.LowStockResponse
+// @Failure 400 {object} errors.HTTPError
+// @Failure 401 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Security BearerAuth
+// @Router /dashboard/low-stock [get]
+func (h *Handler) GetLowStock(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+
+	rows, err := h.repo.GetLowStockFilaments(organizationID, lowStockLimit)
+	if err != nil {
+		coreerrors.Respond(c, err)
+		return
+	}
+	if rows == nil {
+		rows = []entities.LowStockFilament{}
+	}
+
+	c.JSON(http.StatusOK, entities.LowStockResponse{Data: rows})
+}

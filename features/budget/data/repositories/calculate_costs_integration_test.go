@@ -99,7 +99,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			pdf_url varchar(500),
 			quote_number integer, valid_until timestamptz,
 			public_token varchar(43), public_token_created_at timestamptz,
-			customer_response_at timestamptz, customer_response_name varchar(120),
+			approved_at timestamptz, completed_at timestamptz, customer_response_at timestamptz, customer_response_name varchar(120),
 			customer_response_ip varchar(45), customer_response_user_agent varchar(255),
 			rejection_reason text,
 			owner_user_id varchar(255) NOT NULL,

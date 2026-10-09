@@ -37,9 +37,21 @@ func createPhase4BSchema(t *testing.T, db *gorm.DB) {
 			customer_response_ip varchar(45),
 			customer_response_user_agent varchar(255),
 			rejection_reason text,
+			approved_at timestamptz,
+			completed_at timestamptz,
 			created_at timestamptz NOT NULL DEFAULT now(),
 			updated_at timestamptz NOT NULL DEFAULT now(),
 			deleted_at timestamptz
+		)`,
+		`CREATE TABLE budget_status_history (
+			id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+			budget_id uuid NOT NULL,
+			organization_id varchar(255) NOT NULL,
+			previous_status varchar(20) NOT NULL,
+			new_status varchar(20) NOT NULL,
+			changed_by varchar(255) NOT NULL,
+			notes text,
+			created_at timestamptz NOT NULL DEFAULT now()
 		)`,
 		`CREATE UNIQUE INDEX uq_budgets_org_quote_number ON budgets(organization_id, quote_number) WHERE deleted_at IS NULL AND quote_number IS NOT NULL`,
 		`CREATE UNIQUE INDEX uq_budgets_public_token ON budgets(public_token) WHERE public_token IS NOT NULL`,
@@ -182,6 +194,14 @@ func TestExpireOverdue_SQL(t *testing.T) {
 		return s
 	}
 	require.Equal(t, "expired", status(overdue))
+
+	// The expiration is recorded in the status history (funnel/response times).
+	var history []struct{ PreviousStatus, NewStatus, ChangedBy string }
+	require.NoError(t, db.Raw(`SELECT previous_status, new_status, changed_by FROM budget_status_history WHERE budget_id = ?`, overdue).Scan(&history).Error)
+	require.Len(t, history, 1)
+	require.Equal(t, "sent", history[0].PreviousStatus)
+	require.Equal(t, "expired", history[0].NewStatus)
+	require.Equal(t, "system", history[0].ChangedBy)
 	require.Equal(t, "sent", status(notDue))
 	require.Equal(t, "sent", status(noValidity))
 	require.Equal(t, "approved", status(approvedOverdue))
@@ -228,4 +248,66 @@ func TestRespondToPublicBudget_Race(t *testing.T) {
 	var status string
 	require.NoError(t, db.Raw(`SELECT status FROM budgets WHERE id = ?`, id).Scan(&status).Error)
 	require.Equal(t, "approved", status)
+}
+
+// TestUpdateStatus_LifecycleDates checks approved_at/completed_at are stamped on the
+// matching transitions and cleared when the budget is reopened as a draft.
+func TestUpdateStatus_LifecycleDates(t *testing.T) {
+	db := openTestDB(t, "qlifecycle")
+	createPhase4BSchema(t, db)
+	repo := repoimpl.NewBudgetRepository(db)
+	ctx := context.Background()
+
+	id := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, status) VALUES (?, 'org-a', 'sent')`, id).Error)
+
+	dates := func() (approved, completed *time.Time) {
+		var row struct{ ApprovedAt, CompletedAt *time.Time }
+		require.NoError(t, db.Raw(`SELECT approved_at, completed_at FROM budgets WHERE id = ?`, id).Scan(&row).Error)
+		return row.ApprovedAt, row.CompletedAt
+	}
+
+	require.NoError(t, repo.UpdateStatus(ctx, id, "org-a", entities.StatusSent, entities.StatusApproved))
+	approved, completed := dates()
+	require.NotNil(t, approved)
+	require.Nil(t, completed)
+
+	require.NoError(t, repo.UpdateStatus(ctx, id, "org-a", entities.StatusApproved, entities.StatusPrinting))
+	require.NoError(t, repo.UpdateStatus(ctx, id, "org-a", entities.StatusPrinting, entities.StatusCompleted))
+	approvedAfter, completed := dates()
+	require.Equal(t, approved.Unix(), approvedAfter.Unix(), "approval date is kept through production")
+	require.NotNil(t, completed)
+
+	// Reopening (cancelled -> draft) starts a new sale: dates are cleared.
+	require.NoError(t, db.Exec(`UPDATE budgets SET status = 'cancelled' WHERE id = ?`, id).Error)
+	require.NoError(t, repo.UpdateStatus(ctx, id, "org-a", entities.StatusCancelled, entities.StatusDraft))
+	approved, completed = dates()
+	require.Nil(t, approved)
+	require.Nil(t, completed)
+}
+
+// TestRespondToPublicBudget_ApprovalDate checks a customer approval stamps approved_at.
+func TestRespondToPublicBudget_ApprovalDate(t *testing.T) {
+	db := openTestDB(t, "qpublicdate")
+	createPhase4BSchema(t, db)
+	repo := repoimpl.NewBudgetRepository(db)
+
+	approved, rejected := uuid.New(), uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, status) VALUES (?, 'org-a', 'sent'), (?, 'org-a', 'sent')`, approved, rejected).Error)
+	at := time.Now().Truncate(time.Second)
+
+	_, err := repo.RespondToPublicBudget(context.Background(), approved, entities.StatusApproved, "Ana", "1.1.1.1", "ua", nil, at)
+	require.NoError(t, err)
+	reason := "caro"
+	_, err = repo.RespondToPublicBudget(context.Background(), rejected, entities.StatusRejected, "Ana", "1.1.1.1", "ua", &reason, at)
+	require.NoError(t, err)
+
+	approvedAt := func(id uuid.UUID) *time.Time {
+		var row struct{ ApprovedAt *time.Time }
+		require.NoError(t, db.Raw(`SELECT approved_at FROM budgets WHERE id = ?`, id).Scan(&row).Error)
+		return row.ApprovedAt
+	}
+	require.NotNil(t, approvedAt(approved))
+	require.Equal(t, at.Unix(), approvedAt(approved).Unix())
+	require.Nil(t, approvedAt(rejected))
 }

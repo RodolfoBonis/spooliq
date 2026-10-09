@@ -12,32 +12,36 @@ import (
 // dashboard aggregates.
 var statusInvalidateGroups = []string{"filaments", "dashboard"}
 
+// dashboardInvalidateGroups covers mutations that change dashboard aggregates
+// (counts, revenue, profit) without touching stock.
+var dashboardInvalidateGroups = []string{"dashboard"}
+
 // Routes registers all budget routes
 func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware) {
 	budgetRoutes := route.Group("/budgets")
 	{
 		// All users can manage budgets
-		budgetRoutes.POST("", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.POST("", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(dashboardInvalidateGroups...))
 		// Stateless cost preview (never persists). Same roles as create.
 		budgetRoutes.POST("/preview", protectFactory(useCase.Preview, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/export.csv", protectFactory(useCase.ExportCSV, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
-		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(dashboardInvalidateGroups...))
 		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(statusInvalidateGroups...))
-		budgetRoutes.POST("/:id/duplicate", protectFactory(useCase.Duplicate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.POST("/:id/duplicate", protectFactory(useCase.Duplicate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(dashboardInvalidateGroups...))
 		// Public share link management (create/return token, revoke).
 		budgetRoutes.POST("/:id/share", protectFactory(useCase.Share, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.DELETE("/:id/share", protectFactory(useCase.RevokeShare, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Recalculate (mutates stored costs) is a POST and only allowed for drafts.
-		budgetRoutes.POST("/:id/recalculate", protectFactory(useCase.Recalculate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.POST("/:id/recalculate", protectFactory(useCase.Recalculate, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(dashboardInvalidateGroups...))
 		// Deprecated: read-only view of stored costs (kept for backward compatibility).
 		budgetRoutes.GET("/:id/calculate", protectFactory(useCase.GetCalculation, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id/history", protectFactory(useCase.GetHistory, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/by-customer/:customer_id", protectFactory(useCase.FindByCustomer, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id/pdf", protectFactory(useCase.GeneratePDF, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Only Owner and OrgAdmin can delete budgets
-		budgetRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.OwnerRole, roles.OrgAdminRole))
+		budgetRoutes.DELETE("/:id", protectFactory(useCase.Delete, roles.OwnerRole, roles.OrgAdminRole), cacheMiddleware.InvalidateMiddleware(dashboardInvalidateGroups...))
 	}
 }
 

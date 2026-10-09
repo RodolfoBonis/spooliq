@@ -296,10 +296,7 @@ func (r *budgetRepositoryImpl) UpdateStatus(ctx context.Context, budgetID uuid.U
 	result := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).
 		Where("id = ? AND organization_id = ? AND status = ?", budgetID, organizationID, string(expectedCurrent)).
-		Updates(map[string]interface{}{
-			"status":     string(newStatus),
-			"updated_at": time.Now(),
-		})
+		Updates(lifecycleUpdates(newStatus, time.Now()))
 	if result.Error != nil {
 		return fmt.Errorf("failed to update budget status: %w", result.Error)
 	}
@@ -307,6 +304,26 @@ func (r *budgetRepositoryImpl) UpdateStatus(ctx context.Context, budgetID uuid.U
 		return entities.ErrBudgetStatusConflict
 	}
 	return nil
+}
+
+// lifecycleUpdates is the column set for a status change: the status itself plus
+// the approval/completion instants the dashboard relies on. Reopening a budget
+// (back to draft) clears them, since the next approval is a new sale.
+func lifecycleUpdates(newStatus entities.BudgetStatus, at time.Time) map[string]interface{} {
+	updates := map[string]interface{}{
+		"status":     string(newStatus),
+		"updated_at": at,
+	}
+	switch newStatus {
+	case entities.StatusApproved:
+		updates["approved_at"] = at
+	case entities.StatusCompleted:
+		updates["completed_at"] = at
+	case entities.StatusDraft:
+		updates["approved_at"] = nil
+		updates["completed_at"] = nil
+	}
+	return updates
 }
 
 // UpdatePDFURL writes only the pdf_url column (and updated_at), scoped by
@@ -441,10 +458,20 @@ func (r *budgetRepositoryImpl) SetValidUntil(ctx context.Context, budgetID uuid.
 // and returns how many rows were updated.
 func (r *budgetRepositoryImpl) ExpireOverdue(ctx context.Context) ([]entities.ExpiredBudget, error) {
 	var expired []entities.ExpiredBudget
+	// The status history row is written in the same statement so the funnel and
+	// response-time metrics see expirations.
 	err := r.db.WithContext(ctx).Raw(
-		`UPDATE budgets SET status = 'expired', updated_at = now()
-		 WHERE status = 'sent' AND valid_until < now() AND deleted_at IS NULL
-		 RETURNING id, organization_id, name, quote_number`,
+		`WITH expired AS (
+			UPDATE budgets SET status = 'expired', updated_at = now()
+			WHERE status = 'sent' AND valid_until < now() AND deleted_at IS NULL
+			RETURNING id, organization_id, name, quote_number
+		), history AS (
+			INSERT INTO budget_status_history
+				(id, budget_id, organization_id, previous_status, new_status, changed_by, notes, created_at)
+			SELECT gen_random_uuid(), id, organization_id, 'sent', 'expired', 'system', 'Validade expirada', now()
+			FROM expired
+		)
+		SELECT id, organization_id, name, quote_number FROM expired`,
 	).Scan(&expired).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to expire overdue budgets: %w", err)
@@ -465,6 +492,9 @@ func (r *budgetRepositoryImpl) RespondToPublicBudget(ctx context.Context, budget
 		"customer_response_user_agent": userAgent,
 		"rejection_reason":             reason,
 		"updated_at":                   respondedAt,
+	}
+	if newStatus == entities.StatusApproved {
+		updates["approved_at"] = respondedAt
 	}
 	result := r.db.WithContext(ctx).
 		Model(&models.BudgetModel{}).

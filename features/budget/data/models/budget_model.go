@@ -33,6 +33,11 @@ type BudgetModel struct {
 	PublicToken          *string    `gorm:"type:varchar(43)" json:"public_token"`
 	PublicTokenCreatedAt *time.Time `gorm:"type:timestamptz" json:"public_token_created_at"`
 
+	// Lifecycle instants used by the dashboard: when the budget was last approved
+	// (manually or by the customer) and when it was completed. Cleared on reopen.
+	ApprovedAt  *time.Time `gorm:"type:timestamptz" json:"approved_at"`
+	CompletedAt *time.Time `gorm:"type:timestamptz" json:"completed_at"`
+
 	// Customer response (recorded via the public approve/reject endpoints).
 	CustomerResponseAt        *time.Time `gorm:"type:timestamptz" json:"customer_response_at"`
 	CustomerResponseName      *string    `gorm:"type:varchar(120)" json:"customer_response_name"`
@@ -157,6 +162,8 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		ValidUntil:                b.ValidUntil,
 		PublicToken:               b.PublicToken,
 		PublicTokenCreatedAt:      b.PublicTokenCreatedAt,
+		ApprovedAt:                b.ApprovedAt,
+		CompletedAt:               b.CompletedAt,
 		CustomerResponseAt:        b.CustomerResponseAt,
 		CustomerResponseName:      b.CustomerResponseName,
 		CustomerResponseIP:        b.CustomerResponseIP,
@@ -224,6 +231,8 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.ValidUntil = entity.ValidUntil
 	b.PublicToken = entity.PublicToken
 	b.PublicTokenCreatedAt = entity.PublicTokenCreatedAt
+	b.ApprovedAt = entity.ApprovedAt
+	b.CompletedAt = entity.CompletedAt
 	b.CustomerResponseAt = entity.CustomerResponseAt
 	b.CustomerResponseName = entity.CustomerResponseName
 	b.CustomerResponseIP = entity.CustomerResponseIP

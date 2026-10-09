@@ -12,6 +12,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,6 +25,29 @@ type publicFake struct {
 	token         string
 	customerEmail string
 	items         []*entities.BudgetItemEntity
+	history       []*entities.BudgetStatusHistoryEntity
+	historyErr    error
+}
+
+func (p *publicFake) AddStatusHistory(_ context.Context, h *entities.BudgetStatusHistoryEntity) error {
+	if p.historyErr != nil {
+		return p.historyErr
+	}
+	p.history = append(p.history, h)
+	return nil
+}
+
+type fakeInvalidator struct{ orgs []string }
+
+func (f *fakeInvalidator) InvalidatePrefix(_ context.Context, orgID, prefix string) error {
+	f.orgs = append(f.orgs, orgID+":"+prefix)
+	return nil
+}
+
+// WithTransaction hands the callback the publicFake itself (not the embedded
+// fakeBudgetRepo) so transactional writes hit the stateful overrides.
+func (p *publicFake) WithTransaction(_ context.Context, fn func(repo budgetRepo.BudgetRepository) error) error {
+	return fn(p)
 }
 
 func (p *publicFake) GetItems(_ context.Context, _ uuid.UUID) ([]*entities.BudgetItemEntity, error) {
@@ -175,6 +199,43 @@ func TestPublicApprove_HappyPath(t *testing.T) {
 	}
 	if view.CustomerResponseName == nil || *view.CustomerResponseName != "Alice" {
 		t.Errorf("customer_response_name not recorded: %v", view.CustomerResponseName)
+	}
+}
+
+func TestPublicApprove_RecordsHistoryAndInvalidatesDashboard(t *testing.T) {
+	future := time.Now().Add(24 * time.Hour)
+	b := &entities.BudgetEntity{ID: uuid.New(), OrganizationID: "org-a", Name: "X", Status: entities.StatusSent, ValidUntil: &future}
+	repo := newPublicFake(b, "tok")
+	uc := newPublicUC(repo)
+	cache := &fakeInvalidator{}
+	uc.cache = cache
+
+	c, w := newJSONContext(http.MethodPost, "/v1/public/budgets/tok/approve", `{"name":"Alice"}`, gin.Params{{Key: "token", Value: "tok"}})
+	uc.Approve(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("got status %d body %s", w.Code, w.Body.String())
+	}
+	if len(repo.history) != 1 || repo.history[0].PreviousStatus != entities.StatusSent || repo.history[0].NewStatus != entities.StatusApproved {
+		t.Fatalf("history not recorded as sent→approved: %+v", repo.history)
+	}
+	if len(cache.orgs) != 1 || cache.orgs[0] != "org-a:dashboard" {
+		t.Errorf("dashboard cache not invalidated: %v", cache.orgs)
+	}
+}
+
+func TestPublicApprove_HistoryFailureFailsTheResponse(t *testing.T) {
+	future := time.Now().Add(24 * time.Hour)
+	b := &entities.BudgetEntity{ID: uuid.New(), OrganizationID: "org-a", Name: "X", Status: entities.StatusSent, ValidUntil: &future}
+	repo := newPublicFake(b, "tok")
+	repo.historyErr = context.DeadlineExceeded
+	uc := newPublicUC(repo)
+
+	c, w := newJSONContext(http.MethodPost, "/v1/public/budgets/tok/approve", `{"name":"Alice"}`, gin.Params{{Key: "token", Value: "tok"}})
+	uc.Approve(c)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("got status %d, want 500 so the transaction rolls back and the customer can retry", w.Code)
 	}
 }
 

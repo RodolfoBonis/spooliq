@@ -12,6 +12,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/config"
 	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	webhookEntities "github.com/RodolfoBonis/spooliq/features/webhooks/domain/entities"
@@ -24,6 +25,7 @@ type AsaasWebhookUseCase struct {
 	subscriptionRepository subscriptionRepositories.SubscriptionRepository
 	logger                 logger.Logger
 	webhookSecret          string
+	notifications          notificationUc.INotificationService
 }
 
 // NewAsaasWebhookUseCase creates a new webhook use case
@@ -32,12 +34,14 @@ func NewAsaasWebhookUseCase(
 	subscriptionRepository subscriptionRepositories.SubscriptionRepository,
 	cfg *config.AppConfig,
 	logger logger.Logger,
+	notifications notificationUc.INotificationService,
 ) *AsaasWebhookUseCase {
 	return &AsaasWebhookUseCase{
 		companyRepository:      companyRepository,
 		subscriptionRepository: subscriptionRepository,
 		logger:                 logger,
 		webhookSecret:          cfg.AsaasWebhookSecret,
+		notifications:          notifications,
 	}
 }
 

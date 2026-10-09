@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.17.0 - 2026-10-09
+
+### Changes
+- chore: bump version to 2.17.0 (8d9602f)
+- fix(dashboard): never cache partial insights, recover failing sources, transactional goals (0d322b5)
+- feat(dashboard): user goals with projection and rule-based insights (5156381)
+- fix(dashboard): time responses from the latest send and count one decision per budget (512ade5)
+- feat(dashboard): real profit, profitability and response times (63f7bce)
+- fix(budget): atomic public response history, serialized backfills and dashboard invalidation (b5261a4)
+- feat(budget): approval/completion dates and complete status history for analytics (e41cb62)
+
+
+## v2.16.0 - 2026-10-09
+
+### Changes
+- chore: bump version to 2.16.0 (62fd6f3)
+- feat(csv): export budgets and customers, import customers from CSV (#108) (f7eab43)
+- feat(notification): in-app notifications for budget responses, expiry, low stock and payments (#107) (fa2437b)
+- feat(account): forgot password, own profile and password change; record cancel reason (#106) (3308005)
+
+
 ## v2.6.2 - 2026-07-02
 
 ### Changes

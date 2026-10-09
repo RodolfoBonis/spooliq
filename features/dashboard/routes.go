@@ -12,7 +12,8 @@ import (
 //
 // Dashboard responses are per-user and vary by query; the cache wraps each handler
 // so it runs inside protectFactory (after auth, with organization_id in context).
-// Dashboard entries are not actively invalidated and rely on their short TTLs.
+// Budget writes and goal changes invalidate the "dashboard" group; otherwise
+// entries rely on their short TTLs.
 func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware) {
 	dashboard := router.Group("/dashboard")
 
@@ -39,5 +40,15 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 		dashboard.GET("/top-filaments", protectFactory(cacheMiddleware.Wrap(handler.GetTopFilaments, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		dashboard.GET("/top-materials", protectFactory(cacheMiddleware.Wrap(handler.GetTopMaterials, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		dashboard.GET("/goals-alerts", protectFactory(cacheMiddleware.Wrap(handler.GetGoalsAlerts, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		dashboard.GET("/profitability", protectFactory(cacheMiddleware.Wrap(handler.GetProfitability, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		dashboard.GET("/response-times", protectFactory(cacheMiddleware.Wrap(handler.GetResponseTimes, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		dashboard.GET("/insights", protectFactory(cacheMiddleware.Wrap(handler.GetInsights, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		// Goal targets are small and edited in place: read uncached; saving
+		// invalidates cached goals-alerts and insights.
+		dashboard.GET("/goals", protectFactory(handler.GetGoals, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		dashboard.PUT("/goals", protectFactory(handler.SaveGoals, roles.OwnerRole, roles.OrgAdminRole), cacheMiddleware.InvalidateMiddleware("dashboard"))
+		// Low-stock is intentionally NOT cached: it must reflect stock movements
+		// immediately (movements change balances frequently).
+		dashboard.GET("/low-stock", protectFactory(handler.GetLowStock, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 	}
 }

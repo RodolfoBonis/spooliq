@@ -21,6 +21,7 @@ func Routes(route *gin.RouterGroup, useCase usecases.IBudgetUseCase, protectFact
 		// Stateless cost preview (never persists). Same roles as create.
 		budgetRoutes.POST("/preview", protectFactory(useCase.Preview, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		budgetRoutes.GET("/export.csv", protectFactory(useCase.ExportCSV, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		budgetRoutes.PATCH("/:id/status", protectFactory(useCase.UpdateStatus, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole), cacheMiddleware.InvalidateMiddleware(statusInvalidateGroups...))

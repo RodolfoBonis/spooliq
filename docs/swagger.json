@@ -2447,6 +2447,69 @@
                 }
             }
         },
+        "/budgets/export.csv": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Same filters and sorting as GET /budgets (q, status, customer_id, from, to), up to 5000 rows. UTF-8 with BOM, ';' separator.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Export budgets (CSV)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search (name or quote number)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter (comma-separated)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created from (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created until (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/budgets/preview": {
             "post": {
                 "security": [
@@ -3734,6 +3797,82 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers/export.csv": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Up to 5000 customers (optionally filtered by q), with budget count and total. UTF-8 with BOM, ';' separator. The file can be re-imported.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Export customers (CSV)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Columns are matched by header name (pt-BR or English, case/accent-insensitive): nome/name (required), email, telefone/phone, documento/cpf/cnpj, endereço/address, cidade/city, uf/estado/state, cep/zip, observações/notas/notes. Rows whose e-mail already exists are skipped. Max 2000 rows / 2 MB. Accepts ';' or ',' (the export format re-imports as is).",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Import customers (CSV)",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "CSV file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.ImportResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -15618,6 +15757,44 @@
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.ImportResult": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.ImportRowResult"
+                    }
+                },
+                "skipped": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usecases.ImportRowResult": {
+            "type": "object",
+            "properties": {
+                "line": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "created | skipped | error",
                     "type": "string"
                 }
             }

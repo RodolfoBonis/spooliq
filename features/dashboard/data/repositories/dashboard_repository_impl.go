@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/dashboard/domain/entities"
+	domainRepos "github.com/RodolfoBonis/spooliq/features/dashboard/domain/repositories"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
@@ -14,6 +15,8 @@ import (
 type DashboardRepositoryImpl struct {
 	db *gorm.DB
 }
+
+var _ domainRepos.DashboardRepository = (*DashboardRepositoryImpl)(nil)
 
 // NewDashboardRepository creates a new dashboard repository.
 func NewDashboardRepository(db *gorm.DB) *DashboardRepositoryImpl {
@@ -560,192 +563,6 @@ func (r *DashboardRepositoryImpl) GetTopMaterials(organizationID string, start, 
 
 	return &entities.TopMaterialsResponse{
 		Materials: rows,
-	}, nil
-}
-
-// ──────────────────────────────────────────────
-// GetGoalsAlerts
-// ──────────────────────────────────────────────
-
-// goalPeriodMetrics holds aggregated metrics for a single period used by GetGoalsAlerts.
-type goalPeriodMetrics struct {
-	Revenue     int64
-	BudgetCount int
-	Approved    int
-	Decided     int
-}
-
-// GetGoalsAlerts returns goals progress and active alerts.
-func (r *DashboardRepositoryImpl) GetGoalsAlerts(organizationID string) (*entities.GoalsAlertsResponse, error) {
-	now := time.Now().UTC()
-	currentStart := now.AddDate(0, 0, -30)
-	prevStart := now.AddDate(0, 0, -60)
-
-	var current, previous goalPeriodMetrics
-	var staleDrafts, inactiveCustomers int
-
-	g := new(errgroup.Group)
-
-	// Query 1: Both periods in a single query using period bucketing.
-	// Replaces 4 sequential queries (prev revenue, prev approval, cur revenue, cur approval).
-	g.Go(func() error {
-		type periodRow struct {
-			Period      string `gorm:"column:period"`
-			Revenue     int64  `gorm:"column:revenue"`
-			BudgetCount int    `gorm:"column:budget_count"`
-			Approved    int    `gorm:"column:approved"`
-			Decided     int    `gorm:"column:decided"`
-		}
-
-		sql := `SELECT
-			CASE WHEN created_at >= ? THEN 'current' ELSE 'previous' END AS period,
-			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN total_cost ELSE 0 END), 0) AS revenue,
-			COALESCE(SUM(CASE WHEN status IN ('approved','printing','completed') THEN 1 ELSE 0 END), 0) AS budget_count,
-			COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0) AS approved,
-			COALESCE(SUM(CASE WHEN status IN ('approved','rejected') THEN 1 ELSE 0 END), 0) AS decided
-		FROM budgets
-		WHERE organization_id = ?
-		  AND deleted_at IS NULL
-		  AND created_at >= ? AND created_at < ?
-		GROUP BY period`
-
-		var rows []periodRow
-		if err := r.db.Raw(sql, currentStart, organizationID, prevStart, now).Scan(&rows).Error; err != nil {
-			return err
-		}
-
-		for _, row := range rows {
-			switch row.Period {
-			case "current":
-				current = goalPeriodMetrics{Revenue: row.Revenue, BudgetCount: row.BudgetCount, Approved: row.Approved, Decided: row.Decided}
-			case "previous":
-				previous = goalPeriodMetrics{Revenue: row.Revenue, BudgetCount: row.BudgetCount, Approved: row.Approved, Decided: row.Decided}
-			}
-		}
-		return nil
-	})
-
-	// Query 2: Stale drafts (uses idx_budgets_org_status_updated)
-	g.Go(func() error {
-		sql := `SELECT COUNT(*)
-		        FROM budgets
-		        WHERE organization_id = ?
-		          AND status = 'draft'
-		          AND updated_at < ?
-		          AND deleted_at IS NULL`
-		staleThreshold := now.AddDate(0, 0, -7)
-		return r.db.Raw(sql, organizationID, staleThreshold).Row().Scan(&staleDrafts)
-	})
-
-	// Query 3: Inactive customers
-	g.Go(func() error {
-		sql := `SELECT COUNT(*)
-		        FROM customers c
-		        WHERE c.organization_id = ?
-		          AND c.is_active = true
-		          AND c.deleted_at IS NULL
-		          AND NOT EXISTS (
-		            SELECT 1 FROM budgets b
-		            WHERE b.customer_id = c.id
-		              AND b.deleted_at IS NULL
-		              AND b.created_at >= ?
-		          )`
-		return r.db.Raw(sql, organizationID, currentStart).Row().Scan(&inactiveCustomers)
-	})
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	// Build goals
-	goals := make([]entities.Goal, 0, 3)
-
-	revenueTarget := float64(previous.Revenue) * 1.1
-	var revProgress float64
-	if revenueTarget > 0 {
-		revProgress = float64(current.Revenue) / revenueTarget * 100
-	}
-	goals = append(goals, entities.Goal{
-		Name:     "Monthly Revenue",
-		Current:  float64(current.Revenue),
-		Target:   revenueTarget,
-		Progress: math.Min(revProgress, 100),
-		Unit:     "cents",
-	})
-
-	budgetTarget := float64(previous.BudgetCount) * 1.1
-	var budgetProgress float64
-	if budgetTarget > 0 {
-		budgetProgress = float64(current.BudgetCount) / budgetTarget * 100
-	}
-	goals = append(goals, entities.Goal{
-		Name:     "Monthly Budgets",
-		Current:  float64(current.BudgetCount),
-		Target:   budgetTarget,
-		Progress: math.Min(budgetProgress, 100),
-		Unit:     "count",
-	})
-
-	var prevConvRate float64
-	if previous.Decided > 0 {
-		prevConvRate = float64(previous.Approved) / float64(previous.Decided) * 100
-	}
-	convTarget := prevConvRate * 1.1
-	var curConvRate float64
-	if current.Decided > 0 {
-		curConvRate = float64(current.Approved) / float64(current.Decided) * 100
-	}
-	var convProgress float64
-	if convTarget > 0 {
-		convProgress = curConvRate / convTarget * 100
-	}
-	goals = append(goals, entities.Goal{
-		Name:     "Conversion Rate",
-		Current:  curConvRate,
-		Target:   convTarget,
-		Progress: math.Min(convProgress, 100),
-		Unit:     "percent",
-	})
-
-	// Build alerts
-	alerts := make([]entities.Alert, 0, 3)
-
-	if staleDrafts > 0 {
-		alerts = append(alerts, entities.Alert{
-			Type:       "stale_drafts",
-			Severity:   "warning",
-			Message:    fmt.Sprintf("%d budget(s) in draft status with no updates in 7+ days", staleDrafts),
-			Count:      staleDrafts,
-			EntityType: "budget",
-		})
-	}
-
-	if current.Decided > 0 {
-		rejRate := float64(current.Decided-current.Approved) / float64(current.Decided) * 100
-		if rejRate > 30 {
-			alerts = append(alerts, entities.Alert{
-				Type:       "high_rejection",
-				Severity:   "danger",
-				Message:    fmt.Sprintf("Rejection rate is %.1f%% in the last 30 days", rejRate),
-				Count:      current.Decided - current.Approved,
-				EntityType: "budget",
-			})
-		}
-	}
-
-	if inactiveCustomers > 0 {
-		alerts = append(alerts, entities.Alert{
-			Type:       "inactive_customers",
-			Severity:   "info",
-			Message:    fmt.Sprintf("%d active customer(s) with no budgets in the last 30 days", inactiveCustomers),
-			Count:      inactiveCustomers,
-			EntityType: "customer",
-		})
-	}
-
-	return &entities.GoalsAlertsResponse{
-		Goals:  goals,
-		Alerts: alerts,
 	}, nil
 }
 

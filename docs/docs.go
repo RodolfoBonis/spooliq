@@ -4278,6 +4278,110 @@ const docTemplate = `{
                 }
             }
         },
+        "/dashboard/goals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the organization's user-defined monthly targets (revenue and profit in cents, budgets as a count, approval_rate as a percentage).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get monthly goal targets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.GoalTargetsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upserts monthly targets per metric (revenue, profit, budgets, approval_rate). A target of 0 removes that goal. Owner/OrgAdmin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Save monthly goal targets",
+                "parameters": [
+                    {
+                        "description": "Targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.SaveGoalTargetsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.GoalTargetsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/goals-alerts": {
             "get": {
                 "security": [
@@ -4285,7 +4389,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns monthly goals progress (revenue, budgets, profit margin) and active alerts for low stock, expiring budgets, and pending approvals",
+                "description": "Returns the current month's goals (America/Sao_Paulo) with user-defined targets, progress, month-end projection and required daily pace, plus operational alerts. Metrics without a target come back with configured=false.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4317,6 +4421,60 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/insights": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns up to 8 rule-based insights (pt-BR) for the period, ranked by severity and money at stake: margin drops, low-margin materials, high-discount customers, low profit/hour machines, slow responses, expiring budgets, expirations, rejections, stock vs demand, waste, stale drafts, inactive repeat customers and goals off pace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get actionable insights",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.InsightsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
                         }
@@ -12518,20 +12676,96 @@ const docTemplate = `{
         "entities.Goal": {
             "type": "object",
             "properties": {
+                "configured": {
+                    "type": "boolean"
+                },
                 "current": {
                     "type": "number"
+                },
+                "days_left": {
+                    "type": "integer"
+                },
+                "metric": {
+                    "$ref": "#/definitions/entities.GoalMetric"
                 },
                 "name": {
                     "type": "string"
                 },
                 "progress": {
+                    "description": "current / target * 100, capped at 100",
+                    "type": "number"
+                },
+                "projected": {
+                    "description": "Projected is the month-end value at the current daily pace (cumulative\nmetrics) or the current value (approval rate).",
+                    "type": "number"
+                },
+                "projected_progress": {
+                    "description": "projected / target * 100 (not capped)",
+                    "type": "number"
+                },
+                "required_per_day": {
+                    "description": "RequiredPerDay is what is still needed per remaining day to hit the target\n(zero when already reached or for approval rate).",
                     "type": "number"
                 },
                 "target": {
                     "type": "number"
                 },
                 "unit": {
+                    "description": "cents | count | percent",
                     "type": "string"
+                }
+            }
+        },
+        "entities.GoalMetric": {
+            "type": "string",
+            "enum": [
+                "revenue",
+                "profit",
+                "budgets",
+                "approval_rate"
+            ],
+            "x-enum-comments": {
+                "GoalApprovalRate": "approved / decided in the month",
+                "GoalBudgets": "number of sales approved in the month",
+                "GoalProfit": "profit of sales approved in the month",
+                "GoalRevenue": "net revenue of sales approved in the month"
+            },
+            "x-enum-descriptions": [
+                "net revenue of sales approved in the month",
+                "profit of sales approved in the month",
+                "number of sales approved in the month",
+                "approved / decided in the month"
+            ],
+            "x-enum-varnames": [
+                "GoalRevenue",
+                "GoalProfit",
+                "GoalBudgets",
+                "GoalApprovalRate"
+            ]
+        },
+        "entities.GoalTarget": {
+            "type": "object",
+            "required": [
+                "metric"
+            ],
+            "properties": {
+                "metric": {
+                    "$ref": "#/definitions/entities.GoalMetric"
+                },
+                "target": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "entities.GoalTargetsResponse": {
+            "type": "object",
+            "properties": {
+                "goals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.GoalTarget"
+                    }
                 }
             }
         },
@@ -12549,6 +12783,84 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.Goal"
                     }
+                },
+                "month": {
+                    "description": "Month is the goals month in America/Sao_Paulo, formatted YYYY-MM.",
+                    "type": "string"
+                }
+            }
+        },
+        "entities.Insight": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/entities.InsightAction"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "impact": {
+                    "description": "Impact is the estimated money at stake in cents, used for ranking.",
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "metric": {
+                    "description": "Metric is the key number already formatted in pt-BR (\"12,4%\", \"R$ 350,00\").",
+                    "type": "string"
+                },
+                "severity": {
+                    "$ref": "#/definitions/entities.InsightSeverity"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.InsightAction": {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.InsightSeverity": {
+            "type": "string",
+            "enum": [
+                "critical",
+                "warning",
+                "info",
+                "positive"
+            ],
+            "x-enum-varnames": [
+                "SeverityCritical",
+                "SeverityWarning",
+                "SeverityInfo",
+                "SeverityPositive"
+            ]
+        },
+        "entities.InsightsResponse": {
+            "type": "object",
+            "properties": {
+                "insights": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Insight"
+                    }
+                },
+                "period": {
+                    "type": "string"
                 }
             }
         },
@@ -14440,6 +14752,20 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/entities.RevenueTrendPoint"
+                    }
+                }
+            }
+        },
+        "entities.SaveGoalTargetsRequest": {
+            "type": "object",
+            "required": [
+                "goals"
+            ],
+            "properties": {
+                "goals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.GoalTarget"
                     }
                 }
             }

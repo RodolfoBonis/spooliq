@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/RodolfoBonis/spooliq/features/dashboard/data/models"
 	repoimpl "github.com/RodolfoBonis/spooliq/features/dashboard/data/repositories"
+	"github.com/RodolfoBonis/spooliq/features/dashboard/domain/entities"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/postgres"
@@ -38,7 +40,7 @@ func openProfitDB(t *testing.T) *gorm.DB {
 	for _, s := range []string{
 		`CREATE TABLE customers (id uuid PRIMARY KEY, organization_id varchar(255), name varchar(255), email varchar(255), created_at timestamptz DEFAULT now(), deleted_at timestamptz)`,
 		`CREATE TABLE materials (id uuid PRIMARY KEY, name varchar(255))`,
-		`CREATE TABLE filaments (id uuid PRIMARY KEY, name varchar(255), color varchar(100) DEFAULT '', color_hex varchar(7), material_id uuid)`,
+		`CREATE TABLE filaments (id uuid PRIMARY KEY, organization_id varchar(255), name varchar(255), color varchar(100) DEFAULT '', color_hex varchar(7), material_id uuid, track_stock boolean DEFAULT false, stock_grams bigint DEFAULT 0, deleted_at timestamptz)`,
 		`CREATE TABLE presets (id uuid PRIMARY KEY, name varchar(255))`,
 		`CREATE TABLE budgets (
 			id uuid PRIMARY KEY, organization_id varchar(255) NOT NULL, customer_id uuid,
@@ -62,6 +64,7 @@ func openProfitDB(t *testing.T) *gorm.DB {
 	} {
 		require.NoError(t, db.Exec(s).Error, s)
 	}
+	require.NoError(t, db.AutoMigrate(&models.DashboardGoalModel{}))
 	return db
 }
 
@@ -172,6 +175,52 @@ func TestProfitMetrics(t *testing.T) {
 		require.Equal(t, "Bambu A1", p.ByMachine[0].Name)
 		require.InDelta(t, 3.0, p.ByMachine[0].Hours, 0.001)
 		require.InDelta(t, 26.67, p.AverageMargin, 0.01)
+	})
+
+	t.Run("signals", func(t *testing.T) {
+		// PLA Preto is tracked with less stock than the 300 g sold recently.
+		require.NoError(t, db.Exec(`UPDATE filaments SET organization_id = ?, track_stock = true, stock_grams = 100 WHERE id = ?`, profitOrg, plaBlack).Error)
+		require.NoError(t, db.Exec(`UPDATE budgets SET waste_cost = 500 WHERE id = ?`, completed).Error)
+		require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, status, updated_at) VALUES (?, ?, 'draft', ?)`,
+			uuid.New(), profitOrg, now.Add(-10*24*time.Hour)).Error)
+
+		s, err := repo.GetInsightSignals(profitOrg, start, end, now)
+		require.NoError(t, err)
+		require.Equal(t, 1, s.StaleDrafts)
+		require.EqualValues(t, 500, s.WasteCost)
+		require.EqualValues(t, 10000, s.FilamentCost) // item cost stored as filament_cost by the fixture
+		require.Len(t, s.StockShortfall, 1)
+		require.Equal(t, "PLA Basic Preto", s.StockShortfall[0].Name)
+		require.InDelta(t, 300, s.StockShortfall[0].ConsumedGrams30, 0.01)
+		require.Zero(t, s.InactiveRepeatCustomersTotal, "Ana bought recently")
+	})
+
+	t.Run("goals", func(t *testing.T) {
+		require.NoError(t, repo.SaveGoalTargets(profitOrg, "u1", []entities.GoalTarget{
+			{Metric: entities.GoalProfit, Target: 1000},
+			{Metric: entities.GoalBudgets, Target: 10},
+		}))
+		// Upsert updates in place and a zero target removes the goal.
+		require.NoError(t, repo.SaveGoalTargets(profitOrg, "u2", []entities.GoalTarget{
+			{Metric: entities.GoalProfit, Target: 2000},
+			{Metric: entities.GoalBudgets, Target: 0},
+		}))
+		targets, err := repo.GetGoalTargets(profitOrg)
+		require.NoError(t, err)
+		require.Equal(t, []entities.GoalTarget{{Metric: entities.GoalProfit, Target: 2000}}, targets)
+
+		ga, err := repo.GetGoalsAlerts(profitOrg, now)
+		require.NoError(t, err)
+		require.Len(t, ga.Goals, 4)
+		byMetric := map[entities.GoalMetric]entities.Goal{}
+		for _, g := range ga.Goals {
+			byMetric[g.Metric] = g
+		}
+		require.True(t, byMetric[entities.GoalProfit].Configured)
+		require.False(t, byMetric[entities.GoalBudgets].Configured)
+		sp, err := time.LoadLocation("America/Sao_Paulo")
+		require.NoError(t, err)
+		require.Equal(t, now.In(sp).Format("2006-01"), ga.Month)
 	})
 
 	t.Run("response times", func(t *testing.T) {

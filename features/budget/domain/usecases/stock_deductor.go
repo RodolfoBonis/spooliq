@@ -14,4 +14,14 @@ import (
 // the status transition and the stock movements commit (or roll back) atomically.
 type StockDeductor interface {
 	DeductForCompletedBudget(ctx context.Context, tx *gorm.DB, budgetID uuid.UUID, organizationID, userID string) error
+	// LowStockForBudget lists the budget's tracked filaments at/below threshold.
+	LowStockForBudget(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]LowStockFilament, error)
+}
+
+// LowStockFilament is the budget package's view of a low-stock filament.
+type LowStockFilament struct {
+	ID         uuid.UUID
+	Name       string
+	Color      string
+	StockGrams int64
 }

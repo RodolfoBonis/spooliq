@@ -33,8 +33,8 @@ func (f *fakeBudgetRepo) SetValidUntil(_ context.Context, _ uuid.UUID, _ string,
 	return nil
 }
 
-func (f *fakeBudgetRepo) ExpireOverdue(_ context.Context) (int64, error) {
-	return 0, nil
+func (f *fakeBudgetRepo) ExpireOverdue(_ context.Context) ([]entities.ExpiredBudget, error) {
+	return nil, nil
 }
 
 func (f *fakeBudgetRepo) RespondToPublicBudget(_ context.Context, _ uuid.UUID, _ entities.BudgetStatus, _, _, _ string, _ *string, _ time.Time) (int64, error) {

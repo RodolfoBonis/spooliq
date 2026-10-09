@@ -35,6 +35,8 @@ import (
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	model3dDi "github.com/RodolfoBonis/spooliq/features/model3d/di"
 	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
+	notificationDi "github.com/RodolfoBonis/spooliq/features/notification/di"
+	notificationuc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/profile"
 	profileDi "github.com/RodolfoBonis/spooliq/features/profile/di"
@@ -69,6 +71,7 @@ func NewFxApp() *fx.App {
 		services.Module,
 		middlewares.Module,
 		activityDi.Module,
+		notificationDi.Module,
 		authDi.AuthModule,
 		brandDi.Module,
 		budgetDi.Module,
@@ -113,7 +116,7 @@ func NewFxApp() *fx.App {
 			},
 		),
 		fx.Invoke(
-			func(lc fx.Lifecycle, router *gin.Engine, activityService activityuc.IActivityService, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, publicBudgetUc budgetuc.IPublicBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, stockUc stockuc.IStockUseCase, materialUc materialuc.IMaterialUseCase, model3dUc model3duc.IModel3DUseCase, slicerUc sliceruc.ISlicerUseCase, uploadsUc uploadsuc.IUploadUseCase, paymentMethodUc *subscriptionuc.PaymentMethodUseCase, subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase, manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase, presetHandler *preset.Handler, profileHandler *profile.Handler, dashboardHandler *dashboard.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, accountHandler *account.Handler, adminHandler *admin.Handler, healthHandler *health.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, agent *otelagent.Agent, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, logger logger.Logger) {
+			func(lc fx.Lifecycle, router *gin.Engine, activityService activityuc.IActivityService, notificationService notificationuc.INotificationService, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, publicBudgetUc budgetuc.IPublicBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, stockUc stockuc.IStockUseCase, materialUc materialuc.IMaterialUseCase, model3dUc model3duc.IModel3DUseCase, slicerUc sliceruc.ISlicerUseCase, uploadsUc uploadsuc.IUploadUseCase, paymentMethodUc *subscriptionuc.PaymentMethodUseCase, subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase, manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase, presetHandler *preset.Handler, profileHandler *profile.Handler, dashboardHandler *dashboard.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, accountHandler *account.Handler, adminHandler *admin.Handler, healthHandler *health.Handler, monitoring *middlewares.MonitoringMiddleware, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, agent *otelagent.Agent, redisService *services.RedisService, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, logger logger.Logger) {
 				// Initialize Redis connection
 				if err := redisService.Init(); err != nil {
 					logger.Error(context.TODO(), "Failed to initialize Redis", map[string]interface{}{
@@ -122,7 +125,7 @@ func NewFxApp() *fx.App {
 				}
 
 				// Setup middlewares and lifecycle hooks
-				SetupMiddlewaresAndRoutes(lc, router, activityService, authUc, registerUc, brandUc, budgetUc, publicBudgetUc, companyUc, brandingUc, subscriptionPaymentsUc, customerUc, filamentUc, stockUc, materialUc, model3dUc, slicerUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, profileHandler, dashboardHandler, webhookHandler, userHandler, accountHandler, adminHandler, healthHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, agent)
+				SetupMiddlewaresAndRoutes(lc, router, activityService, notificationService, authUc, registerUc, brandUc, budgetUc, publicBudgetUc, companyUc, brandingUc, subscriptionPaymentsUc, customerUc, filamentUc, stockUc, materialUc, model3dUc, slicerUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, profileHandler, dashboardHandler, webhookHandler, userHandler, accountHandler, adminHandler, healthHandler, protectFactory, cacheMiddleware, subscriptionMiddleware, logger, monitoring, agent)
 			},
 		),
 		InitAndRun(),

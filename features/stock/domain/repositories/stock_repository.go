@@ -36,4 +36,8 @@ type StockRepository interface {
 	// actually happened, making the whole operation idempotent. Untracked filaments are
 	// skipped; stock may go negative.
 	DeductForCompletedBudget(ctx context.Context, tx *gorm.DB, budgetID uuid.UUID, organizationID, userID string) error
+
+	// LowStockForBudget returns the budget's tracked filaments that are at or below
+	// their low-stock threshold (used to notify after a completion).
+	LowStockForBudget(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]entities.LowStockFilament, error)
 }

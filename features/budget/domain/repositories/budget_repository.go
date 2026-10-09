@@ -67,8 +67,8 @@ type BudgetRepository interface {
 	SetValidUntil(ctx context.Context, budgetID uuid.UUID, organizationID string, validUntil *time.Time) error
 
 	// ExpireOverdue marks every sent budget whose valid_until has passed as expired in
-	// one statement, returning the number of rows updated. Used by the expiry job.
-	ExpireOverdue(ctx context.Context) (int64, error)
+	// one statement, returning the budgets it updated. Used by the expiry job.
+	ExpireOverdue(ctx context.Context) ([]entities.ExpiredBudget, error)
 
 	// RespondToPublicBudget applies a customer response (approve/reject) using a
 	// race-safe conditional UPDATE guarded by status='sent' and a non-expired

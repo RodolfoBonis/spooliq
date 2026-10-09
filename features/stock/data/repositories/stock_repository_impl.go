@@ -42,6 +42,8 @@ func (r *stockRepositoryImpl) FilamentExistsInOrg(ctx context.Context, filamentI
 // lockedFilament is the projection read under FOR UPDATE when applying a movement.
 type lockedFilament struct {
 	ID                     uuid.UUID `gorm:"column:id"`
+	Name                   string    `gorm:"column:name"`
+	Color                  string    `gorm:"column:color"`
 	StockGrams             int64     `gorm:"column:stock_grams"`
 	TrackStock             bool      `gorm:"column:track_stock"`
 	LowStockThresholdGrams *int      `gorm:"column:low_stock_threshold_grams"`
@@ -59,7 +61,7 @@ func (r *stockRepositoryImpl) CreateManualMovement(ctx context.Context, m *entit
 		if err := tx.
 			Clauses(clause.Locking{Strength: "UPDATE"}).
 			Table("filaments").
-			Select("id, stock_grams, track_stock, low_stock_threshold_grams").
+			Select("id, name, color, stock_grams, track_stock, low_stock_threshold_grams").
 			Where("id = ? AND organization_id = ? AND deleted_at IS NULL", m.FilamentID, m.OrganizationID).
 			Take(&fil).Error; err != nil {
 			return err // gorm.ErrRecordNotFound bubbles up to a 404 in the use case
@@ -94,6 +96,8 @@ func (r *stockRepositoryImpl) CreateManualMovement(ctx context.Context, m *entit
 		stored = model.ToEntity()
 		summary = &entities.FilamentStockSummary{
 			ID:                     m.FilamentID,
+			Name:                   fil.Name,
+			Color:                  fil.Color,
 			StockGrams:             newStock,
 			TrackStock:             true,
 			LowStockThresholdGrams: fil.LowStockThresholdGrams,
@@ -261,4 +265,23 @@ func (r *stockRepositoryImpl) DeductForCompletedBudget(ctx context.Context, tx *
 	}
 
 	return nil
+}
+
+// LowStockForBudget lists the budget's tracked filaments at/below their threshold.
+func (r *stockRepositoryImpl) LowStockForBudget(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]entities.LowStockFilament, error) {
+	var rows []entities.LowStockFilament
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT DISTINCT f.id, f.name, f.color, f.stock_grams
+		FROM budget_item_filaments bif
+		JOIN budget_items bi ON bi.id = bif.budget_item_id
+		JOIN filaments f ON f.id = bif.filament_id
+		WHERE bi.budget_id = ? AND f.organization_id = ? AND f.deleted_at IS NULL
+		  AND f.track_stock AND f.low_stock_threshold_grams IS NOT NULL
+		  AND f.stock_grams <= f.low_stock_threshold_grams`,
+		budgetID, organizationID,
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to load low-stock filaments: %w", err)
+	}
+	return rows, nil
 }

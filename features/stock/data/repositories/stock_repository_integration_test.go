@@ -383,3 +383,40 @@ func TestIntegration_Deduct_WasteDefaultsWhenNoPreset(t *testing.T) {
 	require.Equal(t, int64(892), stockOf(t, db, a), "round(100 + 7.5) = 108")
 	require.Equal(t, int64(892), stockOf(t, db, b), "round(100 + 7.5) = 108")
 }
+
+// TestIntegration_LowStockForBudget lists only the budget's tracked filaments at or
+// below their threshold, and the manual movement summary carries name/color.
+func TestIntegration_LowStockForBudget(t *testing.T) {
+	db := openStockTestDB(t)
+	repo := repoimpl.NewStockRepository(db)
+	threshold := 200
+
+	low := insertFilament(t, db, orgA, 150, true, &threshold)
+	ok := insertFilament(t, db, orgA, 900, true, &threshold)
+	untracked := insertFilament(t, db, orgA, 10, false, &threshold)
+	noThreshold := insertFilament(t, db, orgA, 10, true, nil)
+	_ = insertFilament(t, db, orgA, 10, true, &threshold) // not in the budget
+
+	budgetID := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, quote_number) VALUES (?,?,?)`, budgetID, orgA, 9).Error)
+	item := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budget_items (id, budget_id, organization_id) VALUES (?,?,?)`, item, budgetID, orgA).Error)
+	for _, f := range []uuid.UUID{low, low, ok, untracked, noThreshold} {
+		require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (id, budget_item_id, filament_id, organization_id, quantity) VALUES (?,?,?,?,?)`, uuid.New(), item, f, orgA, 10.0).Error)
+	}
+
+	got, err := repo.LowStockForBudget(context.Background(), budgetID, orgA)
+	require.NoError(t, err)
+	require.Len(t, got, 1, "deduplicated and filtered")
+	require.Equal(t, low, got[0].ID)
+	require.Equal(t, "PLA", got[0].Name)
+	require.Equal(t, "red", got[0].Color)
+	require.Equal(t, int64(150), got[0].StockGrams)
+
+	_, summary, err := repo.CreateManualMovement(context.Background(), &entities.StockMovementEntity{
+		OrganizationID: orgA, FilamentID: ok, Type: entities.MovementWaste, Grams: -750, CreatedBy: "u1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "PLA", summary.Name)
+	require.True(t, summary.IsLowStock)
+}

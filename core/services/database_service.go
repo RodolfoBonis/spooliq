@@ -19,6 +19,7 @@ import (
 	filaments "github.com/RodolfoBonis/spooliq/features/filament/data/models"
 	materials "github.com/RodolfoBonis/spooliq/features/material/data/models"
 	models3d "github.com/RodolfoBonis/spooliq/features/model3d/data/models"
+	notifications "github.com/RodolfoBonis/spooliq/features/notification/data/models"
 	presets "github.com/RodolfoBonis/spooliq/features/preset/data/models"
 	presetRepos "github.com/RodolfoBonis/spooliq/features/preset/data/repositories"
 	profiles "github.com/RodolfoBonis/spooliq/features/profile/data/models"
@@ -279,6 +280,11 @@ func RunMigrations() {
 	// 5.1. Activities (FK: OrganizationID -> Companies)
 	if err := Connector.AutoMigrate(&activities.ActivityModel{}); err != nil {
 		panic(fmt.Sprintf("ERROR DURING ACTIVITY MIGRATION: %s", err.Error()))
+	}
+
+	// 5.2. Notifications (FK: OrganizationID -> Companies)
+	if err := Connector.AutoMigrate(&notifications.NotificationModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING NOTIFICATION MIGRATION: %s", err.Error()))
 	}
 
 	// 6. Brands (FK: OrganizationID -> Companies, referenced by FilamentModel)
@@ -562,7 +568,7 @@ func RunMigrations() {
 	fmt.Println("Adding organization_id foreign key constraints...")
 
 	orgFKTables := map[string]bool{
-		"activities": true, "users": true, "brands": true, "materials": true, "filaments": true,
+		"activities": true, "notifications": true, "users": true, "brands": true, "materials": true, "filaments": true,
 		"customers": true, "models_3d": true, "presets": true, "budgets": true, "budget_items": true,
 		"budget_item_filaments": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,

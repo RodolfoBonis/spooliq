@@ -6,6 +6,8 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	budgetRepos "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	budgetUsecases "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
+	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"go.uber.org/fx"
 )
 
@@ -24,18 +26,21 @@ const expiryJobInitialDelay = time.Minute
 // The public endpoints also check valid_until directly, so correctness never
 // depends on this job having run — it only keeps the stored status in sync for the
 // dashboard/list views.
-func RegisterExpiryJob(lc fx.Lifecycle, repo budgetRepos.BudgetRepository, log logger.Logger) {
+func RegisterExpiryJob(lc fx.Lifecycle, repo budgetRepos.BudgetRepository, notifications notificationUc.INotificationService, log logger.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ticker := time.NewTicker(expiryJobInterval)
 
 	runOnce := func() {
-		count, err := repo.ExpireOverdue(ctx)
+		expired, err := repo.ExpireOverdue(ctx)
 		if err != nil {
 			log.Error(ctx, "Budget expiry sweep failed", map[string]interface{}{"error": err.Error()})
 			return
 		}
-		if count > 0 {
-			log.Info(ctx, "Budget expiry sweep completed", map[string]interface{}{"expired_count": count})
+		if len(expired) > 0 {
+			log.Info(ctx, "Budget expiry sweep completed", map[string]interface{}{"expired_count": len(expired)})
+		}
+		for _, b := range expired {
+			notifications.Notify(b.OrganizationID, budgetUsecases.ExpiredNotification(b))
 		}
 	}
 

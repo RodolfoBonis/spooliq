@@ -7,6 +7,7 @@ import (
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
+	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,6 +47,7 @@ type BudgetUseCase struct {
 	// stockDeductor decrements filament stock when a budget is completed. It runs in
 	// the same transaction as the status change. Injected via FX (stock feature).
 	stockDeductor StockDeductor
+	notifications notificationUc.INotificationService
 }
 
 // NewBudgetUseCase creates a new instance of BudgetUseCase
@@ -60,6 +62,7 @@ func NewBudgetUseCase(
 	profileProvider ProfilePresetProvider,
 	presetProvider DefaultPresetProvider,
 	stockDeductor StockDeductor,
+	notifications notificationUc.INotificationService,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
@@ -72,6 +75,7 @@ func NewBudgetUseCase(
 		profileProvider:    profileProvider,
 		presetProvider:     presetProvider,
 		stockDeductor:      stockDeductor,
+		notifications:      notifications,
 	}
 }
 

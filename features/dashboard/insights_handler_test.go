@@ -82,4 +82,27 @@ func TestGetInsights_DegradesWhenASourceFails(t *testing.T) {
 	require.Len(t, resp.Insights, 1)
 	assert.Equal(t, "stale_drafts", resp.Insights[0].Kind)
 	assert.Equal(t, "30d", resp.Period)
+	assert.True(t, resp.Partial)
+	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"), "partial results must not be cached")
+}
+
+func TestGetInsights_RecoversFromAPanickingSource(t *testing.T) {
+	repo := mocks.NewMockDashboardRepository()
+	h := NewDashboardHandler(repo, mocks.NewMockActivityService(), noopLogger{})
+	any := mock.Anything
+	repo.On("GetOverview", testOrganizationID, any, any, any, any).Return(&entities.OverviewResponse{}, nil)
+	repo.On("GetOperationalInsights", testOrganizationID, any, any, any, any).Return(&entities.OperationalInsightsResponse{}, nil)
+	repo.On("GetProfitability", testOrganizationID, any, any, any).Run(func(mock.Arguments) { panic("scan exploded") })
+	repo.On("GetResponseTimes", testOrganizationID, any, any).Return(&entities.ResponseTimesResponse{}, nil)
+	repo.On("GetInsightSignals", testOrganizationID, any, any, any).Return(&entities.InsightSignals{}, nil)
+	repo.On("GetGoalsAlerts", testOrganizationID, any).Return(&entities.GoalsAlertsResponse{}, nil)
+
+	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/insights")
+	setOrganizationID(c, testOrganizationID)
+
+	require.NotPanics(t, func() { h.GetInsights(c) })
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp entities.InsightsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.True(t, resp.Partial)
 }

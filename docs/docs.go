@@ -12859,6 +12859,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.Insight"
                     }
                 },
+                "partial": {
+                    "description": "Partial is true when a data source failed and its rules were skipped.",
+                    "type": "boolean"
+                },
                 "period": {
                     "type": "string"
                 }

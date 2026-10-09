@@ -52,6 +52,8 @@ type Insight struct {
 type InsightsResponse struct {
 	Insights []Insight `json:"insights"`
 	Period   string    `json:"period"`
+	// Partial is true when a data source failed and its rules were skipped.
+	Partial bool `json:"partial"`
 }
 
 // NamedRef identifies an entity by ID and display name.

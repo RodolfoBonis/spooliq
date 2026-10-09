@@ -8,6 +8,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/dashboard/data/models"
 	"github.com/RodolfoBonis/spooliq/features/dashboard/domain/entities"
 	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -99,30 +100,30 @@ func (r *DashboardRepositoryImpl) GetGoalTargets(organizationID string) ([]entit
 
 // SaveGoalTargets upserts the given targets; a zero target deletes the goal.
 func (r *DashboardRepositoryImpl) SaveGoalTargets(organizationID, userID string, goals []entities.GoalTarget) error {
-	tx := r.db.Begin()
-	for _, goal := range goals {
-		var err error
-		if goal.Target <= 0 {
-			err = tx.Where("organization_id = ? AND metric = ?", organizationID, string(goal.Metric)).
-				Delete(&models.DashboardGoalModel{}).Error
-		} else {
-			err = tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "organization_id"}, {Name: "metric"}},
-				DoUpdates: clause.AssignmentColumns([]string{"target", "updated_by", "updated_at"}),
-			}).Create(&models.DashboardGoalModel{
-				OrganizationID: organizationID,
-				Metric:         string(goal.Metric),
-				Period:         "monthly",
-				Target:         goal.Target,
-				UpdatedBy:      userID,
-			}).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, goal := range goals {
+			var err error
+			if goal.Target <= 0 {
+				err = tx.Where("organization_id = ? AND metric = ?", organizationID, string(goal.Metric)).
+					Delete(&models.DashboardGoalModel{}).Error
+			} else {
+				err = tx.Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "organization_id"}, {Name: "metric"}},
+					DoUpdates: clause.AssignmentColumns([]string{"target", "updated_by", "updated_at"}),
+				}).Create(&models.DashboardGoalModel{
+					OrganizationID: organizationID,
+					Metric:         string(goal.Metric),
+					Period:         "monthly",
+					Target:         goal.Target,
+					UpdatedBy:      userID,
+				}).Error
+			}
+			if err != nil {
+				return fmt.Errorf("failed to save dashboard goal %s: %w", goal.Metric, err)
+			}
 		}
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("failed to save dashboard goal %s: %w", goal.Metric, err)
-		}
-	}
-	return tx.Commit().Error
+		return nil
+	})
 }
 
 // GetGoalsAlerts returns the month's goals (user-defined targets, progress and

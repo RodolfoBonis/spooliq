@@ -2,7 +2,9 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
@@ -76,7 +78,21 @@ func (h *Handler) SaveGoals(c *gin.Context) {
 		coreerrors.Respond(c, err)
 		return
 	}
-	h.GetGoals(c)
+	goals, err := h.repo.GetGoalTargets(organizationID)
+	if err != nil {
+		// Saved already: answer 200 (so the dashboard cache is invalidated) with
+		// what was just written instead of failing the request.
+		h.logger.Error(c.Request.Context(), "failed to reload dashboard goals after save", logger.Fields{
+			"organization_id": organizationID, "error": err.Error(),
+		})
+		goals = make([]entities.GoalTarget, 0, len(req.Goals))
+		for _, g := range req.Goals {
+			if g.Target > 0 {
+				goals = append(goals, g)
+			}
+		}
+	}
+	c.JSON(http.StatusOK, entities.GoalTargetsResponse{Goals: goals})
 }
 
 // GetInsights godoc
@@ -99,26 +115,39 @@ func (h *Handler) GetInsights(c *gin.Context) {
 	start, end, prevStart, prevEnd := period.ToTimeRange()
 	now := time.Now()
 
-	in := h.collectInsightInput(c.Request.Context(), organizationID, start, end, prevStart, prevEnd, now)
+	in, failed := h.collectInsightInput(c.Request.Context(), organizationID, start, end, prevStart, prevEnd, now)
+	if failed {
+		// Do not let a transient failure stick in the cache for the whole TTL.
+		c.Header("Cache-Control", "no-store")
+	}
 	c.JSON(http.StatusOK, entities.InsightsResponse{
 		Insights: insights.Generate(in),
 		Period:   string(period),
+		Partial:  failed,
 	})
 }
 
-// collectInsightInput loads every source in parallel. A failing source is
-// logged and left nil so the remaining rules still run.
-func (h *Handler) collectInsightInput(ctx context.Context, organizationID string, start, end, prevStart, prevEnd, now time.Time) insights.Input {
-	var in insights.Input
+// collectInsightInput loads every source in parallel. A failing (or panicking)
+// source is logged and left nil so the remaining rules still run; failed
+// reports whether any source was lost.
+func (h *Handler) collectInsightInput(ctx context.Context, organizationID string, start, end, prevStart, prevEnd, now time.Time) (in insights.Input, failed bool) {
+	var failures atomic.Int32
 	g := new(errgroup.Group)
 	load := func(source string, fn func() error) {
-		g.Go(func() error {
-			if err := fn(); err != nil {
-				h.logger.Error(ctx, "dashboard insights source failed", logger.Fields{
-					"source": source, "organization_id": organizationID, "error": err.Error(),
-				})
-			}
-			return nil
+		g.Go(func() (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("panic: %v", r)
+				}
+				if err != nil {
+					failures.Add(1)
+					h.logger.Error(ctx, "dashboard insights source failed", logger.Fields{
+						"source": source, "organization_id": organizationID, "error": err.Error(),
+					})
+				}
+				err = nil // degrade instead of failing the request
+			}()
+			return fn()
 		})
 	}
 
@@ -165,5 +194,5 @@ func (h *Handler) collectInsightInput(ctx context.Context, organizationID string
 		return nil
 	})
 	_ = g.Wait()
-	return in
+	return in, failures.Load() > 0
 }

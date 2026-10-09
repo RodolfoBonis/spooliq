@@ -12,6 +12,8 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/validation"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
+	notificationEntities "github.com/RodolfoBonis/spooliq/features/notification/domain/entities"
+	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/stock/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/stock/domain/repositories"
 	"github.com/gin-gonic/gin"
@@ -30,11 +32,12 @@ type StockUseCase struct {
 	repository      repositories.StockRepository
 	logger          log.Logger
 	activityService activityUc.IActivityService
+	notifications   notificationUc.INotificationService
 }
 
 // NewStockUseCase creates a new stock use case.
-func NewStockUseCase(repository repositories.StockRepository, logger log.Logger, activityService activityUc.IActivityService) IStockUseCase {
-	return &StockUseCase{repository: repository, logger: logger, activityService: activityService}
+func NewStockUseCase(repository repositories.StockRepository, logger log.Logger, activityService activityUc.IActivityService, notifications notificationUc.INotificationService) IStockUseCase {
+	return &StockUseCase{repository: repository, logger: logger, activityService: activityService, notifications: notifications}
 }
 
 // movementSortWhitelist maps the public sort name to a safe column. created_at is
@@ -141,6 +144,11 @@ func (uc *StockUseCase) CreateMovement(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, response)
+
+	if summary.TrackStock && summary.IsLowStock && uc.notifications != nil {
+		uc.notifications.Notify(organizationID, notificationEntities.LowStockNotification(
+			filamentID.String(), summary.Name, summary.Color, summary.StockGrams))
+	}
 
 	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
 		OrganizationID: organizationID,

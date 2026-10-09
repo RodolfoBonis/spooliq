@@ -219,3 +219,11 @@ func (b *BudgetEntity) CanBeEdited() bool {
 func (b *BudgetEntity) CanBeDeleted() bool {
 	return b.Status != StatusPrinting && b.Status != StatusCompleted
 }
+
+// ExpiredBudget identifies a budget moved to expired by the expiry job.
+type ExpiredBudget struct {
+	ID             uuid.UUID
+	OrganizationID string
+	Name           string
+	QuoteNumber    *int
+}

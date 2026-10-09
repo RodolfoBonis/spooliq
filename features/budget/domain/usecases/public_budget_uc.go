@@ -16,6 +16,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/gin-gonic/gin"
 )
 
@@ -44,6 +45,7 @@ type PublicBudgetUseCase struct {
 	pdfService         *services.PDFService
 	redisService       *services.RedisService
 	activityService    activityUc.IActivityService
+	notifications      notificationUc.INotificationService
 	logger             logger.Logger
 }
 
@@ -54,6 +56,7 @@ func NewPublicBudgetUseCase(
 	pdfService *services.PDFService,
 	redisService *services.RedisService,
 	activityService activityUc.IActivityService,
+	notifications notificationUc.INotificationService,
 	logger logger.Logger,
 ) IPublicBudgetUseCase {
 	return &PublicBudgetUseCase{
@@ -62,6 +65,7 @@ func NewPublicBudgetUseCase(
 		pdfService:         pdfService,
 		redisService:       redisService,
 		activityService:    activityService,
+		notifications:      notifications,
 		logger:             logger,
 	}
 }
@@ -327,6 +331,9 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 		},
 		CreatedAt: now,
 	})
+	if uc.notifications != nil {
+		uc.notifications.Notify(budget.OrganizationID, CustomerResponseNotification(budget, newStatus, name, reason))
+	}
 
 	updated, err := uc.budgetRepository.FindByPublicToken(ctx, c.Param("token"))
 	if err != nil {

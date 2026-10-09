@@ -76,6 +76,8 @@ type StockMovementResponse struct {
 // movement so the client can refresh the balance without a second request.
 type FilamentStockSummary struct {
 	ID                     uuid.UUID `json:"id"`
+	Name                   string    `json:"name"`
+	Color                  string    `json:"color"`
 	StockGrams             int64     `json:"stock_grams"`
 	TrackStock             bool      `json:"track_stock"`
 	LowStockThresholdGrams *int      `json:"low_stock_threshold_grams"`
@@ -108,4 +110,12 @@ type ListMovementsResponse struct {
 	Page       int                     `json:"page"`
 	PageSize   int                     `json:"page_size"`
 	TotalPages int                     `json:"total_pages"`
+}
+
+// LowStockFilament is a tracked filament at or below its low-stock threshold.
+type LowStockFilament struct {
+	ID         uuid.UUID
+	Name       string
+	Color      string
+	StockGrams int64
 }

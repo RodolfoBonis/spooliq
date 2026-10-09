@@ -27,6 +27,7 @@ func createPhase4BSchema(t *testing.T, db *gorm.DB) {
 		`CREATE TABLE budgets (
 			id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 			organization_id varchar(255) NOT NULL,
+			name varchar(255) NOT NULL DEFAULT '',
 			quote_number integer,
 			public_token varchar(43),
 			status varchar(20) NOT NULL DEFAULT 'draft',
@@ -169,9 +170,11 @@ func TestExpireOverdue_SQL(t *testing.T) {
 		(?, 'org-a', 'approved', ?)`,
 		overdue, past, notDue, future, noValidity, approvedOverdue, past).Error)
 
-	count, err := repo.ExpireOverdue(context.Background())
+	expired, err := repo.ExpireOverdue(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, int64(1), count)
+	require.Len(t, expired, 1)
+	require.Equal(t, overdue, expired[0].ID)
+	require.Equal(t, "org-a", expired[0].OrganizationID)
 
 	status := func(id uuid.UUID) string {
 		var s string

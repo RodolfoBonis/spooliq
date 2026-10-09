@@ -439,15 +439,17 @@ func (r *budgetRepositoryImpl) SetValidUntil(ctx context.Context, budgetID uuid.
 
 // ExpireOverdue marks every overdue sent budget as expired in a single statement
 // and returns how many rows were updated.
-func (r *budgetRepositoryImpl) ExpireOverdue(ctx context.Context) (int64, error) {
-	result := r.db.WithContext(ctx).Exec(
+func (r *budgetRepositoryImpl) ExpireOverdue(ctx context.Context) ([]entities.ExpiredBudget, error) {
+	var expired []entities.ExpiredBudget
+	err := r.db.WithContext(ctx).Raw(
 		`UPDATE budgets SET status = 'expired', updated_at = now()
-		 WHERE status = 'sent' AND valid_until < now() AND deleted_at IS NULL`,
-	)
-	if result.Error != nil {
-		return 0, fmt.Errorf("failed to expire overdue budgets: %w", result.Error)
+		 WHERE status = 'sent' AND valid_until < now() AND deleted_at IS NULL
+		 RETURNING id, organization_id, name, quote_number`,
+	).Scan(&expired).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to expire overdue budgets: %w", err)
 	}
-	return result.RowsAffected, nil
+	return expired, nil
 }
 
 // RespondToPublicBudget applies a customer response (approve/reject) with a

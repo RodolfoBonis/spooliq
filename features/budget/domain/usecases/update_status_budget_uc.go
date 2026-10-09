@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -11,6 +12,7 @@ import (
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	notificationEntities "github.com/RodolfoBonis/spooliq/features/notification/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -187,6 +189,10 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 
+	if request.Status == entities.StatusCompleted {
+		uc.notifyLowStockAfterCompletion(budget.ID, organizationID)
+	}
+
 	// Record activity (fire-and-forget)
 	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
 		OrganizationID: organizationID,
@@ -201,4 +207,28 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		},
 		CreatedAt: time.Now(),
 	})
+}
+
+// notifyLowStockAfterCompletion warns about filaments the completion pushed to
+// (or kept at) low stock. Runs in the background; notifications are deduplicated
+// per filament, so already-warned filaments don't repeat.
+func (uc *BudgetUseCase) notifyLowStockAfterCompletion(budgetID uuid.UUID, organizationID string) {
+	if uc.stockDeductor == nil || uc.notifications == nil {
+		return
+	}
+	go func() {
+		ctx := context.Background()
+		low, err := uc.stockDeductor.LowStockForBudget(ctx, budgetID, organizationID)
+		if err != nil {
+			uc.logger.Error(ctx, "Failed to check low stock after completion", map[string]interface{}{
+				"error":     err.Error(),
+				"budget_id": budgetID,
+			})
+			return
+		}
+		for _, f := range low {
+			uc.notifications.Notify(organizationID, notificationEntities.LowStockNotification(
+				f.ID.String(), f.Name, f.Color, f.StockGrams))
+		}
+	}()
 }

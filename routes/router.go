@@ -28,6 +28,8 @@ import (
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/model3d"
 	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/notification"
+	notificationuc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/profile"
 	"github.com/RodolfoBonis/spooliq/features/slicer"
@@ -50,6 +52,7 @@ import (
 func InitializeRoutes(
 	router *gin.Engine,
 	activityService activityuc.IActivityService,
+	notificationService notificationuc.INotificationService,
 	authUc authuc.AuthUseCase,
 	registerUc *authuc.RegisterUseCase,
 	brandUc branduc.IBrandUseCase,
@@ -91,6 +94,7 @@ func InitializeRoutes(
 
 	healthHandler.Register(root)
 	activity.Routes(root, activityService, protectFactory)
+	notification.Routes(root, notificationService, protectFactory)
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
 	budget.Routes(root, budgetUc, protectFactory, cacheMiddleware)

@@ -4489,6 +4489,69 @@
                 }
             }
         },
+        "/dashboard/profitability": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Profit (profit amount minus discount) and net revenue (without tax and shipping) of the period's sales, counted by approval date, broken down by material, filament, customer, machine and cost preset. Budget amounts are allocated to items by cost share and to filaments by grams share.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get profitability breakdown",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Rows per dimension (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfitabilityResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/recent-activity": {
             "get": {
                 "security": [
@@ -4529,6 +4592,60 @@
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/response-times": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Median/p75 hours from sending a budget to the customer's decision, approval buckets, expiration and rejection rates, recent rejection reasons and sent budgets expiring in the next 2 days.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get customer response times",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ResponseTimesResponse"
                         }
                     },
                     "401": {
@@ -11351,13 +11468,29 @@
                 "energy_pct": {
                     "type": "number"
                 },
+                "failure_pct": {
+                    "type": "number"
+                },
                 "filament_pct": {
                     "type": "number"
                 },
                 "labor_pct": {
                     "type": "number"
                 },
+                "machine_pct": {
+                    "description": "Components previously left out of the breakdown (additive fields).",
+                    "type": "number"
+                },
                 "overhead_pct": {
+                    "type": "number"
+                },
+                "packaging_pct": {
+                    "type": "number"
+                },
+                "post_processing_pct": {
+                    "type": "number"
+                },
+                "quality_control_pct": {
                     "type": "number"
                 },
                 "setup_pct": {
@@ -11989,6 +12122,29 @@
                 },
                 "energy_cost_per_kwh": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.ExpiringBudget": {
+            "type": "object",
+            "properties": {
+                "budget_id": {
+                    "type": "string"
+                },
+                "budget_name": {
+                    "type": "string"
+                },
+                "customer": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "valid_until": {
+                    "type": "string"
                 }
             }
         },
@@ -12877,6 +13033,9 @@
                 "approval_rate_change": {
                     "type": "number"
                 },
+                "approval_rate_points_change": {
+                    "type": "number"
+                },
                 "avg_profit_margin": {
                     "type": "number"
                 },
@@ -12895,6 +13054,13 @@
                 "budgets_change": {
                     "type": "number"
                 },
+                "net_revenue": {
+                    "description": "Profit metrics: sales (approved, printing, completed) counted by approval\ndate. Money in cents. NetRevenue excludes tax and shipping; Profit is\nprofit_amount minus discount; ProfitRealized + ProfitForecast = Profit.",
+                    "type": "integer"
+                },
+                "net_revenue_change": {
+                    "type": "number"
+                },
                 "new_customers": {
                     "type": "integer"
                 },
@@ -12904,11 +13070,45 @@
                 "period": {
                     "type": "string"
                 },
+                "print_hours": {
+                    "type": "number"
+                },
+                "production_cost": {
+                    "type": "integer"
+                },
+                "profit": {
+                    "type": "integer"
+                },
+                "profit_change": {
+                    "type": "number"
+                },
+                "profit_forecast": {
+                    "type": "integer"
+                },
+                "profit_margin": {
+                    "description": "weighted: profit / net revenue * 100",
+                    "type": "number"
+                },
                 "profit_margin_change": {
                     "type": "number"
                 },
+                "profit_margin_points_change": {
+                    "type": "number"
+                },
+                "profit_per_print_hour": {
+                    "type": "integer"
+                },
+                "profit_per_print_hour_change": {
+                    "type": "number"
+                },
+                "profit_realized": {
+                    "type": "integer"
+                },
                 "revenue_change": {
                     "type": "number"
+                },
+                "sales_count": {
+                    "type": "integer"
                 },
                 "total_budgets": {
                     "type": "integer"
@@ -13735,6 +13935,97 @@
                 }
             }
         },
+        "entities.ProfitRow": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "count": {
+                    "description": "sales (customers/machines) or items (materials/filaments)",
+                    "type": "integer"
+                },
+                "discount_rate": {
+                    "description": "DiscountRate is set for customers: discount / price before discount * 100.",
+                    "type": "number"
+                },
+                "grams": {
+                    "type": "number"
+                },
+                "hours": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "margin": {
+                    "description": "profit / revenue * 100",
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "profit": {
+                    "type": "integer"
+                },
+                "profit_per_hour": {
+                    "description": "ProfitPerHour is set for machines (profit per print hour, cents).",
+                    "type": "integer"
+                },
+                "repeat": {
+                    "description": "Repeat is set for customers with more than one sale ever.",
+                    "type": "boolean"
+                },
+                "revenue": {
+                    "description": "net revenue (no tax/shipping)",
+                    "type": "integer"
+                },
+                "subtitle": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ProfitabilityResponse": {
+            "type": "object",
+            "properties": {
+                "average_margin": {
+                    "type": "number"
+                },
+                "by_cost_preset": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_customer": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_filament": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_machine": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_material": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.PublicBudgetCompany": {
             "type": "object",
             "properties": {
@@ -14011,6 +14302,29 @@
                 }
             }
         },
+        "entities.RejectionReason": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "budget_id": {
+                    "type": "string"
+                },
+                "budget_name": {
+                    "type": "string"
+                },
+                "customer": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.RequestLoginEntity": {
             "description": "RequestLoginEntity model data",
             "type": "object",
@@ -14022,6 +14336,70 @@
                 "password": {
                     "description": "User password",
                     "type": "string"
+                }
+            }
+        },
+        "entities.ResponseBucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ResponseTimesResponse": {
+            "type": "object",
+            "properties": {
+                "approval_buckets": {
+                    "description": "ApprovalBuckets counts approvals by time to decide.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ResponseBucket"
+                    }
+                },
+                "approval_median_hours": {
+                    "type": "number"
+                },
+                "approval_p75_hours": {
+                    "type": "number"
+                },
+                "approved": {
+                    "type": "integer"
+                },
+                "expiration_rate": {
+                    "description": "expired / decided * 100",
+                    "type": "number"
+                },
+                "expired": {
+                    "type": "integer"
+                },
+                "expiring_soon": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ExpiringBudget"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                },
+                "recent_rejections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.RejectionReason"
+                    }
+                },
+                "rejected": {
+                    "type": "integer"
+                },
+                "rejection_median_hours": {
+                    "type": "number"
+                },
+                "rejection_rate": {
+                    "description": "rejected / decided * 100",
+                    "type": "number"
                 }
             }
         },

@@ -7,11 +7,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// responseDurationsCTE pairs each decision in the window with the budget's first
-// "sent" event before it; durations are in hours.
+// responseDurationsCTE pairs each decision in the window with the budget's latest
+// "sent" event before it (a budget re-sent after a rejection is timed from the
+// re-send); durations are in hours.
 const responseDurationsCTE = `WITH decisions AS (
 	SELECT h.budget_id, h.new_status, h.created_at AS decided_at,
-	       (SELECT MIN(s.created_at) FROM budget_status_history s
+	       (SELECT MAX(s.created_at) FROM budget_status_history s
 	        WHERE s.budget_id = h.budget_id AND s.new_status = 'sent' AND s.created_at <= h.created_at) AS sent_at
 	FROM budget_status_history h
 	JOIN budgets b ON b.id = h.budget_id AND b.deleted_at IS NULL

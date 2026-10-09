@@ -187,3 +187,50 @@ func TestProfitMetrics(t *testing.T) {
 		require.Equal(t, "muito caro", r.RecentRejections[0].Reason)
 	})
 }
+
+// TestProfitEdgeCases covers re-sent budgets and items that cannot be allocated
+// by cost or have no filament.
+func TestProfitEdgeCases(t *testing.T) {
+	db := openProfitDB(t)
+	repo := repoimpl.NewDashboardRepository(db)
+	now := time.Now()
+	start, end := now.Add(-30*24*time.Hour), now.Add(time.Hour)
+	day := func(n int) time.Time { return now.Add(time.Duration(-n) * 24 * time.Hour) }
+
+	customer, material, filament := uuid.New(), uuid.New(), uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO customers (id, organization_id, name) VALUES (?, ?, 'Ana')`, customer, profitOrg).Error)
+	require.NoError(t, db.Exec(`INSERT INTO materials (id, name) VALUES (?, 'PLA')`, material).Error)
+	require.NoError(t, db.Exec(`INSERT INTO filaments (id, name, material_id) VALUES (?, 'PLA Basic', ?)`, filament, material).Error)
+
+	// Sent, rejected, reopened, re-sent and approved inside the window.
+	budget := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, customer_id, status, total_cost, profit_amount, approved_at)
+		VALUES (?, ?, ?, 'approved', 10000, 2000, ?)`, budget, profitOrg, customer, day(2)).Error)
+	history(t, db, budget, "sent", day(20))
+	history(t, db, budget, "rejected", day(19))
+	history(t, db, budget, "sent", day(3))
+	history(t, db, budget, "approved", day(2))
+
+	// Two zero-cost items (equal split); only one has filament.
+	withFilament, service := uuid.New(), uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO budget_items (id, budget_id, item_total_cost) VALUES (?, ?, 0), (?, ?, 0)`,
+		withFilament, budget, service, budget).Error)
+	require.NoError(t, db.Exec(`INSERT INTO budget_item_filaments (budget_item_id, filament_id, quantity) VALUES (?, ?, 50)`,
+		withFilament, filament).Error)
+
+	r, err := repo.GetResponseTimes(profitOrg, start, end)
+	require.NoError(t, err)
+	require.Equal(t, 1, r.Approved, "the budget counts once, by its latest decision")
+	require.Equal(t, 0, r.Rejected)
+	require.InDelta(t, 24.0, r.ApprovalMedianHours, 0.01, "timed from the re-send, not the first send")
+
+	o, err := repo.GetOverview(profitOrg, start, end, start.Add(-30*24*time.Hour), start)
+	require.NoError(t, err)
+	require.InDelta(t, 100.0, o.ApprovalRate, 0.01)
+
+	p, err := repo.GetProfitability(profitOrg, start, end, 10)
+	require.NoError(t, err)
+	require.Len(t, p.ByMaterial, 1)
+	require.EqualValues(t, 5000, p.ByMaterial[0].Revenue, "half of the budget goes to the item with filament")
+	require.EqualValues(t, 1000, p.ByMaterial[0].Profit)
+}

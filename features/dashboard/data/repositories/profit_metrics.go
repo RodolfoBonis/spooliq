@@ -101,18 +101,25 @@ func (d *decisionMetrics) rate(n int) float64 {
 
 func (r *DashboardRepositoryImpl) queryDecisions(organizationID string, start, end time.Time) (*decisionMetrics, error) {
 	d := &decisionMetrics{}
-	sql := `SELECT
-		COUNT(DISTINCT CASE WHEN h.new_status = 'approved' THEN h.budget_id END),
-		COUNT(DISTINCT CASE WHEN h.new_status = 'rejected' THEN h.budget_id END),
-		COUNT(DISTINCT CASE WHEN h.new_status = 'expired' THEN h.budget_id END)
-	FROM budget_status_history h
-	JOIN budgets b ON b.id = h.budget_id AND b.deleted_at IS NULL
-	WHERE h.organization_id = ? AND h.new_status IN ('approved','rejected','expired')`
+	// Only the latest decision per budget in the window counts, so a budget
+	// approved and later rejected (after reopening) is counted once.
+	window := ""
 	params := []any{organizationID}
 	if !isAllPeriod(start) {
-		sql += " AND h.created_at >= ? AND h.created_at < ?"
+		window = " AND h.created_at >= ? AND h.created_at < ?"
 		params = append(params, start, end)
 	}
+	sql := `SELECT
+		COUNT(*) FILTER (WHERE new_status = 'approved'),
+		COUNT(*) FILTER (WHERE new_status = 'rejected'),
+		COUNT(*) FILTER (WHERE new_status = 'expired')
+	FROM (
+		SELECT DISTINCT ON (h.budget_id) h.new_status
+		FROM budget_status_history h
+		JOIN budgets b ON b.id = h.budget_id AND b.deleted_at IS NULL
+		WHERE h.organization_id = ? AND h.new_status IN ('approved','rejected','expired')` + window + `
+		ORDER BY h.budget_id, h.created_at DESC
+	) latest`
 	if err := r.db.Raw(sql, params...).Row().Scan(&d.Approved, &d.Rejected, &d.Expired); err != nil {
 		return nil, err
 	}

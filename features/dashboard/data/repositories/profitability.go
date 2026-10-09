@@ -49,7 +49,9 @@ func (p profitRowScan) toRow() entities.ProfitRow {
 
 // salesCTE selects the period's sales with net revenue and profit, plus each
 // item's share of the budget cost and each filament's share of the item grams.
-// Allocation: budget → items by item_total_cost, item → filaments by grams.
+// Allocation: budget → items by item_total_cost (equal split when every item
+// costs zero), item → filaments by grams. Items without filaments (services)
+// have no material, so material/filament totals can be below the sales total.
 const salesCTE = `WITH sales AS (
 	SELECT b.id, b.customer_id, b.machine_preset_id, b.cost_preset_id, b.discount_amount,
 	       ` + netRevenueExpr + ` AS net, ` + profitExpr + ` AS profit

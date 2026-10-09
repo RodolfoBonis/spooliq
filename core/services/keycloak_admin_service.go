@@ -38,6 +38,8 @@ type IKeycloakAdminService interface {
 	GetOrCreateGroup(ctx context.Context, groupName string) (string, *apperrors.AppError)
 	SetGroupAttributes(ctx context.Context, groupID string, attributes map[string][]string) *apperrors.AppError
 	GetUserByEmail(ctx context.Context, email string) (*KeycloakUserResponse, *apperrors.AppError)
+	ExecuteActionsEmail(ctx context.Context, userID string, actions []string, lifespan time.Duration) *apperrors.AppError
+	UpdateUserName(ctx context.Context, userID, firstName, lastName string) *apperrors.AppError
 }
 
 // KeycloakAdminService implements IKeycloakAdminService.
@@ -451,4 +453,18 @@ func (s *KeycloakAdminService) GetUserByEmail(ctx context.Context, email string)
 	}
 
 	return &users[0], nil
+}
+
+// ExecuteActionsEmail asks Keycloak to e-mail the user a link to perform the
+// given required actions (e.g. UPDATE_PASSWORD). The link expires after
+// lifespan. Keycloak sends the e-mail with the realm's SMTP settings.
+func (s *KeycloakAdminService) ExecuteActionsEmail(ctx context.Context, userID string, actions []string, lifespan time.Duration) *apperrors.AppError {
+	path := fmt.Sprintf("users/%s/execute-actions-email?lifespan=%d", url.PathEscape(userID), int(lifespan.Seconds()))
+	return s.doRequest(ctx, http.MethodPut, path, actions, nil)
+}
+
+// UpdateUserName updates only the first and last name of a Keycloak user.
+func (s *KeycloakAdminService) UpdateUserName(ctx context.Context, userID, firstName, lastName string) *apperrors.AppError {
+	body := map[string]string{"firstName": firstName, "lastName": lastName}
+	return s.doRequest(ctx, http.MethodPut, "users/"+url.PathEscape(userID), body, nil)
 }

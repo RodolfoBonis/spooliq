@@ -7,6 +7,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
+	"github.com/RodolfoBonis/spooliq/features/account"
 	"github.com/RodolfoBonis/spooliq/features/activity"
 	activityuc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/admin"
@@ -72,6 +73,7 @@ func InitializeRoutes(
 	dashboardHandler *dashboard.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
+	accountHandler *account.Handler,
 	adminHandler *admin.Handler,
 	healthHandler *health.Handler,
 	protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc,
@@ -105,6 +107,7 @@ func InitializeRoutes(
 	profile.Routes(root, profileHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
 	users.SetupRoutes(root, userHandler, protectFactory)
+	account.SetupRoutes(root, accountHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
 	admin.SetupRoutes(root, adminHandler, protectFactory)
 	subscriptions.Routes(root, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, protectFactory)

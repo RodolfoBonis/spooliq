@@ -320,11 +320,19 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// CancelSubscriptionRequest is the optional cancellation feedback.
+type CancelSubscriptionRequest struct {
+	Reason   string `json:"reason"`
+	Feedback string `json:"feedback"`
+}
+
 // CancelSubscription cancels the current subscription
 // @Summary Cancel subscription
-// @Description Cancel the current active subscription
+// @Description Cancel the current active subscription. Cancellation is immediate. The optional body records the reason for churn analysis.
 // @Tags subscriptions
+// @Accept json
 // @Produce json
+// @Param request body CancelSubscriptionRequest false "Cancellation reason and feedback"
 // @Success 200 {object} map[string]string "Subscription cancelled"
 // @Failure 400 {object} map[string]string "No active subscription"
 // @Failure 500 {object} map[string]string "Internal server error"
@@ -333,6 +341,12 @@ func (uc *ManageSubscriptionUseCase) SubscribeToPlan(c *gin.Context) {
 func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 	orgID := helpers.GetOrganizationIDString(c)
+
+	// The body is optional (older clients send none); ignore bind errors.
+	var feedback CancelSubscriptionRequest
+	if c.Request.ContentLength > 0 {
+		_ = c.ShouldBindJSON(&feedback)
+	}
 
 	// 1. Get company to check subscription
 	company, err := uc.companyRepo.FindByOrganizationID(ctx, orgID)
@@ -411,6 +425,8 @@ func (uc *ManageSubscriptionUseCase) CancelSubscription(c *gin.Context) {
 	uc.logger.Info(ctx, "Subscription cancelled successfully", map[string]interface{}{
 		"organization_id": orgID,
 		"subscription_id": subscriptionID,
+		"cancel_reason":   truncate(feedback.Reason, 64),
+		"cancel_feedback": truncate(feedback.Feedback, 1000),
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Subscription cancelled successfully"})
@@ -520,4 +536,13 @@ func (uc *ManageSubscriptionUseCase) GetSubscriptionStatus(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, response)
+}
+
+// truncate caps free-text fields before logging them.
+func truncate(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max])
 }

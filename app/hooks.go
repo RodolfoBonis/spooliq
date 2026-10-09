@@ -13,6 +13,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/validation"
+	"github.com/RodolfoBonis/spooliq/features/account"
 	activityuc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/admin"
 	authuc "github.com/RodolfoBonis/spooliq/features/auth/domain/usecases"
@@ -38,7 +39,7 @@ import (
 )
 
 // SetupMiddlewaresAndRoutes configures middlewares BEFORE routes (critical for Gin)
-func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activityService activityuc.IActivityService, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, publicBudgetUc budgetuc.IPublicBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, stockUc stockuc.IStockUseCase, materialUc materialuc.IMaterialUseCase, model3dUc model3duc.IModel3DUseCase, slicerUc sliceruc.ISlicerUseCase, uploadsUc uploadsuc.IUploadUseCase, paymentMethodUc *subscriptionuc.PaymentMethodUseCase, subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase, manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase, presetHandler *preset.Handler, profileHandler *profile.Handler, dashboardHandler *dashboard.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, adminHandler *admin.Handler, healthHandler *health.Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, agent *otelagent.Agent) {
+func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activityService activityuc.IActivityService, authUc authuc.AuthUseCase, registerUc *authuc.RegisterUseCase, brandUc branduc.IBrandUseCase, budgetUc budgetuc.IBudgetUseCase, publicBudgetUc budgetuc.IPublicBudgetUseCase, companyUc companyuc.ICompanyUseCase, brandingUc companyuc.IBrandingUseCase, subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase, customerUc customeruc.ICustomerUseCase, filamentUc filamentuc.IFilamentUseCase, stockUc stockuc.IStockUseCase, materialUc materialuc.IMaterialUseCase, model3dUc model3duc.IModel3DUseCase, slicerUc sliceruc.ISlicerUseCase, uploadsUc uploadsuc.IUploadUseCase, paymentMethodUc *subscriptionuc.PaymentMethodUseCase, subscriptionPlanUc *subscriptionuc.SubscriptionPlanUseCase, manageSubscriptionUc *subscriptionuc.ManageSubscriptionUseCase, presetHandler *preset.Handler, profileHandler *profile.Handler, dashboardHandler *dashboard.Handler, webhookHandler *webhooks.Handler, userHandler *users.Handler, accountHandler *account.Handler, adminHandler *admin.Handler, healthHandler *health.Handler, protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc, cacheMiddleware *middlewares.CacheMiddleware, subscriptionMiddleware *middlewares.SubscriptionMiddleware, logger logger.Logger, monitoring *middlewares.MonitoringMiddleware, agent *otelagent.Agent) {
 	// Configure trusted proxies
 	err := router.SetTrustedProxies([]string{})
 	if err != nil {
@@ -87,7 +88,7 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activ
 	}))
 	router.Use(gin.ErrorLogger())
 
-	routes.InitializeRoutes(router, activityService, authUc, registerUc, brandUc, budgetUc, publicBudgetUc, companyUc, brandingUc, subscriptionPaymentsUc, customerUc, filamentUc, stockUc, materialUc, model3dUc, slicerUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, profileHandler, dashboardHandler, webhookHandler, userHandler, adminHandler, healthHandler, protectFactory, cacheMiddleware, logger)
+	routes.InitializeRoutes(router, activityService, authUc, registerUc, brandUc, budgetUc, publicBudgetUc, companyUc, brandingUc, subscriptionPaymentsUc, customerUc, filamentUc, stockUc, materialUc, model3dUc, slicerUc, uploadsUc, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, presetHandler, profileHandler, dashboardHandler, webhookHandler, userHandler, accountHandler, adminHandler, healthHandler, protectFactory, cacheMiddleware, logger)
 	logger.Info(context.Background(), "Routes initialized after middleware setup")
 
 	// Register lifecycle hooks for cleanup

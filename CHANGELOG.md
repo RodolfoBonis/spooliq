@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.17.0 - 2026-10-09
+
+### Changes
+- chore: bump version to 2.17.0 (8d9602f)
+- fix(dashboard): never cache partial insights, recover failing sources, transactional goals (0d322b5)
+- feat(dashboard): user goals with projection and rule-based insights (5156381)
+- fix(dashboard): time responses from the latest send and count one decision per budget (512ade5)
+- feat(dashboard): real profit, profitability and response times (63f7bce)
+- fix(budget): atomic public response history, serialized backfills and dashboard invalidation (b5261a4)
+- feat(budget): approval/completion dates and complete status history for analytics (e41cb62)
+
+
 ## v2.16.0 - 2026-10-09
 
 ### Changes

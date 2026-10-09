@@ -53,7 +53,7 @@ func createListSchema(t *testing.T, db *gorm.DB) {
 			tax_amount bigint DEFAULT 0, tax_rate_applied double precision DEFAULT 0,
 			total_cost bigint DEFAULT 0,
 			delivery_days integer, payment_terms text, notes text, pdf_url varchar(500),
-quote_number integer, valid_until timestamptz, public_token varchar(43), public_token_created_at timestamptz, customer_response_at timestamptz, customer_response_name varchar(120), customer_response_ip varchar(45), customer_response_user_agent varchar(255), rejection_reason text,
+quote_number integer, valid_until timestamptz, public_token varchar(43), public_token_created_at timestamptz, approved_at timestamptz, completed_at timestamptz, customer_response_at timestamptz, customer_response_name varchar(120), customer_response_ip varchar(45), customer_response_user_agent varchar(255), rejection_reason text,
 						owner_user_id varchar(255) NOT NULL, created_at timestamptz, updated_at timestamptz, deleted_at timestamptz
 		)`,
 		`CREATE TABLE budget_items (

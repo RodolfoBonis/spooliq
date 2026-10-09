@@ -18,6 +18,7 @@ import (
 	companyRepo "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
 	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Public rate-limit buckets (per IP, per minute).
@@ -307,6 +308,28 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 		}
 		coreErrors.Respond(c, mapNotRespondableError(fresh, time.Now()))
 		return
+	}
+
+	// Status history (feeds the funnel and the response-time metrics). Best effort:
+	// the response is already stored, so a failure here is only logged.
+	note := "Resposta do cliente pelo link"
+	if reason != nil {
+		note = "Motivo: " + *reason
+	}
+	if herr := uc.budgetRepository.AddStatusHistory(ctx, &entities.BudgetStatusHistoryEntity{
+		ID:             uuid.New(),
+		BudgetID:       budget.ID,
+		OrganizationID: budget.OrganizationID,
+		PreviousStatus: entities.StatusSent,
+		NewStatus:      newStatus,
+		ChangedBy:      name + " (cliente)",
+		Notes:          note,
+		CreatedAt:      now,
+	}); herr != nil {
+		uc.logger.Error(ctx, "Failed to record public response history", map[string]interface{}{
+			"error":     herr.Error(),
+			"budget_id": budget.ID,
+		})
 	}
 
 	// Record the activity (actor is the customer, suffixed to distinguish it).

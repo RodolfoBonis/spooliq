@@ -657,6 +657,11 @@ func RunMigrations() {
 			"CREATE INDEX IF NOT EXISTS idx_budgets_org_created ON budgets(organization_id, created_at) WHERE deleted_at IS NULL",
 		},
 		{
+			// Dashboard profit is filtered by approval date.
+			"idx_budgets_org_approved",
+			"CREATE INDEX IF NOT EXISTS idx_budgets_org_approved ON budgets(organization_id, approved_at) WHERE deleted_at IS NULL AND approved_at IS NOT NULL",
+		},
+		{
 			"idx_budgets_org_status_updated",
 			"CREATE INDEX IF NOT EXISTS idx_budgets_org_status_updated ON budgets(organization_id, status, updated_at) WHERE deleted_at IS NULL",
 		},
@@ -757,6 +762,56 @@ var dataMigrations = []struct{ name, sql string }{
 			GROUP BY organization_id
 		 ) sub
 		 WHERE c.organization_id = sub.organization_id AND sub.max_qn >= c.next_quote_number`,
+	},
+	{
+		// Customer responses via the public link never wrote status history, so the
+		// funnel and response times missed them. Add one row per response, inferring
+		// approve vs reject from the current status (skips reopened/cancelled ones).
+		"2026-10-09_backfill_public_response_history",
+		`INSERT INTO budget_status_history
+			(id, budget_id, organization_id, previous_status, new_status, changed_by, notes, created_at)
+		 SELECT gen_random_uuid(), b.id, b.organization_id, 'sent',
+			CASE WHEN b.status = 'rejected' THEN 'rejected' ELSE 'approved' END,
+			COALESCE(b.customer_response_name, 'Cliente') || ' (cliente)',
+			'Resposta do cliente pelo link', b.customer_response_at
+		 FROM budgets b
+		 WHERE b.customer_response_at IS NOT NULL
+		   AND b.status IN ('approved', 'printing', 'completed', 'rejected')
+		   AND NOT EXISTS (
+			SELECT 1 FROM budget_status_history h
+			WHERE h.budget_id = b.id AND h.new_status IN ('approved', 'rejected')
+			  AND h.created_at BETWEEN b.customer_response_at - interval '1 minute'
+			                       AND b.customer_response_at + interval '1 minute'
+		   )`,
+	},
+	{
+		// The expiry job never wrote status history either.
+		"2026-10-09_backfill_expired_history",
+		`INSERT INTO budget_status_history
+			(id, budget_id, organization_id, previous_status, new_status, changed_by, notes, created_at)
+		 SELECT gen_random_uuid(), b.id, b.organization_id, 'sent', 'expired', 'system',
+			'Validade expirada', COALESCE(b.valid_until, b.updated_at)
+		 FROM budgets b
+		 WHERE b.status = 'expired'
+		   AND NOT EXISTS (SELECT 1 FROM budget_status_history h WHERE h.budget_id = b.id AND h.new_status = 'expired')`,
+	},
+	{
+		// approved_at = the latest approval in the history (now complete thanks to the
+		// backfills above), falling back to the last update for older budgets.
+		"2026-10-09_backfill_budget_approved_at",
+		`UPDATE budgets b SET approved_at = COALESCE(
+			(SELECT MAX(h.created_at) FROM budget_status_history h
+			 WHERE h.budget_id = b.id AND h.new_status = 'approved'),
+			b.updated_at)
+		 WHERE b.approved_at IS NULL AND b.status IN ('approved', 'printing', 'completed')`,
+	},
+	{
+		"2026-10-09_backfill_budget_completed_at",
+		`UPDATE budgets b SET completed_at = COALESCE(
+			(SELECT MAX(h.created_at) FROM budget_status_history h
+			 WHERE h.budget_id = b.id AND h.new_status = 'completed'),
+			b.updated_at)
+		 WHERE b.completed_at IS NULL AND b.status = 'completed'`,
 	},
 }
 

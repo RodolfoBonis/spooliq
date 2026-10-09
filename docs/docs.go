@@ -10596,9 +10596,16 @@ const docTemplate = `{
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "approved_at": {
+                    "description": "Customer response (recorded via the public approve/reject endpoints).\nApprovedAt / CompletedAt: last approval and completion instants (dashboard\nprofit is counted by approval date; realized profit by completion date).",
+                    "type": "string"
+                },
                 "base_price": {
                     "description": "BasePrice is the sale price before discount/shipping/tax (subtotal + overhead +\nprofit), derived from the stored totals. TaxRateApplied is exposed via the\nembedded entity.",
                     "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
                 },
                 "cost_preset": {
                     "$ref": "#/definitions/entities.CostPresetRef"
@@ -10618,7 +10625,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "customer_response_at": {
-                    "description": "Customer response (recorded via the public approve/reject endpoints).",
                     "type": "string"
                 },
                 "customer_response_name": {

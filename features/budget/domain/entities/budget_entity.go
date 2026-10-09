@@ -76,6 +76,10 @@ type BudgetEntity struct {
 	PublicTokenCreatedAt *time.Time `json:"public_token_created_at,omitempty"`
 
 	// Customer response (recorded via the public approve/reject endpoints).
+	// ApprovedAt / CompletedAt: last approval and completion instants (dashboard
+	// profit is counted by approval date; realized profit by completion date).
+	ApprovedAt           *time.Time `json:"approved_at,omitempty"`
+	CompletedAt          *time.Time `json:"completed_at,omitempty"`
 	CustomerResponseAt   *time.Time `json:"customer_response_at,omitempty"`
 	CustomerResponseName *string    `json:"customer_response_name,omitempty"`
 	// CustomerResponseIP / CustomerResponseUserAgent are stored for audit only and

@@ -401,3 +401,58 @@ func (h *Handler) GetLowStock(c *gin.Context) {
 
 	c.JSON(http.StatusOK, entities.LowStockResponse{Data: rows})
 }
+
+// GetProfitability godoc
+// @Summary Get profitability breakdown
+// @Description Profit (profit amount minus discount) and net revenue (without tax and shipping) of the period's sales, counted by approval date, broken down by material, filament, customer, machine and cost preset. Budget amounts are allocated to items by cost share and to filaments by grams share.
+// @Tags Dashboard
+// @Produce json
+// @Param period query string false "Period filter" Enums(7d, 30d, 3m, 6m, 1y, all) default(30d)
+// @Param limit query int false "Rows per dimension (max 50)" default(10) minimum(1) maximum(50)
+// @Success 200 {object} entities.ProfitabilityResponse
+// @Failure 401 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Security BearerAuth
+// @Router /dashboard/profitability [get]
+func (h *Handler) GetProfitability(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+	period := entities.ParsePeriod(c.Query("period"))
+	start, end, _, _ := period.ToTimeRange()
+	resp, err := h.repo.GetProfitability(organizationID, start, end, parseWidgetLimit(c, 10))
+	if err != nil {
+		coreerrors.Respond(c, err)
+		return
+	}
+	resp.Period = string(period)
+	c.JSON(http.StatusOK, resp)
+}
+
+// GetResponseTimes godoc
+// @Summary Get customer response times
+// @Description Median/p75 hours from sending a budget to the customer's decision, approval buckets, expiration and rejection rates, recent rejection reasons and sent budgets expiring in the next 2 days.
+// @Tags Dashboard
+// @Produce json
+// @Param period query string false "Period filter" Enums(7d, 30d, 3m, 6m, 1y, all) default(30d)
+// @Success 200 {object} entities.ResponseTimesResponse
+// @Failure 401 {object} errors.HTTPError
+// @Failure 500 {object} errors.HTTPError
+// @Security BearerAuth
+// @Router /dashboard/response-times [get]
+func (h *Handler) GetResponseTimes(c *gin.Context) {
+	organizationID, ok := requireOrganizationID(c)
+	if !ok {
+		return
+	}
+	period := entities.ParsePeriod(c.Query("period"))
+	start, end, _, _ := period.ToTimeRange()
+	resp, err := h.repo.GetResponseTimes(organizationID, start, end)
+	if err != nil {
+		coreerrors.Respond(c, err)
+		return
+	}
+	resp.Period = string(period)
+	c.JSON(http.StatusOK, resp)
+}

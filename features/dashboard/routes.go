@@ -39,6 +39,8 @@ func SetupRoutes(router *gin.RouterGroup, handler *Handler, protectFactory func(
 		dashboard.GET("/top-filaments", protectFactory(cacheMiddleware.Wrap(handler.GetTopFilaments, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		dashboard.GET("/top-materials", protectFactory(cacheMiddleware.Wrap(handler.GetTopMaterials, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		dashboard.GET("/goals-alerts", protectFactory(cacheMiddleware.Wrap(handler.GetGoalsAlerts, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		dashboard.GET("/profitability", protectFactory(cacheMiddleware.Wrap(handler.GetProfitability, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		dashboard.GET("/response-times", protectFactory(cacheMiddleware.Wrap(handler.GetResponseTimes, dashboardCache), roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Low-stock is intentionally NOT cached: it must reflect stock movements
 		// immediately (movements change balances frequently).
 		dashboard.GET("/low-stock", protectFactory(handler.GetLowStock, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))

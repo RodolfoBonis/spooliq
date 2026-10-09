@@ -97,3 +97,21 @@ func (m *MockDashboardRepository) GetLowStockFilaments(organizationID string, li
 	}
 	return args.Get(0).([]entities.LowStockFilament), args.Error(1)
 }
+
+// GetProfitability mocks the GetProfitability method.
+func (m *MockDashboardRepository) GetProfitability(organizationID string, start, end time.Time, limit int) (*entities.ProfitabilityResponse, error) {
+	args := m.Called(organizationID, start, end, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.ProfitabilityResponse), args.Error(1)
+}
+
+// GetResponseTimes mocks the GetResponseTimes method.
+func (m *MockDashboardRepository) GetResponseTimes(organizationID string, start, end time.Time) (*entities.ResponseTimesResponse, error) {
+	args := m.Called(organizationID, start, end)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.ResponseTimesResponse), args.Error(1)
+}

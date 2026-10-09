@@ -81,8 +81,8 @@ func (m *MockDashboardRepository) GetTopMaterials(organizationID string, start, 
 }
 
 // GetGoalsAlerts mocks the GetGoalsAlerts method.
-func (m *MockDashboardRepository) GetGoalsAlerts(organizationID string) (*entities.GoalsAlertsResponse, error) {
-	args := m.Called(organizationID)
+func (m *MockDashboardRepository) GetGoalsAlerts(organizationID string, now time.Time) (*entities.GoalsAlertsResponse, error) {
+	args := m.Called(organizationID, now)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -114,4 +114,27 @@ func (m *MockDashboardRepository) GetResponseTimes(organizationID string, start,
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*entities.ResponseTimesResponse), args.Error(1)
+}
+
+// GetGoalTargets mocks the GetGoalTargets method.
+func (m *MockDashboardRepository) GetGoalTargets(organizationID string) ([]entities.GoalTarget, error) {
+	args := m.Called(organizationID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entities.GoalTarget), args.Error(1)
+}
+
+// SaveGoalTargets mocks the SaveGoalTargets method.
+func (m *MockDashboardRepository) SaveGoalTargets(organizationID, userID string, goals []entities.GoalTarget) error {
+	return m.Called(organizationID, userID, goals).Error(0)
+}
+
+// GetInsightSignals mocks the GetInsightSignals method.
+func (m *MockDashboardRepository) GetInsightSignals(organizationID string, start, end, now time.Time) (*entities.InsightSignals, error) {
+	args := m.Called(organizationID, start, end, now)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.InsightSignals), args.Error(1)
 }

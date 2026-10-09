@@ -15,7 +15,15 @@ type DashboardRepository interface {
 	GetOperationalInsights(organizationID string, start, end, prevStart, prevEnd time.Time) (*entities.OperationalInsightsResponse, error)
 	GetTopFilaments(organizationID string, start, end time.Time, limit int) (*entities.TopFilamentsResponse, error)
 	GetTopMaterials(organizationID string, start, end time.Time, limit int) (*entities.TopMaterialsResponse, error)
-	GetGoalsAlerts(organizationID string) (*entities.GoalsAlertsResponse, error)
+	// GetGoalsAlerts returns the current month's goals (user targets, progress,
+	// month-end projection) and operational alerts.
+	GetGoalsAlerts(organizationID string, now time.Time) (*entities.GoalsAlertsResponse, error)
+	// GetGoalTargets returns the organization's configured monthly targets.
+	GetGoalTargets(organizationID string) ([]entities.GoalTarget, error)
+	// SaveGoalTargets upserts targets; a zero target removes the goal.
+	SaveGoalTargets(organizationID, userID string, goals []entities.GoalTarget) error
+	// GetInsightSignals loads the extra aggregates used by the insight rules.
+	GetInsightSignals(organizationID string, start, end, now time.Time) (*entities.InsightSignals, error)
 	// GetProfitability breaks the period's profit down by material, filament,
 	// customer, machine and cost preset (sales dated by approval).
 	GetProfitability(organizationID string, start, end time.Time, limit int) (*entities.ProfitabilityResponse, error)

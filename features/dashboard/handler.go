@@ -3,7 +3,9 @@ package dashboard
 import (
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	coreerrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
@@ -21,13 +23,15 @@ const maxDashboardLimit = 50
 type Handler struct {
 	repo            repositories.DashboardRepository
 	activityService activityUc.IActivityService
+	logger          logger.Logger
 }
 
 // NewDashboardHandler creates a new dashboard handler.
-func NewDashboardHandler(repo repositories.DashboardRepository, activityService activityUc.IActivityService) *Handler {
+func NewDashboardHandler(repo repositories.DashboardRepository, activityService activityUc.IActivityService, log logger.Logger) *Handler {
 	return &Handler{
 		repo:            repo,
 		activityService: activityService,
+		logger:          log,
 	}
 }
 
@@ -344,7 +348,7 @@ func (h *Handler) GetTopMaterials(c *gin.Context) {
 
 // GetGoalsAlerts godoc
 // @Summary Get goals progress and alerts
-// @Description Returns monthly goals progress (revenue, budgets, profit margin) and active alerts for low stock, expiring budgets, and pending approvals
+// @Description Returns the current month's goals (America/Sao_Paulo) with user-defined targets, progress, month-end projection and required daily pace, plus operational alerts. Metrics without a target come back with configured=false.
 // @Tags Dashboard
 // @Accept json
 // @Produce json
@@ -360,7 +364,7 @@ func (h *Handler) GetGoalsAlerts(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.repo.GetGoalsAlerts(organizationID)
+	resp, err := h.repo.GetGoalsAlerts(organizationID, time.Now())
 	if err != nil {
 		coreerrors.Respond(c, err)
 		return

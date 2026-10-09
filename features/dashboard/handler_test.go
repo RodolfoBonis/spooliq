@@ -42,7 +42,7 @@ func setOrganizationID(c *gin.Context, orgID string) {
 func TestGetOverview_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.OverviewResponse{
 		TotalRevenue:       100000,
@@ -84,7 +84,7 @@ func TestGetOverview_Success(t *testing.T) {
 func TestGetOverview_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/overview")
 	// Not setting organization ID
@@ -103,7 +103,7 @@ func TestGetOverview_MissingOrganizationID(t *testing.T) {
 func TestGetTopCustomers_LimitClampedToMax(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	// The repository must be invoked with 50, never the requested 1000.
 	mockRepo.On("GetTopCustomers", testOrganizationID, mock.Anything, mock.Anything, 50).
@@ -123,7 +123,7 @@ func TestGetTopCustomers_LimitClampedToMax(t *testing.T) {
 func TestGetTopFilaments_LimitClampedToMax(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetTopFilaments", testOrganizationID, mock.Anything, mock.Anything, 50).
 		Return(&entities.TopFilamentsResponse{}, nil)
@@ -141,7 +141,7 @@ func TestGetTopFilaments_LimitClampedToMax(t *testing.T) {
 func TestGetOverview_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetOverview", testOrganizationID, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -158,7 +158,7 @@ func TestGetOverview_RepositoryError(t *testing.T) {
 func TestGetOverview_EmptyData(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.OverviewResponse{
 		TotalRevenue:       0,
@@ -201,7 +201,7 @@ func TestGetOverview_EmptyData(t *testing.T) {
 func TestGetRevenueTrend_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.RevenueTrendResponse{
 		Points: []entities.RevenueTrendPoint{
@@ -231,7 +231,7 @@ func TestGetRevenueTrend_Success(t *testing.T) {
 func TestGetRevenueTrend_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/revenue-trend")
 
@@ -243,7 +243,7 @@ func TestGetRevenueTrend_MissingOrganizationID(t *testing.T) {
 func TestGetRevenueTrend_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetRevenueTrend", testOrganizationID, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -260,7 +260,7 @@ func TestGetRevenueTrend_RepositoryError(t *testing.T) {
 func TestGetRevenueTrend_EmptyData(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.RevenueTrendResponse{
 		Points: []entities.RevenueTrendPoint{},
@@ -286,7 +286,7 @@ func TestGetRevenueTrend_EmptyData(t *testing.T) {
 func TestGetRevenueTrend_MonthlyTruncation(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.RevenueTrendResponse{
 		Points: []entities.RevenueTrendPoint{
@@ -318,7 +318,7 @@ func TestGetRevenueTrend_MonthlyTruncation(t *testing.T) {
 func TestGetConversionFunnel_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.ConversionFunnelResponse{
 		Steps: []entities.FunnelStep{
@@ -352,7 +352,7 @@ func TestGetConversionFunnel_Success(t *testing.T) {
 func TestGetConversionFunnel_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/conversion-funnel")
 
@@ -364,7 +364,7 @@ func TestGetConversionFunnel_MissingOrganizationID(t *testing.T) {
 func TestGetConversionFunnel_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetConversionFunnel", testOrganizationID, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -381,7 +381,7 @@ func TestGetConversionFunnel_RepositoryError(t *testing.T) {
 func TestGetConversionFunnel_ZeroBudgets(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.ConversionFunnelResponse{
 		Steps:             []entities.FunnelStep{},
@@ -414,7 +414,7 @@ func TestGetConversionFunnel_ZeroBudgets(t *testing.T) {
 func TestGetTopCustomers_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopCustomersResponse{
 		Customers: []entities.TopCustomer{
@@ -443,7 +443,7 @@ func TestGetTopCustomers_Success(t *testing.T) {
 func TestGetTopCustomers_CustomLimit(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopCustomersResponse{
 		Customers: []entities.TopCustomer{
@@ -467,7 +467,7 @@ func TestGetTopCustomers_CustomLimit(t *testing.T) {
 func TestGetTopCustomers_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/top-customers")
 
@@ -479,7 +479,7 @@ func TestGetTopCustomers_MissingOrganizationID(t *testing.T) {
 func TestGetTopCustomers_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetTopCustomers", testOrganizationID, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -496,7 +496,7 @@ func TestGetTopCustomers_RepositoryError(t *testing.T) {
 func TestGetTopCustomers_EmptyResult(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopCustomersResponse{
 		Customers: []entities.TopCustomer{},
@@ -526,7 +526,7 @@ func TestGetTopCustomers_EmptyResult(t *testing.T) {
 func TestGetOperationalInsights_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.OperationalInsightsResponse{
 		AvgTicket:           2500,
@@ -568,7 +568,7 @@ func TestGetOperationalInsights_Success(t *testing.T) {
 func TestGetOperationalInsights_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/operational-insights")
 
@@ -580,7 +580,7 @@ func TestGetOperationalInsights_MissingOrganizationID(t *testing.T) {
 func TestGetOperationalInsights_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetOperationalInsights", testOrganizationID, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -597,7 +597,7 @@ func TestGetOperationalInsights_RepositoryError(t *testing.T) {
 func TestGetOperationalInsights_ZeroCosts(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.OperationalInsightsResponse{
 		AvgTicket:           0,
@@ -643,7 +643,7 @@ func TestGetOperationalInsights_ZeroCosts(t *testing.T) {
 func TestGetTopFilaments_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopFilamentsResponse{
 		Filaments: []entities.TopFilament{
@@ -672,7 +672,7 @@ func TestGetTopFilaments_Success(t *testing.T) {
 func TestGetTopFilaments_CustomLimit(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopFilamentsResponse{
 		Filaments: []entities.TopFilament{},
@@ -694,7 +694,7 @@ func TestGetTopFilaments_CustomLimit(t *testing.T) {
 func TestGetTopFilaments_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/top-filaments")
 
@@ -706,7 +706,7 @@ func TestGetTopFilaments_MissingOrganizationID(t *testing.T) {
 func TestGetTopFilaments_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetTopFilaments", testOrganizationID, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -723,7 +723,7 @@ func TestGetTopFilaments_RepositoryError(t *testing.T) {
 func TestGetTopFilaments_EmptyResult(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopFilamentsResponse{
 		Filaments: []entities.TopFilament{},
@@ -753,7 +753,7 @@ func TestGetTopFilaments_EmptyResult(t *testing.T) {
 func TestGetTopMaterials_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopMaterialsResponse{
 		Materials: []entities.TopMaterial{
@@ -782,7 +782,7 @@ func TestGetTopMaterials_Success(t *testing.T) {
 func TestGetTopMaterials_CustomLimit(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopMaterialsResponse{
 		Materials: []entities.TopMaterial{},
@@ -804,7 +804,7 @@ func TestGetTopMaterials_CustomLimit(t *testing.T) {
 func TestGetTopMaterials_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/top-materials")
 
@@ -816,7 +816,7 @@ func TestGetTopMaterials_MissingOrganizationID(t *testing.T) {
 func TestGetTopMaterials_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockRepo.On("GetTopMaterials", testOrganizationID, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database error"))
@@ -833,7 +833,7 @@ func TestGetTopMaterials_RepositoryError(t *testing.T) {
 func TestGetTopMaterials_EmptyResult(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.TopMaterialsResponse{
 		Materials: []entities.TopMaterial{},
@@ -863,7 +863,7 @@ func TestGetTopMaterials_EmptyResult(t *testing.T) {
 func TestGetGoalsAlerts_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.GoalsAlertsResponse{
 		Goals: []entities.Goal{
@@ -875,7 +875,7 @@ func TestGetGoalsAlerts_Success(t *testing.T) {
 		},
 	}
 
-	mockRepo.On("GetGoalsAlerts", testOrganizationID).
+	mockRepo.On("GetGoalsAlerts", testOrganizationID, mock.Anything).
 		Return(expectedResponse, nil)
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/goals-alerts")
@@ -896,7 +896,7 @@ func TestGetGoalsAlerts_Success(t *testing.T) {
 func TestGetGoalsAlerts_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/goals-alerts")
 
@@ -908,9 +908,9 @@ func TestGetGoalsAlerts_MissingOrganizationID(t *testing.T) {
 func TestGetGoalsAlerts_RepositoryError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
-	mockRepo.On("GetGoalsAlerts", testOrganizationID).
+	mockRepo.On("GetGoalsAlerts", testOrganizationID, mock.Anything).
 		Return(nil, errors.New("database error"))
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/goals-alerts")
@@ -925,14 +925,14 @@ func TestGetGoalsAlerts_RepositoryError(t *testing.T) {
 func TestGetGoalsAlerts_NoAlertsNoGoals(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedResponse := &entities.GoalsAlertsResponse{
 		Goals:  []entities.Goal{},
 		Alerts: []entities.Alert{},
 	}
 
-	mockRepo.On("GetGoalsAlerts", testOrganizationID).
+	mockRepo.On("GetGoalsAlerts", testOrganizationID, mock.Anything).
 		Return(expectedResponse, nil)
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/goals-alerts")
@@ -957,7 +957,7 @@ func TestGetGoalsAlerts_NoAlertsNoGoals(t *testing.T) {
 func TestGetRecentActivity_Success(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	expectedActivities := []activityEntities.ActivityEntity{
 		{
@@ -1003,7 +1003,7 @@ func TestGetRecentActivity_Success(t *testing.T) {
 func TestGetRecentActivity_CustomLimit(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockActivitySvc.On("FindRecentByOrganization", testOrganizationID, 10).
 		Return([]activityEntities.ActivityEntity{}, nil)
@@ -1021,7 +1021,7 @@ func TestGetRecentActivity_CustomLimit(t *testing.T) {
 func TestGetRecentActivity_LimitCappedAt50(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockActivitySvc.On("FindRecentByOrganization", testOrganizationID, 50).
 		Return([]activityEntities.ActivityEntity{}, nil)
@@ -1039,7 +1039,7 @@ func TestGetRecentActivity_LimitCappedAt50(t *testing.T) {
 func TestGetRecentActivity_MissingOrganizationID(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	w, c := setupTestContext(setupTestRouter(), http.MethodGet, "/dashboard/recent-activity")
 
@@ -1051,7 +1051,7 @@ func TestGetRecentActivity_MissingOrganizationID(t *testing.T) {
 func TestGetRecentActivity_ServiceError(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockActivitySvc.On("FindRecentByOrganization", testOrganizationID, 20).
 		Return(nil, errors.New("database error"))
@@ -1068,7 +1068,7 @@ func TestGetRecentActivity_ServiceError(t *testing.T) {
 func TestGetRecentActivity_EmptyResult(t *testing.T) {
 	mockRepo := mocks.NewMockDashboardRepository()
 	mockActivitySvc := mocks.NewMockActivityService()
-	handler := NewDashboardHandler(mockRepo, mockActivitySvc)
+	handler := NewDashboardHandler(mockRepo, mockActivitySvc, noopLogger{})
 
 	mockActivitySvc.On("FindRecentByOrganization", testOrganizationID, 20).
 		Return([]activityEntities.ActivityEntity{}, nil)

@@ -22,4 +22,22 @@ type OverviewResponse struct {
 	NewCustomersChange float64             `json:"new_customers_change"`
 	BudgetsByStatus    []BudgetStatusCount `json:"budgets_by_status"`
 	Period             string              `json:"period"`
+
+	// Profit metrics: sales (approved, printing, completed) counted by approval
+	// date. Money in cents. NetRevenue excludes tax and shipping; Profit is
+	// profit_amount minus discount; ProfitRealized + ProfitForecast = Profit.
+	NetRevenue               int64   `json:"net_revenue"`
+	NetRevenueChange         float64 `json:"net_revenue_change"`
+	Profit                   int64   `json:"profit"`
+	ProfitChange             float64 `json:"profit_change"`
+	ProfitRealized           int64   `json:"profit_realized"`
+	ProfitForecast           int64   `json:"profit_forecast"`
+	ProductionCost           int64   `json:"production_cost"`
+	ProfitMargin             float64 `json:"profit_margin"` // weighted: profit / net revenue * 100
+	ProfitMarginPointsChange float64 `json:"profit_margin_points_change"`
+	ProfitPerPrintHour       int64   `json:"profit_per_print_hour"`
+	ProfitPerPrintHourChange float64 `json:"profit_per_print_hour_change"`
+	PrintHours               float64 `json:"print_hours"`
+	SalesCount               int     `json:"sales_count"`
+	ApprovalRatePointsChange float64 `json:"approval_rate_points_change"`
 }

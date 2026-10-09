@@ -4,6 +4,7 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
 	companyRepositories "github.com/RodolfoBonis/spooliq/features/company/domain/repositories"
+	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	subscriptionRepositories "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/webhooks"
 	"github.com/RodolfoBonis/spooliq/features/webhooks/domain/usecases"
@@ -18,8 +19,9 @@ var Module = fx.Module("webhooks",
 			subscriptionRepository subscriptionRepositories.SubscriptionRepository,
 			cfg *config.AppConfig,
 			logger logger.Logger,
+			notifications notificationUc.INotificationService,
 		) *usecases.AsaasWebhookUseCase {
-			return usecases.NewAsaasWebhookUseCase(companyRepository, subscriptionRepository, cfg, logger)
+			return usecases.NewAsaasWebhookUseCase(companyRepository, subscriptionRepository, cfg, logger, notifications)
 		},
 		webhooks.NewWebhookHandler,
 	),

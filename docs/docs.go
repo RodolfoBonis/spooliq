@@ -2454,6 +2454,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/budgets/export.csv": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Same filters and sorting as GET /budgets (q, status, customer_id, from, to), up to 5000 rows. UTF-8 with BOM, ';' separator.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Export budgets (CSV)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search (name or quote number)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter (comma-separated)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer ID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created from (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created until (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/budgets/preview": {
             "post": {
                 "security": [
@@ -2973,6 +3036,115 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/budgets/{id}/share": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create or return the public share token for a budget. Idempotent:\nrepeated calls return the same token. A draft is transitioned to sent\n(with the same valid_until side effect as UpdateStatus).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Share budget publicly",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "public_token, status, valid_until",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke the public share token for a budget (sets it to NULL).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Revoke budget public share",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
                         }
@@ -3637,6 +3809,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/customers/export.csv": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Up to 5000 customers (optionally filtered by q), with budget count and total. UTF-8 with BOM, ';' separator. The file can be re-imported.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Export customers (CSV)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Columns are matched by header name (pt-BR or English, case/accent-insensitive): nome/name (required), email, telefone/phone, documento/cpf/cnpj, endereço/address, cidade/city, uf/estado/state, cep/zip, observações/notas/notes. Rows whose e-mail already exists are skipped. Max 2000 rows / 2 MB. Accepts ';' or ',' (the export format re-imports as is).",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Import customers (CSV)",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "CSV file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.ImportResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/customers/search": {
             "get": {
                 "security": [
@@ -4030,6 +4278,110 @@ const docTemplate = `{
                 }
             }
         },
+        "/dashboard/goals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the organization's user-defined monthly targets (revenue and profit in cents, budgets as a count, approval_rate as a percentage).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get monthly goal targets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.GoalTargetsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upserts monthly targets per metric (revenue, profit, budgets, approval_rate). A target of 0 removes that goal. Owner/OrgAdmin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Save monthly goal targets",
+                "parameters": [
+                    {
+                        "description": "Targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.SaveGoalTargetsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.GoalTargetsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/goals-alerts": {
             "get": {
                 "security": [
@@ -4037,7 +4389,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns monthly goals progress (revenue, budgets, profit margin) and active alerts for low stock, expiring budgets, and pending approvals",
+                "description": "Returns the current month's goals (America/Sao_Paulo) with user-defined targets, progress, month-end projection and required daily pace, plus operational alerts. Metrics without a target come back with configured=false.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4053,6 +4405,106 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/entities.GoalsAlertsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/insights": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns up to 8 rule-based insights (pt-BR) for the period, ranked by severity and money at stake: margin drops, low-margin materials, high-discount customers, low profit/hour machines, slow responses, expiring budgets, expirations, rejections, stock vs demand, waste, stale drafts, inactive repeat customers and goals off pace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get actionable insights",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.InsightsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/low-stock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns tracked filaments at or below their alert threshold, ordered by shortfall (stock - threshold) ascending, limited to 20.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get low-stock filaments",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.LowStockResponse"
                         }
                     },
                     "400": {
@@ -4202,6 +4654,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/dashboard/profitability": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Profit (profit amount minus discount) and net revenue (without tax and shipping) of the period's sales, counted by approval date, broken down by material, filament, customer, machine and cost preset. Budget amounts are allocated to items by cost share and to filaments by grams share.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get profitability breakdown",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Rows per dimension (max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ProfitabilityResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/recent-activity": {
             "get": {
                 "security": [
@@ -4242,6 +4757,60 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/response-times": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Median/p75 hours from sending a budget to the customer's decision, approval buckets, expiration and rejection rates, recent rejection reasons and sent budgets expiring in the next 2 days.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get customer response times",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "3m",
+                            "6m",
+                            "1y",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Period filter",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ResponseTimesResponse"
                         }
                     },
                     "401": {
@@ -4620,6 +5189,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Only filaments at or below their low-stock threshold",
+                        "name": "low_stock",
+                        "in": "query"
+                    },
+                    {
                         "enum": [
                             "name",
                             "created_at",
@@ -4797,6 +5372,12 @@ const docTemplate = `{
                         "type": "number",
                         "description": "Maximum price per kg",
                         "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only filaments at or below their low-stock threshold",
+                        "name": "low_stock",
                         "in": "query"
                     },
                     {
@@ -5049,6 +5630,182 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/filaments/{id}/stock-movements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List the stock movement ledger for a filament, newest first, paginated and filterable by type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Stock"
+                ],
+                "summary": "List filament stock movements",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "purchase",
+                            "adjustment",
+                            "waste",
+                            "consumption"
+                        ],
+                        "type": "string",
+                        "description": "Filter by movement type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated movement ledger",
+                        "schema": {
+                            "$ref": "#/definitions/entities.ListMovementsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Record a manual stock movement (purchase, adjustment or waste) for a filament. Any manual movement enables stock tracking for the filament.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Filament Stock"
+                ],
+                "summary": "Create filament stock movement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filament ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Stock movement data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateMovementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Movement recorded and filament balance refreshed",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateMovementResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/errors.APIError"
                         }
@@ -5605,6 +6362,128 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Get own profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.MeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Update own profile",
+                "parameters": [
+                    {
+                        "description": "Profile",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpdateMeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.MeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Change own password",
+                "parameters": [
+                    {
+                        "description": "Passwords",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Password changed"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -6184,6 +7063,185 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "List notifications",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only unread",
+                        "name": "unread",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.Page-entities_Notification"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/read-all": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark all notifications as read",
+                "responses": {
+                    "204": {
+                        "description": "Marked as read"
+                    }
+                }
+            }
+        },
+        "/notifications/unread-count": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Unread notifications count",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.UnreadCountResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{id}/read": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark notification as read",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Marked as read"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/password/forgot": {
+            "post": {
+                "description": "Sends a password reset link (via Keycloak) when the e-mail belongs to an active user. Always 204 for valid input, so it can't be used to discover accounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Forgot password",
+                "parameters": [
+                    {
+                        "description": "E-mail",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Accepted"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -8224,6 +9282,230 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/budgets/{token}": {
+            "get": {
+                "description": "Public, sanitized budget view for a customer share link. No authentication.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget view",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/approve": {
+            "post": {
+                "description": "Customer approves a shared budget. No authentication.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget approve",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Approval payload: name",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/pdf": {
+            "get": {
+                "description": "Streams the budget PDF for a customer share link. No authentication.",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "application/pdf",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/reject": {
+            "post": {
+                "description": "Customer rejects a shared budget. No authentication.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-budgets"
+                ],
+                "summary": "Public budget reject",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rejection payload: name, reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.PublicBudgetView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/refresh": {
             "post": {
                 "description": "Refresh the user's access and refresh tokens",
@@ -8421,7 +9703,10 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Cancel the current active subscription",
+                "description": "Cancel the current active subscription. Cancellation is immediate. The optional body records the reason for churn analysis.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -8429,6 +9714,16 @@ const docTemplate = `{
                     "subscriptions"
                 ],
                 "summary": "Cancel subscription",
+                "parameters": [
+                    {
+                        "description": "Cancellation reason and feedback",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.CancelSubscriptionRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Subscription cancelled",
@@ -9101,13 +10396,17 @@ const docTemplate = `{
                 "created",
                 "updated",
                 "deleted",
-                "status_changed"
+                "status_changed",
+                "approved",
+                "rejected"
             ],
             "x-enum-varnames": [
                 "ActionCreated",
                 "ActionUpdated",
                 "ActionDeleted",
-                "ActionStatusChanged"
+                "ActionStatusChanged",
+                "ActionApproved",
+                "ActionRejected"
             ]
         },
         "entities.ActivityEntity": {
@@ -9155,7 +10454,8 @@ const docTemplate = `{
                 "material",
                 "budget",
                 "preset",
-                "model3d"
+                "model3d",
+                "stock_movement"
             ],
             "x-enum-varnames": [
                 "EntityBrand",
@@ -9164,7 +10464,8 @@ const docTemplate = `{
                 "EntityMaterial",
                 "EntityBudget",
                 "EntityPreset",
-                "EntityModel3D"
+                "EntityModel3D",
+                "EntityStockMovement"
             ]
         },
         "entities.AdminStats": {
@@ -9352,7 +10653,7 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "cost_preset_id": {
-                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor rates — see the pricing input mapping.",
+                    "description": "Optional: specific cost preset for this item. When omitted, the budget-level\ncost preset (resolved from the request/profile/org defaults) is used for this\nitem's setup/labor/post-processing/packaging/QC/failure rates.",
                     "type": "string"
                 },
                 "filaments": {
@@ -9374,6 +10675,11 @@ const docTemplate = `{
                 },
                 "order": {
                     "description": "Order in the budget",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "post_processing_minutes": {
+                    "description": "Post-processing time for this item (minutes)",
                     "type": "integer",
                     "minimum": 0
                 },
@@ -9408,6 +10714,11 @@ const docTemplate = `{
                     "description": "Labor breakdown for this item",
                     "type": "integer",
                     "minimum": 0
+                },
+                "support_removal_minutes": {
+                    "description": "Support-removal time for this item (minutes)",
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -9439,6 +10750,10 @@ const docTemplate = `{
                     "description": "cents",
                     "type": "integer"
                 },
+                "failure_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "filament_cost": {
                     "description": "Calculated costs for this item",
                     "type": "integer"
@@ -9457,6 +10772,10 @@ const docTemplate = `{
                     "description": "cents (sum of all)",
                     "type": "integer"
                 },
+                "machine_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "manual_labor_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -9470,6 +10789,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
+                    "type": "integer"
+                },
+                "packaging_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "post_processing_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "post_processing_minutes": {
+                    "description": "Post-processing time for this item (minutes)",
                     "type": "integer"
                 },
                 "print_time_display": {
@@ -9496,12 +10827,16 @@ const docTemplate = `{
                 "product_quantity": {
                     "type": "integer"
                 },
+                "quality_control_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
                 "sale_total": {
                     "description": "cents (with markup)",
                     "type": "integer"
                 },
                 "sale_unit_price": {
-                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide overhead+profit markup. SaleTotal values across items sum EXACTLY\nto the budget total. SaleUnitPrice is rounded, so SaleUnitPrice * quantity may\ndiffer from SaleTotal by a few cents.",
+                    "description": "Customer-facing SALE values: the item cost plus its proportional share of the\nbudget-wide markup. SaleTotal values across items sum EXACTLY to the budget total\nMINUS shipping (so the item sale totals plus shipping reconcile to the total).\nSaleUnitPrice is rounded, so SaleUnitPrice * quantity may differ from SaleTotal by\na few cents.",
                     "type": "integer"
                 },
                 "setup_cost": {
@@ -9510,6 +10845,14 @@ const docTemplate = `{
                 },
                 "setup_time_minutes": {
                     "description": "Labor breakdown for this item",
+                    "type": "integer"
+                },
+                "support_removal_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "support_removal_minutes": {
+                    "description": "Support-removal time for this item (minutes)",
                     "type": "integer"
                 },
                 "unit_price": {
@@ -9528,6 +10871,17 @@ const docTemplate = `{
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "approved_at": {
+                    "description": "Customer response (recorded via the public approve/reject endpoints).\nApprovedAt / CompletedAt: last approval and completion instants (dashboard\nprofit is counted by approval date; realized profit by completion date).",
+                    "type": "string"
+                },
+                "base_price": {
+                    "description": "BasePrice is the sale price before discount/shipping/tax (subtotal + overhead +\nprofit), derived from the stored totals. TaxRateApplied is exposed via the\nembedded entity.",
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
                 "cost_preset": {
                     "$ref": "#/definitions/entities.CostPresetRef"
                 },
@@ -9545,6 +10899,12 @@ const docTemplate = `{
                 "customer_id": {
                     "type": "string"
                 },
+                "customer_response_at": {
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
                 "deleted_at": {
                     "type": "string"
                 },
@@ -9554,6 +10914,17 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "discount_amount": {
+                    "description": "Discount/shipping/tax results (cents, except TaxRateApplied which is a percent).",
+                    "type": "integer"
+                },
+                "discount_type": {
+                    "description": "Discount configuration (nullable). DiscountType is \"percent\" or \"fixed\";\nDiscountValue is a 0-100 percent or a reais amount accordingly.",
+                    "type": "string"
+                },
+                "discount_value": {
+                    "type": "number"
                 },
                 "energy_cost": {
                     "description": "cents - Sum of all items energy costs",
@@ -9565,6 +10936,10 @@ const docTemplate = `{
                 "energy_preset_id": {
                     "type": "string"
                 },
+                "failure_cost": {
+                    "description": "cents - Sum of all items failure-rate costs",
+                    "type": "integer"
+                },
                 "filament_cost": {
                     "description": "Calculated costs (in cents for precision)",
                     "type": "integer"
@@ -9574,6 +10949,14 @@ const docTemplate = `{
                 },
                 "include_energy_cost": {
                     "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "description": "charge per-item machine time (cost_per_hour)",
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping configuration. When IncludeShipping is set the shipping cost is\nShippingOverride (cents) when provided, else computed from the budget cost preset.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -9587,6 +10970,10 @@ const docTemplate = `{
                 },
                 "labor_cost": {
                     "description": "cents - Sum of all items manual labor costs",
+                    "type": "integer"
+                },
+                "machine_cost": {
+                    "description": "cents - Sum of all items machine-time costs",
                     "type": "integer"
                 },
                 "machine_preset": {
@@ -9608,12 +10995,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "overhead_cost": {
-                    "description": "cents - Overhead calculated on subtotal (from CostPreset.OverheadPercentage)",
+                    "description": "cents - Overhead calculated on subtotal",
                     "type": "integer"
                 },
                 "owner_user_id": {
                     "description": "Ownership",
                     "type": "string"
+                },
+                "packaging_cost": {
+                    "description": "cents - Sum of all items packaging costs",
+                    "type": "integer"
                 },
                 "payment_terms": {
                     "description": "condições de pagamento",
@@ -9622,6 +11013,10 @@ const docTemplate = `{
                 "pdf_url": {
                     "description": "URL do PDF gerado",
                     "type": "string"
+                },
+                "post_processing_cost": {
+                    "description": "cents - Sum of all items post-processing costs",
+                    "type": "integer"
                 },
                 "print_time_hours": {
                     "description": "Print time (manual input for now)",
@@ -9643,11 +11038,37 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "profit_amount": {
-                    "description": "cents - Profit margin calculated (from CostPreset.ProfitMarginPercentage)",
+                    "description": "cents - Profit margin calculated",
                     "type": "integer"
+                },
+                "public_token": {
+                    "description": "Public share token fields. PublicToken is a base64url (unpadded) random token\nused by the customer-facing public link; nil when the budget was never shared\nor the token was revoked.",
+                    "type": "string"
+                },
+                "public_token_created_at": {
+                    "type": "string"
+                },
+                "quality_control_cost": {
+                    "description": "cents - Sum of all items quality-control costs",
+                    "type": "integer"
+                },
+                "quote_number": {
+                    "description": "QuoteNumber is the sequential, per-organization quote number (starts at 1),\nassigned on create and duplicate. Nil only for rows not yet backfilled.",
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
                 },
                 "setup_cost": {
                     "description": "cents - Sum of all items setup costs",
+                    "type": "integer"
+                },
+                "shipping_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "shipping_override": {
+                    "description": "cents",
                     "type": "integer"
                 },
                 "status": {
@@ -9659,8 +11080,27 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.BudgetStatusHistoryEntity"
                     }
                 },
+                "stock_warnings": {
+                    "description": "StockWarnings lists tracked filaments whose on-hand stock is below this budget's\nrequirement (empty when none, or when the budget is already completed and its\nstock was deducted). Computed on the detail and preview responses only.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.StockWarning"
+                    }
+                },
+                "tax_amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "tax_rate": {
+                    "description": "TaxRate is the budget-level \"por dentro\" tax rate (percent). When nil the\ncompany default_tax_rate is used. TaxRateApplied records the rate actually used.",
+                    "type": "number"
+                },
+                "tax_rate_applied": {
+                    "description": "percent actually applied",
+                    "type": "number"
+                },
                 "total_cost": {
-                    "description": "cents - Final total: Filament + Waste + Energy + Setup + Labor + Overhead + Profit",
+                    "description": "cents - Final total (base - discount + shipping + tax)",
                     "type": "integer"
                 },
                 "total_print_time_display": {
@@ -9677,6 +11117,10 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string"
                 },
+                "valid_until": {
+                    "description": "ValidUntil is the date (stored as timestamptz, end-of-day in America/Sao_Paulo)\nafter which a sent budget is considered expired. Nil when no validity is set.",
+                    "type": "string"
+                },
                 "waste_cost": {
                     "description": "cents - Sum of all items waste costs",
                     "type": "integer"
@@ -9691,12 +11135,16 @@ const docTemplate = `{
                 "approved",
                 "rejected",
                 "printing",
-                "completed"
+                "completed",
+                "expired",
+                "cancelled"
             ],
             "x-enum-comments": {
                 "StatusApproved": "StatusApproved represents an approved budget",
+                "StatusCancelled": "StatusCancelled represents a cancelled budget",
                 "StatusCompleted": "StatusCompleted represents a completed budget",
                 "StatusDraft": "StatusDraft represents a budget in draft state",
+                "StatusExpired": "StatusExpired represents a sent budget whose validity has passed",
                 "StatusPrinting": "StatusPrinting represents a budget currently being printed",
                 "StatusRejected": "StatusRejected represents a rejected budget",
                 "StatusSent": "StatusSent represents a budget sent to customer"
@@ -9707,7 +11155,9 @@ const docTemplate = `{
                 "StatusApproved represents an approved budget",
                 "StatusRejected represents a rejected budget",
                 "StatusPrinting represents a budget currently being printed",
-                "StatusCompleted represents a completed budget"
+                "StatusCompleted represents a completed budget",
+                "StatusExpired represents a sent budget whose validity has passed",
+                "StatusCancelled represents a cancelled budget"
             ],
             "x-enum-varnames": [
                 "StatusDraft",
@@ -9715,7 +11165,9 @@ const docTemplate = `{
                 "StatusApproved",
                 "StatusRejected",
                 "StatusPrinting",
-                "StatusCompleted"
+                "StatusCompleted",
+                "StatusExpired",
+                "StatusCancelled"
             ]
         },
         "entities.BudgetStatusCount": {
@@ -9859,6 +11311,23 @@ const docTemplate = `{
                 "updates": {
                     "type": "object",
                     "additionalProperties": true
+                }
+            }
+        },
+        "entities.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
                 }
             }
         },
@@ -10062,6 +11531,18 @@ const docTemplate = `{
                 "current_plan": {
                     "$ref": "#/definitions/entities.SubscriptionPlanResponse"
                 },
+                "default_payment_terms": {
+                    "description": "DefaultPaymentTerms is the organization's default payment terms.",
+                    "type": "string"
+                },
+                "default_quote_validity_days": {
+                    "description": "DefaultQuoteValidityDays is the default number of days a sent quote stays valid.",
+                    "type": "integer"
+                },
+                "default_tax_rate": {
+                    "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent).",
+                    "type": "number"
+                },
                 "document": {
                     "type": "string"
                 },
@@ -10152,13 +11633,29 @@ const docTemplate = `{
                 "energy_pct": {
                     "type": "number"
                 },
+                "failure_pct": {
+                    "type": "number"
+                },
                 "filament_pct": {
                     "type": "number"
                 },
                 "labor_pct": {
                     "type": "number"
                 },
+                "machine_pct": {
+                    "description": "Components previously left out of the breakdown (additive fields).",
+                    "type": "number"
+                },
                 "overhead_pct": {
+                    "type": "number"
+                },
+                "packaging_pct": {
+                    "type": "number"
+                },
+                "post_processing_pct": {
+                    "type": "number"
+                },
+                "quality_control_pct": {
                     "type": "number"
                 },
                 "setup_pct": {
@@ -10172,6 +11669,9 @@ const docTemplate = `{
         "entities.CostPresetEntity": {
             "type": "object",
             "properties": {
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -10204,6 +11704,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "waste_grams_per_color_change": {
                     "type": "number"
                 }
             }
@@ -10257,11 +11760,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional). DiscountType ∈ {\"percent\",\"fixed\"}; DiscountValue is a\n0-100 percent for \"percent\" or a reais amount (\u003e= 0) for \"fixed\".",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
-                    "description": "Configuration flags",
+                    "description": "Configuration flags. IncludeMachineCost defaults to TRUE when omitted.",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -10294,6 +11816,19 @@ const docTemplate = `{
                 },
                 "profile_id": {
                     "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
+                    "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "valid_until": {
+                    "description": "ValidUntil is the optional quote validity date (date-only semantics; stored at\nend of day in America/Sao_Paulo). When omitted it is computed on first send.",
                     "type": "string"
                 }
             }
@@ -10495,6 +12030,41 @@ const docTemplate = `{
                 },
                 "template_id": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.CreateMovementRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "grams": {
+                    "description": "Grams is the movement size. Sign/positivity rules depend on Type and are\nvalidated in the use case (see ValidateCreate).",
+                    "type": "integer"
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.MovementType"
+                },
+                "unit_price_per_kg": {
+                    "description": "UnitPricePerKg is accepted only for purchase movements (cents, \u003e= 0).",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "entities.CreateMovementResponse": {
+            "type": "object",
+            "properties": {
+                "filament": {
+                    "$ref": "#/definitions/entities.FilamentStockSummary"
+                },
+                "movement": {
+                    "$ref": "#/definitions/entities.StockMovementResponse"
                 }
             }
         },
@@ -10720,6 +12290,29 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.ExpiringBudget": {
+            "type": "object",
+            "properties": {
+                "budget_id": {
+                    "type": "string"
+                },
+                "budget_name": {
+                    "type": "string"
+                },
+                "customer": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "valid_until": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.FeatureValidationRequest": {
             "type": "object",
             "required": [
@@ -10849,6 +12442,12 @@ const docTemplate = `{
                 "is_active": {
                     "type": "boolean"
                 },
+                "is_low_stock": {
+                    "type": "boolean"
+                },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
                 "material": {
                     "$ref": "#/definitions/entities.MaterialInfo"
                 },
@@ -10873,6 +12472,13 @@ const docTemplate = `{
                     "description": "Technical specifications",
                     "type": "integer"
                 },
+                "stock_grams": {
+                    "type": "integer"
+                },
+                "track_stock": {
+                    "description": "Stock control (Phase 4C). TrackStock enables inventory tracking for this\nfilament; any manual stock movement turns it on. StockGrams is the current\nbalance in grams and MAY go negative (consumption is never blocked). It is\nNOT editable through the filament update endpoint — it changes only through\nstock movements. LowStockThresholdGrams is the optional alert threshold:\nnil means no alert. IsLowStock is a computed convenience flag.",
+                    "type": "boolean"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -10882,6 +12488,32 @@ const docTemplate = `{
                 },
                 "weight": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.FilamentStockSummary": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_low_stock": {
+                    "type": "boolean"
+                },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "stock_grams": {
+                    "type": "integer"
+                },
+                "track_stock": {
+                    "type": "boolean"
                 }
             }
         },
@@ -11015,6 +12647,18 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
         "entities.FunnelStep": {
             "type": "object",
             "properties": {
@@ -11032,20 +12676,96 @@ const docTemplate = `{
         "entities.Goal": {
             "type": "object",
             "properties": {
+                "configured": {
+                    "type": "boolean"
+                },
                 "current": {
                     "type": "number"
+                },
+                "days_left": {
+                    "type": "integer"
+                },
+                "metric": {
+                    "$ref": "#/definitions/entities.GoalMetric"
                 },
                 "name": {
                     "type": "string"
                 },
                 "progress": {
+                    "description": "current / target * 100, capped at 100",
+                    "type": "number"
+                },
+                "projected": {
+                    "description": "Projected is the month-end value at the current daily pace (cumulative\nmetrics) or the current value (approval rate).",
+                    "type": "number"
+                },
+                "projected_progress": {
+                    "description": "projected / target * 100 (not capped)",
+                    "type": "number"
+                },
+                "required_per_day": {
+                    "description": "RequiredPerDay is what is still needed per remaining day to hit the target\n(zero when already reached or for approval rate).",
                     "type": "number"
                 },
                 "target": {
                     "type": "number"
                 },
                 "unit": {
+                    "description": "cents | count | percent",
                     "type": "string"
+                }
+            }
+        },
+        "entities.GoalMetric": {
+            "type": "string",
+            "enum": [
+                "revenue",
+                "profit",
+                "budgets",
+                "approval_rate"
+            ],
+            "x-enum-comments": {
+                "GoalApprovalRate": "approved / decided in the month",
+                "GoalBudgets": "number of sales approved in the month",
+                "GoalProfit": "profit of sales approved in the month",
+                "GoalRevenue": "net revenue of sales approved in the month"
+            },
+            "x-enum-descriptions": [
+                "net revenue of sales approved in the month",
+                "profit of sales approved in the month",
+                "number of sales approved in the month",
+                "approved / decided in the month"
+            ],
+            "x-enum-varnames": [
+                "GoalRevenue",
+                "GoalProfit",
+                "GoalBudgets",
+                "GoalApprovalRate"
+            ]
+        },
+        "entities.GoalTarget": {
+            "type": "object",
+            "required": [
+                "metric"
+            ],
+            "properties": {
+                "metric": {
+                    "$ref": "#/definitions/entities.GoalMetric"
+                },
+                "target": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "entities.GoalTargetsResponse": {
+            "type": "object",
+            "properties": {
+                "goals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.GoalTarget"
+                    }
                 }
             }
         },
@@ -11063,6 +12783,88 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.Goal"
                     }
+                },
+                "month": {
+                    "description": "Month is the goals month in America/Sao_Paulo, formatted YYYY-MM.",
+                    "type": "string"
+                }
+            }
+        },
+        "entities.Insight": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/entities.InsightAction"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "impact": {
+                    "description": "Impact is the estimated money at stake in cents, used for ranking.",
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "metric": {
+                    "description": "Metric is the key number already formatted in pt-BR (\"12,4%\", \"R$ 350,00\").",
+                    "type": "string"
+                },
+                "severity": {
+                    "$ref": "#/definitions/entities.InsightSeverity"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.InsightAction": {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.InsightSeverity": {
+            "type": "string",
+            "enum": [
+                "critical",
+                "warning",
+                "info",
+                "positive"
+            ],
+            "x-enum-varnames": [
+                "SeverityCritical",
+                "SeverityWarning",
+                "SeverityInfo",
+                "SeverityPositive"
+            ]
+        },
+        "entities.InsightsResponse": {
+            "type": "object",
+            "properties": {
+                "insights": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Insight"
+                    }
+                },
+                "partial": {
+                    "description": "Partial is true when a data source failed and its rules were skipped.",
+                    "type": "boolean"
+                },
+                "period": {
+                    "type": "string"
                 }
             }
         },
@@ -11123,6 +12925,29 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.ListMovementsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.StockMovementResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.ListPlanCompaniesResponse": {
             "type": "object",
             "properties": {
@@ -11161,6 +12986,17 @@ const docTemplate = `{
                 "refreshToken": {
                     "description": "Token to refresh Access Token",
                     "type": "string"
+                }
+            }
+        },
+        "entities.LowStockResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_RodolfoBonis_spooliq_features_dashboard_domain_entities.LowStockFilament"
+                    }
                 }
             }
         },
@@ -11300,6 +13136,26 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.MeResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "user_type": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.MigrationCompanyItem": {
             "type": "object",
             "properties": {
@@ -11384,6 +13240,67 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.MovementType": {
+            "type": "string",
+            "enum": [
+                "purchase",
+                "adjustment",
+                "waste",
+                "consumption"
+            ],
+            "x-enum-varnames": [
+                "MovementPurchase",
+                "MovementAdjustment",
+                "MovementWaste",
+                "MovementConsumption"
+            ]
+        },
+        "entities.Notification": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "link": {
+                    "description": "Link is an app route (e.g. \"/budgets/\u003cid\u003e\"), resolved by the clients.",
+                    "type": "string"
+                },
+                "read_at": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.NotificationType"
+                }
+            }
+        },
+        "entities.NotificationType": {
+            "type": "string",
+            "enum": [
+                "budget_approved",
+                "budget_rejected",
+                "budget_expired",
+                "low_stock",
+                "payment_overdue",
+                "payment_received"
+            ],
+            "x-enum-varnames": [
+                "TypeBudgetApproved",
+                "TypeBudgetRejected",
+                "TypeBudgetExpired",
+                "TypeLowStock",
+                "TypePaymentOverdue",
+                "TypePaymentPaid"
+            ]
+        },
         "entities.NullableString": {
             "type": "object",
             "properties": {
@@ -11439,6 +13356,9 @@ const docTemplate = `{
                 "approval_rate_change": {
                     "type": "number"
                 },
+                "approval_rate_points_change": {
+                    "type": "number"
+                },
                 "avg_profit_margin": {
                     "type": "number"
                 },
@@ -11457,6 +13377,13 @@ const docTemplate = `{
                 "budgets_change": {
                     "type": "number"
                 },
+                "net_revenue": {
+                    "description": "Profit metrics: sales (approved, printing, completed) counted by approval\ndate. Money in cents. NetRevenue excludes tax and shipping; Profit is\nprofit_amount minus discount; ProfitRealized + ProfitForecast = Profit.",
+                    "type": "integer"
+                },
+                "net_revenue_change": {
+                    "type": "number"
+                },
                 "new_customers": {
                     "type": "integer"
                 },
@@ -11466,11 +13393,45 @@ const docTemplate = `{
                 "period": {
                     "type": "string"
                 },
+                "print_hours": {
+                    "type": "number"
+                },
+                "production_cost": {
+                    "type": "integer"
+                },
+                "profit": {
+                    "type": "integer"
+                },
+                "profit_change": {
+                    "type": "number"
+                },
+                "profit_forecast": {
+                    "type": "integer"
+                },
+                "profit_margin": {
+                    "description": "weighted: profit / net revenue * 100",
+                    "type": "number"
+                },
                 "profit_margin_change": {
                     "type": "number"
                 },
+                "profit_margin_points_change": {
+                    "type": "number"
+                },
+                "profit_per_print_hour": {
+                    "type": "integer"
+                },
+                "profit_per_print_hour_change": {
+                    "type": "number"
+                },
+                "profit_realized": {
+                    "type": "integer"
+                },
                 "revenue_change": {
                     "type": "number"
+                },
+                "sales_count": {
+                    "type": "integer"
                 },
                 "total_budgets": {
                     "type": "integer"
@@ -12183,11 +14144,30 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
+                "discount_type": {
+                    "description": "Discount (optional). DiscountType ∈ {\"percent\",\"fixed\"}.",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
-                    "description": "Configuration flags",
+                    "description": "Configuration flags. IncludeMachineCost defaults to TRUE when omitted.",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is in cents.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -12220,6 +14200,15 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. When provided it supplies the machine/energy/cost\npresets for any slot not explicitly set below (see the budget preset resolver).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "tax_rate": {
+                    "description": "TaxRate (optional, percent 0..\u003c100). When omitted the company default is used.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -12265,6 +14254,242 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ProfitRow": {
+            "type": "object",
+            "properties": {
+                "color_hex": {
+                    "type": "string"
+                },
+                "count": {
+                    "description": "sales (customers/machines) or items (materials/filaments)",
+                    "type": "integer"
+                },
+                "discount_rate": {
+                    "description": "DiscountRate is set for customers: discount / price before discount * 100.",
+                    "type": "number"
+                },
+                "grams": {
+                    "type": "number"
+                },
+                "hours": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "margin": {
+                    "description": "profit / revenue * 100",
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "profit": {
+                    "type": "integer"
+                },
+                "profit_per_hour": {
+                    "description": "ProfitPerHour is set for machines (profit per print hour, cents).",
+                    "type": "integer"
+                },
+                "repeat": {
+                    "description": "Repeat is set for customers with more than one sale ever.",
+                    "type": "boolean"
+                },
+                "revenue": {
+                    "description": "net revenue (no tax/shipping)",
+                    "type": "integer"
+                },
+                "subtitle": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ProfitabilityResponse": {
+            "type": "object",
+            "properties": {
+                "average_margin": {
+                    "type": "number"
+                },
+                "by_cost_preset": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_customer": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_filament": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_machine": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "by_material": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ProfitRow"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetCompany": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "trade_name": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetCustomer": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicBudgetItem": {
+            "type": "object",
+            "properties": {
+                "product_description": {
+                    "type": "string"
+                },
+                "product_dimensions": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "product_quantity": {
+                    "type": "integer"
+                },
+                "total_price": {
+                    "description": "cents (sale, with markup)",
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "description": "cents (sale, with markup)",
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.PublicBudgetView": {
+            "type": "object",
+            "properties": {
+                "base_price": {
+                    "type": "integer"
+                },
+                "can_respond": {
+                    "type": "boolean"
+                },
+                "company": {
+                    "$ref": "#/definitions/entities.PublicBudgetCompany"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/entities.PublicBudgetCustomer"
+                },
+                "customer_response_at": {
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "discount_amount": {
+                    "type": "integer"
+                },
+                "is_expired": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PublicBudgetItem"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_terms": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
+                },
+                "shipping_cost": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tax_amount": {
+                    "type": "integer"
+                },
+                "tax_rate_applied": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "valid_until": {
                     "type": "string"
                 }
             }
@@ -12400,6 +14625,29 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.RejectionReason": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "budget_id": {
+                    "type": "string"
+                },
+                "budget_name": {
+                    "type": "string"
+                },
+                "customer": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.RequestLoginEntity": {
             "description": "RequestLoginEntity model data",
             "type": "object",
@@ -12411,6 +14659,70 @@ const docTemplate = `{
                 "password": {
                     "description": "User password",
                     "type": "string"
+                }
+            }
+        },
+        "entities.ResponseBucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ResponseTimesResponse": {
+            "type": "object",
+            "properties": {
+                "approval_buckets": {
+                    "description": "ApprovalBuckets counts approvals by time to decide.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ResponseBucket"
+                    }
+                },
+                "approval_median_hours": {
+                    "type": "number"
+                },
+                "approval_p75_hours": {
+                    "type": "number"
+                },
+                "approved": {
+                    "type": "integer"
+                },
+                "expiration_rate": {
+                    "description": "expired / decided * 100",
+                    "type": "number"
+                },
+                "expired": {
+                    "type": "integer"
+                },
+                "expiring_soon": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.ExpiringBudget"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                },
+                "recent_rejections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.RejectionReason"
+                    }
+                },
+                "rejected": {
+                    "type": "integer"
+                },
+                "rejection_median_hours": {
+                    "type": "number"
+                },
+                "rejection_rate": {
+                    "description": "rejected / decided * 100",
+                    "type": "number"
                 }
             }
         },
@@ -12448,6 +14760,20 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.SaveGoalTargetsRequest": {
+            "type": "object",
+            "required": [
+                "goals"
+            ],
+            "properties": {
+                "goals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.GoalTarget"
+                    }
+                }
+            }
+        },
         "entities.Slicer": {
             "type": "object",
             "properties": {
@@ -12456,6 +14782,61 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.StockMovementResponse": {
+            "type": "object",
+            "properties": {
+                "budget_id": {
+                    "type": "string"
+                },
+                "budget_quote_number": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "filament_id": {
+                    "type": "string"
+                },
+                "grams": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/entities.MovementType"
+                },
+                "unit_price_per_kg": {
+                    "type": "integer"
+                }
+            }
+        },
+        "entities.StockWarning": {
+            "type": "object",
+            "properties": {
+                "available_grams": {
+                    "type": "integer"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "filament_id": {
+                    "type": "string"
+                },
+                "filament_name": {
+                    "type": "string"
+                },
+                "required_grams": {
+                    "type": "integer"
                 }
             }
         },
@@ -12754,6 +15135,14 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.UnreadCountResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.UpdateBudgetRequest": {
             "type": "object",
             "properties": {
@@ -12765,19 +15154,37 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "delivery_days": {
-                    "description": "Additional fields for PDF",
-                    "type": "integer",
-                    "minimum": 0
+                    "description": "Additional fields for PDF. DeliveryDays is tri-state: absent keeps it, explicit\nnull clears it, a value (\u003e= 0) sets it.",
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string",
                     "maxLength": 1000
+                },
+                "discount_type": {
+                    "description": "DiscountType is tri-state. Absent: unchanged. Explicit null: clears BOTH\ndiscount_type AND discount_value (removes the discount). Value (\"percent\" or\n\"fixed\"): sets the type; the resulting type/value pair is validated together\n(see validateDiscountInput). If either discount_type OR discount_value is null,\nboth are cleared (\"null wins\" even when the other carries a value).",
+                    "type": "string",
+                    "enum": [
+                        "percent",
+                        "fixed"
+                    ]
+                },
+                "discount_value": {
+                    "description": "DiscountValue is tri-state (see DiscountType). Absent: unchanged. Explicit null:\nclears BOTH. Value: 0-100 for a \"percent\" discount, or a non-negative reais\namount for a \"fixed\" discount. Sending only discount_value while no type is\nstored yields a 400 (type and value must be provided together).",
+                    "type": "number"
                 },
                 "energy_preset_id": {
                     "type": "string"
                 },
                 "include_energy_cost": {
                     "description": "Configuration flags",
+                    "type": "boolean"
+                },
+                "include_machine_cost": {
+                    "type": "boolean"
+                },
+                "include_shipping": {
+                    "description": "Shipping (optional). ShippingOverride is tri-state and in cents. Absent:\nunchanged. Explicit null: clears the override so computed shipping applies.\nValue: a non-negative cents amount that overrides the computed shipping.",
                     "type": "boolean"
                 },
                 "include_waste_cost": {
@@ -12811,6 +15218,18 @@ const docTemplate = `{
                 "profile_id": {
                     "description": "Optional print profile. Presets are ONLY re-resolved from the profile/org\ndefaults when profile_id is explicitly provided in the update; otherwise the\nstored preset values are kept (partial-update semantics).",
                     "type": "string"
+                },
+                "shipping_override": {
+                    "type": "integer"
+                },
+                "tax_rate": {
+                    "description": "TaxRate is tri-state (percent 0..\u003c100). Absent: unchanged. Explicit null: clears\nthe budget-level rate so the company default applies. Value: a rate in [0, 100).",
+                    "type": "number"
+                },
+                "valid_until": {
+                    "description": "ValidUntil is the tri-state quote validity date (date-only; stored end of day,\nAmerica/Sao_Paulo). Absent: unchanged. Explicit null: clears the validity date.\nValue: sets it (normalized to end of day).",
+                    "type": "string",
+                    "format": "date-time"
                 }
             }
         },
@@ -12824,6 +15243,22 @@ const docTemplate = `{
                 "city": {
                     "type": "string",
                     "maxLength": 100
+                },
+                "default_payment_terms": {
+                    "description": "DefaultPaymentTerms is the organization's default payment terms (max 500).",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "default_quote_validity_days": {
+                    "description": "DefaultQuoteValidityDays is the default quote validity in days (1..365).",
+                    "type": "integer",
+                    "maximum": 365,
+                    "minimum": 1
+                },
+                "default_tax_rate": {
+                    "description": "DefaultTaxRate is the organization's default \"por dentro\" tax rate (percent, 0..\u003c100).",
+                    "type": "number",
+                    "minimum": 0
                 },
                 "document": {
                     "type": "string",
@@ -12956,6 +15391,9 @@ const docTemplate = `{
                     "description": "Status",
                     "type": "boolean"
                 },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
                 "material_id": {
                     "type": "string"
                 },
@@ -12974,12 +15412,29 @@ const docTemplate = `{
                     "maximum": 500,
                     "minimum": 0
                 },
+                "track_stock": {
+                    "description": "Stock control (Phase 4C). TrackStock, when present, turns inventory tracking\non or off. LowStockThresholdGrams is an optional JSON number carried as raw\nbytes so three cases can be told apart:\n  - field ABSENT        -\u003e threshold unchanged\n  - explicit null OR -1 -\u003e threshold cleared (no alert)\n  - number \u003e= 0         -\u003e threshold set to that value\nStockGrams is intentionally NOT accepted here; it changes only via movements.",
+                    "type": "boolean"
+                },
                 "url": {
                     "description": "Additional properties",
                     "type": "string"
                 },
                 "weight": {
                     "type": "number"
+                }
+            }
+        },
+        "entities.UpdateMeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
                 }
             }
         },
@@ -13200,13 +15655,44 @@ const docTemplate = `{
                         "approved",
                         "rejected",
                         "printing",
-                        "completed"
+                        "completed",
+                        "expired",
+                        "cancelled"
                     ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/entities.BudgetStatus"
                         }
                     ]
+                }
+            }
+        },
+        "github_com_RodolfoBonis_spooliq_features_dashboard_domain_entities.LowStockFilament": {
+            "type": "object",
+            "properties": {
+                "brand_name": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "color_hex": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "low_stock_threshold_grams": {
+                    "type": "integer"
+                },
+                "material_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "stock_grams": {
+                    "type": "integer"
                 }
             }
         },
@@ -13332,6 +15818,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/entities.CompanyListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.Page-entities_Notification": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Notification"
                     }
                 },
                 "page": {
@@ -13647,6 +16156,17 @@ const docTemplate = `{
                 }
             }
         },
+        "usecases.CancelSubscriptionRequest": {
+            "type": "object",
+            "properties": {
+                "feedback": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "usecases.CostPresetResponse": {
             "type": "object",
             "properties": {
@@ -13655,6 +16175,9 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "failure_rate_percentage": {
+                    "type": "number"
                 },
                 "id": {
                     "type": "string"
@@ -13700,6 +16223,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "waste_grams_per_color_change": {
+                    "type": "number"
                 }
             }
         },
@@ -13708,6 +16234,11 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "failure_rate_percentage": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
                 },
                 "is_default": {
                     "type": "boolean"
@@ -13756,6 +16287,11 @@ const docTemplate = `{
                 "user_id": {
                     "description": "Deprecated: ignored; derived from the authenticated user.",
                     "type": "string"
+                },
+                "waste_grams_per_color_change": {
+                    "description": "WasteGramsPerColorChange defaults to 15 when omitted (0) to match the engine default.",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -13942,6 +16478,44 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecases.ImportResult": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecases.ImportRowResult"
+                    }
+                },
+                "skipped": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usecases.ImportRowResult": {
+            "type": "object",
+            "properties": {
+                "line": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "created | skipped | error",
                     "type": "string"
                 }
             }
@@ -14207,6 +16781,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "failure_rate_percentage": {
+                    "type": "number"
+                },
                 "id": {
                     "description": "Taken from the URL path; any body value is overridden",
                     "type": "string"
@@ -14245,6 +16822,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "support_removal_cost_per_hour": {
+                    "type": "number"
+                },
+                "waste_grams_per_color_change": {
                     "type": "number"
                 }
             }

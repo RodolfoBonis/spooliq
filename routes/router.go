@@ -7,6 +7,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/health"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
+	"github.com/RodolfoBonis/spooliq/features/account"
 	"github.com/RodolfoBonis/spooliq/features/activity"
 	activityuc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/admin"
@@ -27,10 +28,14 @@ import (
 	materialuc "github.com/RodolfoBonis/spooliq/features/material/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/model3d"
 	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/notification"
+	notificationuc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/profile"
 	"github.com/RodolfoBonis/spooliq/features/slicer"
 	sliceruc "github.com/RodolfoBonis/spooliq/features/slicer/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/stock"
+	stockuc "github.com/RodolfoBonis/spooliq/features/stock/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
@@ -47,15 +52,18 @@ import (
 func InitializeRoutes(
 	router *gin.Engine,
 	activityService activityuc.IActivityService,
+	notificationService notificationuc.INotificationService,
 	authUc authuc.AuthUseCase,
 	registerUc *authuc.RegisterUseCase,
 	brandUc branduc.IBrandUseCase,
 	budgetUc budgetuc.IBudgetUseCase,
+	publicBudgetUc budgetuc.IPublicBudgetUseCase,
 	companyUc companyuc.ICompanyUseCase,
 	brandingUc companyuc.IBrandingUseCase,
 	subscriptionPaymentsUc companyuc.ISubscriptionPaymentsUseCase,
 	customerUc customeruc.ICustomerUseCase,
 	filamentUc filamentuc.IFilamentUseCase,
+	stockUc stockuc.IStockUseCase,
 	materialUc materialuc.IMaterialUseCase,
 	model3dUc model3duc.IModel3DUseCase,
 	slicerUc sliceruc.ISlicerUseCase,
@@ -68,6 +76,7 @@ func InitializeRoutes(
 	dashboardHandler *dashboard.Handler,
 	webhookHandler *webhooks.Handler,
 	userHandler *users.Handler,
+	accountHandler *account.Handler,
 	adminHandler *admin.Handler,
 	healthHandler *health.Handler,
 	protectFactory func(handler gin.HandlerFunc, roles ...string) gin.HandlerFunc,
@@ -85,13 +94,16 @@ func InitializeRoutes(
 
 	healthHandler.Register(root)
 	activity.Routes(root, activityService, protectFactory)
+	notification.Routes(root, notificationService, protectFactory)
 	auth.Routes(root, authUc, registerUc, protectFactory)
 	brand.Routes(root, brandUc, protectFactory, cacheMiddleware)
-	budget.Routes(root, budgetUc, protectFactory)
+	budget.Routes(root, budgetUc, protectFactory, cacheMiddleware)
+	budget.PublicRoutes(root, publicBudgetUc)
 	company.Routes(root, companyUc, brandingUc, subscriptionPaymentsUc, protectFactory)
 	customer.Routes(root, customerUc, protectFactory)
 	dashboard.SetupRoutes(root, dashboardHandler, protectFactory, cacheMiddleware)
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
+	stock.Routes(root, stockUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
 	model3d.Routes(root, model3dUc, protectFactory)
 	slicer.Routes(root, slicerUc, protectFactory)
@@ -99,6 +111,7 @@ func InitializeRoutes(
 	profile.Routes(root, profileHandler, protectFactory)
 	uploads.Routes(root, uploadsUc, protectFactory)
 	users.SetupRoutes(root, userHandler, protectFactory)
+	account.SetupRoutes(root, accountHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
 	admin.SetupRoutes(root, adminHandler, protectFactory)
 	subscriptions.Routes(root, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, protectFactory)

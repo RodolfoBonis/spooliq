@@ -55,6 +55,14 @@ type FilamentModel struct {
 	PrintTemperature *int `gorm:"type:integer" json:"print_temperature"`
 	BedTemperature   *int `gorm:"type:integer" json:"bed_temperature"`
 
+	// Stock control (Phase 4C). StockGrams is the current balance in grams and may
+	// go negative. It is mutated only through stock movements, never through the
+	// generic filament update (see filamentUpdatableColumns). LowStockThresholdGrams
+	// is the optional alert threshold (NULL = no alert).
+	TrackStock             bool  `gorm:"not null;default:false" json:"track_stock"`
+	StockGrams             int64 `gorm:"type:bigint;not null;default:0" json:"stock_grams"`
+	LowStockThresholdGrams *int  `gorm:"type:integer" json:"low_stock_threshold_grams"`
+
 	// Timestamps
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
@@ -77,28 +85,32 @@ func (f *FilamentModel) BeforeCreate(tx *gorm.DB) error {
 // ToEntity converts the GORM model to domain entity
 func (f *FilamentModel) ToEntity() *entities.FilamentEntity {
 	return &entities.FilamentEntity{
-		ID:               f.ID,
-		OrganizationID:   f.OrganizationID,
-		Name:             f.Name,
-		Description:      f.Description,
-		BrandID:          f.BrandID,
-		MaterialID:       f.MaterialID,
-		Color:            f.Color,
-		ColorHex:         f.ColorHex,
-		ColorType:        entities.ColorType(f.ColorType),
-		ColorData:        json.RawMessage(f.ColorData),
-		ColorPreview:     f.ColorPreview,
-		Diameter:         f.Diameter,
-		Weight:           f.Weight,
-		PricePerKg:       f.PricePerKg,
-		URL:              f.URL,
-		OwnerUserID:      f.OwnerUserID,
-		IsActive:         f.IsActive,
-		PrintTemperature: f.PrintTemperature,
-		BedTemperature:   f.BedTemperature,
-		CreatedAt:        f.CreatedAt,
-		UpdatedAt:        f.UpdatedAt,
-		DeletedAt:        getDeletedAt(f.DeletedAt),
+		ID:                     f.ID,
+		OrganizationID:         f.OrganizationID,
+		Name:                   f.Name,
+		Description:            f.Description,
+		BrandID:                f.BrandID,
+		MaterialID:             f.MaterialID,
+		Color:                  f.Color,
+		ColorHex:               f.ColorHex,
+		ColorType:              entities.ColorType(f.ColorType),
+		ColorData:              json.RawMessage(f.ColorData),
+		ColorPreview:           f.ColorPreview,
+		Diameter:               f.Diameter,
+		Weight:                 f.Weight,
+		PricePerKg:             f.PricePerKg,
+		URL:                    f.URL,
+		OwnerUserID:            f.OwnerUserID,
+		IsActive:               f.IsActive,
+		PrintTemperature:       f.PrintTemperature,
+		BedTemperature:         f.BedTemperature,
+		TrackStock:             f.TrackStock,
+		StockGrams:             f.StockGrams,
+		LowStockThresholdGrams: f.LowStockThresholdGrams,
+		IsLowStock:             f.TrackStock && f.LowStockThresholdGrams != nil && f.StockGrams <= int64(*f.LowStockThresholdGrams),
+		CreatedAt:              f.CreatedAt,
+		UpdatedAt:              f.UpdatedAt,
+		DeletedAt:              getDeletedAt(f.DeletedAt),
 	}
 }
 
@@ -131,6 +143,9 @@ func (f *FilamentModel) FromEntity(entity *entities.FilamentEntity) {
 	f.IsActive = entity.IsActive
 	f.PrintTemperature = entity.PrintTemperature
 	f.BedTemperature = entity.BedTemperature
+	f.TrackStock = entity.TrackStock
+	f.StockGrams = entity.StockGrams
+	f.LowStockThresholdGrams = entity.LowStockThresholdGrams
 	f.CreatedAt = entity.CreatedAt
 	f.UpdatedAt = entity.UpdatedAt
 	if entity.DeletedAt != nil {

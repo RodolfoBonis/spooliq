@@ -88,3 +88,12 @@ func (m *MockDashboardRepository) GetGoalsAlerts(organizationID string) (*entiti
 	}
 	return args.Get(0).(*entities.GoalsAlertsResponse), args.Error(1)
 }
+
+// GetLowStockFilaments mocks the GetLowStockFilaments method.
+func (m *MockDashboardRepository) GetLowStockFilaments(organizationID string, limit int) ([]entities.LowStockFilament, error) {
+	args := m.Called(organizationID, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entities.LowStockFilament), args.Error(1)
+}

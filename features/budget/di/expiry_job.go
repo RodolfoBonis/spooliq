@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	budgetRepos "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	budgetUsecases "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
 	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
@@ -26,7 +27,7 @@ const expiryJobInitialDelay = time.Minute
 // The public endpoints also check valid_until directly, so correctness never
 // depends on this job having run — it only keeps the stored status in sync for the
 // dashboard/list views.
-func RegisterExpiryJob(lc fx.Lifecycle, repo budgetRepos.BudgetRepository, notifications notificationUc.INotificationService, log logger.Logger) {
+func RegisterExpiryJob(lc fx.Lifecycle, repo budgetRepos.BudgetRepository, notifications notificationUc.INotificationService, cache *middlewares.CacheMiddleware, log logger.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ticker := time.NewTicker(expiryJobInterval)
 
@@ -39,8 +40,15 @@ func RegisterExpiryJob(lc fx.Lifecycle, repo budgetRepos.BudgetRepository, notif
 		if len(expired) > 0 {
 			log.Info(ctx, "Budget expiry sweep completed", map[string]interface{}{"expired_count": len(expired)})
 		}
+		orgs := map[string]bool{}
 		for _, b := range expired {
 			notifications.Notify(b.OrganizationID, budgetUsecases.ExpiredNotification(b))
+			orgs[b.OrganizationID] = true
+		}
+		for orgID := range orgs {
+			if cache != nil {
+				budgetUsecases.InvalidateDashboard(ctx, cache, log, orgID)
+			}
 		}
 	}
 

@@ -802,7 +802,7 @@ var dataMigrations = []struct{ name, sql string }{
 		`UPDATE budgets b SET approved_at = COALESCE(
 			(SELECT MAX(h.created_at) FROM budget_status_history h
 			 WHERE h.budget_id = b.id AND h.new_status = 'approved'),
-			b.updated_at)
+			b.updated_at) -- legacy budgets without history: best available date
 		 WHERE b.approved_at IS NULL AND b.status IN ('approved', 'printing', 'completed')`,
 	},
 	{
@@ -825,16 +825,23 @@ func runDataMigrations() {
 		fmt.Printf("Warning: data_migrations table creation failed: %v\n", err)
 		return
 	}
+	// Migrations run in order and later ones may depend on earlier ones (the
+	// approved_at backfill reads history rows inserted by the history
+	// backfills), so the first failure stops the run; it is retried on the next
+	// boot. An advisory lock serializes replicas starting at the same time, and
+	// the applied check is repeated under the lock.
 	for _, m := range dataMigrations {
-		var applied int64
-		if err := Connector.Raw("SELECT count(*) FROM data_migrations WHERE name = ?", m.name).Scan(&applied).Error; err != nil {
-			fmt.Printf("Warning: data migration %s check failed: %v\n", m.name, err)
-			continue
-		}
-		if applied > 0 {
-			continue
-		}
 		err := Connector.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(hashtext('data_migrations'))").Error; err != nil {
+				return err
+			}
+			var applied int64
+			if err := tx.Raw("SELECT count(*) FROM data_migrations WHERE name = ?", m.name).Scan(&applied).Error; err != nil {
+				return err
+			}
+			if applied > 0 {
+				return nil
+			}
 			res := tx.Exec(m.sql)
 			if res.Error != nil {
 				return res.Error
@@ -843,7 +850,8 @@ func runDataMigrations() {
 			return tx.Exec("INSERT INTO data_migrations (name) VALUES (?) ON CONFLICT (name) DO NOTHING", m.name).Error
 		})
 		if err != nil {
-			fmt.Printf("Warning: data migration %s failed: %v\n", m.name, err)
+			fmt.Printf("Warning: data migration %s failed, skipping the remaining ones until next start: %v\n", m.name, err)
+			return
 		}
 	}
 }

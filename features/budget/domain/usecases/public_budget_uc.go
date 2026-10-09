@@ -10,6 +10,7 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	activityUc "github.com/RodolfoBonis/spooliq/features/activity/domain/usecases"
@@ -47,7 +48,30 @@ type PublicBudgetUseCase struct {
 	redisService       *services.RedisService
 	activityService    activityUc.IActivityService
 	notifications      notificationUc.INotificationService
+	cache              DashboardCacheInvalidator
 	logger             logger.Logger
+}
+
+// DashboardCacheInvalidator clears an organization's cached dashboard after
+// writes that do not go through an authenticated route (public link, jobs).
+type DashboardCacheInvalidator interface {
+	InvalidatePrefix(ctx context.Context, orgID, prefix string) error
+}
+
+// DashboardCachePrefix is the cache group of every dashboard endpoint.
+const DashboardCachePrefix = "dashboard"
+
+// InvalidateDashboard clears the organization's dashboard cache, logging failures.
+func InvalidateDashboard(ctx context.Context, cache DashboardCacheInvalidator, log logger.Logger, orgID string) {
+	if cache == nil {
+		return
+	}
+	if err := cache.InvalidatePrefix(ctx, orgID, DashboardCachePrefix); err != nil {
+		log.Error(ctx, "Failed to invalidate dashboard cache", map[string]interface{}{
+			"organization_id": orgID,
+			"error":           err.Error(),
+		})
+	}
 }
 
 // NewPublicBudgetUseCase creates a new PublicBudgetUseCase.
@@ -58,9 +82,10 @@ func NewPublicBudgetUseCase(
 	redisService *services.RedisService,
 	activityService activityUc.IActivityService,
 	notifications notificationUc.INotificationService,
+	cache *middlewares.CacheMiddleware,
 	logger logger.Logger,
 ) IPublicBudgetUseCase {
-	return &PublicBudgetUseCase{
+	uc := &PublicBudgetUseCase{
 		budgetRepository:   budgetRepository,
 		brandingRepository: brandingRepository,
 		pdfService:         pdfService,
@@ -69,6 +94,10 @@ func NewPublicBudgetUseCase(
 		notifications:      notifications,
 		logger:             logger,
 	}
+	if cache != nil { // avoid a non-nil interface wrapping a nil pointer
+		uc.cache = cache
+	}
+	return uc
 }
 
 // allowRequest applies a per-IP sliding-ish fixed-window rate limit using Redis
@@ -293,9 +322,32 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 		userAgent = string([]rune(userAgent)[:maxUserAgentLength])
 	}
 
-	rows, err := uc.budgetRepository.RespondToPublicBudget(ctx, budget.ID, newStatus, name, ip, userAgent, reason, now)
+	// The response and its status-history row (which feeds the funnel, approval
+	// rate and response times) are written atomically.
+	note := "Resposta do cliente pelo link"
+	if reason != nil {
+		note = "Motivo: " + *reason
+	}
+	var rows int64
+	err = uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		var err error
+		rows, err = repo.RespondToPublicBudget(ctx, budget.ID, newStatus, name, ip, userAgent, reason, now)
+		if err != nil || rows == 0 {
+			return err
+		}
+		return repo.AddStatusHistory(ctx, &entities.BudgetStatusHistoryEntity{
+			ID:             uuid.New(),
+			BudgetID:       budget.ID,
+			OrganizationID: budget.OrganizationID,
+			PreviousStatus: entities.StatusSent,
+			NewStatus:      newStatus,
+			ChangedBy:      name + " (cliente)",
+			Notes:          note,
+			CreatedAt:      now,
+		})
+	})
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to record customer response", map[string]interface{}{"error": err.Error()})
+		uc.logger.Error(ctx, "Failed to record customer response", map[string]interface{}{"error": err.Error(), "budget_id": budget.ID})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -309,28 +361,7 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 		coreErrors.Respond(c, mapNotRespondableError(fresh, time.Now()))
 		return
 	}
-
-	// Status history (feeds the funnel and the response-time metrics). Best effort:
-	// the response is already stored, so a failure here is only logged.
-	note := "Resposta do cliente pelo link"
-	if reason != nil {
-		note = "Motivo: " + *reason
-	}
-	if herr := uc.budgetRepository.AddStatusHistory(ctx, &entities.BudgetStatusHistoryEntity{
-		ID:             uuid.New(),
-		BudgetID:       budget.ID,
-		OrganizationID: budget.OrganizationID,
-		PreviousStatus: entities.StatusSent,
-		NewStatus:      newStatus,
-		ChangedBy:      name + " (cliente)",
-		Notes:          note,
-		CreatedAt:      now,
-	}); herr != nil {
-		uc.logger.Error(ctx, "Failed to record public response history", map[string]interface{}{
-			"error":     herr.Error(),
-			"budget_id": budget.ID,
-		})
-	}
+	InvalidateDashboard(ctx, uc.cache, uc.logger, budget.OrganizationID)
 
 	// Record the activity (actor is the customer, suffixed to distinguish it).
 	quoteNumber := 0

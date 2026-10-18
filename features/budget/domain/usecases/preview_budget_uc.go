@@ -213,6 +213,8 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 			ProductName:             item.ProductName,
 			ProductDescription:      item.ProductDescription,
 			ProductQuantity:         item.ProductQuantity,
+			UnitsPerPrint:           item.UnitsPerPrint,
+			PerPrint:                perPrintFor(item),
 			ProductDimensions:       item.ProductDimensions,
 			PrintTimeHours:          item.PrintTimeHours,
 			PrintTimeMinutes:        item.PrintTimeMinutes,

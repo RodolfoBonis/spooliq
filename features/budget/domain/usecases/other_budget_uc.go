@@ -121,6 +121,8 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 			ProductName:             original.ProductName,
 			ProductDescription:      original.ProductDescription,
 			ProductQuantity:         original.ProductQuantity,
+			UnitsPerPrint:           original.UnitsPerPrint,
+			PerPrint:                original.PerPrint,
 			ProductDimensions:       original.ProductDimensions,
 			PrintTimeHours:          original.PrintTimeHours,
 			PrintTimeMinutes:        original.PrintTimeMinutes,

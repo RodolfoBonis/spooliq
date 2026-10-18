@@ -85,10 +85,12 @@ type BudgetItemResponse struct {
 	BudgetID string `json:"budget_id"`
 
 	// Product information (customer-facing)
-	ProductName        string  `json:"product_name"`
-	ProductDescription *string `json:"product_description,omitempty"`
-	ProductQuantity    int     `json:"product_quantity"`
-	ProductDimensions  *string `json:"product_dimensions,omitempty"`
+	ProductName        string          `json:"product_name"`
+	ProductDescription *string         `json:"product_description,omitempty"`
+	ProductQuantity    int             `json:"product_quantity"`
+	UnitsPerPrint      *int            `json:"units_per_print,omitempty"`
+	PerPrint           *PerPrintValues `json:"per_print,omitempty"`
+	ProductDimensions  *string         `json:"product_dimensions,omitempty"`
 
 	// Print time for this item
 	PrintTimeHours   int    `json:"print_time_hours"`

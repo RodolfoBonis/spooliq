@@ -10678,6 +10678,14 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
+                "per_print": {
+                    "description": "PerPrint are the client's inputs for one run (only with UnitsPerPrint).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.PerPrintValues"
+                        }
+                    ]
+                },
                 "post_processing_minutes": {
                     "description": "Post-processing time for this item (minutes)",
                     "type": "integer",
@@ -10719,6 +10727,11 @@ const docTemplate = `{
                     "description": "Support-removal time for this item (minutes)",
                     "type": "integer",
                     "minimum": 0
+                },
+                "units_per_print": {
+                    "description": "UnitsPerPrint is how many units one run of the sliced file produces (the\nclient scales the totals below from it). Stored for re-editing only.",
+                    "type": "integer",
+                    "maximum": 1000000
                 }
             }
         },
@@ -10795,6 +10808,9 @@ const docTemplate = `{
                     "description": "cents",
                     "type": "integer"
                 },
+                "per_print": {
+                    "$ref": "#/definitions/entities.PerPrintValues"
+                },
                 "post_processing_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -10857,6 +10873,9 @@ const docTemplate = `{
                 },
                 "unit_price": {
                     "description": "cents per unit (COST, no markup) - kept for compatibility",
+                    "type": "integer"
+                },
+                "units_per_print": {
                     "type": "integer"
                 },
                 "updated_at": {
@@ -13531,6 +13550,38 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.PerPrintValues": {
+            "type": "object",
+            "properties": {
+                "filament_grams": {
+                    "description": "in filament order",
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "labor_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "post_processing_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "print_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "setup_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "support_removal_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
         "entities.PlanAuditEntry": {
             "type": "object",
             "properties": {
@@ -14013,9 +14064,27 @@ const docTemplate = `{
                     "description": "Name is an optional human label for the plate.",
                     "type": "string"
                 },
+                "objects": {
+                    "description": "Objects counts the printed (non-skipped) objects on the plate by name,\nso clients can tell how many pieces one run of the file produces (e.g.\n10× \"pote\" + 10× \"tampa\"). Empty when the slicer does not report objects.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlateObject"
+                    }
+                },
                 "print_time_seconds": {
                     "description": "PrintTimeSeconds is the estimated print time in seconds.",
                     "type": "integer"
+                }
+            }
+        },
+        "entities.PlateObject": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

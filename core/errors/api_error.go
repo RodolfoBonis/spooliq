@@ -105,3 +105,13 @@ func Validation(fields map[string]string) *APIError {
 func Internal() *APIError {
 	return newAPIError(http.StatusInternalServerError, CodeInternalError, genericInternalMessage)
 }
+
+// Gone builds a 410 Gone APIError.
+func Gone(code, message string) *APIError {
+	return newAPIError(http.StatusGone, code, message)
+}
+
+// TooManyRequests builds a 429 Too Many Requests APIError.
+func TooManyRequests(code, message string) *APIError {
+	return newAPIError(http.StatusTooManyRequests, code, message)
+}

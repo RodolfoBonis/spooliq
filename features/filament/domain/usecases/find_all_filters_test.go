@@ -104,3 +104,16 @@ func TestFindAll_InvalidBrandIDFilter(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, 0, repo.searchCalls)
 }
+
+func TestApplyFilamentUpdate_IsActive(t *testing.T) {
+	active := true
+	f := &entities.FilamentEntity{IsActive: false}
+	applyFilamentUpdate(f, &entities.UpdateFilamentRequest{})
+	if f.IsActive {
+		t.Fatal("absent is_active must keep the stored value")
+	}
+	applyFilamentUpdate(f, &entities.UpdateFilamentRequest{IsActive: &active})
+	if !f.IsActive {
+		t.Fatal("explicit is_active must be applied")
+	}
+}

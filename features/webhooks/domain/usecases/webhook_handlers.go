@@ -2,8 +2,10 @@ package usecases
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	notificationEntities "github.com/RodolfoBonis/spooliq/features/notification/domain/entities"
 	subscriptionEntities "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/entities"
 	webhookEntities "github.com/RodolfoBonis/spooliq/features/webhooks/domain/entities"
 )
@@ -49,6 +51,7 @@ func (uc *AsaasWebhookUseCase) handlePaymentReceived(ctx context.Context, paymen
 	if err := uc.recordPayment(ctx, payment, subscriptionEntities.StatusReceived, "PAYMENT_RECEIVED"); err != nil {
 		return err
 	}
+	uc.notifyPayment(payment, notificationEntities.TypePaymentPaid)
 	return uc.activateCompanyIfNeeded(ctx, payment.ExternalReference)
 }
 
@@ -57,6 +60,7 @@ func (uc *AsaasWebhookUseCase) handlePaymentConfirmed(ctx context.Context, payme
 	if err := uc.recordPayment(ctx, payment, subscriptionEntities.StatusConfirmed, "PAYMENT_CONFIRMED"); err != nil {
 		return err
 	}
+	uc.notifyPayment(payment, notificationEntities.TypePaymentPaid)
 	return uc.activateCompanyIfNeeded(ctx, payment.ExternalReference)
 }
 
@@ -74,6 +78,7 @@ func (uc *AsaasWebhookUseCase) handlePaymentOverdue(ctx context.Context, payment
 	if err := uc.recordPayment(ctx, payment, subscriptionEntities.StatusOverdue, "PAYMENT_OVERDUE"); err != nil {
 		return err
 	}
+	uc.notifyPayment(payment, notificationEntities.TypePaymentOverdue)
 	// Optionally suspend company on overdue
 	return uc.suspendCompanyIfNeeded(ctx, payment.ExternalReference)
 }
@@ -381,4 +386,27 @@ func (uc *AsaasWebhookUseCase) suspendCompanyIfNeeded(ctx context.Context, orgID
 	}
 
 	return nil
+}
+
+// notifyPayment tells the organization about subscription payment events.
+// Deduplicated per payment: Asaas sends RECEIVED and CONFIRMED for the same
+// payment and retries deliveries.
+func (uc *AsaasWebhookUseCase) notifyPayment(payment webhookEntities.AsaasPaymentWebhook, kind notificationEntities.NotificationType) {
+	if uc.notifications == nil || payment.ExternalReference == "" {
+		return
+	}
+	amount := fmt.Sprintf("R$ %.2f", payment.Value)
+	n := notificationEntities.NewNotification{
+		Type:      kind,
+		Link:      "/settings/subscription",
+		DedupeKey: string(kind) + ":" + payment.ID,
+	}
+	if kind == notificationEntities.TypePaymentOverdue {
+		n.Title = "Pagamento da assinatura em atraso"
+		n.Body = "A cobrança de " + amount + " venceu. Regularize para não perder o acesso."
+	} else {
+		n.Title = "Pagamento da assinatura confirmado"
+		n.Body = "Recebemos " + amount + ". Obrigado!"
+	}
+	uc.notifications.Notify(payment.ExternalReference, n)
 }

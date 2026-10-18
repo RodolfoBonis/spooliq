@@ -9,7 +9,7 @@ import (
 func TestIsValidTransition(t *testing.T) {
 	allowed := map[BudgetStatus]map[BudgetStatus]bool{
 		StatusDraft:     {StatusSent: true, StatusCancelled: true},
-		StatusSent:      {StatusApproved: true, StatusRejected: true, StatusExpired: true, StatusCancelled: true},
+		StatusSent:      {StatusApproved: true, StatusRejected: true, StatusExpired: true, StatusCancelled: true, StatusDraft: true}, // draft = revision
 		StatusApproved:  {StatusPrinting: true, StatusCancelled: true},
 		StatusRejected:  {StatusDraft: true},
 		StatusExpired:   {StatusDraft: true},

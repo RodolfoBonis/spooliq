@@ -188,8 +188,10 @@ func (b *BudgetEntity) CanRespond(now time.Time) bool {
 
 // validTransitions is the single source of truth for allowed status transitions.
 var validTransitions = map[BudgetStatus][]BudgetStatus{
-	StatusDraft:     {StatusSent, StatusCancelled},
-	StatusSent:      {StatusApproved, StatusRejected, StatusExpired, StatusCancelled},
+	StatusDraft: {StatusSent, StatusCancelled},
+	// sent → draft is a revision requested by the customer: same number and
+	// share link; the public page shows "em revisão" until it is sent again.
+	StatusSent:      {StatusApproved, StatusRejected, StatusExpired, StatusCancelled, StatusDraft},
 	StatusApproved:  {StatusPrinting, StatusCancelled},
 	StatusRejected:  {StatusDraft},
 	StatusExpired:   {StatusDraft},

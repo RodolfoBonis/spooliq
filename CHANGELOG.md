@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.18.1 - 2026-10-18
+
+### Changes
+- chore: bump version to 2.18.1 (f931ea3)
+- fix(stock): bound movement grams and alert thresholds before integer conversion (0ab200d)
+- fix(stock): accept decimal grams, stock settings on create and decimal alert thresholds (10223af)
+
+
 ## v2.18.0 - 2026-10-18
 
 ### Changes

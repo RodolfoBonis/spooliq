@@ -3,6 +3,7 @@ package usecases
 import (
 	"bytes"
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -266,10 +267,12 @@ func applyThresholdUpdate(f *filamentEntities.FilamentEntity, raw []byte) error 
 		f.LowStockThresholdGrams = nil
 		return nil
 	}
-	v, err := strconv.Atoi(string(trimmed))
-	if err != nil {
+	// Accept any JSON number (clients send 100.0); grams are whole numbers.
+	parsed, err := strconv.ParseFloat(string(trimmed), 64)
+	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) {
 		return coreErrors.BadRequest("invalid_low_stock_threshold", "Limite de estoque baixo inválido")
 	}
+	v := int(math.Round(parsed))
 	if v < 0 {
 		f.LowStockThresholdGrams = nil
 		return nil

@@ -33,6 +33,12 @@ type CreateFilamentRequest struct {
 
 	// Ownership
 	OwnerUserID *string `json:"owner_user_id,omitempty"`
+
+	// Stock control. The balance itself is never set here: it starts at 0 and
+	// changes only through stock movements (clients record the initial stock
+	// as a purchase right after creating the filament).
+	TrackStock             bool     `json:"track_stock"`
+	LowStockThresholdGrams *float64 `json:"low_stock_threshold_grams,omitempty" validate:"omitempty,gte=0"`
 }
 
 // UpdateFilamentRequest represents the request to update an existing filament

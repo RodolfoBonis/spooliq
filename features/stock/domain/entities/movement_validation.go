@@ -1,5 +1,7 @@
 package entities
 
+import "math"
+
 // Validation error codes (snake_case, stable; messages are pt-BR in the use case).
 const (
 	// CodeInvalidMovementType is returned when the movement type is not one of the
@@ -21,23 +23,24 @@ func (r CreateMovementRequest) Normalize() (signedGrams int64, errCode string) {
 	if !r.Type.IsManual() {
 		return 0, CodeInvalidMovementType
 	}
+	grams := int64(math.Round(r.Grams))
 
 	switch r.Type {
 	case MovementPurchase:
-		if r.Grams <= 0 {
+		if grams <= 0 {
 			return 0, CodeInvalidMovementGrams
 		}
-		return r.Grams, ""
+		return grams, ""
 	case MovementAdjustment:
-		if r.Grams == 0 {
+		if grams == 0 {
 			return 0, CodeInvalidMovementGrams
 		}
-		return r.Grams, ""
+		return grams, ""
 	case MovementWaste:
-		if r.Grams <= 0 {
+		if grams <= 0 {
 			return 0, CodeInvalidMovementGrams
 		}
-		return -r.Grams, ""
+		return -grams, ""
 	default:
 		return 0, CodeInvalidMovementType
 	}

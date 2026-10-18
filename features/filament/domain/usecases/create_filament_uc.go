@@ -116,6 +116,8 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 		URL:              request.URL,
 		PrintTemperature: request.PrintTemperature,
 		BedTemperature:   request.BedTemperature,
+		// New filaments are available for budgets and slicer suggestions.
+		IsActive: true,
 	}
 
 	// Only admins may create global (ownerless) filaments; everyone else owns

@@ -8,6 +8,12 @@ type CostBreakdown struct {
 	SetupPct    float64 `json:"setup_pct"`
 	LaborPct    float64 `json:"labor_pct"`
 	OverheadPct float64 `json:"overhead_pct"`
+	// Components previously left out of the breakdown (additive fields).
+	MachinePct        float64 `json:"machine_pct"`
+	PostProcessingPct float64 `json:"post_processing_pct"`
+	PackagingPct      float64 `json:"packaging_pct"`
+	QualityControlPct float64 `json:"quality_control_pct"`
+	FailurePct        float64 `json:"failure_pct"`
 }
 
 // OperationalInsightsResponse contains operational metrics.

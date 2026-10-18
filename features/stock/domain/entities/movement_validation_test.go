@@ -29,6 +29,8 @@ func TestNormalize_SignAndValidation(t *testing.T) {
 		{"purchase decimal rounds to whole grams", CreateMovementRequest{Type: MovementPurchase, Grams: 382.4}, 382, ""},
 		{"waste decimal rounds", CreateMovementRequest{Type: MovementWaste, Grams: 12.6}, -13, ""},
 		{"purchase below half a gram rejected", CreateMovementRequest{Type: MovementPurchase, Grams: 0.4}, 0, CodeInvalidMovementGrams},
+		{"huge purchase rejected", CreateMovementRequest{Type: MovementPurchase, Grams: 1e30}, 0, CodeInvalidMovementGrams},
+		{"huge negative adjustment rejected", CreateMovementRequest{Type: MovementAdjustment, Grams: -1e30}, 0, CodeInvalidMovementGrams},
 	}
 
 	for _, tc := range cases {

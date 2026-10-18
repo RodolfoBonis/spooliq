@@ -12003,7 +12003,9 @@ const docTemplate = `{
                     "maximum": 10
                 },
                 "low_stock_threshold_grams": {
+                    "description": "Ignored unless TrackStock is true.",
                     "type": "number",
+                    "maximum": 1000000,
                     "minimum": 0
                 },
                 "material_id": {

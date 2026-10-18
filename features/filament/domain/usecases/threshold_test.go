@@ -21,6 +21,7 @@ func TestApplyThresholdUpdate(t *testing.T) {
 		{"100.0", nil, intPtr(100), false},      // desktop client sends doubles
 		{"99.6", nil, intPtr(100), false},       // rounded to whole grams
 		{`"abc"`, intPtr(50), intPtr(50), true}, // invalid
+		{"1e30", intPtr(50), intPtr(50), true},  // out of range, not a silent clear
 	}
 	for _, tc := range cases {
 		f := &filamentEntities.FilamentEntity{LowStockThresholdGrams: tc.start}

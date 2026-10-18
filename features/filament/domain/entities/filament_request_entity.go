@@ -37,8 +37,9 @@ type CreateFilamentRequest struct {
 	// Stock control. The balance itself is never set here: it starts at 0 and
 	// changes only through stock movements (clients record the initial stock
 	// as a purchase right after creating the filament).
-	TrackStock             bool     `json:"track_stock"`
-	LowStockThresholdGrams *float64 `json:"low_stock_threshold_grams,omitempty" validate:"omitempty,gte=0"`
+	TrackStock bool `json:"track_stock"`
+	// Ignored unless TrackStock is true.
+	LowStockThresholdGrams *float64 `json:"low_stock_threshold_grams,omitempty" validate:"omitempty,gte=0,lte=1000000"`
 }
 
 // UpdateFilamentRequest represents the request to update an existing filament

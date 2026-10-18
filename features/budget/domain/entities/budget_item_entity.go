@@ -21,8 +21,12 @@ type BudgetItemEntity struct {
 	ProductName        string  `json:"product_name"`
 	ProductDescription *string `json:"product_description,omitempty"`
 	ProductQuantity    int     `json:"product_quantity"` // number of units
-	UnitPrice          int64   `json:"unit_price"`       // cents per unit
-	ProductDimensions  *string `json:"product_dimensions,omitempty"`
+	// UnitsPerPrint is how many units one run of the sliced file produces. When
+	// set, the client scaled print time, grams and labor from one run to the
+	// quantity; the stored values are still totals for the item.
+	UnitsPerPrint     *int    `json:"units_per_print,omitempty"`
+	UnitPrice         int64   `json:"unit_price"` // cents per unit
+	ProductDimensions *string `json:"product_dimensions,omitempty"`
 
 	// Print time for THIS item (not global)
 	PrintTimeHours   int `json:"print_time_hours"`

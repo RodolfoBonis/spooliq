@@ -88,6 +88,7 @@ type BudgetItemResponse struct {
 	ProductName        string  `json:"product_name"`
 	ProductDescription *string `json:"product_description,omitempty"`
 	ProductQuantity    int     `json:"product_quantity"`
+	UnitsPerPrint      *int    `json:"units_per_print,omitempty"`
 	ProductDimensions  *string `json:"product_dimensions,omitempty"`
 
 	// Print time for this item

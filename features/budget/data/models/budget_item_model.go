@@ -26,6 +26,7 @@ type BudgetItemModel struct {
 	ProductName        string  `gorm:"type:varchar(255);not null" json:"product_name"`
 	ProductDescription *string `gorm:"type:text" json:"product_description,omitempty"`
 	ProductQuantity    int     `gorm:"type:integer;not null" json:"product_quantity"` // number of units
+	UnitsPerPrint      *int    `gorm:"type:integer" json:"units_per_print,omitempty"` // units per run of the sliced file
 	UnitPrice          int64   `gorm:"type:bigint;not null" json:"unit_price"`        // cents per unit
 	ProductDimensions  *string `gorm:"type:varchar(100)" json:"product_dimensions,omitempty"`
 
@@ -97,6 +98,7 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		ProductName:             bi.ProductName,
 		ProductDescription:      bi.ProductDescription,
 		ProductQuantity:         bi.ProductQuantity,
+		UnitsPerPrint:           bi.UnitsPerPrint,
 		UnitPrice:               bi.UnitPrice,
 		ProductDimensions:       bi.ProductDimensions,
 		PrintTimeHours:          bi.PrintTimeHours,
@@ -136,6 +138,7 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ProductName = entity.ProductName
 	bi.ProductDescription = entity.ProductDescription
 	bi.ProductQuantity = entity.ProductQuantity
+	bi.UnitsPerPrint = entity.UnitsPerPrint
 	bi.UnitPrice = entity.UnitPrice
 	bi.ProductDimensions = entity.ProductDimensions
 	bi.PrintTimeHours = entity.PrintTimeHours

@@ -64,6 +64,7 @@ func buildBudgetItems(budgetID uuid.UUID, organizationID string, reqs []entities
 			ProductName:             req.ProductName,
 			ProductDescription:      req.ProductDescription,
 			ProductQuantity:         req.ProductQuantity,
+			UnitsPerPrint:           req.UnitsPerPrint,
 			ProductDimensions:       req.ProductDimensions,
 			PrintTimeHours:          req.PrintTimeHours,
 			PrintTimeMinutes:        req.PrintTimeMinutes,

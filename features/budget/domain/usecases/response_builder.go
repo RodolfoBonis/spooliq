@@ -46,6 +46,7 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 		ProductName:             item.ProductName,
 		ProductDescription:      item.ProductDescription,
 		ProductQuantity:         item.ProductQuantity,
+		UnitsPerPrint:           item.UnitsPerPrint,
 		ProductDimensions:       item.ProductDimensions,
 		PrintTimeHours:          item.PrintTimeHours,
 		PrintTimeMinutes:        item.PrintTimeMinutes,

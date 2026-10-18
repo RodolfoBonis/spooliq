@@ -119,7 +119,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			"order" integer NOT NULL DEFAULT 0,
 			product_name varchar(255) NOT NULL,
 			product_description text,
-			product_quantity integer NOT NULL DEFAULT 0,
+			product_quantity integer NOT NULL DEFAULT 0, units_per_print integer,
 			unit_price bigint NOT NULL DEFAULT 0,
 			product_dimensions varchar(100),
 			print_time_hours integer DEFAULT 0,
@@ -428,6 +428,8 @@ func TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback(t *testing.T)
 	}))
 
 	// Single item with NO cost_preset_id but with setup + manual labor minutes.
+	// units_per_print is stored as-is (pricing only sees the client's totals).
+	unitsPerPrint := 10
 	itemID := uuid.New()
 	require.NoError(t, repo.AddItem(ctx, &entities.BudgetItemEntity{
 		ID:                      itemID,
@@ -438,6 +440,7 @@ func TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback(t *testing.T)
 		Order:                   1,
 		ProductName:             "A",
 		ProductQuantity:         1,
+		UnitsPerPrint:           &unitsPerPrint,
 		SetupTimeMinutes:        40,
 		ManualLaborMinutesTotal: 20,
 		CostPresetID:            nil, // must fall back to the budget-level preset
@@ -449,6 +452,12 @@ func TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback(t *testing.T)
 	}))
 
 	require.NoError(t, repo.CalculateCosts(ctx, budgetID, org))
+
+	items, err := repo.GetItems(ctx, budgetID)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.NotNil(t, items[0].UnitsPerPrint, "units_per_print round-trips")
+	require.Equal(t, 10, *items[0].UnitsPerPrint)
 
 	// Expected: the pure engine with the budget preset as BOTH the overhead/profit
 	// source and the item's (fallback) cost preset.

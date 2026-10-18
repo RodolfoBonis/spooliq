@@ -10719,6 +10719,10 @@ const docTemplate = `{
                     "description": "Support-removal time for this item (minutes)",
                     "type": "integer",
                     "minimum": 0
+                },
+                "units_per_print": {
+                    "description": "UnitsPerPrint is how many units one run of the sliced file produces (the\nclient scales the totals below from it). Stored for re-editing only.",
+                    "type": "integer"
                 }
             }
         },
@@ -10857,6 +10861,9 @@ const docTemplate = `{
                 },
                 "unit_price": {
                     "description": "cents per unit (COST, no markup) - kept for compatibility",
+                    "type": "integer"
+                },
+                "units_per_print": {
                     "type": "integer"
                 },
                 "updated_at": {
@@ -14013,9 +14020,27 @@ const docTemplate = `{
                     "description": "Name is an optional human label for the plate.",
                     "type": "string"
                 },
+                "objects": {
+                    "description": "Objects counts the printed (non-skipped) objects on the plate by name,\nso clients can tell how many pieces one run of the file produces (e.g.\n10× \"pote\" + 10× \"tampa\"). Empty when the slicer does not report objects.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PlateObject"
+                    }
+                },
                 "print_time_seconds": {
                     "description": "PrintTimeSeconds is the estimated print time in seconds.",
                     "type": "integer"
+                }
+            }
+        },
+        "entities.PlateObject": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

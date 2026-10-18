@@ -145,6 +145,10 @@ func (uc *PublicBudgetUseCase) GetByToken(c *gin.Context) {
 		coreErrors.Respond(c, coreErrors.NotFoundErr(CodePublicBudgetNotFound, "Orçamento não encontrado"))
 		return
 	}
+	if budget.Status == entities.StatusDraft {
+		coreErrors.Respond(c, underReviewError())
+		return
+	}
 
 	view, err := uc.buildPublicView(ctx, budget)
 	if err != nil {
@@ -176,6 +180,10 @@ func (uc *PublicBudgetUseCase) GetPDF(c *gin.Context) {
 	budget, err := uc.budgetRepository.FindByPublicToken(ctx, c.Param("token"))
 	if err != nil {
 		coreErrors.Respond(c, coreErrors.NotFoundErr(CodePublicBudgetNotFound, "Orçamento não encontrado"))
+		return
+	}
+	if budget.Status == entities.StatusDraft {
+		coreErrors.Respond(c, underReviewError())
 		return
 	}
 
@@ -307,6 +315,10 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 	budget, err := uc.budgetRepository.FindByPublicToken(ctx, c.Param("token"))
 	if err != nil {
 		coreErrors.Respond(c, coreErrors.NotFoundErr(CodePublicBudgetNotFound, "Orçamento não encontrado"))
+		return
+	}
+	if budget.Status == entities.StatusDraft {
+		coreErrors.Respond(c, underReviewError())
 		return
 	}
 
@@ -525,4 +537,11 @@ func firstValidIP(s string) string {
 		return s
 	}
 	return ""
+}
+
+// underReviewError hides a budget that went back to draft for a revision: the
+// customer must not see (or answer) a half-edited version on the share link.
+func underReviewError() error {
+	return coreErrors.Conflict(CodeBudgetUnderReview,
+		"Este orçamento está sendo revisado. Você receberá a nova versão em breve.")
 }

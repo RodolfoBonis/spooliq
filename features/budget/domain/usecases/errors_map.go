@@ -54,6 +54,9 @@ const (
 	CodePublicBudgetNotFound = "public_budget_not_found"
 	// CodeBudgetAlreadyResponded (409) — the budget was already approved/rejected.
 	CodeBudgetAlreadyResponded = "budget_already_responded"
+	// CodeBudgetUnderReview (409) — the budget went back to draft for a revision
+	// and is not visible on the public link until it is sent again.
+	CodeBudgetUnderReview = "budget_under_review"
 	// CodeBudgetExpired (410) — the budget's validity has passed.
 	CodeBudgetExpired = "budget_expired"
 	// CodeBudgetNotAvailable (409) — the budget is not in a state that accepts a response.

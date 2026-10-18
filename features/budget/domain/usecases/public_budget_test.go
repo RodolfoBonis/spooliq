@@ -377,3 +377,25 @@ func TestPublicGet_ItemSaleValuesReconcileToBasePrice(t *testing.T) {
 			view.BasePrice, view.DiscountAmount, view.ShippingCost, view.TaxAmount, view.Total)
 	}
 }
+
+func TestPublic_UnderReviewHidesTheBudget(t *testing.T) {
+	future := time.Now().Add(24 * time.Hour)
+	b := &entities.BudgetEntity{ID: uuid.New(), OrganizationID: "org-a", Name: "X", Status: entities.StatusDraft, ValidUntil: &future}
+	repo := newPublicFake(b, "tok")
+	uc := newPublicUC(repo)
+
+	c, w := newJSONContext(http.MethodGet, "/v1/public/budgets/tok", "", gin.Params{{Key: "token", Value: "tok"}})
+	uc.GetByToken(c)
+	if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), CodeBudgetUnderReview) {
+		t.Fatalf("view: got %d %s, want 409 %s", w.Code, w.Body.String(), CodeBudgetUnderReview)
+	}
+
+	c, w = newJSONContext(http.MethodPost, "/v1/public/budgets/tok/approve", `{"name":"Alice"}`, gin.Params{{Key: "token", Value: "tok"}})
+	uc.Approve(c)
+	if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), CodeBudgetUnderReview) {
+		t.Fatalf("approve: got %d %s, want 409 %s", w.Code, w.Body.String(), CodeBudgetUnderReview)
+	}
+	if len(repo.history) != 0 {
+		t.Errorf("no response may be recorded while under review")
+	}
+}

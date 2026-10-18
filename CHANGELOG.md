@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.18.0 - 2026-10-18
+
+### Changes
+- chore: bump version to 2.18.0 (5a1eda2)
+- fix(budget): keep per-print inputs for exact re-editing and bound units_per_print (17f1767)
+- feat(slicer): count printed objects per plate and store units per print on budget items (2da1fef)
+
+
 ## v2.17.0 - 2026-10-09
 
 ### Changes

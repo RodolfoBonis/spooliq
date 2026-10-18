@@ -32,4 +32,10 @@ type UpdateCompanyRequest struct {
 	City      *string `json:"city,omitempty" validate:"omitempty,max=100"`
 	State     *string `json:"state,omitempty" validate:"omitempty,max=100"`
 	ZipCode   *string `json:"zip_code,omitempty" validate:"omitempty,max=20"`
+	// DefaultTaxRate is the organization's default "por dentro" tax rate (percent, 0..<100).
+	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty" validate:"omitempty,gte=0,lt=100"`
+	// DefaultQuoteValidityDays is the default quote validity in days (1..365).
+	DefaultQuoteValidityDays *int `json:"default_quote_validity_days,omitempty" validate:"omitempty,gte=1,lte=365"`
+	// DefaultPaymentTerms is the organization's default payment terms (max 500).
+	DefaultPaymentTerms *string `json:"default_payment_terms,omitempty" validate:"omitempty,max=500"`
 }

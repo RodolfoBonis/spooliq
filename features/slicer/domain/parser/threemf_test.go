@@ -195,3 +195,64 @@ func TestParse3MF_ZipBombGuard(t *testing.T) {
 		t.Fatalf("err = %v, want ErrCorruptFile (zip bomb)", perr)
 	}
 }
+
+// Two plates like a real Bambu project: 10 pots + 10 lids, then 10 bows; one
+// skipped object must not count.
+const bambuSliceInfoWithObjects = `<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <plate>
+    <metadata key="index" value="1"/>
+    <metadata key="prediction" value="11282"/>
+    <object identify_id="1" name="pote" skipped="false" />
+    <object identify_id="2" name="tampa" skipped="false" />
+    <object identify_id="3" name="pote" skipped="false" />
+    <object identify_id="4" name="tampa" skipped="false" />
+    <object identify_id="5" name="pote" skipped="true" />
+    <filament id="1" type="PLA" color="#FFFFFF" used_m="26.40" used_g="78.73"/>
+  </plate>
+  <plate>
+    <metadata key="index" value="2"/>
+    <metadata key="prediction" value="1044"/>
+    <object identify_id="6" name="laco" skipped="false" />
+    <object identify_id="7" name="laco" skipped="false" />
+    <filament id="3" type="PLA" color="#EEAECD" used_m="1.18" used_g="3.51"/>
+  </plate>
+</config>`
+
+func TestParse3MF_CountsObjectsPerPlate(t *testing.T) {
+	data := buildZip(t, map[string]string{
+		"3D/3dmodel.model":           "<model/>",
+		"Metadata/slice_info.config": bambuSliceInfoWithObjects,
+	})
+
+	a, err := Parse3MF(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(a.Plates) != 2 {
+		t.Fatalf("plates = %d", len(a.Plates))
+	}
+	want1 := []entities.PlateObject{{Name: "pote", Count: 2}, {Name: "tampa", Count: 2}}
+	if got := a.Plates[0].Objects; len(got) != 2 || got[0] != want1[0] || got[1] != want1[1] {
+		t.Errorf("plate1 objects = %+v, want %+v (skipped pote excluded)", got, want1)
+	}
+	if got := a.Plates[1].Objects; len(got) != 1 || got[0] != (entities.PlateObject{Name: "laco", Count: 2}) {
+		t.Errorf("plate2 objects = %+v", got)
+	}
+}
+
+func TestParse3MF_NoObjectsIsEmptyNotNil(t *testing.T) {
+	data := buildZip(t, map[string]string{
+		"3D/3dmodel.model":           "<model/>",
+		"Metadata/slice_info.config": bambuSliceInfo,
+	})
+	a, err := Parse3MF(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, p := range a.Plates {
+		if p.Objects == nil || len(p.Objects) != 0 {
+			t.Errorf("plate %d objects = %#v, want empty slice", p.Index, p.Objects)
+		}
+	}
+}

@@ -113,6 +113,10 @@ func (cm *CacheMiddleware) serve(c *gin.Context, config CacheConfig, next gin.Ha
 	if writer.statusCode != http.StatusOK || len(writer.body) == 0 {
 		return
 	}
+	// Handlers can opt a response out (e.g. a degraded, partial result).
+	if strings.Contains(writer.Header().Get("Cache-Control"), "no-store") {
+		return
+	}
 
 	cachedData = CachedResponse{
 		Body:        writer.body,

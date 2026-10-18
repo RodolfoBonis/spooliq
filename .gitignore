@@ -36,3 +36,6 @@ api.log
 test_logo.png
 *.pdf
 test_*.sh
+
+# Local Claude Code settings (may contain machine-specific commands/credentials)
+.claude/settings.local.json

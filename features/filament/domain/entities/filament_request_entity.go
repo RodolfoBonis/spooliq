@@ -62,6 +62,16 @@ type UpdateFilamentRequest struct {
 
 	// Status
 	IsActive *bool `json:"is_active,omitempty"`
+
+	// Stock control (Phase 4C). TrackStock, when present, turns inventory tracking
+	// on or off. LowStockThresholdGrams is an optional JSON number carried as raw
+	// bytes so three cases can be told apart:
+	//   - field ABSENT        -> threshold unchanged
+	//   - explicit null OR -1 -> threshold cleared (no alert)
+	//   - number >= 0         -> threshold set to that value
+	// StockGrams is intentionally NOT accepted here; it changes only via movements.
+	TrackStock             *bool           `json:"track_stock,omitempty"`
+	LowStockThresholdGrams json.RawMessage `json:"low_stock_threshold_grams,omitempty" swaggertype:"integer"`
 }
 
 // FilamentSearchRequest represents the request to search filaments

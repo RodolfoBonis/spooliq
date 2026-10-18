@@ -23,9 +23,21 @@ type PreviewBudgetRequest struct {
 	// setup/labor rate fallback for items without their own cost preset).
 	CostPresetID *uuid.UUID `json:"cost_preset_id,omitempty"`
 
-	// Configuration flags
-	IncludeEnergyCost bool `json:"include_energy_cost"`
-	IncludeWasteCost  bool `json:"include_waste_cost"`
+	// Configuration flags. IncludeMachineCost defaults to TRUE when omitted.
+	IncludeEnergyCost  bool  `json:"include_energy_cost"`
+	IncludeWasteCost   bool  `json:"include_waste_cost"`
+	IncludeMachineCost *bool `json:"include_machine_cost,omitempty"`
+
+	// Discount (optional). DiscountType ∈ {"percent","fixed"}.
+	DiscountType  *string  `json:"discount_type,omitempty" validate:"omitempty,oneof=percent fixed"`
+	DiscountValue *float64 `json:"discount_value,omitempty" validate:"omitempty,gte=0"`
+
+	// Shipping (optional). ShippingOverride is in cents.
+	IncludeShipping  bool   `json:"include_shipping"`
+	ShippingOverride *int64 `json:"shipping_override,omitempty" validate:"omitempty,gte=0"`
+
+	// TaxRate (optional, percent 0..<100). When omitted the company default is used.
+	TaxRate *float64 `json:"tax_rate,omitempty" validate:"omitempty,gte=0,lt=100"`
 
 	// Additional fields (echoed back on the preview response for convenience)
 	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`

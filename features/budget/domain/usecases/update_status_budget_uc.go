@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -11,6 +12,7 @@ import (
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
+	notificationEntities "github.com/RodolfoBonis/spooliq/features/notification/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -110,11 +112,55 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 	// (and vice-versa). The status write is guarded by the expected current status;
 	// if a concurrent change already moved the budget off previousStatus the write
 	// matches no row and we surface a 409 Conflict.
+	// Resolve the quote-validity side effects of this transition:
+	//   - becoming "sent" with no valid_until set => set valid_until to now + default
+	//     company validity days;
+	//   - reopening to "draft" => clear valid_until so the next send recomputes it.
+	now := time.Now()
+	var validUntilToSet *time.Time
+	setValidUntil := false
+	clearValidUntil := false
+	if request.Status == entities.StatusSent && budget.ValidUntil == nil {
+		validityDays, _, derr := uc.budgetRepository.GetCompanyQuoteDefaults(ctx, organizationID)
+		if derr != nil {
+			uc.logger.Error(ctx, "Failed to load company quote defaults", map[string]interface{}{"error": derr.Error()})
+			respondBudgetError(c, derr)
+			return
+		}
+		computed := computeValidUntil(now, validityDays)
+		validUntilToSet = &computed
+		setValidUntil = true
+	}
+	if request.Status == entities.StatusDraft {
+		clearValidUntil = true
+	}
+
 	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
 		if err := repo.UpdateStatus(ctx, budget.ID, organizationID, previousStatus, request.Status); err != nil {
 			return err
 		}
-		return repo.AddStatusHistory(ctx, history)
+		if setValidUntil {
+			if err := repo.SetValidUntil(ctx, budget.ID, organizationID, validUntilToSet); err != nil {
+				return err
+			}
+		}
+		if clearValidUntil {
+			if err := repo.SetValidUntil(ctx, budget.ID, organizationID, nil); err != nil {
+				return err
+			}
+		}
+		if err := repo.AddStatusHistory(ctx, history); err != nil {
+			return err
+		}
+		// On completion, deduct filament stock in the SAME transaction so the status
+		// change and the consumption movements are atomic. The deduction is idempotent
+		// (partial unique index), so a retry never double-counts.
+		if request.Status == entities.StatusCompleted && uc.stockDeductor != nil {
+			if err := uc.stockDeductor.DeductForCompletedBudget(ctx, repo.UnderlyingTx(), budget.ID, organizationID, userID); err != nil {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		if errors.Is(err, entities.ErrBudgetStatusConflict) {
 			uc.logger.Warning(ctx, "Budget status changed concurrently", map[string]interface{}{
@@ -143,6 +189,10 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 
+	if request.Status == entities.StatusCompleted {
+		uc.notifyLowStockAfterCompletion(budget.ID, organizationID)
+	}
+
 	// Record activity (fire-and-forget)
 	uc.activityService.Record(c.Request.Context(), activityEntities.ActivityEntity{
 		OrganizationID: organizationID,
@@ -157,4 +207,28 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		},
 		CreatedAt: time.Now(),
 	})
+}
+
+// notifyLowStockAfterCompletion warns about filaments the completion pushed to
+// (or kept at) low stock. Runs in the background; notifications are deduplicated
+// per filament, so already-warned filaments don't repeat.
+func (uc *BudgetUseCase) notifyLowStockAfterCompletion(budgetID uuid.UUID, organizationID string) {
+	if uc.stockDeductor == nil || uc.notifications == nil {
+		return
+	}
+	go func() {
+		ctx := context.Background()
+		low, err := uc.stockDeductor.LowStockForBudget(ctx, budgetID, organizationID)
+		if err != nil {
+			uc.logger.Error(ctx, "Failed to check low stock after completion", map[string]interface{}{
+				"error":     err.Error(),
+				"budget_id": budgetID,
+			})
+			return
+		}
+		for _, f := range low {
+			uc.notifications.Notify(organizationID, notificationEntities.LowStockNotification(
+				f.ID.String(), f.Name, f.Color, f.StockGrams))
+		}
+	}()
 }

@@ -235,3 +235,26 @@ func TestInvalidatePrefixIsTenantScoped(t *testing.T) {
 		t.Errorf("only org-b entry should remain, got %v", keys)
 	}
 }
+
+func TestCacheSkipsNoStoreResponses(t *testing.T) {
+	cm, _ := newTestCache(t)
+	calls := 0
+	router := gin.New()
+	router.GET("/insights", orgMiddleware(), cm.Cache5Min("dashboard", func(c *gin.Context) {
+		calls++
+		c.Header("Cache-Control", "no-store")
+		c.JSON(http.StatusOK, gin.H{"partial": true})
+	}))
+	for range 2 {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/insights", nil)
+		req.Header.Set("X-Org", "org-a")
+		router.ServeHTTP(rec, req)
+		if rec.Header().Get("X-Cache") != "MISS" {
+			t.Fatalf("no-store response must not be served from cache")
+		}
+	}
+	if calls != 2 {
+		t.Errorf("handler should run every time, ran %d", calls)
+	}
+}

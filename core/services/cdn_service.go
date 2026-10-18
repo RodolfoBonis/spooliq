@@ -94,9 +94,9 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 	uctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	if _, err := s.minio.PutObject(uctx, s.bucket, key, file, -1, minio.PutObjectOptions{
-		ContentType: contentType,
-	}); err != nil {
+	size, opts := putObjectSizing(file)
+	opts.ContentType = contentType
+	if _, err := s.minio.PutObject(uctx, s.bucket, key, file, size, opts); err != nil {
 		s.logger.Error(ctx, "Failed to upload file to MinIO", map[string]interface{}{
 			"error": err.Error(), "key": key,
 		})
@@ -106,6 +106,34 @@ func (s *CDNService) UploadFile(ctx context.Context, file io.Reader, filename st
 	url := s.publicBaseURL + "/" + key
 	s.logger.Info(ctx, "File uploaded to MinIO", map[string]interface{}{"key": key, "url": url})
 	return url, nil
+}
+
+// uploadPartSize bounds the in-memory buffer minio-go uses when the object size is
+// unknown. Without it minio-go derives the part size from the 5 TiB maximum object
+// size (~512 MiB per part) and allocates that buffer, which OOM-kills the pod.
+const uploadPartSize = 16 << 20
+
+// putObjectSizing returns the exact remaining size when the reader exposes it
+// (bytes.Reader, strings.Reader, multipart files), so small uploads go out in a single PUT. For
+// readers of unknown length it returns -1 with a bounded multipart part size.
+func putObjectSizing(r io.Reader) (int64, minio.PutObjectOptions) {
+	switch v := r.(type) {
+	case interface{ Len() int }: // unread bytes (bytes.Reader, strings.Reader)
+		return int64(v.Len()), minio.PutObjectOptions{}
+	case io.Seeker:
+		if cur, err := v.Seek(0, io.SeekCurrent); err == nil {
+			if end, err := v.Seek(0, io.SeekEnd); err == nil {
+				if _, err := v.Seek(cur, io.SeekStart); err == nil {
+					return end - cur, minio.PutObjectOptions{}
+				}
+			}
+		}
+	case interface{ Size() int64 }:
+		if n := v.Size(); n >= 0 {
+			return n, minio.PutObjectOptions{}
+		}
+	}
+	return -1, minio.PutObjectOptions{PartSize: uploadPartSize}
 }
 
 // GetFileURL constructs the public served URL for an object key.

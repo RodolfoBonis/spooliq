@@ -22,8 +22,10 @@ type BudgetItemRequest struct {
 	ProductQuantity    int     `json:"product_quantity" validate:"required,gt=0"` // number of units
 	// UnitsPerPrint is how many units one run of the sliced file produces (the
 	// client scales the totals below from it). Stored for re-editing only.
-	UnitsPerPrint     *int    `json:"units_per_print,omitempty" validate:"omitempty,gt=0"`
-	ProductDimensions *string `json:"product_dimensions,omitempty" validate:"omitempty,max=100"`
+	UnitsPerPrint *int `json:"units_per_print,omitempty" validate:"omitempty,gt=0,lte=1000000"`
+	// PerPrint are the client's inputs for one run (only with UnitsPerPrint).
+	PerPrint          *PerPrintValues `json:"per_print,omitempty" validate:"omitempty"`
+	ProductDimensions *string         `json:"product_dimensions,omitempty" validate:"omitempty,max=100"`
 
 	// Print time for THIS item
 	PrintTimeHours   int `json:"print_time_hours" validate:"gte=0"`

@@ -23,12 +23,13 @@ type BudgetItemModel struct {
 	Order    int     `gorm:"type:integer;not null" json:"order"`    // sequence
 
 	// Product information (customer-facing - for PDF and quotes)
-	ProductName        string  `gorm:"type:varchar(255);not null" json:"product_name"`
-	ProductDescription *string `gorm:"type:text" json:"product_description,omitempty"`
-	ProductQuantity    int     `gorm:"type:integer;not null" json:"product_quantity"` // number of units
-	UnitsPerPrint      *int    `gorm:"type:integer" json:"units_per_print,omitempty"` // units per run of the sliced file
-	UnitPrice          int64   `gorm:"type:bigint;not null" json:"unit_price"`        // cents per unit
-	ProductDimensions  *string `gorm:"type:varchar(100)" json:"product_dimensions,omitempty"`
+	ProductName        string                   `gorm:"type:varchar(255);not null" json:"product_name"`
+	ProductDescription *string                  `gorm:"type:text" json:"product_description,omitempty"`
+	ProductQuantity    int                      `gorm:"type:integer;not null" json:"product_quantity"` // number of units
+	UnitsPerPrint      *int                     `gorm:"type:integer" json:"units_per_print,omitempty"` // units per run of the sliced file
+	PerPrint           *entities.PerPrintValues `gorm:"type:jsonb;serializer:json" json:"per_print,omitempty"`
+	UnitPrice          int64                    `gorm:"type:bigint;not null" json:"unit_price"` // cents per unit
+	ProductDimensions  *string                  `gorm:"type:varchar(100)" json:"product_dimensions,omitempty"`
 
 	// NEW: Print time for THIS item (not global)
 	PrintTimeHours   int `gorm:"type:integer;default:0" json:"print_time_hours"`
@@ -99,6 +100,7 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		ProductDescription:      bi.ProductDescription,
 		ProductQuantity:         bi.ProductQuantity,
 		UnitsPerPrint:           bi.UnitsPerPrint,
+		PerPrint:                bi.PerPrint,
 		UnitPrice:               bi.UnitPrice,
 		ProductDimensions:       bi.ProductDimensions,
 		PrintTimeHours:          bi.PrintTimeHours,
@@ -139,6 +141,7 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ProductDescription = entity.ProductDescription
 	bi.ProductQuantity = entity.ProductQuantity
 	bi.UnitsPerPrint = entity.UnitsPerPrint
+	bi.PerPrint = entity.PerPrint
 	bi.UnitPrice = entity.UnitPrice
 	bi.ProductDimensions = entity.ProductDimensions
 	bi.PrintTimeHours = entity.PrintTimeHours

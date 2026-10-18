@@ -65,6 +65,7 @@ func buildBudgetItems(budgetID uuid.UUID, organizationID string, reqs []entities
 			ProductDescription:      req.ProductDescription,
 			ProductQuantity:         req.ProductQuantity,
 			UnitsPerPrint:           req.UnitsPerPrint,
+			PerPrint:                perPrintFor(req),
 			ProductDimensions:       req.ProductDimensions,
 			PrintTimeHours:          req.PrintTimeHours,
 			PrintTimeMinutes:        req.PrintTimeMinutes,
@@ -110,4 +111,13 @@ func collectModel3DIDs(reqs []entities.BudgetItemRequest) []uuid.UUID {
 		ids = append(ids, *req.Model3DID)
 	}
 	return ids
+}
+
+// perPrintFor keeps the per-run inputs only when the item is in "pieces per
+// print" mode; without UnitsPerPrint they would be meaningless.
+func perPrintFor(req entities.BudgetItemRequest) *entities.PerPrintValues {
+	if req.UnitsPerPrint == nil {
+		return nil
+	}
+	return req.PerPrint
 }

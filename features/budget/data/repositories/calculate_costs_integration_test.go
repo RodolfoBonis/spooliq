@@ -119,7 +119,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			"order" integer NOT NULL DEFAULT 0,
 			product_name varchar(255) NOT NULL,
 			product_description text,
-			product_quantity integer NOT NULL DEFAULT 0, units_per_print integer,
+			product_quantity integer NOT NULL DEFAULT 0, units_per_print integer, per_print jsonb,
 			unit_price bigint NOT NULL DEFAULT 0,
 			product_dimensions varchar(100),
 			print_time_hours integer DEFAULT 0,
@@ -432,15 +432,18 @@ func TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback(t *testing.T)
 	unitsPerPrint := 10
 	itemID := uuid.New()
 	require.NoError(t, repo.AddItem(ctx, &entities.BudgetItemEntity{
-		ID:                      itemID,
-		BudgetID:                budgetID,
-		FilamentID:              fil,
-		OrganizationID:          org,
-		Quantity:                100,
-		Order:                   1,
-		ProductName:             "A",
-		ProductQuantity:         1,
-		UnitsPerPrint:           &unitsPerPrint,
+		ID:              itemID,
+		BudgetID:        budgetID,
+		FilamentID:      fil,
+		OrganizationID:  org,
+		Quantity:        100,
+		Order:           1,
+		ProductName:     "A",
+		ProductQuantity: 1,
+		UnitsPerPrint:   &unitsPerPrint,
+		PerPrint: &entities.PerPrintValues{
+			PrintMinutes: 205, SetupMinutes: 15, FilamentGrams: []float64{78.73, 3.51},
+		},
 		SetupTimeMinutes:        40,
 		ManualLaborMinutesTotal: 20,
 		CostPresetID:            nil, // must fall back to the budget-level preset
@@ -458,6 +461,9 @@ func TestIntegration_BudgetCostPresetDrivesOverheadAndItemFallback(t *testing.T)
 	require.Len(t, items, 1)
 	require.NotNil(t, items[0].UnitsPerPrint, "units_per_print round-trips")
 	require.Equal(t, 10, *items[0].UnitsPerPrint)
+	require.NotNil(t, items[0].PerPrint, "per-run inputs round-trip as JSONB")
+	require.Equal(t, 205, items[0].PerPrint.PrintMinutes)
+	require.Equal(t, []float64{78.73, 3.51}, items[0].PerPrint.FilamentGrams)
 
 	// Expected: the pure engine with the budget preset as BOTH the overhead/profit
 	// source and the item's (fallback) cost preset.

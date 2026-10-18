@@ -10678,6 +10678,14 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
+                "per_print": {
+                    "description": "PerPrint are the client's inputs for one run (only with UnitsPerPrint).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.PerPrintValues"
+                        }
+                    ]
+                },
                 "post_processing_minutes": {
                     "description": "Post-processing time for this item (minutes)",
                     "type": "integer",
@@ -10722,7 +10730,8 @@ const docTemplate = `{
                 },
                 "units_per_print": {
                     "description": "UnitsPerPrint is how many units one run of the sliced file produces (the\nclient scales the totals below from it). Stored for re-editing only.",
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 1000000
                 }
             }
         },
@@ -10798,6 +10807,9 @@ const docTemplate = `{
                 "packaging_cost": {
                     "description": "cents",
                     "type": "integer"
+                },
+                "per_print": {
+                    "$ref": "#/definitions/entities.PerPrintValues"
                 },
                 "post_processing_cost": {
                     "description": "cents",
@@ -13535,6 +13547,38 @@ const docTemplate = `{
                 },
                 "last_4_digits": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.PerPrintValues": {
+            "type": "object",
+            "properties": {
+                "filament_grams": {
+                    "description": "in filament order",
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "labor_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "post_processing_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "print_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "setup_minutes": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "support_removal_minutes": {
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },

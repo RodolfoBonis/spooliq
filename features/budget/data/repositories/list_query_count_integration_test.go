@@ -59,7 +59,7 @@ quote_number integer, valid_until timestamptz, public_token varchar(43), public_
 		`CREATE TABLE budget_items (
 			id uuid PRIMARY KEY, budget_id uuid NOT NULL, filament_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
 			quantity numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 0,
-			product_name varchar(255) NOT NULL, product_description text, product_quantity integer NOT NULL DEFAULT 0, units_per_print integer,
+			product_name varchar(255) NOT NULL, product_description text, product_quantity integer NOT NULL DEFAULT 0, units_per_print integer, per_print jsonb,
 			unit_price bigint NOT NULL DEFAULT 0, product_dimensions varchar(100),
 			print_time_hours integer DEFAULT 0, print_time_minutes integer DEFAULT 0,
 			setup_time_minutes integer DEFAULT 0, manual_labor_minutes_total integer DEFAULT 0,

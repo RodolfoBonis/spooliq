@@ -88,8 +88,9 @@ type FilamentStockSummary struct {
 type CreateMovementRequest struct {
 	Type MovementType `json:"type" validate:"required"`
 	// Grams is the movement size. Sign/positivity rules depend on Type and are
-	// validated in the use case (see ValidateCreate).
-	Grams int64   `json:"grams"`
+	// validated in the use case (see Normalize). Decimals are accepted (clients
+	// often send 382.0) and rounded to whole grams, the ledger's unit.
+	Grams float64 `json:"grams"`
 	Note  *string `json:"note" validate:"omitempty,max=500"`
 	// UnitPricePerKg is accepted only for purchase movements (cents, >= 0).
 	UnitPricePerKg *int64 `json:"unit_price_per_kg" validate:"omitempty,gte=0"`

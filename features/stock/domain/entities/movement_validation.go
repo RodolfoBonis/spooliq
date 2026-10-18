@@ -1,5 +1,7 @@
 package entities
 
+import "math"
+
 // Validation error codes (snake_case, stable; messages are pt-BR in the use case).
 const (
 	// CodeInvalidMovementType is returned when the movement type is not one of the
@@ -8,6 +10,9 @@ const (
 	// CodeInvalidMovementGrams is returned when grams violate the rule for the type.
 	CodeInvalidMovementGrams = "invalid_movement_grams"
 )
+
+// MaxMovementGrams caps a single manual movement (1 t of filament).
+const MaxMovementGrams = 1_000_000
 
 // Normalize validates the request and returns the SIGNED grams delta to apply to
 // the filament balance, together with an error code ("" when valid).
@@ -21,23 +26,29 @@ func (r CreateMovementRequest) Normalize() (signedGrams int64, errCode string) {
 	if !r.Type.IsManual() {
 		return 0, CodeInvalidMovementType
 	}
+	// Bound before converting: float→int64 is implementation-defined beyond
+	// the int64 range. No real spool movement comes near a ton.
+	if math.Abs(r.Grams) > MaxMovementGrams {
+		return 0, CodeInvalidMovementGrams
+	}
+	grams := int64(math.Round(r.Grams))
 
 	switch r.Type {
 	case MovementPurchase:
-		if r.Grams <= 0 {
+		if grams <= 0 {
 			return 0, CodeInvalidMovementGrams
 		}
-		return r.Grams, ""
+		return grams, ""
 	case MovementAdjustment:
-		if r.Grams == 0 {
+		if grams == 0 {
 			return 0, CodeInvalidMovementGrams
 		}
-		return r.Grams, ""
+		return grams, ""
 	case MovementWaste:
-		if r.Grams <= 0 {
+		if grams <= 0 {
 			return 0, CodeInvalidMovementGrams
 		}
-		return -r.Grams, ""
+		return -grams, ""
 	default:
 		return 0, CodeInvalidMovementType
 	}

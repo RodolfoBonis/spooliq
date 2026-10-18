@@ -1,6 +1,9 @@
 package entities
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 // TestNormalize_SignAndValidation is the movement validation table: it proves the
 // per-type sign handling (waste is stored negative, purchase stays positive,
@@ -23,6 +26,11 @@ func TestNormalize_SignAndValidation(t *testing.T) {
 		{"waste negative input rejected", CreateMovementRequest{Type: MovementWaste, Grams: -300}, 0, CodeInvalidMovementGrams},
 		{"consumption not manual", CreateMovementRequest{Type: MovementConsumption, Grams: 100}, 0, CodeInvalidMovementType},
 		{"unknown type", CreateMovementRequest{Type: MovementType("bogus"), Grams: 100}, 0, CodeInvalidMovementType},
+		{"purchase decimal rounds to whole grams", CreateMovementRequest{Type: MovementPurchase, Grams: 382.4}, 382, ""},
+		{"waste decimal rounds", CreateMovementRequest{Type: MovementWaste, Grams: 12.6}, -13, ""},
+		{"purchase below half a gram rejected", CreateMovementRequest{Type: MovementPurchase, Grams: 0.4}, 0, CodeInvalidMovementGrams},
+		{"huge purchase rejected", CreateMovementRequest{Type: MovementPurchase, Grams: 1e30}, 0, CodeInvalidMovementGrams},
+		{"huge negative adjustment rejected", CreateMovementRequest{Type: MovementAdjustment, Grams: -1e30}, 0, CodeInvalidMovementGrams},
 	}
 
 	for _, tc := range cases {
@@ -60,5 +68,17 @@ func TestMovementType_IsKnown(t *testing.T) {
 		if got := tc.in.IsKnown(); got != tc.want {
 			t.Errorf("IsKnown(%q) = %v, want %v", tc.in, got, tc.want)
 		}
+	}
+}
+
+// TestCreateMovementRequest_AcceptsDecimalJSON guards the desktop client bug:
+// Dart encodes 382.0 for a double, which an int64 field used to reject.
+func TestCreateMovementRequest_AcceptsDecimalJSON(t *testing.T) {
+	var r CreateMovementRequest
+	if err := json.Unmarshal([]byte(`{"type":"purchase","grams":382.0}`), &r); err != nil {
+		t.Fatalf("decimal grams must decode: %v", err)
+	}
+	if signed, code := r.Normalize(); code != "" || signed != 382 {
+		t.Fatalf("got %d %q, want 382", signed, code)
 	}
 }

@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"math"
 	"net/http"
 	"time"
 
@@ -117,7 +118,12 @@ func (uc *FilamentUseCase) Create(c *gin.Context) {
 		PrintTemperature: request.PrintTemperature,
 		BedTemperature:   request.BedTemperature,
 		// New filaments are available for budgets and slicer suggestions.
-		IsActive: true,
+		IsActive:   true,
+		TrackStock: request.TrackStock,
+	}
+	if request.TrackStock && request.LowStockThresholdGrams != nil {
+		threshold := int(math.Round(*request.LowStockThresholdGrams))
+		filament.LowStockThresholdGrams = &threshold
 	}
 
 	// Only admins may create global (ownerless) filaments; everyone else owns

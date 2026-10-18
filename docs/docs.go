@@ -12002,6 +12002,12 @@ const docTemplate = `{
                     "type": "number",
                     "maximum": 10
                 },
+                "low_stock_threshold_grams": {
+                    "description": "Ignored unless TrackStock is true.",
+                    "type": "number",
+                    "maximum": 1000000,
+                    "minimum": 0
+                },
                 "material_id": {
                     "type": "string"
                 },
@@ -12023,6 +12029,10 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 500,
                     "minimum": 0
+                },
+                "track_stock": {
+                    "description": "Stock control. The balance itself is never set here: it starts at 0 and\nchanges only through stock movements (clients record the initial stock\nas a purchase right after creating the filament).",
+                    "type": "boolean"
                 },
                 "url": {
                     "description": "Additional properties",
@@ -12059,8 +12069,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "grams": {
-                    "description": "Grams is the movement size. Sign/positivity rules depend on Type and are\nvalidated in the use case (see ValidateCreate).",
-                    "type": "integer"
+                    "description": "Grams is the movement size. Sign/positivity rules depend on Type and are\nvalidated in the use case (see Normalize). Decimals are accepted (clients\noften send 382.0) and rounded to whole grams, the ledger's unit.",
+                    "type": "number"
                 },
                 "note": {
                     "type": "string",

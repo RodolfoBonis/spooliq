@@ -15,6 +15,8 @@ type ICustomerUseCase interface {
 	Update(c *gin.Context)
 	Delete(c *gin.Context)
 	Search(c *gin.Context)
+	ExportCSV(c *gin.Context)
+	ImportCSV(c *gin.Context)
 }
 
 // CustomerUseCase implements the customer use cases

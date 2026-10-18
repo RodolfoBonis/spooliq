@@ -48,6 +48,18 @@ const (
 	CodeOrganizationRequired = "organization_required"
 	// CodeUserRequired (400) — the user ID is missing from the context.
 	CodeUserRequired = "user_required"
+	// CodeBudgetNotShareable (409) — the budget's status does not allow sharing.
+	CodeBudgetNotShareable = "budget_not_shareable"
+	// CodePublicBudgetNotFound (404) — the public token is unknown or revoked.
+	CodePublicBudgetNotFound = "public_budget_not_found"
+	// CodeBudgetAlreadyResponded (409) — the budget was already approved/rejected.
+	CodeBudgetAlreadyResponded = "budget_already_responded"
+	// CodeBudgetExpired (410) — the budget's validity has passed.
+	CodeBudgetExpired = "budget_expired"
+	// CodeBudgetNotAvailable (409) — the budget is not in a state that accepts a response.
+	CodeBudgetNotAvailable = "budget_not_available"
+	// CodeRateLimited (429) — the per-IP public rate limit was exceeded.
+	CodeRateLimited = "rate_limited"
 )
 
 // budgetAPIError maps a domain error to a stable *APIError (code + pt-BR message +

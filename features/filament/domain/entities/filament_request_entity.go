@@ -33,6 +33,13 @@ type CreateFilamentRequest struct {
 
 	// Ownership
 	OwnerUserID *string `json:"owner_user_id,omitempty"`
+
+	// Stock control. The balance itself is never set here: it starts at 0 and
+	// changes only through stock movements (clients record the initial stock
+	// as a purchase right after creating the filament).
+	TrackStock bool `json:"track_stock"`
+	// Ignored unless TrackStock is true.
+	LowStockThresholdGrams *float64 `json:"low_stock_threshold_grams,omitempty" validate:"omitempty,gte=0,lte=1000000"`
 }
 
 // UpdateFilamentRequest represents the request to update an existing filament
@@ -62,6 +69,16 @@ type UpdateFilamentRequest struct {
 
 	// Status
 	IsActive *bool `json:"is_active,omitempty"`
+
+	// Stock control (Phase 4C). TrackStock, when present, turns inventory tracking
+	// on or off. LowStockThresholdGrams is an optional JSON number carried as raw
+	// bytes so three cases can be told apart:
+	//   - field ABSENT        -> threshold unchanged
+	//   - explicit null OR -1 -> threshold cleared (no alert)
+	//   - number >= 0         -> threshold set to that value
+	// StockGrams is intentionally NOT accepted here; it changes only via movements.
+	TrackStock             *bool           `json:"track_stock,omitempty"`
+	LowStockThresholdGrams json.RawMessage `json:"low_stock_threshold_grams,omitempty" swaggertype:"integer"`
 }
 
 // FilamentSearchRequest represents the request to search filaments

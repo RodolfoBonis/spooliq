@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.19.0 - 2026-10-18
+
+### Changes
+- chore: bump version to 2.19.0 (342105c)
+- feat(budget): revise sent budgets back to draft with an under-review public link (30d78a3)
+
+
 ## v2.18.1 - 2026-10-18
 
 ### Changes

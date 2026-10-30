@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.21.0 - 2026-10-30
+
+### Changes
+- chore: bump version to 2.21.0 (4f5e2d3)
+- fix(supply): partial updates keep the stored package instead of zeroing the price (7e282ee)
+- feat(supply): package size and price for exact per-unit supply costs (32c6652)
+
+
 ## v2.20.0 - 2026-10-30
 
 ### Changes

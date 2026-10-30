@@ -16164,7 +16164,7 @@ const docTemplate = `{
                     ]
                 },
                 "unit_cost": {
-                    "description": "UnitCost is the legacy per-unit cost (CENTS). Kept only for backward\ncompatibility: it is used to derive the package fields when they are absent.",
+                    "description": "UnitCost is the legacy per-unit cost (CENTS). Kept only for backward\ncompatibility: it is used to derive the package fields when they are absent.\nA pointer so \"not sent\" is distinguishable from an explicit 0.",
                     "type": "integer",
                     "minimum": 0
                 }

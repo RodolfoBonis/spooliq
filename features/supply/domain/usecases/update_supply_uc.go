@@ -87,7 +87,8 @@ func (uc *SupplyUseCase) Update(c *gin.Context) {
 		}
 	}
 
-	packageSize, packagePrice := request.ResolvePackage()
+	// Partial PUTs keep what is stored instead of zeroing the price.
+	packageSize, packagePrice := request.ResolvePackageUpdate(supply.PackageSize, supply.PackagePrice)
 	supply.Name = request.Name
 	supply.Unit = request.Unit
 	supply.PackageSize = packageSize

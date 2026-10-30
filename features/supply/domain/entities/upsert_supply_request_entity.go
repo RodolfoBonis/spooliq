@@ -28,26 +28,51 @@ type UpsertSupplyRequestEntity struct {
 	PackagePrice *int64   `json:"package_price,omitempty" validate:"omitempty,gte=0"`
 	// UnitCost is the legacy per-unit cost (CENTS). Kept only for backward
 	// compatibility: it is used to derive the package fields when they are absent.
-	UnitCost    int64   `json:"unit_cost" validate:"gte=0"`
+	// A pointer so "not sent" is distinguishable from an explicit 0.
+	UnitCost    *int64  `json:"unit_cost,omitempty" validate:"omitempty,gte=0"`
 	Description *string `json:"description,omitempty" validate:"omitempty,max=1000"`
 	IsActive    *bool   `json:"is_active,omitempty"`
 }
 
-// ResolvePackage resolves the effective (packageSize, packagePrice) from the
-// request, applying the backward-compatibility rule: when BOTH package fields are
-// absent, fall back to package_size = 1 and package_price = the legacy unit_cost.
-// A present package field always wins over the legacy unit_cost; a package_size
-// without a package_price keeps the legacy unit_cost as the price (and vice-versa),
-// which degrades gracefully instead of zeroing a half-specified payload.
+// ResolvePackage resolves (packageSize, packagePrice) for a CREATE. When BOTH
+// package fields are absent it falls back to package_size = 1 and package_price =
+// the legacy unit_cost (0 when absent), so an old payload prices exactly as before.
+// A missing size defaults to 1; a missing price uses the legacy unit_cost.
 func (r *UpsertSupplyRequestEntity) ResolvePackage() (packageSize float64, packagePrice int64) {
 	packageSize = 1
 	if r.PackageSize != nil {
 		packageSize = *r.PackageSize
 	}
+	switch {
+	case r.PackagePrice != nil:
+		packagePrice = *r.PackagePrice
+	case r.UnitCost != nil:
+		packagePrice = *r.UnitCost
+	}
+	return packageSize, packagePrice
+}
+
+// ResolvePackageUpdate resolves (packageSize, packagePrice) for an UPDATE of a
+// supply currently stored as (storedSize, storedPrice). Fields the client does not
+// send keep their stored values, so a partial PUT never zeroes the price.
+//
+// Legacy clients only know unit_cost: when no package field is sent and unit_cost
+// equals the stored derived value, the package is kept as is; when unit_cost
+// differs the client really changed the price, which is stored as a 1-unit
+// package (the legacy meaning of unit_cost).
+func (r *UpsertSupplyRequestEntity) ResolvePackageUpdate(storedSize float64, storedPrice int64) (packageSize float64, packagePrice int64) {
+	if r.PackageSize == nil && r.PackagePrice == nil {
+		if r.UnitCost != nil && *r.UnitCost != DeriveUnitCostCents(storedPrice, storedSize) {
+			return 1, *r.UnitCost
+		}
+		return storedSize, storedPrice
+	}
+	packageSize, packagePrice = storedSize, storedPrice
+	if r.PackageSize != nil {
+		packageSize = *r.PackageSize
+	}
 	if r.PackagePrice != nil {
 		packagePrice = *r.PackagePrice
-	} else {
-		packagePrice = r.UnitCost
 	}
 	return packageSize, packagePrice
 }

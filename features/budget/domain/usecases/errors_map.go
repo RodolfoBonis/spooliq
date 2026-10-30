@@ -34,6 +34,8 @@ const (
 	CodeProfileNotFound = "profile_not_found"
 	// CodeFilamentNotFound (400) — a referenced filament is not in the organization.
 	CodeFilamentNotFound = "filament_not_found"
+	// CodeSupplyNotFound (400) — a referenced supply (insumo) is not in the organization.
+	CodeSupplyNotFound = "supply_not_found"
 	// CodeInvalidModel3DReference (400) — a referenced 3D model is not in the organization.
 	CodeInvalidModel3DReference = "invalid_model3d_reference"
 	// CodeCustomerNotFound (404) — the referenced customer is not in the organization.
@@ -48,6 +50,21 @@ const (
 	CodeOrganizationRequired = "organization_required"
 	// CodeUserRequired (400) — the user ID is missing from the context.
 	CodeUserRequired = "user_required"
+	// CodeBudgetNotShareable (409) — the budget's status does not allow sharing.
+	CodeBudgetNotShareable = "budget_not_shareable"
+	// CodePublicBudgetNotFound (404) — the public token is unknown or revoked.
+	CodePublicBudgetNotFound = "public_budget_not_found"
+	// CodeBudgetAlreadyResponded (409) — the budget was already approved/rejected.
+	CodeBudgetAlreadyResponded = "budget_already_responded"
+	// CodeBudgetUnderReview (409) — the budget went back to draft for a revision
+	// and is not visible on the public link until it is sent again.
+	CodeBudgetUnderReview = "budget_under_review"
+	// CodeBudgetExpired (410) — the budget's validity has passed.
+	CodeBudgetExpired = "budget_expired"
+	// CodeBudgetNotAvailable (409) — the budget is not in a state that accepts a response.
+	CodeBudgetNotAvailable = "budget_not_available"
+	// CodeRateLimited (429) — the per-IP public rate limit was exceeded.
+	CodeRateLimited = "rate_limited"
 )
 
 // budgetAPIError maps a domain error to a stable *APIError (code + pt-BR message +
@@ -74,6 +91,8 @@ func budgetAPIError(err error) *coreErrors.APIError {
 		return coreErrors.BadRequest(CodeInvalidPresetReference, "Uma ou mais referências de preset são inválidas ou não pertencem à sua organização")
 	case errors.Is(err, entities.ErrFilamentNotFound):
 		return coreErrors.BadRequest(CodeFilamentNotFound, "Um ou mais filamentos informados não pertencem à sua organização")
+	case errors.Is(err, entities.ErrSupplyNotFound):
+		return coreErrors.BadRequest(CodeSupplyNotFound, "Um ou mais insumos informados não pertencem à sua organização")
 	case errors.Is(err, entities.ErrInvalidModel3DReference):
 		return coreErrors.BadRequest(CodeInvalidModel3DReference, "Um ou mais modelos 3D informados não pertencem à sua organização")
 	case errors.Is(err, entities.ErrCustomerNotFound):

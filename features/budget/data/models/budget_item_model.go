@@ -23,11 +23,13 @@ type BudgetItemModel struct {
 	Order    int     `gorm:"type:integer;not null" json:"order"`    // sequence
 
 	// Product information (customer-facing - for PDF and quotes)
-	ProductName        string  `gorm:"type:varchar(255);not null" json:"product_name"`
-	ProductDescription *string `gorm:"type:text" json:"product_description,omitempty"`
-	ProductQuantity    int     `gorm:"type:integer;not null" json:"product_quantity"` // number of units
-	UnitPrice          int64   `gorm:"type:bigint;not null" json:"unit_price"`        // cents per unit
-	ProductDimensions  *string `gorm:"type:varchar(100)" json:"product_dimensions,omitempty"`
+	ProductName        string                   `gorm:"type:varchar(255);not null" json:"product_name"`
+	ProductDescription *string                  `gorm:"type:text" json:"product_description,omitempty"`
+	ProductQuantity    int                      `gorm:"type:integer;not null" json:"product_quantity"` // number of units
+	UnitsPerPrint      *int                     `gorm:"type:integer" json:"units_per_print,omitempty"` // units per run of the sliced file
+	PerPrint           *entities.PerPrintValues `gorm:"type:jsonb;serializer:json" json:"per_print,omitempty"`
+	UnitPrice          int64                    `gorm:"type:bigint;not null" json:"unit_price"` // cents per unit
+	ProductDimensions  *string                  `gorm:"type:varchar(100)" json:"product_dimensions,omitempty"`
 
 	// NEW: Print time for THIS item (not global)
 	PrintTimeHours   int `gorm:"type:integer;default:0" json:"print_time_hours"`
@@ -36,6 +38,8 @@ type BudgetItemModel struct {
 	// Labor breakdown fields
 	SetupTimeMinutes        int `gorm:"type:integer;default:0" json:"setup_time_minutes"`         // Setup time for this product (minutes)
 	ManualLaborMinutesTotal int `gorm:"type:integer;default:0" json:"manual_labor_minutes_total"` // Total manual labor time for ALL units (minutes)
+	PostProcessingMinutes   int `gorm:"type:integer;default:0" json:"post_processing_minutes"`    // Post-processing time for this item (minutes)
+	SupportRemovalMinutes   int `gorm:"type:integer;default:0" json:"support_removal_minutes"`    // Support-removal time for this item (minutes)
 
 	// Additional costs specific to this item
 	CostPresetID    *uuid.UUID `gorm:"type:uuid" json:"cost_preset_id,omitempty"`
@@ -45,12 +49,19 @@ type BudgetItemModel struct {
 	Model3DID *uuid.UUID `gorm:"column:model_3d_id;type:uuid;index" json:"model_3d_id,omitempty"`
 
 	// Calculated costs per item
-	FilamentCost    int64 `gorm:"type:bigint;default:0" json:"filament_cost"`     // cents
-	WasteCost       int64 `gorm:"type:bigint;default:0" json:"waste_cost"`        // cents
-	EnergyCost      int64 `gorm:"type:bigint;default:0" json:"energy_cost"`       // cents
-	SetupCost       int64 `gorm:"type:bigint;default:0" json:"setup_cost"`        // cents
-	ManualLaborCost int64 `gorm:"type:bigint;default:0" json:"manual_labor_cost"` // cents
-	ItemTotalCost   int64 `gorm:"type:bigint;default:0" json:"item_total_cost"`   // cents (sum of all costs)
+	FilamentCost       int64 `gorm:"type:bigint;default:0" json:"filament_cost"`        // cents
+	WasteCost          int64 `gorm:"type:bigint;default:0" json:"waste_cost"`           // cents
+	EnergyCost         int64 `gorm:"type:bigint;default:0" json:"energy_cost"`          // cents
+	MachineCost        int64 `gorm:"type:bigint;default:0" json:"machine_cost"`         // cents
+	SetupCost          int64 `gorm:"type:bigint;default:0" json:"setup_cost"`           // cents
+	ManualLaborCost    int64 `gorm:"type:bigint;default:0" json:"manual_labor_cost"`    // cents
+	PostProcessingCost int64 `gorm:"type:bigint;default:0" json:"post_processing_cost"` // cents
+	SupportRemovalCost int64 `gorm:"type:bigint;default:0" json:"support_removal_cost"` // cents
+	PackagingCost      int64 `gorm:"type:bigint;default:0" json:"packaging_cost"`       // cents
+	QualityControlCost int64 `gorm:"type:bigint;default:0" json:"quality_control_cost"` // cents
+	FailureCost        int64 `gorm:"type:bigint;default:0" json:"failure_cost"`         // cents
+	SuppliesCost       int64 `gorm:"type:bigint;default:0" json:"supplies_cost"`        // cents (sum of supply lines)
+	ItemTotalCost      int64 `gorm:"type:bigint;default:0" json:"item_total_cost"`      // cents (sum of all costs)
 
 	// Timestamps
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
@@ -62,6 +73,7 @@ type BudgetItemModel struct {
 	Filament     *filamentModels.FilamentModel `gorm:"foreignKey:FilamentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filament,omitempty"`
 	CostPreset   *presetModels.CostPresetModel `gorm:"foreignKey:CostPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"cost_preset,omitempty"`
 	Filaments    []BudgetItemFilamentModel     `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"filaments,omitempty"`
+	Supplies     []BudgetItemSupplyModel       `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"supplies,omitempty"`
 }
 
 // TableName specifies the table name for GORM
@@ -89,20 +101,31 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		ProductName:             bi.ProductName,
 		ProductDescription:      bi.ProductDescription,
 		ProductQuantity:         bi.ProductQuantity,
+		UnitsPerPrint:           bi.UnitsPerPrint,
+		PerPrint:                bi.PerPrint,
 		UnitPrice:               bi.UnitPrice,
 		ProductDimensions:       bi.ProductDimensions,
 		PrintTimeHours:          bi.PrintTimeHours,
 		PrintTimeMinutes:        bi.PrintTimeMinutes,
 		SetupTimeMinutes:        bi.SetupTimeMinutes,
 		ManualLaborMinutesTotal: bi.ManualLaborMinutesTotal,
+		PostProcessingMinutes:   bi.PostProcessingMinutes,
+		SupportRemovalMinutes:   bi.SupportRemovalMinutes,
 		CostPresetID:            bi.CostPresetID,
 		AdditionalNotes:         bi.AdditionalNotes,
 		Model3DID:               bi.Model3DID,
 		FilamentCost:            bi.FilamentCost,
 		WasteCost:               bi.WasteCost,
 		EnergyCost:              bi.EnergyCost,
+		MachineCost:             bi.MachineCost,
 		SetupCost:               bi.SetupCost,
 		ManualLaborCost:         bi.ManualLaborCost,
+		PostProcessingCost:      bi.PostProcessingCost,
+		SupportRemovalCost:      bi.SupportRemovalCost,
+		PackagingCost:           bi.PackagingCost,
+		QualityControlCost:      bi.QualityControlCost,
+		FailureCost:             bi.FailureCost,
+		SuppliesCost:            bi.SuppliesCost,
 		ItemTotalCost:           bi.ItemTotalCost,
 		CreatedAt:               bi.CreatedAt,
 		UpdatedAt:               bi.UpdatedAt,
@@ -120,20 +143,31 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.ProductName = entity.ProductName
 	bi.ProductDescription = entity.ProductDescription
 	bi.ProductQuantity = entity.ProductQuantity
+	bi.UnitsPerPrint = entity.UnitsPerPrint
+	bi.PerPrint = entity.PerPrint
 	bi.UnitPrice = entity.UnitPrice
 	bi.ProductDimensions = entity.ProductDimensions
 	bi.PrintTimeHours = entity.PrintTimeHours
 	bi.PrintTimeMinutes = entity.PrintTimeMinutes
 	bi.SetupTimeMinutes = entity.SetupTimeMinutes
 	bi.ManualLaborMinutesTotal = entity.ManualLaborMinutesTotal
+	bi.PostProcessingMinutes = entity.PostProcessingMinutes
+	bi.SupportRemovalMinutes = entity.SupportRemovalMinutes
 	bi.CostPresetID = entity.CostPresetID
 	bi.AdditionalNotes = entity.AdditionalNotes
 	bi.Model3DID = entity.Model3DID
 	bi.FilamentCost = entity.FilamentCost
 	bi.WasteCost = entity.WasteCost
 	bi.EnergyCost = entity.EnergyCost
+	bi.MachineCost = entity.MachineCost
 	bi.SetupCost = entity.SetupCost
 	bi.ManualLaborCost = entity.ManualLaborCost
+	bi.PostProcessingCost = entity.PostProcessingCost
+	bi.SupportRemovalCost = entity.SupportRemovalCost
+	bi.PackagingCost = entity.PackagingCost
+	bi.QualityControlCost = entity.QualityControlCost
+	bi.FailureCost = entity.FailureCost
+	bi.SuppliesCost = entity.SuppliesCost
 	bi.ItemTotalCost = entity.ItemTotalCost
 	bi.CreatedAt = entity.CreatedAt
 	bi.UpdatedAt = entity.UpdatedAt

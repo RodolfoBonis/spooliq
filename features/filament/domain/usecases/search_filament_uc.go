@@ -26,6 +26,7 @@ import (
 // @Param diameter query number false "Filter by diameter (exact match)"
 // @Param min_price query number false "Minimum price per kg"
 // @Param max_price query number false "Maximum price per kg"
+// @Param low_stock query boolean false "Only filaments at or below their low-stock threshold"
 // @Param page query int false "Page number (1-based)" default(1)
 // @Param page_size query int false "Items per page (max 100)" default(20)
 // @Param sort_by query string false "Sort field" Enums(name, created_at, price_per_kg) default(created_at)
@@ -130,6 +131,14 @@ func parseFilamentFilters(c *gin.Context) (map[string]interface{}, *coreErrors.A
 			return nil, coreErrors.BadRequest("invalid_max_price", "Preço máximo inválido")
 		}
 		filters["max_price"] = maxPrice
+	}
+
+	// low_stock=true restricts the list to filaments currently at/below their alert
+	// threshold. Any other value is ignored (treated as no filter).
+	if lowStockStr := c.Query("low_stock"); lowStockStr != "" {
+		if lowStock, err := strconv.ParseBool(lowStockStr); err == nil && lowStock {
+			filters["low_stock"] = true
+		}
 	}
 
 	return filters, nil

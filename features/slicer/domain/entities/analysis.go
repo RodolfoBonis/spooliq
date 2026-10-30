@@ -54,6 +54,17 @@ type Plate struct {
 	Estimated bool `json:"estimated"`
 	// Filaments is the per-slot usage. Slots with 0g are dropped.
 	Filaments []Filament `json:"filaments"`
+	// Objects counts the printed (non-skipped) objects on the plate by name,
+	// so clients can tell how many pieces one run of the file produces (e.g.
+	// 10× "pote" + 10× "tampa"). Empty when the slicer does not report objects.
+	Objects []PlateObject `json:"objects"`
+}
+
+// PlateObject is a distinct object name on a plate and how many copies of it
+// are printed.
+type PlateObject struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 // Filament is the usage of one filament slot on a plate.

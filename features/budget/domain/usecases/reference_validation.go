@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// validateReferences ensures that every preset and filament referenced by a
-// budget belongs to the caller's organization AND is of the expected type,
+// validateReferences ensures that every preset, filament and supply referenced by
+// a budget belongs to the caller's organization AND is of the expected type,
 // preventing cross-tenant leakage and type mismatches (e.g. a cost preset passed
 // as a machine preset).
 //
@@ -49,6 +49,12 @@ func (uc *BudgetUseCase) validateReferences(
 	}
 
 	if err := uc.budgetRepository.ValidateFilamentsInOrg(ctx, collectFilamentIDs(items), organizationID); err != nil {
+		return err
+	}
+
+	// Validate only the supplies explicitly provided by the caller (items with a nil
+	// Supplies slice contribute nothing — the update path preserves those instead).
+	if err := uc.budgetRepository.ValidateSuppliesInOrg(ctx, collectSupplyIDs(items), organizationID); err != nil {
 		return err
 	}
 

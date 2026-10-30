@@ -28,8 +28,9 @@ func (l countingLogger) Trace(ctx context.Context, begin time.Time, fc func() (s
 }
 
 // createListSchema creates the tables the list response assembly reads: budgets,
-// budget_items, budget_item_filaments, filaments (+ brands/materials for the JOIN),
-// customers, presets and print_profiles. No foreign keys; the test is self-contained.
+// budget_items, budget_item_filaments, budget_item_supplies, filaments (+
+// brands/materials for the JOIN), customers, presets and print_profiles. No foreign
+// keys; the test is self-contained.
 func createListSchema(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	stmts := []string{
@@ -39,27 +40,51 @@ func createListSchema(t *testing.T, db *gorm.DB) {
 			print_time_hours integer NOT NULL DEFAULT 0, print_time_minutes integer NOT NULL DEFAULT 0,
 			profile_id uuid, machine_preset_id uuid, energy_preset_id uuid, cost_preset_id uuid,
 			include_energy_cost boolean DEFAULT false, include_waste_cost boolean DEFAULT false,
+			include_machine_cost boolean NOT NULL DEFAULT false,
+			discount_type varchar(10), discount_value double precision,
+			include_shipping boolean DEFAULT false, shipping_override bigint, tax_rate double precision,
 			filament_cost bigint DEFAULT 0, waste_cost bigint DEFAULT 0, energy_cost bigint DEFAULT 0,
-			setup_cost bigint DEFAULT 0, labor_cost bigint DEFAULT 0, overhead_cost bigint DEFAULT 0,
-			profit_amount bigint DEFAULT 0, total_cost bigint DEFAULT 0,
+			machine_cost bigint DEFAULT 0,
+			setup_cost bigint DEFAULT 0, labor_cost bigint DEFAULT 0,
+			post_processing_cost bigint DEFAULT 0, packaging_cost bigint DEFAULT 0,
+			quality_control_cost bigint DEFAULT 0, failure_cost bigint DEFAULT 0,
+			supplies_cost bigint DEFAULT 0,
+			overhead_cost bigint DEFAULT 0,
+			profit_amount bigint DEFAULT 0,
+			discount_amount bigint DEFAULT 0, shipping_cost bigint DEFAULT 0,
+			tax_amount bigint DEFAULT 0, tax_rate_applied double precision DEFAULT 0,
+			total_cost bigint DEFAULT 0,
 			delivery_days integer, payment_terms text, notes text, pdf_url varchar(500),
-			owner_user_id varchar(255) NOT NULL, created_at timestamptz, updated_at timestamptz, deleted_at timestamptz
+quote_number integer, valid_until timestamptz, public_token varchar(43), public_token_created_at timestamptz, approved_at timestamptz, completed_at timestamptz, customer_response_at timestamptz, customer_response_name varchar(120), customer_response_ip varchar(45), customer_response_user_agent varchar(255), rejection_reason text,
+						owner_user_id varchar(255) NOT NULL, created_at timestamptz, updated_at timestamptz, deleted_at timestamptz
 		)`,
 		`CREATE TABLE budget_items (
 			id uuid PRIMARY KEY, budget_id uuid NOT NULL, filament_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
 			quantity numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 0,
-			product_name varchar(255) NOT NULL, product_description text, product_quantity integer NOT NULL DEFAULT 0,
+			product_name varchar(255) NOT NULL, product_description text, product_quantity integer NOT NULL DEFAULT 0, units_per_print integer, per_print jsonb,
 			unit_price bigint NOT NULL DEFAULT 0, product_dimensions varchar(100),
 			print_time_hours integer DEFAULT 0, print_time_minutes integer DEFAULT 0,
 			setup_time_minutes integer DEFAULT 0, manual_labor_minutes_total integer DEFAULT 0,
+			post_processing_minutes integer DEFAULT 0, support_removal_minutes integer DEFAULT 0,
 			cost_preset_id uuid, additional_notes text, model_3d_id uuid,
 			filament_cost bigint DEFAULT 0, waste_cost bigint DEFAULT 0, energy_cost bigint DEFAULT 0,
-			setup_cost bigint DEFAULT 0, manual_labor_cost bigint DEFAULT 0, item_total_cost bigint DEFAULT 0,
+			machine_cost bigint DEFAULT 0,
+			setup_cost bigint DEFAULT 0, manual_labor_cost bigint DEFAULT 0,
+			post_processing_cost bigint DEFAULT 0, support_removal_cost bigint DEFAULT 0,
+			packaging_cost bigint DEFAULT 0, quality_control_cost bigint DEFAULT 0,
+			failure_cost bigint DEFAULT 0, supplies_cost bigint DEFAULT 0, item_total_cost bigint DEFAULT 0,
 			created_at timestamptz, updated_at timestamptz
 		)`,
 		`CREATE TABLE budget_item_filaments (
 			id uuid PRIMARY KEY, budget_item_id uuid NOT NULL, filament_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
 			quantity numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 1,
+			created_at timestamptz, updated_at timestamptz
+		)`,
+		`CREATE TABLE budget_item_supplies (
+			id uuid PRIMARY KEY, budget_item_id uuid NOT NULL, supply_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
+			quantity_per_piece numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 0,
+			name varchar(255) NOT NULL DEFAULT '', unit varchar(20) NOT NULL DEFAULT '',
+			package_size numeric NOT NULL DEFAULT 1, package_price bigint NOT NULL DEFAULT 0, unit_cost bigint NOT NULL DEFAULT 0,
 			created_at timestamptz, updated_at timestamptz
 		)`,
 		`CREATE TABLE filaments (
@@ -148,8 +173,8 @@ func seedBudgetsWithItems(t *testing.T, db *gorm.DB, org string, n, itemsPer int
 // runListLoad executes the exact batch-loading sequence the FindAll use case runs to
 // assemble a page of budgets, over a query-counting session, and returns the number
 // of SQL statements executed. The sequence is: SearchBudgets (count + find), then one
-// batch query each for customers, items, filament usage, cost-preset names and
-// profile names.
+// batch query each for customers, items, filament usage, item supplies, cost-preset
+// names and profile names.
 func runListLoad(t *testing.T, db *gorm.DB, org string) int64 {
 	t.Helper()
 	ctx := context.Background()
@@ -194,6 +219,8 @@ func runListLoad(t *testing.T, db *gorm.DB, org string) int64 {
 
 	_, err = repo.GetFilamentUsageInfoByItemIDs(ctx, itemIDs, org)
 	require.NoError(t, err)
+	_, err = repo.GetItemSuppliesByItemIDs(ctx, itemIDs, org)
+	require.NoError(t, err)
 	_, err = repo.GetCostPresetNames(ctx, costPresetIDs, org)
 	require.NoError(t, err)
 	_, err = repo.GetProfileNames(ctx, profileIDs, org)
@@ -224,8 +251,9 @@ func TestIntegration_ListQueryCount_IsConstant(t *testing.T) {
 	require.Equal(t, small, large, "list query count must not grow with the number of budgets (N+1 regression)")
 
 	// And it is the expected small constant: SearchBudgets (count+find) + one batch
-	// query each for customers, items, filament usage, cost-preset names, profile names.
-	require.Equal(t, int64(7), large, "expected a constant 7 queries per page")
+	// query each for customers, items, filament usage, item supplies, cost-preset
+	// names, profile names.
+	require.Equal(t, int64(8), large, "expected a constant 8 queries per page")
 }
 
 // compile-time guard that the repository returned by NewBudgetRepository satisfies

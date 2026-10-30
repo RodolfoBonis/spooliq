@@ -890,6 +890,22 @@ var dataMigrations = []struct{ name, sql string }{
 			b.updated_at)
 		 WHERE b.completed_at IS NULL AND b.status = 'completed'`,
 	},
+	{
+		// Supplies gained PACKAGE pricing (package_size, package_price). AutoMigrate
+		// backfills existing rows with package_size = 1 (column DEFAULT) and
+		// package_price = 0 (column DEFAULT). Seed package_price from the legacy
+		// per-unit unit_cost so a pre-package supply prices exactly as before
+		// (package_size 1, package_price = unit_cost => derived unit_cost unchanged).
+		// Idempotent: the WHERE package_price = 0 guard makes a re-run a no-op.
+		"2026-10-30_supply_package_backfill",
+		"UPDATE supplies SET package_price = unit_cost WHERE package_price = 0 AND unit_cost > 0",
+	},
+	{
+		// Same backfill for the budget_item_supplies snapshots so stored budgets keep
+		// their historical per-line totals under the new package formula.
+		"2026-10-30_budget_item_supply_package_backfill",
+		"UPDATE budget_item_supplies SET package_price = unit_cost WHERE package_price = 0 AND unit_cost > 0",
+	},
 }
 
 // runDataMigrations applies pending dataMigrations, each in its own transaction

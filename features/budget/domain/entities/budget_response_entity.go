@@ -46,14 +46,17 @@ type FilamentUsageInfo struct {
 }
 
 // SupplyUsageInfo represents a non-printed supply (insumo) line on a budget item.
-// The name/unit/unit_cost are the snapshot stored on the budget item supply, and
-// total is the line cost in cents for THIS item:
-// round(quantity_per_piece * product_quantity * unit_cost).
+// The name/unit/package_size/package_price/unit_cost are the snapshot stored on the
+// budget item supply (unit_cost is DERIVED = round(package_price / package_size)),
+// and total is the line cost in cents for THIS item:
+// round(quantity_per_piece * product_quantity * package_price / package_size).
 type SupplyUsageInfo struct {
 	SupplyID         string  `json:"supply_id"`
 	Name             string  `json:"name"`
 	Unit             string  `json:"unit"`
-	UnitCost         int64   `json:"unit_cost"` // cents
+	PackageSize      float64 `json:"package_size"`  // units per package
+	PackagePrice     int64   `json:"package_price"` // cents per package
+	UnitCost         int64   `json:"unit_cost"`     // cents, derived
 	QuantityPerPiece float64 `json:"quantity_per_piece"`
 	Total            int64   `json:"total"` // cents for this item
 }

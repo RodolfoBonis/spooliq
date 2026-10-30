@@ -57,15 +57,17 @@ type PricingFilamentInput struct {
 // PricingSupplyInput is one non-printed supply (insumo) used by an item.
 //
 //   - QuantityPerPiece is how many units of the supply each printed piece consumes.
-//   - UnitCostCents is the supply's unit cost in CENTS.
+//   - PackagePriceCents is the price (CENTS) of ONE package of the supply.
+//   - PackageSize is how many units are in one package (same unit as QuantityPerPiece).
 //
-// The supply line cost is QuantityPerPiece * item.Quantity (product units) *
-// UnitCostCents, rounded to the cent (see SupplyCostCents). Supplies are a direct
+// The supply line cost is round(QuantityPerPiece * item.Quantity (product units) *
+// PackagePriceCents / PackageSize) (see SupplyCostCents). Supplies are a direct
 // item cost that receives overhead + margin like any other, but are NOT part of
 // the failure-rate base (a supply is not reprinted on a failed job).
 type PricingSupplyInput struct {
-	QuantityPerPiece float64
-	UnitCostCents    int64
+	QuantityPerPiece  float64
+	PackagePriceCents int64
+	PackageSize       float64
 }
 
 // PricingItemInput is a single product line in the budget.
@@ -375,7 +377,7 @@ func Calculate(in PricingInput) (PricingResult, error) {
 		// item cost reconciles exactly with the per-line totals shown in the response.
 		var suppliesCost int64
 		for _, s := range item.Supplies {
-			suppliesCost += SupplyCostCents(s.QuantityPerPiece, item.Quantity, s.UnitCostCents)
+			suppliesCost += SupplyCostCents(s.QuantityPerPiece, item.Quantity, s.PackagePriceCents, s.PackageSize)
 		}
 
 		itemTotal := filamentCost + wasteCost + energyCost + machineCost + setupCost + manualLaborCost +

@@ -264,6 +264,58 @@ func TestSupplyCreateValidationAndErrors(t *testing.T) {
 	})
 }
 
+// TestSupplyCreatePackagePricing covers the package-pricing create paths: an
+// explicit package (size + price) stores both and derives unit_cost, while a legacy
+// payload carrying only unit_cost falls back to package_size = 1 and
+// package_price = unit_cost (so old clients keep working unchanged).
+func TestSupplyCreatePackagePricing(t *testing.T) {
+	validation.Register()
+
+	decodeSupply := func(w *httptest.ResponseRecorder) entities.SupplyEntity {
+		var got entities.SupplyEntity
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		return got
+	}
+
+	t.Run("explicit package stores and derives unit_cost", func(t *testing.T) {
+		repo := &fakeSupplyRepo{}
+		// 400 ml lotion for R$69,90 => derived unit_cost round(6990/400) = 17.
+		w, c := testCtx(http.MethodPost, "/supplies", `{"name":"Locao","unit":"ml","package_size":400,"package_price":6990}`)
+		newSupplyUC(repo).Create(c)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want 201", w.Code)
+		}
+		got := decodeSupply(w)
+		if got.PackageSize != 400 || got.PackagePrice != 6990 || got.UnitCost != 17 {
+			t.Errorf("got package_size=%v package_price=%d unit_cost=%d, want 400/6990/17", got.PackageSize, got.PackagePrice, got.UnitCost)
+		}
+	})
+
+	t.Run("legacy unit_cost only falls back to size 1", func(t *testing.T) {
+		repo := &fakeSupplyRepo{}
+		w, c := testCtx(http.MethodPost, "/supplies", `{"name":"LED","unit":"un","unit_cost":150}`)
+		newSupplyUC(repo).Create(c)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want 201", w.Code)
+		}
+		got := decodeSupply(w)
+		if got.PackageSize != 1 || got.PackagePrice != 150 || got.UnitCost != 150 {
+			t.Errorf("legacy: got package_size=%v package_price=%d unit_cost=%d, want 1/150/150", got.PackageSize, got.PackagePrice, got.UnitCost)
+		}
+	})
+
+	t.Run("zero package_size rejected", func(t *testing.T) {
+		repo := &fakeSupplyRepo{}
+		w, c := testCtx(http.MethodPost, "/supplies", `{"name":"X","unit":"ml","package_size":0,"package_price":100}`)
+		newSupplyUC(repo).Create(c)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400 for package_size=0", w.Code)
+		}
+	})
+}
+
 func TestSupplyIDErrors(t *testing.T) {
 	validation.Register()
 

@@ -25,9 +25,17 @@ type BudgetItemSupplyModel struct {
 	Order            int       `gorm:"type:integer;not null;default:0" json:"order"`
 
 	// Snapshot of the catalog supply at the last calculation.
-	Name     string `gorm:"type:varchar(255);not null" json:"name"`
-	Unit     string `gorm:"type:varchar(20);not null" json:"unit"`
-	UnitCost int64  `gorm:"type:bigint;not null;default:0" json:"unit_cost"` // cents
+	Name string `gorm:"type:varchar(255);not null" json:"name"`
+	Unit string `gorm:"type:varchar(20);not null" json:"unit"`
+	// PackageSize/PackagePrice snapshot the supply's package pricing; the line cost is
+	// round(quantity_per_piece * product_quantity * package_price / package_size).
+	// PackageSize carries a gorm default of 1 so AutoMigrate backfills legacy rows
+	// with a single-unit package (the data migration seeds package_price from unit_cost).
+	PackageSize  float64 `gorm:"type:numeric;not null;default:1" json:"package_size"` // units per package, > 0
+	PackagePrice int64   `gorm:"type:bigint;not null;default:0" json:"package_price"` // cents
+	// UnitCost is the DERIVED per-unit cost (round(package_price / package_size)), kept
+	// for readers predating package pricing.
+	UnitCost int64 `gorm:"type:bigint;not null;default:0" json:"unit_cost"` // cents
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
@@ -54,6 +62,8 @@ func (m *BudgetItemSupplyModel) ToEntity() *entities.BudgetItemSupplyEntity {
 		Order:            m.Order,
 		Name:             m.Name,
 		Unit:             m.Unit,
+		PackageSize:      m.PackageSize,
+		PackagePrice:     m.PackagePrice,
 		UnitCost:         m.UnitCost,
 		CreatedAt:        m.CreatedAt,
 		UpdatedAt:        m.UpdatedAt,
@@ -70,6 +80,8 @@ func (m *BudgetItemSupplyModel) FromEntity(e *entities.BudgetItemSupplyEntity) {
 	m.Order = e.Order
 	m.Name = e.Name
 	m.Unit = e.Unit
+	m.PackageSize = e.PackageSize
+	m.PackagePrice = e.PackagePrice
 	m.UnitCost = e.UnitCost
 	m.CreatedAt = e.CreatedAt
 	m.UpdatedAt = e.UpdatedAt

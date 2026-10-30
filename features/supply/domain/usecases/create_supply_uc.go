@@ -67,11 +67,17 @@ func (uc *SupplyUseCase) Create(c *gin.Context) {
 		isActive = *request.IsActive
 	}
 
+	// Resolve package pricing (with legacy unit_cost fallback) and keep the stored
+	// unit_cost in sync with the derived per-unit value.
+	packageSize, packagePrice := request.ResolvePackage()
+
 	supply := &entities.SupplyEntity{
 		OrganizationID: organizationID,
 		Name:           request.Name,
 		Unit:           request.Unit,
-		UnitCost:       request.UnitCost,
+		PackageSize:    packageSize,
+		PackagePrice:   packagePrice,
+		UnitCost:       entities.DeriveUnitCostCents(packagePrice, packageSize),
 		Description:    request.Description,
 		IsActive:       isActive,
 	}

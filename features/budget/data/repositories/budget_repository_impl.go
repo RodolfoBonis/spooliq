@@ -1178,8 +1178,8 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 		return zero, err
 	}
 
-	// Supply unit costs (CENTS) for every supply referenced by the items.
-	supplyCostByID, err := r.loadSupplyUnitCosts(ctx, in.Items, in.OrganizationID)
+	// Supply package pricing (CENTS price + size) for every supply referenced by the items.
+	supplyPricingByID, err := r.loadSupplyPricing(ctx, in.Items, in.OrganizationID)
 	if err != nil {
 		return zero, err
 	}
@@ -1267,9 +1267,11 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 		}
 		supplies := make([]pricing.PricingSupplyInput, len(item.Supplies))
 		for j, s := range item.Supplies {
+			p := supplyPricingByID[s.SupplyID]
 			supplies[j] = pricing.PricingSupplyInput{
-				QuantityPerPiece: s.QuantityPerPiece,
-				UnitCostCents:    supplyCostByID[s.SupplyID],
+				QuantityPerPiece:  s.QuantityPerPiece,
+				PackagePriceCents: p.PackagePrice,
+				PackageSize:       p.PackageSize,
 			}
 		}
 		// Item cost preset fallback: when an item has no cost preset of its own, it

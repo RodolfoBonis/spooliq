@@ -59,6 +59,8 @@ func setupSupplyRepo(t *testing.T) repositories.SupplyRepository {
 			organization_id varchar(255) NOT NULL,
 			name varchar(255) NOT NULL,
 			unit varchar(20) NOT NULL,
+			package_size numeric NOT NULL DEFAULT 1,
+			package_price bigint NOT NULL DEFAULT 0,
 			unit_cost bigint NOT NULL DEFAULT 0,
 			description text,
 			is_active boolean NOT NULL DEFAULT true,
@@ -94,6 +96,43 @@ func TestSupplyUpdatePersistsZeroAndFalse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), got.UnitCost, "unit_cost: 0 must persist")
 	assert.False(t, got.IsActive, "is_active: false must persist")
+}
+
+// TestSupplyPersistsPackageFields verifies the package pricing columns round-trip on
+// create and that the Select-based Update overwrites them (including a change that
+// lowers package_price), so a stored supply always reflects the caller's package.
+func TestSupplyPersistsPackageFields(t *testing.T) {
+	repo := setupSupplyRepo(t)
+
+	s := &entities.SupplyEntity{
+		ID:             uuid.New(),
+		OrganizationID: itOrgA,
+		Name:           "Locao",
+		Unit:           "ml",
+		PackageSize:    400,
+		PackagePrice:   6990,
+		UnitCost:       17, // derived round(6990/400)
+		IsActive:       true,
+	}
+	require.NoError(t, repo.Create(s))
+
+	got, err := repo.FindByID(s.ID, itOrgA)
+	require.NoError(t, err)
+	assert.Equal(t, float64(400), got.PackageSize)
+	assert.Equal(t, int64(6990), got.PackagePrice)
+	assert.Equal(t, int64(17), got.UnitCost)
+
+	// Update to a different package; package_price must be written by the Select list.
+	s.PackageSize = 100
+	s.PackagePrice = 2500
+	s.UnitCost = 25
+	require.NoError(t, repo.Update(s))
+
+	got, err = repo.FindByID(s.ID, itOrgA)
+	require.NoError(t, err)
+	assert.Equal(t, float64(100), got.PackageSize, "package_size update must persist")
+	assert.Equal(t, int64(2500), got.PackagePrice, "package_price update must persist")
+	assert.Equal(t, int64(25), got.UnitCost)
 }
 
 // TestSupplyListOrgScopedSearchAndActiveFilter verifies org scoping, the name search

@@ -20,9 +20,11 @@ func supplyUsageFrom(item *entities.BudgetItemEntity, supplies []*entities.Budge
 			SupplyID:         s.SupplyID.String(),
 			Name:             s.Name,
 			Unit:             s.Unit,
+			PackageSize:      s.PackageSize,
+			PackagePrice:     s.PackagePrice,
 			UnitCost:         s.UnitCost,
 			QuantityPerPiece: s.QuantityPerPiece,
-			Total:            pricing.SupplyCostCents(s.QuantityPerPiece, item.ProductQuantity, s.UnitCost),
+			Total:            pricing.SupplyCostCents(s.QuantityPerPiece, item.ProductQuantity, s.PackagePrice, s.PackageSize),
 		})
 	}
 	return out

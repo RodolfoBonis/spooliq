@@ -87,9 +87,12 @@ func (uc *SupplyUseCase) Update(c *gin.Context) {
 		}
 	}
 
+	packageSize, packagePrice := request.ResolvePackage()
 	supply.Name = request.Name
 	supply.Unit = request.Unit
-	supply.UnitCost = request.UnitCost
+	supply.PackageSize = packageSize
+	supply.PackagePrice = packagePrice
+	supply.UnitCost = entities.DeriveUnitCostCents(packagePrice, packageSize)
 	supply.Description = request.Description
 	// is_active keeps its stored value when the client omits it.
 	if request.IsActive != nil {

@@ -22,6 +22,10 @@ var (
 	// ErrFilamentNotFound is returned when a filament item is not found
 	ErrFilamentNotFound = errors.New("filament not found")
 
+	// ErrSupplyNotFound is returned when a referenced supply (insumo) does not belong
+	// to the caller's organization or is soft-deleted. Safe to surface as a 400.
+	ErrSupplyNotFound = errors.New("referenced supply does not belong to your organization")
+
 	// ErrBudgetNotEditable is returned when trying to edit a non-draft budget
 	ErrBudgetNotEditable = errors.New("only draft budgets can be edited")
 

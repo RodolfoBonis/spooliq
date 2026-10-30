@@ -99,7 +99,7 @@ func (s *supplyRepository) Delete(id uuid.UUID) error {
 // supplyUpdatableColumns are the columns a PUT may overwrite. They are passed to
 // Select so GORM persists explicit zero values (e.g. unit_cost: 0, is_active:
 // false) instead of skipping them.
-var supplyUpdatableColumns = []string{"name", "unit", "unit_cost", "description", "is_active", "updated_at"}
+var supplyUpdatableColumns = []string{"name", "unit", "package_size", "package_price", "unit_cost", "description", "is_active", "updated_at"}
 
 func (s *supplyRepository) Update(entity *entities.SupplyEntity) error {
 	supply := models.SupplyModel{}

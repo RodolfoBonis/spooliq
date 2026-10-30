@@ -35,8 +35,8 @@ func TestIntegration_Supplies_SnapshotPersistAndRefresh(t *testing.T) {
 
 	// Catalog supply: LED, R$1,50/un (150 cents).
 	supply := uuid.New()
-	require.NoError(t, db.Exec(`INSERT INTO supplies (id, organization_id, name, unit, unit_cost, is_active) VALUES (?,?,?,?,?,?)`,
-		supply, org, "LED", "un", 150, true).Error)
+	require.NoError(t, db.Exec(`INSERT INTO supplies (id, organization_id, name, unit, package_size, package_price, unit_cost, is_active) VALUES (?,?,?,?,?,?,?,?)`,
+		supply, org, "LED", "un", 1, 150, 150, true).Error)
 
 	budgetID := uuid.New()
 	require.NoError(t, repo.Create(ctx, &entities.BudgetEntity{
@@ -72,12 +72,14 @@ func TestIntegration_Supplies_SnapshotPersistAndRefresh(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	require.Equal(t, int64(150), got[0].UnitCost, "snapshot unit_cost refreshed to the catalog value")
+	require.Equal(t, float64(1), got[0].PackageSize, "snapshot package_size refreshed from the catalog")
+	require.Equal(t, int64(150), got[0].PackagePrice, "snapshot package_price refreshed from the catalog")
 	require.Equal(t, "LED", got[0].Name)
 	require.Equal(t, "un", got[0].Unit)
 	require.InEpsilon(t, 2.0, got[0].QuantityPerPiece, 1e-9)
 
 	// A later catalog price change flows in on the next recalculation.
-	require.NoError(t, db.Exec(`UPDATE supplies SET unit_cost = 200 WHERE id = ?`, supply).Error)
+	require.NoError(t, db.Exec(`UPDATE supplies SET package_price = 200, unit_cost = 200 WHERE id = ?`, supply).Error)
 	require.NoError(t, repo.CalculateCosts(ctx, budgetID, org))
 
 	require.NoError(t, db.Raw(`SELECT supplies_cost FROM budget_items WHERE id = ?`, itemID).Scan(&itemSuppliesCost).Error)
@@ -85,6 +87,7 @@ func TestIntegration_Supplies_SnapshotPersistAndRefresh(t *testing.T) {
 	got, err = repo.GetItemSupplies(ctx, itemID, org)
 	require.NoError(t, err)
 	require.Equal(t, int64(200), got[0].UnitCost, "snapshot refreshed to the new catalog price")
+	require.Equal(t, int64(200), got[0].PackagePrice, "snapshot package_price refreshed to the new catalog price")
 
 	// Item total = filament (100g@R$100/kg = 1000c) + supplies 1200 = 2200.
 	var itemTotal int64
@@ -166,7 +169,8 @@ func TestIntegration_Supplies_SoftDeleteKeepsBudgetsWorking(t *testing.T) {
 
 	// Catalog supply created through the supply repository (soft-delete aware model).
 	supply := &supplyentities.SupplyEntity{
-		ID: uuid.New(), OrganizationID: org, Name: "LED", Unit: "un", UnitCost: 150, IsActive: true,
+		ID: uuid.New(), OrganizationID: org, Name: "LED", Unit: "un",
+		PackageSize: 1, PackagePrice: 150, UnitCost: 150, IsActive: true,
 	}
 	require.NoError(t, supplyRepo.Create(supply))
 	require.NotEqual(t, uuid.Nil, supply.ID)
@@ -230,7 +234,7 @@ func TestIntegration_Supplies_SoftDeleteKeepsBudgetsWorking(t *testing.T) {
 	require.Equal(t, int64(900), suppliesCost, "recalc of a budget whose supply was soft-deleted still prices from the catalog row")
 
 	// A later price change on the soft-deleted row still flows into recalc.
-	require.NoError(t, db.Exec(`UPDATE supplies SET unit_cost = 200 WHERE id = ?`, supply.ID).Error)
+	require.NoError(t, db.Exec(`UPDATE supplies SET package_price = 200, unit_cost = 200 WHERE id = ?`, supply.ID).Error)
 	require.NoError(t, budgetRepo.CalculateCosts(ctx, budgetID, org))
 	require.NoError(t, db.Raw(`SELECT supplies_cost FROM budget_items WHERE id = ?`, itemID).Scan(&suppliesCost).Error)
 	require.Equal(t, int64(1200), suppliesCost, "2*3*200 after the catalog price change on the soft-deleted row")

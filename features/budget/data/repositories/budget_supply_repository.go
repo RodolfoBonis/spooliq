@@ -98,20 +98,28 @@ func (r *budgetRepositoryImpl) GetSuppliesInfo(ctx context.Context, supplyIDs []
 	}
 
 	var rows []struct {
-		ID       uuid.UUID `gorm:"column:id"`
-		Name     string    `gorm:"column:name"`
-		Unit     string    `gorm:"column:unit"`
-		UnitCost int64     `gorm:"column:unit_cost"`
+		ID           uuid.UUID `gorm:"column:id"`
+		Name         string    `gorm:"column:name"`
+		Unit         string    `gorm:"column:unit"`
+		PackageSize  float64   `gorm:"column:package_size"`
+		PackagePrice int64     `gorm:"column:package_price"`
+		UnitCost     int64     `gorm:"column:unit_cost"`
 	}
 	if err := r.db.WithContext(ctx).
 		Table("supplies").
-		Select("id, name, unit, unit_cost").
+		Select("id, name, unit, package_size, package_price, unit_cost").
 		Where("id IN ? AND organization_id = ? AND deleted_at IS NULL", ids, organizationID).
 		Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("failed to load supplies info: %w", err)
 	}
 	for _, row := range rows {
-		out[row.ID] = entities.SupplySnapshot{Name: row.Name, Unit: row.Unit, UnitCost: row.UnitCost}
+		out[row.ID] = entities.SupplySnapshot{
+			Name:         row.Name,
+			Unit:         row.Unit,
+			PackageSize:  row.PackageSize,
+			PackagePrice: row.PackagePrice,
+			UnitCost:     row.UnitCost,
+		}
 	}
 	return out, nil
 }
@@ -153,13 +161,21 @@ func (r *budgetRepositoryImpl) loadItemSupplySpecs(ctx context.Context, items []
 	return out, nil
 }
 
-// loadSupplyUnitCosts batch-loads the unit cost (CENTS) of every distinct supply
-// referenced by the items in a single org-scoped query. The lookup is NOT filtered
-// by deleted_at (historical consistency with saved budgets, matching filament/cost
-// preset loading): a supply soft-deleted from the catalog still prices an existing
-// budget on recalc/preview. A referenced supply that does not resolve inside the
-// organization is an error (not a silent zero).
-func (r *budgetRepositoryImpl) loadSupplyUnitCosts(ctx context.Context, items []entities.PricingItemSpec, organizationID string) (map[uuid.UUID]int64, error) {
+// supplyPackagePricing is the package pricing (CENTS price + size) of a catalog
+// supply used to price a budget line via SupplyCostCents.
+type supplyPackagePricing struct {
+	PackagePrice int64
+	PackageSize  float64
+}
+
+// loadSupplyPricing batch-loads the package pricing (package_price CENTS +
+// package_size) of every distinct supply referenced by the items in a single
+// org-scoped query. The lookup is NOT filtered by deleted_at (historical
+// consistency with saved budgets, matching filament/cost preset loading): a supply
+// soft-deleted from the catalog still prices an existing budget on recalc/preview.
+// A referenced supply that does not resolve inside the organization is an error
+// (not a silent zero).
+func (r *budgetRepositoryImpl) loadSupplyPricing(ctx context.Context, items []entities.PricingItemSpec, organizationID string) (map[uuid.UUID]supplyPackagePricing, error) {
 	seen := make(map[uuid.UUID]struct{})
 	ids := make([]uuid.UUID, 0)
 	for _, item := range items {
@@ -172,24 +188,25 @@ func (r *budgetRepositoryImpl) loadSupplyUnitCosts(ctx context.Context, items []
 		}
 	}
 
-	out := make(map[uuid.UUID]int64, len(ids))
+	out := make(map[uuid.UUID]supplyPackagePricing, len(ids))
 	if len(ids) == 0 {
 		return out, nil
 	}
 
 	var rows []struct {
-		ID       uuid.UUID `gorm:"column:id"`
-		UnitCost int64     `gorm:"column:unit_cost"`
+		ID           uuid.UUID `gorm:"column:id"`
+		PackagePrice int64     `gorm:"column:package_price"`
+		PackageSize  float64   `gorm:"column:package_size"`
 	}
 	if err := r.db.WithContext(ctx).
 		Table("supplies").
-		Select("id, unit_cost").
+		Select("id, package_price, package_size").
 		Where("id IN ? AND organization_id = ?", ids, organizationID).
 		Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("failed to load supply unit costs: %w", err)
+		return nil, fmt.Errorf("failed to load supply pricing: %w", err)
 	}
 	for _, row := range rows {
-		out[row.ID] = row.UnitCost
+		out[row.ID] = supplyPackagePricing{PackagePrice: row.PackagePrice, PackageSize: row.PackageSize}
 	}
 	if len(out) != len(ids) {
 		return nil, fmt.Errorf("%w: one or more referenced supplies do not belong to your organization", entities.ErrSupplyNotFound)
@@ -211,7 +228,8 @@ func (r *budgetRepositoryImpl) refreshSupplySnapshots(ctx context.Context, itemI
 	}
 	if err := r.db.WithContext(ctx).Exec(
 		`UPDATE budget_item_supplies bis
-		 SET name = s.name, unit = s.unit, unit_cost = s.unit_cost, updated_at = ?
+		 SET name = s.name, unit = s.unit, package_size = s.package_size,
+		     package_price = s.package_price, unit_cost = s.unit_cost, updated_at = ?
 		 FROM supplies s
 		 WHERE bis.supply_id = s.id
 		   AND s.organization_id = ?

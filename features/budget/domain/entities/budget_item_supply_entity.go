@@ -20,9 +20,11 @@ type BudgetItemSupplyEntity struct {
 	Order            int       `json:"order"`
 
 	// Snapshot of the catalog supply at the last calculation.
-	Name     string `json:"name"`
-	Unit     string `json:"unit"`
-	UnitCost int64  `json:"unit_cost"` // cents
+	Name         string  `json:"name"`
+	Unit         string  `json:"unit"`
+	PackageSize  float64 `json:"package_size"`  // units per package, > 0
+	PackagePrice int64   `json:"package_price"` // cents per package
+	UnitCost     int64   `json:"unit_cost"`     // cents, DERIVED = round(package_price / package_size)
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -31,7 +33,9 @@ type BudgetItemSupplyEntity struct {
 // SupplySnapshot is the subset of a catalog supply snapshotted onto a budget item
 // supply (and used to price a preview). UnitCost is in cents.
 type SupplySnapshot struct {
-	Name     string
-	Unit     string
-	UnitCost int64
+	Name         string
+	Unit         string
+	PackageSize  float64
+	PackagePrice int64
+	UnitCost     int64
 }

@@ -83,7 +83,8 @@ quote_number integer, valid_until timestamptz, public_token varchar(43), public_
 		`CREATE TABLE budget_item_supplies (
 			id uuid PRIMARY KEY, budget_item_id uuid NOT NULL, supply_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
 			quantity_per_piece numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 0,
-			name varchar(255) NOT NULL DEFAULT '', unit varchar(20) NOT NULL DEFAULT '', unit_cost bigint NOT NULL DEFAULT 0,
+			name varchar(255) NOT NULL DEFAULT '', unit varchar(20) NOT NULL DEFAULT '',
+			package_size numeric NOT NULL DEFAULT 1, package_price bigint NOT NULL DEFAULT 0, unit_cost bigint NOT NULL DEFAULT 0,
 			created_at timestamptz, updated_at timestamptz
 		)`,
 		`CREATE TABLE filaments (

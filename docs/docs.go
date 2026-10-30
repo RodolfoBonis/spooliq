@@ -15557,12 +15557,20 @@ const docTemplate = `{
                     "description": "Multi-tenancy",
                     "type": "string"
                 },
+                "package_price": {
+                    "description": "cents per package, \u003e= 0",
+                    "type": "integer"
+                },
+                "package_size": {
+                    "description": "units per package, \u003e 0",
+                    "type": "number"
+                },
                 "unit": {
                     "description": "one of un, par, ml, g, m, cm, kg, l",
                     "type": "string"
                 },
                 "unit_cost": {
-                    "description": "cents, \u003e= 0",
+                    "description": "cents, DERIVED = round(package_price / package_size)",
                     "type": "integer"
                 },
                 "updated_at": {
@@ -15575,6 +15583,14 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "type": "string"
+                },
+                "package_price": {
+                    "description": "cents per package",
+                    "type": "integer"
+                },
+                "package_size": {
+                    "description": "units per package",
+                    "type": "number"
                 },
                 "quantity_per_piece": {
                     "type": "number"
@@ -15590,7 +15606,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit_cost": {
-                    "description": "cents",
+                    "description": "cents, derived",
                     "type": "integer"
                 }
             }
@@ -16126,6 +16142,14 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 1
                 },
+                "package_price": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "package_size": {
+                    "type": "number",
+                    "maximum": 1000000
+                },
                 "unit": {
                     "type": "string",
                     "enum": [
@@ -16140,6 +16164,7 @@ const docTemplate = `{
                     ]
                 },
                 "unit_cost": {
+                    "description": "UnitCost is the legacy per-unit cost (CENTS). Kept only for backward\ncompatibility: it is used to derive the package fields when they are absent.\nA pointer so \"not sent\" is distinguishable from an explicit 0.",
                     "type": "integer",
                     "minimum": 0
                 }

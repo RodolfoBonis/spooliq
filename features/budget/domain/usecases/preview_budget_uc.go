@@ -230,9 +230,11 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 				SupplyID:         s.SupplyID.String(),
 				Name:             snap.Name,
 				Unit:             snap.Unit,
+				PackageSize:      snap.PackageSize,
+				PackagePrice:     snap.PackagePrice,
 				UnitCost:         snap.UnitCost,
 				QuantityPerPiece: s.QuantityPerPiece,
-				Total:            pricing.SupplyCostCents(s.QuantityPerPiece, item.ProductQuantity, snap.UnitCost),
+				Total:            pricing.SupplyCostCents(s.QuantityPerPiece, item.ProductQuantity, snap.PackagePrice, snap.PackageSize),
 			}
 		}
 

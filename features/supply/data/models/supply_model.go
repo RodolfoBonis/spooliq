@@ -15,8 +15,18 @@ type SupplyModel struct {
 	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_supply_org" json:"organization_id"` // FK: references companies(organization_id) ON DELETE RESTRICT
 	Name           string    `gorm:"type:varchar(255);not null" json:"name"`
 	Unit           string    `gorm:"type:varchar(20);not null" json:"unit"`
-	UnitCost       int64     `gorm:"type:bigint;not null;default:0" json:"unit_cost"` // cents
-	Description    *string   `gorm:"type:text" json:"description,omitempty"`
+	// PackageSize carries a gorm default of 1 so AutoMigrate's ADD COLUMN backfills
+	// pre-existing rows with a single-unit package (preserving their legacy unit_cost
+	// as the package price via the data migration). It is always set explicitly on
+	// write (validated > 0), so the default-tag zero-omit pitfall never applies.
+	PackageSize float64 `gorm:"type:numeric;not null;default:1" json:"package_size"` // units per package, > 0
+	// PackagePrice is the price (CENTS) of one package. Its zero value (0) maps to the
+	// column DEFAULT 0, and the Update Select list forces it even when 0.
+	PackagePrice int64 `gorm:"type:bigint;not null;default:0" json:"package_price"` // cents
+	// UnitCost is DERIVED (round(package_price / package_size)) and kept in sync on
+	// every write so readers predating package pricing stay correct.
+	UnitCost    int64   `gorm:"type:bigint;not null;default:0" json:"unit_cost"` // cents
+	Description *string `gorm:"type:text" json:"description,omitempty"`
 	// IsActive carries NO gorm `default` tag on purpose: a `default` tag makes GORM
 	// omit a zero value (false) from the INSERT so the DB default would silently turn
 	// an explicitly inactive supply active. The "new supplies default to active" rule
@@ -48,6 +58,8 @@ func (s *SupplyModel) FromEntity(entity *entities.SupplyEntity) {
 	s.OrganizationID = entity.OrganizationID
 	s.Name = entity.Name
 	s.Unit = entity.Unit
+	s.PackageSize = entity.PackageSize
+	s.PackagePrice = entity.PackagePrice
 	s.UnitCost = entity.UnitCost
 	s.Description = entity.Description
 	s.IsActive = entity.IsActive
@@ -70,6 +82,8 @@ func (s *SupplyModel) ToEntity() entities.SupplyEntity {
 		OrganizationID: s.OrganizationID,
 		Name:           s.Name,
 		Unit:           s.Unit,
+		PackageSize:    s.PackageSize,
+		PackagePrice:   s.PackagePrice,
 		UnitCost:       s.UnitCost,
 		Description:    s.Description,
 		IsActive:       s.IsActive,

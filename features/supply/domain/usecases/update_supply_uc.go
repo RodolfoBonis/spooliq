@@ -87,9 +87,13 @@ func (uc *SupplyUseCase) Update(c *gin.Context) {
 		}
 	}
 
+	// Partial PUTs keep what is stored instead of zeroing the price.
+	packageSize, packagePrice := request.ResolvePackageUpdate(supply.PackageSize, supply.PackagePrice)
 	supply.Name = request.Name
 	supply.Unit = request.Unit
-	supply.UnitCost = request.UnitCost
+	supply.PackageSize = packageSize
+	supply.PackagePrice = packagePrice
+	supply.UnitCost = entities.DeriveUnitCostCents(packagePrice, packageSize)
 	supply.Description = request.Description
 	// is_active keeps its stored value when the client omits it.
 	if request.IsActive != nil {

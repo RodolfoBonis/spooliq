@@ -173,6 +173,8 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			"order" integer NOT NULL DEFAULT 0,
 			name varchar(255) NOT NULL,
 			unit varchar(20) NOT NULL,
+			package_size numeric NOT NULL DEFAULT 1,
+			package_price bigint NOT NULL DEFAULT 0,
 			unit_cost bigint NOT NULL DEFAULT 0,
 			created_at timestamptz,
 			updated_at timestamptz
@@ -185,6 +187,8 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			organization_id varchar(255) NOT NULL,
 			name varchar(255) NOT NULL,
 			unit varchar(20) NOT NULL,
+			package_size numeric NOT NULL DEFAULT 1,
+			package_price bigint NOT NULL DEFAULT 0,
 			unit_cost bigint NOT NULL DEFAULT 0,
 			description text,
 			is_active boolean NOT NULL DEFAULT true,

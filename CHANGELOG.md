@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.20.0 - 2026-10-30
+
+### Changes
+- chore: bump version to 2.20.0 (7a2c4b0)
+- fix(supply): soft delete, batched org-scoped loads, transactional preserve and overflow guards (3edb0ed)
+- feat(supply): supplies catalog and per-piece supplies on budget items (f9d776d)
+
+
 ## v2.19.0 - 2026-10-18
 
 ### Changes

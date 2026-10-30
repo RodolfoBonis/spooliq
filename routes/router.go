@@ -38,6 +38,8 @@ import (
 	stockuc "github.com/RodolfoBonis/spooliq/features/stock/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/subscriptions"
 	subscriptionuc "github.com/RodolfoBonis/spooliq/features/subscriptions/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/supply"
+	supplyuc "github.com/RodolfoBonis/spooliq/features/supply/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/uploads"
 	uploadsuc "github.com/RodolfoBonis/spooliq/features/uploads/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/users"
@@ -65,6 +67,7 @@ func InitializeRoutes(
 	filamentUc filamentuc.IFilamentUseCase,
 	stockUc stockuc.IStockUseCase,
 	materialUc materialuc.IMaterialUseCase,
+	supplyUc supplyuc.ISupplyUseCase,
 	model3dUc model3duc.IModel3DUseCase,
 	slicerUc sliceruc.ISlicerUseCase,
 	uploadsUc uploadsuc.IUploadUseCase,
@@ -105,6 +108,7 @@ func InitializeRoutes(
 	filament.Routes(root, filamentUc, protectFactory, cacheMiddleware)
 	stock.Routes(root, stockUc, protectFactory, cacheMiddleware)
 	material.Routes(root, materialUc, protectFactory, cacheMiddleware)
+	supply.Routes(root, supplyUc, protectFactory, cacheMiddleware)
 	model3d.Routes(root, model3dUc, protectFactory)
 	slicer.Routes(root, slicerUc, protectFactory)
 	preset.SetupRoutes(root, presetHandler, protectFactory)

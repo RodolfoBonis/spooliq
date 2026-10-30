@@ -73,6 +73,7 @@ func TestIntegration_UpdateItem_PersistsZeroCosts(t *testing.T) {
 			packaging_cost bigint NOT NULL DEFAULT 0,
 			quality_control_cost bigint NOT NULL DEFAULT 0,
 			failure_cost bigint NOT NULL DEFAULT 0,
+			supplies_cost bigint NOT NULL DEFAULT 0,
 			item_total_cost bigint NOT NULL DEFAULT 0,
 			unit_price bigint NOT NULL DEFAULT 0,
 			updated_at timestamptz

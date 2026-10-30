@@ -130,6 +130,7 @@ type BudgetEntity struct {
 	PackagingCost      int64 `json:"packaging_cost"`       // cents - Sum of all items packaging costs
 	QualityControlCost int64 `json:"quality_control_cost"` // cents - Sum of all items quality-control costs
 	FailureCost        int64 `json:"failure_cost"`         // cents - Sum of all items failure-rate costs
+	SuppliesCost       int64 `json:"supplies_cost"`        // cents - Sum of all items non-printed supply costs
 	OverheadCost       int64 `json:"overhead_cost"`        // cents - Overhead calculated on subtotal
 	ProfitAmount       int64 `json:"profit_amount"`        // cents - Profit margin calculated
 

@@ -100,11 +100,18 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 	type itemBundle struct {
 		item      *entities.BudgetItemEntity
 		filaments []*entities.BudgetItemFilamentEntity
+		supplies  []*entities.BudgetItemSupplyEntity
 	}
 
 	bundles := make([]itemBundle, 0, len(originalItems))
 	for _, original := range originalItems {
 		originalFilaments, err := uc.budgetRepository.GetItemFilaments(ctx, original.ID)
+		if err != nil {
+			respondBudgetError(c, err)
+			return
+		}
+
+		originalSupplies, err := uc.budgetRepository.GetItemSupplies(ctx, original.ID)
 		if err != nil {
 			respondBudgetError(c, err)
 			return
@@ -151,7 +158,11 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 			})
 		}
 
-		bundles = append(bundles, itemBundle{item: newItem, filaments: newFilaments})
+		// Copy supplies (with their stored snapshot); CalculateCosts refreshes the
+		// snapshot to the current catalog values afterwards.
+		newSupplies := copyItemSupplies(newItemID, organizationID, originalSupplies, now)
+
+		bundles = append(bundles, itemBundle{item: newItem, filaments: newFilaments, supplies: newSupplies})
 	}
 
 	initialHistory := &entities.BudgetStatusHistoryEntity{
@@ -185,6 +196,11 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 			}
 			for _, filament := range b.filaments {
 				if err := repo.AddItemFilament(ctx, filament); err != nil {
+					return err
+				}
+			}
+			for _, supply := range b.supplies {
+				if err := repo.AddItemSupply(ctx, supply); err != nil {
 					return err
 				}
 			}

@@ -370,11 +370,12 @@ func (r *DashboardRepositoryImpl) GetTopCustomers(organizationID string, start, 
 type costTotals struct {
 	Filament, Waste, Energy, Machine, Setup, Labor               int64
 	PostProcessing, Packaging, QualityControl, Failure, Overhead int64
+	Supplies                                                     int64
 }
 
 func (c costTotals) sum() int64 {
 	return c.Filament + c.Waste + c.Energy + c.Machine + c.Setup + c.Labor +
-		c.PostProcessing + c.Packaging + c.QualityControl + c.Failure + c.Overhead
+		c.PostProcessing + c.Packaging + c.QualityControl + c.Failure + c.Overhead + c.Supplies
 }
 
 type opsMetrics struct {
@@ -403,7 +404,7 @@ func (r *DashboardRepositoryImpl) queryOpsMetrics(organizationID string, start, 
 			COALESCE(SUM(b.setup_cost), 0), COALESCE(SUM(b.labor_cost), 0),
 			COALESCE(SUM(b.post_processing_cost), 0), COALESCE(SUM(b.packaging_cost), 0),
 			COALESCE(SUM(b.quality_control_cost), 0), COALESCE(SUM(b.failure_cost), 0),
-			COALESCE(SUM(b.overhead_cost), 0)
+			COALESCE(SUM(b.overhead_cost), 0), COALESCE(SUM(b.supplies_cost), 0)
 		FROM budgets b
 		WHERE b.organization_id = ? AND b.deleted_at IS NULL AND b.status IN ` + saleStatuses
 		params := []any{organizationID}
@@ -411,7 +412,7 @@ func (r *DashboardRepositoryImpl) queryOpsMetrics(organizationID string, start, 
 		c := &m.Costs
 		return r.db.Raw(sql, params...).Row().Scan(
 			&c.Filament, &c.Waste, &c.Energy, &c.Machine, &c.Setup, &c.Labor,
-			&c.PostProcessing, &c.Packaging, &c.QualityControl, &c.Failure, &c.Overhead,
+			&c.PostProcessing, &c.Packaging, &c.QualityControl, &c.Failure, &c.Overhead, &c.Supplies,
 		)
 	})
 	if err := g.Wait(); err != nil {
@@ -469,6 +470,7 @@ func (r *DashboardRepositoryImpl) GetOperationalInsights(organizationID string, 
 			PackagingPct:      pct(c.Packaging),
 			QualityControlPct: pct(c.QualityControl),
 			FailurePct:        pct(c.Failure),
+			SuppliesPct:       pct(c.Supplies),
 		}
 	}
 

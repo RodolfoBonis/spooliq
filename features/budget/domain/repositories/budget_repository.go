@@ -97,6 +97,9 @@ type BudgetRepository interface {
 	// GetFilamentUsageInfoByItemIDs loads the filament usage of every given item,
 	// grouped by item ID and ordered by the color-change order within each item.
 	GetFilamentUsageInfoByItemIDs(ctx context.Context, itemIDs []uuid.UUID, organizationID string) (map[uuid.UUID][]entities.FilamentUsageInfo, error)
+	// GetItemSuppliesByItemIDs loads the supplies of every given item, grouped by item
+	// ID and ordered by the display order within each item.
+	GetItemSuppliesByItemIDs(ctx context.Context, itemIDs []uuid.UUID, organizationID string) (map[uuid.UUID][]*entities.BudgetItemSupplyEntity, error)
 	// GetCostPresetNames loads the display name of every given cost preset. Names are
 	// resolved WITHOUT a deleted_at filter for historical consistency with budgets
 	// that reference a since-soft-deleted preset (matching GetPresetInfo).
@@ -117,6 +120,20 @@ type BudgetRepository interface {
 	GetItemFilaments(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemFilamentEntity, error)
 	DeleteAllItemFilaments(ctx context.Context, itemID uuid.UUID) error
 	GetFilamentUsageInfo(ctx context.Context, itemID uuid.UUID, organizationID string) ([]entities.FilamentUsageInfo, error)
+
+	// Item Supply operations (non-printed insumos)
+	// AddItemSupply persists one budget item supply row (with its catalog snapshot).
+	AddItemSupply(ctx context.Context, supply *entities.BudgetItemSupplyEntity) error
+	// GetItemSupplies returns one item's supplies, ordered by display order. Used by
+	// Duplicate to copy supplies onto the new items.
+	GetItemSupplies(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemSupplyEntity, error)
+	// ValidateSuppliesInOrg ensures every supply ID belongs to the organization and is
+	// live (deleted_at IS NULL). Empty input is a no-op.
+	ValidateSuppliesInOrg(ctx context.Context, supplyIDs []uuid.UUID, organizationID string) error
+	// GetSuppliesInfo loads the snapshot fields (name, unit, unit_cost) of every given
+	// LIVE supply, keyed by supply ID. Used to snapshot supplies at create/update time
+	// and to render a preview's supply lines.
+	GetSuppliesInfo(ctx context.Context, supplyIDs []uuid.UUID, organizationID string) (map[uuid.UUID]entities.SupplySnapshot, error)
 
 	// Status history operations
 	AddStatusHistory(ctx context.Context, history *entities.BudgetStatusHistoryEntity) error

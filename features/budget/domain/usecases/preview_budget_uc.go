@@ -7,14 +7,15 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/validation"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/gin-gonic/gin"
 )
 
 // Preview calculates a budget's full cost breakdown WITHOUT persisting anything.
 // It accepts the same body shape as Create (customer optional, items required),
-// validates every referenced preset/filament against the organization, runs the
-// pure pricing engine via the repository's stateless computation, and returns the
-// per-item breakdown (costs + sale values) together with the budget totals.
+// validates every referenced preset/filament/supply against the organization, runs
+// the pure pricing engine via the repository's stateless computation, and returns
+// the per-item breakdown (costs + sale values) together with the budget totals.
 //
 // @Summary Preview budget costs
 // @Description Calculate a budget's full cost breakdown without saving it. Useful for live quoting in the UI.
@@ -80,7 +81,7 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		return
 	}
 
-	// Validate the remaining references (item-level cost presets + filaments).
+	// Validate the remaining references (item-level cost presets + filaments + supplies).
 	if err := uc.validateReferences(ctx, organizationID, nil, nil, nil, request.Items); err != nil {
 		uc.logger.Error(ctx, "Invalid preview references", map[string]interface{}{"error": err.Error()})
 		respondBudgetError(c, err)
@@ -89,12 +90,25 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 
 	includeMachineCost := resolveIncludeMachineCost(request.IncludeMachineCost)
 
+	// Resolve supply snapshots (name/unit/unit_cost) once for the response lines; the
+	// pricing engine resolves unit costs on its own from the same catalog.
+	supplySnapshots, err := uc.budgetRepository.GetSuppliesInfo(ctx, collectSupplyIDs(request.Items), organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to load preview supplies", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
+	}
+
 	// Assemble the persistence-agnostic pricing input from the request items.
 	specs := make([]entities.PricingItemSpec, len(request.Items))
 	for i, item := range request.Items {
 		filaments := make([]entities.PricingFilamentSpec, len(item.Filaments))
 		for j, f := range item.Filaments {
 			filaments[j] = entities.PricingFilamentSpec{FilamentID: f.FilamentID, Quantity: f.Quantity}
+		}
+		supplies := make([]entities.PricingSupplySpec, len(item.Supplies))
+		for j, s := range item.Supplies {
+			supplies[j] = entities.PricingSupplySpec(s)
 		}
 		specs[i] = entities.PricingItemSpec{
 			ProductQuantity:         item.ProductQuantity,
@@ -106,6 +120,7 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			CostPresetID:            item.CostPresetID,
 			Filaments:               filaments,
+			Supplies:                supplies,
 		}
 	}
 
@@ -161,6 +176,7 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 		PackagingCost:      result.PackagingCost,
 		QualityControlCost: result.QualityControlCost,
 		FailureCost:        result.FailureCost,
+		SuppliesCost:       result.SuppliesCost,
 		OverheadCost:       result.Overhead,
 		ProfitAmount:       result.Profit,
 		DiscountAmount:     result.DiscountAmount,
@@ -207,6 +223,19 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 			}
 		}
 
+		supplies := make([]entities.SupplyUsageInfo, len(item.Supplies))
+		for j, s := range item.Supplies {
+			snap := supplySnapshots[s.SupplyID]
+			supplies[j] = entities.SupplyUsageInfo{
+				SupplyID:         s.SupplyID.String(),
+				Name:             snap.Name,
+				Unit:             snap.Unit,
+				UnitCost:         snap.UnitCost,
+				QuantityPerPiece: s.QuantityPerPiece,
+				Total:            pricing.SupplyCostCents(s.QuantityPerPiece, item.ProductQuantity, snap.UnitCost),
+			}
+		}
+
 		totalPrintMinutes += (item.PrintTimeHours * 60) + item.PrintTimeMinutes
 
 		itemResponses[i] = entities.BudgetItemResponse{
@@ -237,11 +266,13 @@ func (uc *BudgetUseCase) Preview(c *gin.Context) {
 			PackagingCost:           res.PackagingCost,
 			QualityControlCost:      res.QualityControlCost,
 			FailureCost:             res.FailureCost,
+			SuppliesCost:            res.SuppliesCost,
 			ItemTotalCost:           res.ItemTotalCost,
 			UnitPrice:               res.UnitCost,
 			SaleTotal:               res.SaleTotal,
 			SaleUnitPrice:           res.SaleUnitPrice,
 			Filaments:               filaments,
+			Supplies:                supplies,
 			Order:                   item.Order,
 		}
 	}

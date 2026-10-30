@@ -9,6 +9,14 @@ type PricingFilamentSpec struct {
 	Quantity   float64
 }
 
+// PricingSupplySpec describes one non-printed supply (insumo) used by an item for a
+// pricing run. The unit cost is resolved from the org-scoped catalog by SupplyID at
+// compute time; QuantityPerPiece is how many units each printed piece consumes.
+type PricingSupplySpec struct {
+	SupplyID         uuid.UUID
+	QuantityPerPiece float64
+}
+
 // PricingItemSpec describes one product line for a pricing run. It is the
 // persistence-agnostic shape consumed by the repository's pricing computation,
 // so it is used both for stored budgets (CalculateCosts) and for the stateless
@@ -23,11 +31,13 @@ type PricingItemSpec struct {
 	SupportRemovalMinutes   int
 	CostPresetID            *uuid.UUID
 	Filaments               []PricingFilamentSpec
+	Supplies                []PricingSupplySpec
 }
 
 // PricingComputationInput is everything the repository needs to load the
-// org-scoped rates (filament prices, machine/energy/cost presets, company default
-// tax rate) and run the pure pricing engine, WITHOUT persisting anything.
+// org-scoped rates (filament prices, supply unit costs, machine/energy/cost
+// presets, company default tax rate) and run the pure pricing engine, WITHOUT
+// persisting anything.
 type PricingComputationInput struct {
 	OrganizationID     string
 	IncludeEnergyCost  bool

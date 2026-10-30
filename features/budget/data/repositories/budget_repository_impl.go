@@ -805,6 +805,7 @@ func (r *budgetRepositoryImpl) UpdateItem(ctx context.Context, item *entities.Bu
 		"packaging_cost":       item.PackagingCost,
 		"quality_control_cost": item.QualityControlCost,
 		"failure_cost":         item.FailureCost,
+		"supplies_cost":        item.SuppliesCost,
 		"item_total_cost":      item.ItemTotalCost,
 		"unit_price":           item.UnitPrice,
 		"updated_at":           time.Now(),
@@ -1010,10 +1011,12 @@ func (r *budgetRepositoryImpl) GetStatusHistory(ctx context.Context, budgetID uu
 // CalculateCosts recomputes and persists all costs for a stored budget.
 //
 // It loads everything org-scoped (the budget itself, its items, every item's
-// filaments in ONE batched query and each distinct preset once), delegates the
-// arithmetic to the pure pricing engine via ComputeBudgetPricing, and then
-// persists the per-item cost columns and the budget totals using explicit column
-// maps inside the caller's transaction. All monetary results are in CENTS.
+// filaments and supplies in batched queries and each distinct preset once),
+// delegates the arithmetic to the pure pricing engine via ComputeBudgetPricing, and
+// then persists the per-item cost columns and the budget totals using explicit
+// column maps inside the caller's transaction. All monetary results are in CENTS.
+// The item supply snapshots (name/unit/unit_cost) are refreshed to the current
+// catalog values so the stored budget stays in sync with the prices just used.
 //
 // The initial budget fetch is scoped by organization (defense-in-depth against a
 // cross-tenant budget ID). Historical consistency for presets/filaments is handled
@@ -1038,6 +1041,12 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		return err
 	}
 
+	// Batch-load every item's supplies (supply_id + quantity_per_piece) in ONE query.
+	suppliesByItem, err := r.loadItemSupplySpecs(ctx, items, organizationID)
+	if err != nil {
+		return err
+	}
+
 	specs := make([]entities.PricingItemSpec, len(items))
 	for i, item := range items {
 		specs[i] = entities.PricingItemSpec{
@@ -1050,6 +1059,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			CostPresetID:            item.CostPresetID,
 			Filaments:               gramsByItem[item.ID],
+			Supplies:                suppliesByItem[item.ID],
 		}
 	}
 
@@ -1087,11 +1097,22 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		item.PackagingCost = res.PackagingCost
 		item.QualityControlCost = res.QualityControlCost
 		item.FailureCost = res.FailureCost
+		item.SuppliesCost = res.SuppliesCost
 		item.ItemTotalCost = res.ItemTotalCost
 		item.UnitPrice = res.UnitCost
 		if err := r.UpdateItem(ctx, item); err != nil {
 			return fmt.Errorf("failed to update item costs: %w", err)
 		}
+	}
+
+	// Refresh the item supply snapshots (name/unit/unit_cost) to the current catalog
+	// values used for pricing, so the stored budget stays reproducible.
+	itemIDs := make([]uuid.UUID, len(items))
+	for i, item := range items {
+		itemIDs[i] = item.ID
+	}
+	if err := r.refreshSupplySnapshots(ctx, itemIDs, organizationID); err != nil {
+		return err
 	}
 
 	// Persist budget totals (explicit column map, org-scoped).
@@ -1109,6 +1130,7 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 			"packaging_cost":       result.PackagingCost,
 			"quality_control_cost": result.QualityControlCost,
 			"failure_cost":         result.FailureCost,
+			"supplies_cost":        result.SuppliesCost,
 			"overhead_cost":        result.Overhead,
 			"profit_amount":        result.Profit,
 			"discount_amount":      result.DiscountAmount,
@@ -1133,15 +1155,16 @@ type costPresetRates struct {
 }
 
 // ComputeBudgetPricing loads the org-scoped rates for the given input (filament
-// prices in ONE batched query, distinct cost presets in ONE batched query, the
-// machine/energy presets and the company default tax rate) and runs the pure
-// pricing engine WITHOUT persisting anything. It is shared by CalculateCosts (which
-// persists afterwards) and the stateless preview endpoint.
+// prices in ONE batched query, supply unit costs in ONE batched query, distinct
+// cost presets in ONE batched query, the machine/energy presets and the company
+// default tax rate) and runs the pure pricing engine WITHOUT persisting anything.
+// It is shared by CalculateCosts (which persists afterwards) and the stateless
+// preview endpoint.
 //
 // All lookups are scoped by organization so cross-tenant references cannot leak in;
-// a referenced filament or cost preset that does not resolve inside the org is an
-// error rather than a silent zero. Presets/filaments are resolved WITHOUT a
-// deleted_at filter for historical consistency with already-saved budgets.
+// a referenced filament, supply or cost preset that does not resolve inside the org
+// is an error rather than a silent zero. Presets/filaments/supplies are resolved
+// WITHOUT a deleted_at filter for historical consistency with already-saved budgets.
 func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in entities.PricingComputationInput) (pricing.PricingResult, error) {
 	var zero pricing.PricingResult
 
@@ -1151,6 +1174,12 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 	}
 
 	costPresetByID, err := r.loadCostPresets(ctx, in)
+	if err != nil {
+		return zero, err
+	}
+
+	// Supply unit costs (CENTS) for every supply referenced by the items.
+	supplyCostByID, err := r.loadSupplyUnitCosts(ctx, in.Items, in.OrganizationID)
 	if err != nil {
 		return zero, err
 	}
@@ -1236,6 +1265,13 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 				PricePerKgCents: priceByFilament[f.FilamentID],
 			}
 		}
+		supplies := make([]pricing.PricingSupplyInput, len(item.Supplies))
+		for j, s := range item.Supplies {
+			supplies[j] = pricing.PricingSupplyInput{
+				QuantityPerPiece: s.QuantityPerPiece,
+				UnitCostCents:    supplyCostByID[s.SupplyID],
+			}
+		}
 		// Item cost preset fallback: when an item has no cost preset of its own, it
 		// uses the budget-level cost preset (resolved from the request/profile/org
 		// defaults) for its setup + manual labor rates. This is applied here, in the
@@ -1261,6 +1297,7 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 			SupportRemovalMinutes:   item.SupportRemovalMinutes,
 			CostPreset:              cp,
 			Filaments:               filaments,
+			Supplies:                supplies,
 		}
 	}
 

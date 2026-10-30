@@ -60,6 +60,7 @@ type BudgetItemEntity struct {
 	PackagingCost      int64 `json:"packaging_cost"`       // cents
 	QualityControlCost int64 `json:"quality_control_cost"` // cents
 	FailureCost        int64 `json:"failure_cost"`         // cents
+	SuppliesCost       int64 `json:"supplies_cost"`        // cents (sum of non-printed supply lines)
 	ItemTotalCost      int64 `json:"item_total_cost"`      // cents (sum of all costs)
 
 	// Timestamps

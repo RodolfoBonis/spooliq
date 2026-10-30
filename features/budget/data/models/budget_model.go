@@ -96,6 +96,7 @@ type BudgetModel struct {
 	PackagingCost      int64 `gorm:"type:bigint;default:0" json:"packaging_cost"`
 	QualityControlCost int64 `gorm:"type:bigint;default:0" json:"quality_control_cost"`
 	FailureCost        int64 `gorm:"type:bigint;default:0" json:"failure_cost"`
+	SuppliesCost       int64 `gorm:"type:bigint;default:0" json:"supplies_cost"`
 	OverheadCost       int64 `gorm:"type:bigint;default:0" json:"overhead_cost"`
 	ProfitAmount       int64 `gorm:"type:bigint;default:0" json:"profit_amount"`
 
@@ -193,6 +194,7 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		PackagingCost:             b.PackagingCost,
 		QualityControlCost:        b.QualityControlCost,
 		FailureCost:               b.FailureCost,
+		SuppliesCost:              b.SuppliesCost,
 		OverheadCost:              b.OverheadCost,
 		ProfitAmount:              b.ProfitAmount,
 		DiscountAmount:            b.DiscountAmount,
@@ -262,6 +264,7 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.PackagingCost = entity.PackagingCost
 	b.QualityControlCost = entity.QualityControlCost
 	b.FailureCost = entity.FailureCost
+	b.SuppliesCost = entity.SuppliesCost
 	b.OverheadCost = entity.OverheadCost
 	b.ProfitAmount = entity.ProfitAmount
 	b.DiscountAmount = entity.DiscountAmount

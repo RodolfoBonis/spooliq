@@ -14,6 +14,7 @@ type CostBreakdown struct {
 	PackagingPct      float64 `json:"packaging_pct"`
 	QualityControlPct float64 `json:"quality_control_pct"`
 	FailurePct        float64 `json:"failure_pct"`
+	SuppliesPct       float64 `json:"supplies_pct"`
 }
 
 // OperationalInsightsResponse contains operational metrics.

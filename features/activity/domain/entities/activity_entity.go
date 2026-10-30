@@ -31,6 +31,8 @@ const (
 	EntityModel3D  ActivityEntityType = "model3d"
 	// EntityStockMovement is a filament stock ledger entry (Phase 4C).
 	EntityStockMovement ActivityEntityType = "stock_movement"
+	// EntitySupply is a non-printed per-piece supply (insumo).
+	EntitySupply ActivityEntityType = "supply"
 )
 
 // ActivityEntity represents a recorded activity.

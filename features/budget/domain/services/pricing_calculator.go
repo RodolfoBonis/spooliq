@@ -54,6 +54,20 @@ type PricingFilamentInput struct {
 	PricePerKgCents float64
 }
 
+// PricingSupplyInput is one non-printed supply (insumo) used by an item.
+//
+//   - QuantityPerPiece is how many units of the supply each printed piece consumes.
+//   - UnitCostCents is the supply's unit cost in CENTS.
+//
+// The supply line cost is QuantityPerPiece * item.Quantity (product units) *
+// UnitCostCents, rounded to the cent (see SupplyCostCents). Supplies are a direct
+// item cost that receives overhead + margin like any other, but are NOT part of
+// the failure-rate base (a supply is not reprinted on a failed job).
+type PricingSupplyInput struct {
+	QuantityPerPiece float64
+	UnitCostCents    int64
+}
+
 // PricingItemInput is a single product line in the budget.
 type PricingItemInput struct {
 	Quantity                int // product units
@@ -69,6 +83,8 @@ type PricingItemInput struct {
 	// fallback when the item is the first item and no budget-level preset is set).
 	CostPreset *CostPresetInput
 	Filaments  []PricingFilamentInput
+	// Supplies are the non-printed per-piece consumables attached to the item.
+	Supplies []PricingSupplyInput
 }
 
 // PricingInput is the complete, DB-free input to Calculate.
@@ -126,6 +142,9 @@ type PricingItemResult struct {
 	PackagingCost      int64
 	QualityControlCost int64
 	FailureCost        int64
+	// SuppliesCost is the item's total non-printed supply cost (sum of its supply
+	// lines). It is part of ItemTotalCost but NOT part of the failure-rate base.
+	SuppliesCost int64
 	// ItemTotalCost is the sum of all the direct costs above (no markup).
 	ItemTotalCost int64
 	// UnitCost is ItemTotalCost / quantity, rounded (cost per unit, no markup).
@@ -156,6 +175,7 @@ type PricingResult struct {
 	PackagingCost      int64
 	QualityControlCost int64
 	FailureCost        int64
+	SuppliesCost       int64 // sum of non-printed supply costs across items
 	Subtotal           int64 // sum of all item direct costs
 	Overhead           int64
 	Profit             int64
@@ -282,7 +302,8 @@ func FilamentWasteGrams(items []RequirementItem) map[uuid.UUID]float64 {
 //   - setup + manual labor = minutes/60 * the item cost preset's labor rate;
 //   - post-processing / support-removal = minutes/60 * the respective preset rate;
 //   - packaging = quantity * packaging_cost_per_item; quality control = quantity * qc_cost_per_item;
-//   - failure = (filament + waste + energy + machine) * failure_rate_percentage.
+//   - supplies = sum over the item's supplies of qty_per_piece * quantity * unit_cost (cents);
+//   - failure = (filament + waste + energy + machine) * failure_rate_percentage (supplies excluded).
 //
 // Budget:
 //   - subtotal = sum of item direct costs; overhead = subtotal * overhead%;
@@ -349,8 +370,16 @@ func Calculate(in PricingInput) (PricingResult, error) {
 		qualityControlCost := ReaisPerItemCents(item.Quantity, qcPerItem)
 		failureCost := PercentageCents(filamentCost+wasteCost+energyCost+machineCost, failurePct)
 
+		// Supplies: a direct item cost (receives overhead + margin) but excluded from
+		// the failure base. Each line is rounded to the cent via SupplyCostCents so the
+		// item cost reconciles exactly with the per-line totals shown in the response.
+		var suppliesCost int64
+		for _, s := range item.Supplies {
+			suppliesCost += SupplyCostCents(s.QuantityPerPiece, item.Quantity, s.UnitCostCents)
+		}
+
 		itemTotal := filamentCost + wasteCost + energyCost + machineCost + setupCost + manualLaborCost +
-			postProcessingCost + supportRemovalCost + packagingCost + qualityControlCost + failureCost
+			postProcessingCost + supportRemovalCost + packagingCost + qualityControlCost + failureCost + suppliesCost
 
 		result.Items[i] = PricingItemResult{
 			FilamentCost:       filamentCost,
@@ -364,6 +393,7 @@ func Calculate(in PricingInput) (PricingResult, error) {
 			PackagingCost:      packagingCost,
 			QualityControlCost: qualityControlCost,
 			FailureCost:        failureCost,
+			SuppliesCost:       suppliesCost,
 			ItemTotalCost:      itemTotal,
 			UnitCost:           UnitPriceCents(itemTotal, item.Quantity),
 		}
@@ -380,6 +410,7 @@ func Calculate(in PricingInput) (PricingResult, error) {
 		result.PackagingCost += packagingCost
 		result.QualityControlCost += qualityControlCost
 		result.FailureCost += failureCost
+		result.SuppliesCost += suppliesCost
 		result.Subtotal += itemTotal
 	}
 

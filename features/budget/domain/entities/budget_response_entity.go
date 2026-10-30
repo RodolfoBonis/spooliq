@@ -45,6 +45,19 @@ type FilamentUsageInfo struct {
 	Order    int     `json:"order"`
 }
 
+// SupplyUsageInfo represents a non-printed supply (insumo) line on a budget item.
+// The name/unit/unit_cost are the snapshot stored on the budget item supply, and
+// total is the line cost in cents for THIS item:
+// round(quantity_per_piece * product_quantity * unit_cost).
+type SupplyUsageInfo struct {
+	SupplyID         string  `json:"supply_id"`
+	Name             string  `json:"name"`
+	Unit             string  `json:"unit"`
+	UnitCost         int64   `json:"unit_cost"` // cents
+	QuantityPerPiece float64 `json:"quantity_per_piece"`
+	Total            int64   `json:"total"` // cents for this item
+}
+
 // StockWarning flags a tracked filament whose on-hand stock is below what this
 // budget requires. required_grams is the rounded total grams the budget needs for
 // the filament; available_grams is the filament's current stock balance.
@@ -123,6 +136,7 @@ type BudgetItemResponse struct {
 	PackagingCost      int64 `json:"packaging_cost"`       // cents
 	QualityControlCost int64 `json:"quality_control_cost"` // cents
 	FailureCost        int64 `json:"failure_cost"`         // cents
+	SuppliesCost       int64 `json:"supplies_cost"`        // cents (sum of supply lines)
 	ItemTotalCost      int64 `json:"item_total_cost"`      // cents (sum of all)
 	UnitPrice          int64 `json:"unit_price"`           // cents per unit (COST, no markup) - kept for compatibility
 
@@ -136,6 +150,9 @@ type BudgetItemResponse struct {
 
 	// Filaments used in this item
 	Filaments []FilamentUsageInfo `json:"filaments"`
+
+	// Supplies (non-printed insumos) attached to this item
+	Supplies []SupplyUsageInfo `json:"supplies"`
 
 	Order int `json:"order"`
 

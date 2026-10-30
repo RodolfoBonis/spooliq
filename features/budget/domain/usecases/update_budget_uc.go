@@ -280,6 +280,14 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		}
 
 		if request.Items != nil {
+			// Resolve/attach supplies INSIDE the transaction, against the current
+			// (committed, draft-guarded) items before they are replaced. A request item
+			// whose `supplies` key is ABSENT preserves the previous item's supplies
+			// (matched by position/order); an explicit [] clears them; a non-empty array
+			// replaces them with fresh catalog snapshots. See attachUpdateSupplies.
+			if err := uc.attachUpdateSupplies(ctx, repo, organizationID, budgetID, built, *request.Items); err != nil {
+				return err
+			}
 			if err := repo.DeleteAllItems(ctx, budgetID, organizationID); err != nil {
 				return err
 			}
@@ -289,6 +297,11 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 				}
 				for _, filament := range b.Filaments {
 					if err := repo.AddItemFilament(ctx, filament); err != nil {
+						return err
+					}
+				}
+				for _, supply := range b.Supplies {
+					if err := repo.AddItemSupply(ctx, supply); err != nil {
 						return err
 					}
 				}

@@ -28,8 +28,9 @@ func (l countingLogger) Trace(ctx context.Context, begin time.Time, fc func() (s
 }
 
 // createListSchema creates the tables the list response assembly reads: budgets,
-// budget_items, budget_item_filaments, filaments (+ brands/materials for the JOIN),
-// customers, presets and print_profiles. No foreign keys; the test is self-contained.
+// budget_items, budget_item_filaments, budget_item_supplies, filaments (+
+// brands/materials for the JOIN), customers, presets and print_profiles. No foreign
+// keys; the test is self-contained.
 func createListSchema(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	stmts := []string{
@@ -47,6 +48,7 @@ func createListSchema(t *testing.T, db *gorm.DB) {
 			setup_cost bigint DEFAULT 0, labor_cost bigint DEFAULT 0,
 			post_processing_cost bigint DEFAULT 0, packaging_cost bigint DEFAULT 0,
 			quality_control_cost bigint DEFAULT 0, failure_cost bigint DEFAULT 0,
+			supplies_cost bigint DEFAULT 0,
 			overhead_cost bigint DEFAULT 0,
 			profit_amount bigint DEFAULT 0,
 			discount_amount bigint DEFAULT 0, shipping_cost bigint DEFAULT 0,
@@ -70,12 +72,18 @@ quote_number integer, valid_until timestamptz, public_token varchar(43), public_
 			setup_cost bigint DEFAULT 0, manual_labor_cost bigint DEFAULT 0,
 			post_processing_cost bigint DEFAULT 0, support_removal_cost bigint DEFAULT 0,
 			packaging_cost bigint DEFAULT 0, quality_control_cost bigint DEFAULT 0,
-			failure_cost bigint DEFAULT 0, item_total_cost bigint DEFAULT 0,
+			failure_cost bigint DEFAULT 0, supplies_cost bigint DEFAULT 0, item_total_cost bigint DEFAULT 0,
 			created_at timestamptz, updated_at timestamptz
 		)`,
 		`CREATE TABLE budget_item_filaments (
 			id uuid PRIMARY KEY, budget_item_id uuid NOT NULL, filament_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
 			quantity numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 1,
+			created_at timestamptz, updated_at timestamptz
+		)`,
+		`CREATE TABLE budget_item_supplies (
+			id uuid PRIMARY KEY, budget_item_id uuid NOT NULL, supply_id uuid NOT NULL, organization_id varchar(255) NOT NULL,
+			quantity_per_piece numeric NOT NULL DEFAULT 0, "order" integer NOT NULL DEFAULT 0,
+			name varchar(255) NOT NULL DEFAULT '', unit varchar(20) NOT NULL DEFAULT '', unit_cost bigint NOT NULL DEFAULT 0,
 			created_at timestamptz, updated_at timestamptz
 		)`,
 		`CREATE TABLE filaments (
@@ -164,8 +172,8 @@ func seedBudgetsWithItems(t *testing.T, db *gorm.DB, org string, n, itemsPer int
 // runListLoad executes the exact batch-loading sequence the FindAll use case runs to
 // assemble a page of budgets, over a query-counting session, and returns the number
 // of SQL statements executed. The sequence is: SearchBudgets (count + find), then one
-// batch query each for customers, items, filament usage, cost-preset names and
-// profile names.
+// batch query each for customers, items, filament usage, item supplies, cost-preset
+// names and profile names.
 func runListLoad(t *testing.T, db *gorm.DB, org string) int64 {
 	t.Helper()
 	ctx := context.Background()
@@ -210,6 +218,8 @@ func runListLoad(t *testing.T, db *gorm.DB, org string) int64 {
 
 	_, err = repo.GetFilamentUsageInfoByItemIDs(ctx, itemIDs, org)
 	require.NoError(t, err)
+	_, err = repo.GetItemSuppliesByItemIDs(ctx, itemIDs, org)
+	require.NoError(t, err)
 	_, err = repo.GetCostPresetNames(ctx, costPresetIDs, org)
 	require.NoError(t, err)
 	_, err = repo.GetProfileNames(ctx, profileIDs, org)
@@ -240,8 +250,9 @@ func TestIntegration_ListQueryCount_IsConstant(t *testing.T) {
 	require.Equal(t, small, large, "list query count must not grow with the number of budgets (N+1 regression)")
 
 	// And it is the expected small constant: SearchBudgets (count+find) + one batch
-	// query each for customers, items, filament usage, cost-preset names, profile names.
-	require.Equal(t, int64(7), large, "expected a constant 7 queries per page")
+	// query each for customers, items, filament usage, item supplies, cost-preset
+	// names, profile names.
+	require.Equal(t, int64(8), large, "expected a constant 8 queries per page")
 }
 
 // compile-time guard that the repository returned by NewBudgetRepository satisfies

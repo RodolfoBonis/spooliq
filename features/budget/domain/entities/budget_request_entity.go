@@ -14,12 +14,20 @@ type BudgetItemFilamentRequest struct {
 	Order      int       `json:"order" validate:"gte=1"`
 }
 
+// BudgetItemSupplyRequest represents a non-printed supply (insumo) attached to a
+// budget item request. SupplyID must resolve to a live supply in the organization;
+// QuantityPerPiece is how many units of the supply each printed piece consumes.
+type BudgetItemSupplyRequest struct {
+	SupplyID         uuid.UUID `json:"supply_id" validate:"required"`
+	QuantityPerPiece float64   `json:"quantity_per_piece" validate:"gt=0,lte=1000000"`
+}
+
 // BudgetItemRequest represents a product item in a budget request
 type BudgetItemRequest struct {
 	// Product information (customer-facing)
 	ProductName        string  `json:"product_name" validate:"required,min=1,max=255"`
 	ProductDescription *string `json:"product_description,omitempty" validate:"omitempty,max=1000"`
-	ProductQuantity    int     `json:"product_quantity" validate:"required,gt=0"` // number of units
+	ProductQuantity    int     `json:"product_quantity" validate:"required,gt=0,lte=1000000"` // number of units (bounded to guard the supply cost overflow)
 	// UnitsPerPrint is how many units one run of the sliced file produces (the
 	// client scales the totals below from it). Stored for re-editing only.
 	UnitsPerPrint *int `json:"units_per_print,omitempty" validate:"omitempty,gt=0,lte=1000000"`
@@ -39,6 +47,17 @@ type BudgetItemRequest struct {
 
 	// Filaments used in this item (1:N relationship)
 	Filaments []BudgetItemFilamentRequest `json:"filaments" validate:"required,min=1,dive"`
+
+	// Supplies are the non-printed per-piece consumables attached to this item.
+	//
+	// IMPORTANT update semantics (web compatibility): on UPDATE this field is
+	// tri-state via nil-vs-empty. A nil slice (the `supplies` key ABSENT from the
+	// request) means "preserve the previous item's supplies" — items are recreated
+	// on update, so the previous supplies are matched by the item's position/order.
+	// An explicit empty array (`"supplies": []`) clears the item's supplies. A
+	// non-empty array replaces them. On CREATE/PREVIEW a nil slice simply means "no
+	// supplies". See update_budget_uc.go for the preservation rule.
+	Supplies []BudgetItemSupplyRequest `json:"supplies,omitempty" validate:"omitempty,dive"`
 
 	// Optional: specific cost preset for this item. When omitted, the budget-level
 	// cost preset (resolved from the request/profile/org defaults) is used for this

@@ -27,6 +27,7 @@ import (
 	profileRepos "github.com/RodolfoBonis/spooliq/features/profile/data/repositories"
 	stocks "github.com/RodolfoBonis/spooliq/features/stock/data/models"
 	subscriptions "github.com/RodolfoBonis/spooliq/features/subscriptions/data/models"
+	supplies "github.com/RodolfoBonis/spooliq/features/supply/data/models"
 	users "github.com/RodolfoBonis/spooliq/features/users/data/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -303,6 +304,11 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING MATERIAL MIGRATION: %s", err.Error()))
 	}
 
+	// 7.1. Supplies (FK: OrganizationID -> Companies, snapshotted into budget_item_supplies)
+	if err := Connector.AutoMigrate(&supplies.SupplyModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING SUPPLY MIGRATION: %s", err.Error()))
+	}
+
 	// ========================================
 	// LEVEL 3: Tables with FK to Companies AND Users/Brands/Materials
 	// ========================================
@@ -463,6 +469,12 @@ func RunMigrations() {
 		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_FILAMENT MIGRATION: %s", err.Error()))
 	}
 
+	// 18.0. BudgetItemSupplies (FK: OrganizationID -> Companies, BudgetItemID -> BudgetItems CASCADE,
+	// SupplyID -> Supplies). Snapshots name/unit/unit_cost from the supply catalog.
+	if err := Connector.AutoMigrate(&budgets.BudgetItemSupplyModel{}); err != nil {
+		panic(fmt.Sprintf("ERROR DURING BUDGET_ITEM_SUPPLY MIGRATION: %s", err.Error()))
+	}
+
 	// 18.1. Filament Stock Movements (Phase 4C). FK: OrganizationID -> Companies,
 	// FilamentID -> Filaments CASCADE, BudgetID -> Budgets SET NULL. Migrated after
 	// filaments and budgets exist; the non-org FKs are added idempotently below.
@@ -525,6 +537,61 @@ func RunMigrations() {
 		}
 	}
 
+	// 18.3. budget_item_supplies.budget_item_id FK -> budget_items(id) ON DELETE CASCADE,
+	// and supply_id FK -> supplies(id) ON DELETE RESTRICT. FK creation is disabled during
+	// AutoMigrate (see newGormConfig), so add them here, idempotently.
+	{
+		var tableExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budget_item_supplies')").Scan(&tableExists)
+		if tableExists {
+			var itemFKExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'budget_item_supplies' AND constraint_name = 'fk_budget_item_supplies_item'
+				)
+			`).Scan(&itemFKExists)
+			if !itemFKExists {
+				sql := `
+					ALTER TABLE budget_item_supplies
+					ADD CONSTRAINT fk_budget_item_supplies_item
+					FOREIGN KEY (budget_item_id)
+					REFERENCES budget_items(id)
+					ON UPDATE CASCADE
+					ON DELETE CASCADE
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for budget_item_supplies.budget_item_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for budget_item_supplies.budget_item_id")
+				}
+			}
+
+			var supplyFKExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'budget_item_supplies' AND constraint_name = 'fk_budget_item_supplies_supply'
+				)
+			`).Scan(&supplyFKExists)
+			if !supplyFKExists {
+				sql := `
+					ALTER TABLE budget_item_supplies
+					ADD CONSTRAINT fk_budget_item_supplies_supply
+					FOREIGN KEY (supply_id)
+					REFERENCES supplies(id)
+					ON UPDATE CASCADE
+					ON DELETE RESTRICT
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Error: FK constraint for budget_item_supplies.supply_id failed (soft delete prevents orphaning, but the RESTRICT safety net is missing): %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for budget_item_supplies.supply_id")
+				}
+			}
+		}
+	}
+
 	// 17.1. budget_items.model_3d_id FK -> models_3d(id) ON DELETE SET NULL. Added
 	// here (after both budget_items and models_3d exist), idempotently: only when the
 	// constraint is not already present. Deleting a model simply detaches it from the
@@ -574,9 +641,9 @@ func RunMigrations() {
 	fmt.Println("Adding organization_id foreign key constraints...")
 
 	orgFKTables := map[string]bool{
-		"activities": true, "notifications": true, "dashboard_goals": true, "users": true, "brands": true, "materials": true, "filaments": true,
+		"activities": true, "notifications": true, "dashboard_goals": true, "users": true, "brands": true, "materials": true, "supplies": true, "filaments": true,
 		"customers": true, "models_3d": true, "presets": true, "budgets": true, "budget_items": true,
-		"budget_item_filaments": true, "budget_status_history": true,
+		"budget_item_filaments": true, "budget_item_supplies": true, "budget_status_history": true,
 		"payment_methods": true, "subscription_payments": true, "company_branding": true,
 		"print_profiles": true, "filament_stock_movements": true,
 	}
@@ -641,6 +708,10 @@ func RunMigrations() {
 		{
 			"idx_bif_org_filament",
 			"CREATE INDEX IF NOT EXISTS idx_bif_org_filament ON budget_item_filaments(organization_id, filament_id)",
+		},
+		{
+			"idx_bis_item",
+			"CREATE INDEX IF NOT EXISTS idx_bis_item ON budget_item_supplies(budget_item_id, organization_id)",
 		},
 		{
 			"idx_customers_org_created",

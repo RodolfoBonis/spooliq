@@ -10,12 +10,31 @@ import (
 	"github.com/google/uuid"
 )
 
+// supplyUsageFrom maps an item's stored supply entities to the response shape,
+// computing each line's total (cents for THIS item) with the same rounding the
+// pricing engine used, so a line's total reconciles with the item's supplies cost.
+func supplyUsageFrom(item *entities.BudgetItemEntity, supplies []*entities.BudgetItemSupplyEntity) []entities.SupplyUsageInfo {
+	out := make([]entities.SupplyUsageInfo, 0, len(supplies))
+	for _, s := range supplies {
+		out = append(out, entities.SupplyUsageInfo{
+			SupplyID:         s.SupplyID.String(),
+			Name:             s.Name,
+			Unit:             s.Unit,
+			UnitCost:         s.UnitCost,
+			QuantityPerPiece: s.QuantityPerPiece,
+			Total:            pricing.SupplyCostCents(s.QuantityPerPiece, item.ProductQuantity, s.UnitCost),
+		})
+	}
+	return out
+}
+
 // assembleItemResponse maps a single stored budget item into its API response,
-// given the item's already-resolved sale total, filament usage and cost-preset ref.
-// It is the single source of truth for the item response shape, shared by the
-// per-budget (detail/PDF) path and the batched list path so both emit identical
-// fields. It also returns the item's print time in minutes so callers can total it.
-func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, filaments []entities.FilamentUsageInfo, costPresetRef *entities.CostPresetRef) (entities.BudgetItemResponse, int) {
+// given the item's already-resolved sale total, filament/supply usage and
+// cost-preset ref. It is the single source of truth for the item response shape,
+// shared by the per-budget (detail/PDF) path and the batched list path so both emit
+// identical fields. It also returns the item's print time in minutes so callers can
+// total it.
+func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, filaments []entities.FilamentUsageInfo, supplies []entities.SupplyUsageInfo, costPresetRef *entities.CostPresetRef) (entities.BudgetItemResponse, int) {
 	printTimeDisplay := ""
 	if item.PrintTimeHours > 0 {
 		printTimeDisplay = fmt.Sprintf("%dh%02dm", item.PrintTimeHours, item.PrintTimeMinutes)
@@ -32,6 +51,9 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 
 	if filaments == nil {
 		filaments = []entities.FilamentUsageInfo{}
+	}
+	if supplies == nil {
+		supplies = []entities.SupplyUsageInfo{}
 	}
 
 	var model3dIDStr *string
@@ -71,11 +93,13 @@ func assembleItemResponse(item *entities.BudgetItemEntity, saleTotal int64, fila
 		PackagingCost:           item.PackagingCost,
 		QualityControlCost:      item.QualityControlCost,
 		FailureCost:             item.FailureCost,
+		SuppliesCost:            item.SuppliesCost,
 		ItemTotalCost:           item.ItemTotalCost,
 		UnitPrice:               item.UnitPrice,
 		SaleTotal:               saleTotal,
 		SaleUnitPrice:           pricing.UnitPriceCents(saleTotal, item.ProductQuantity),
 		Filaments:               filaments,
+		Supplies:                supplies,
 		Order:                   item.Order,
 		CreatedAt:               item.CreatedAt,
 		UpdatedAt:               item.UpdatedAt,
@@ -95,13 +119,26 @@ func saleTotalsFor(items []*entities.BudgetItemEntity, saleTarget int64) []int64
 }
 
 // buildBudgetItemResponses maps stored budget items into API responses for a SINGLE
-// budget, resolving each item's filament usage and cost-preset name directly from
-// the repository. It is used by the detail endpoint and the PDF generator (one
+// budget, resolving each item's filament/supply usage and cost-preset name directly
+// from the repository. It is used by the detail endpoint and the PDF generator (one
 // budget at a time); the list endpoint uses the batched path instead. It returns the
 // item responses plus the summed print time (hours, minutes). saleTarget is the
 // budget total minus shipping (see saleTotalsFor).
-func buildBudgetItemResponses(ctx context.Context, repo repositories.BudgetRepository, items []*entities.BudgetItemEntity, saleTarget int64, organizationID string) ([]entities.BudgetItemResponse, int, int) {
+//
+// Supplies are batch-loaded in ONE org-scoped query (no per-item N+1) and a failure
+// is propagated to the caller rather than silently dropped, so a transient DB error
+// cannot make a budget render with missing supply lines.
+func buildBudgetItemResponses(ctx context.Context, repo repositories.BudgetRepository, items []*entities.BudgetItemEntity, saleTarget int64, organizationID string) ([]entities.BudgetItemResponse, int, int, error) {
 	saleTotals := saleTotalsFor(items, saleTarget)
+
+	itemIDs := make([]uuid.UUID, len(items))
+	for i, item := range items {
+		itemIDs[i] = item.ID
+	}
+	suppliesByItem, err := repo.GetItemSuppliesByItemIDs(ctx, itemIDs, organizationID)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to load item supplies: %w", err)
+	}
 
 	// Resolve cost-preset names once per distinct preset.
 	presetNameCache := make(map[uuid.UUID]*entities.CostPresetRef)
@@ -124,20 +161,20 @@ func buildBudgetItemResponses(ctx context.Context, repo repositories.BudgetRepos
 	var totalPrintMinutes int
 	for i, item := range items {
 		filaments, _ := repo.GetFilamentUsageInfo(ctx, item.ID, organizationID)
-		resp, minutes := assembleItemResponse(item, saleTotals[i], filaments, resolveCostPreset(item.CostPresetID))
+		resp, minutes := assembleItemResponse(item, saleTotals[i], filaments, supplyUsageFrom(item, suppliesByItem[item.ID]), resolveCostPreset(item.CostPresetID))
 		responses[i] = resp
 		totalPrintMinutes += minutes
 	}
 
-	return responses, totalPrintMinutes / 60, totalPrintMinutes % 60
+	return responses, totalPrintMinutes / 60, totalPrintMinutes % 60, nil
 }
 
 // assembleItemResponsesFromMaps builds the item responses for a budget from already
-// batch-loaded data (filament usage keyed by item ID, cost-preset names keyed by
-// preset ID), performing NO per-item queries. It is the list-path counterpart of
-// buildBudgetItemResponses and emits an identical response shape. saleTarget is the
-// budget total minus shipping (see saleTotalsFor).
-func assembleItemResponsesFromMaps(items []*entities.BudgetItemEntity, saleTarget int64, filamentsByItem map[uuid.UUID][]entities.FilamentUsageInfo, costPresetNames map[uuid.UUID]string) ([]entities.BudgetItemResponse, int, int) {
+// batch-loaded data (filament usage keyed by item ID, supplies keyed by item ID,
+// cost-preset names keyed by preset ID), performing NO per-item queries. It is the
+// list-path counterpart of buildBudgetItemResponses and emits an identical response
+// shape. saleTarget is the budget total minus shipping (see saleTotalsFor).
+func assembleItemResponsesFromMaps(items []*entities.BudgetItemEntity, saleTarget int64, filamentsByItem map[uuid.UUID][]entities.FilamentUsageInfo, suppliesByItem map[uuid.UUID][]*entities.BudgetItemSupplyEntity, costPresetNames map[uuid.UUID]string) ([]entities.BudgetItemResponse, int, int) {
 	saleTotals := saleTotalsFor(items, saleTarget)
 
 	responses := make([]entities.BudgetItemResponse, len(items))
@@ -150,7 +187,7 @@ func assembleItemResponsesFromMaps(items []*entities.BudgetItemEntity, saleTarge
 				Name: costPresetNames[*item.CostPresetID],
 			}
 		}
-		resp, minutes := assembleItemResponse(item, saleTotals[i], filamentsByItem[item.ID], costPresetRef)
+		resp, minutes := assembleItemResponse(item, saleTotals[i], filamentsByItem[item.ID], supplyUsageFrom(item, suppliesByItem[item.ID]), costPresetRef)
 		responses[i] = resp
 		totalPrintMinutes += minutes
 	}
@@ -206,7 +243,10 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 	items, _ := uc.budgetRepository.GetItems(ctx, budget.ID)
 
 	saleTarget := budget.TotalCost - budget.ShippingCost
-	itemResponses, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, saleTarget, organizationID)
+	itemResponses, totalHours, totalMins, err := buildBudgetItemResponses(ctx, uc.budgetRepository, items, saleTarget, organizationID)
+	if err != nil {
+		return nil, err
+	}
 	profileRef, costRef := uc.budgetLevelRefs(ctx, budget)
 
 	// Stock warnings (detail only, one batched query). Skip for completed budgets:
@@ -236,10 +276,10 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 
 // buildBudgetListResponses assembles the API responses for a PAGE of budgets using a
 // constant number of queries, independent of the page size. It batch-loads the
-// customers, the items for all budgets, the filament usage for all items, and the
-// cost-preset/profile names for every referenced ID, then builds each response from
-// those in-memory maps (no per-budget or per-item query). The response shape matches
-// buildBudgetResponse, including the budget-level profile/cost_preset refs.
+// customers, the items for all budgets, the filament usage and supplies for all
+// items, and the cost-preset/profile names for every referenced ID, then builds each
+// response from those in-memory maps (no per-budget or per-item query). The response
+// shape matches buildBudgetResponse, including the budget-level profile/cost_preset refs.
 func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets []*entities.BudgetEntity, organizationID string) ([]entities.BudgetResponse, error) {
 	responses := make([]entities.BudgetResponse, 0, len(budgets))
 	if len(budgets) == 0 {
@@ -286,6 +326,11 @@ func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets [
 		return nil, err
 	}
 
+	suppliesByItem, err := uc.budgetRepository.GetItemSuppliesByItemIDs(ctx, itemIDs, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
 	costPresetNames, err := uc.budgetRepository.GetCostPresetNames(ctx, costPresetIDs, organizationID)
 	if err != nil {
 		return nil, err
@@ -299,7 +344,7 @@ func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets [
 	for _, budget := range budgets {
 		items := itemsByBudget[budget.ID]
 		saleTarget := budget.TotalCost - budget.ShippingCost
-		itemResponses, totalHours, totalMins := assembleItemResponsesFromMaps(items, saleTarget, filamentsByItem, costPresetNames)
+		itemResponses, totalHours, totalMins := assembleItemResponsesFromMaps(items, saleTarget, filamentsByItem, suppliesByItem, costPresetNames)
 
 		var profileRef *entities.ProfileRef
 		if budget.ProfileID != nil {

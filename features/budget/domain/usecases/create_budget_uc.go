@@ -100,8 +100,9 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Validate the remaining references (item-level cost presets + filaments). The
-	// budget-level machine/energy/cost presets were already validated by the resolver.
+	// Validate the remaining references (item-level cost presets + filaments +
+	// supplies). The budget-level machine/energy/cost presets were already validated
+	// by the resolver.
 	if err := uc.validateReferences(ctx, organizationID, nil, nil, nil, request.Items); err != nil {
 		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{"error": err.Error()})
 		respondBudgetError(c, err)
@@ -160,8 +161,15 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	// Build items (+ filaments) consistently with OrganizationID and legacy columns.
 	built := buildBudgetItems(budget.ID, organizationID, request.Items)
 
-	// Persist everything atomically: budget, status history, items, filaments and
-	// cost calculation all succeed together or roll back together.
+	// Resolve and attach the supplies for each item, snapshotting the catalog values.
+	if err := uc.attachRequestSupplies(ctx, organizationID, built, request.Items); err != nil {
+		uc.logger.Error(ctx, "Failed to resolve item supplies", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
+	}
+
+	// Persist everything atomically: budget, status history, items, filaments,
+	// supplies and the cost calculation all succeed together or roll back together.
 	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
 		// Allocate the sequential, per-organization quote number atomically so
 		// concurrent creates never collide.
@@ -182,6 +190,11 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 			}
 			for _, filament := range b.Filaments {
 				if err := repo.AddItemFilament(ctx, filament); err != nil {
+					return err
+				}
+			}
+			for _, supply := range b.Supplies {
+				if err := repo.AddItemSupply(ctx, supply); err != nil {
 					return err
 				}
 			}

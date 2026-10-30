@@ -9864,6 +9864,358 @@ const docTemplate = `{
                 }
             }
         },
+        "/supplies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List non-printed supplies (insumos) for the organization, paginated, searchable and filterable by active state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Supplies"
+                ],
+                "summary": "Find All Supplies",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (1-based)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on the supply name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alias of q (case-insensitive name search)",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active state (true/false). Omitted returns all.",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "unit_cost",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "name",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort direction",
+                        "name": "sort_dir",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of supplies",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindAllSuppliesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new non-printed supply (insumo)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Supplies"
+                ],
+                "summary": "Create Supply",
+                "parameters": [
+                    {
+                        "description": "Supply data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertSupplyRequestEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created supply",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SupplyEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/supplies/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific supply (insumo) by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Supplies"
+                ],
+                "summary": "Get Supply by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Supply ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved supply",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FindByIDSupplyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing non-printed supply (insumo)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Supplies"
+                ],
+                "summary": "Update Supply",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Supply ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Supply data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertSupplyRequestEntity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated supply",
+                        "schema": {
+                            "$ref": "#/definitions/entities.SupplyEntity"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-delete a non-printed supply (insumo) by its ID. Budgets that already reference it keep working from their snapshot.",
+                "tags": [
+                    "Supplies"
+                ],
+                "summary": "Delete Supply",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Supply ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted supply"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/uploads/file": {
             "post": {
                 "security": [
@@ -10455,7 +10807,8 @@ const docTemplate = `{
                 "budget",
                 "preset",
                 "model3d",
-                "stock_movement"
+                "stock_movement",
+                "supply"
             ],
             "x-enum-varnames": [
                 "EntityBrand",
@@ -10465,7 +10818,8 @@ const docTemplate = `{
                 "EntityBudget",
                 "EntityPreset",
                 "EntityModel3D",
-                "EntityStockMovement"
+                "EntityStockMovement",
+                "EntitySupply"
             ]
         },
         "entities.AdminStats": {
@@ -10715,13 +11069,21 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "product_quantity": {
-                    "description": "number of units",
-                    "type": "integer"
+                    "description": "number of units (bounded to guard the supply cost overflow)",
+                    "type": "integer",
+                    "maximum": 1000000
                 },
                 "setup_time_minutes": {
                     "description": "Labor breakdown for this item",
                     "type": "integer",
                     "minimum": 0
+                },
+                "supplies": {
+                    "description": "Supplies are the non-printed per-piece consumables attached to this item.\n\nIMPORTANT update semantics (web compatibility): on UPDATE this field is\ntri-state via nil-vs-empty. A nil slice (the ` + "`" + `supplies` + "`" + ` key ABSENT from the\nrequest) means \"preserve the previous item's supplies\" — items are recreated\non update, so the previous supplies are matched by the item's position/order.\nAn explicit empty array (` + "`" + `\"supplies\": []` + "`" + `) clears the item's supplies. A\nnon-empty array replaces them. On CREATE/PREVIEW a nil slice simply means \"no\nsupplies\". See update_budget_uc.go for the preservation rule.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.BudgetItemSupplyRequest"
+                    }
                 },
                 "support_removal_minutes": {
                     "description": "Support-removal time for this item (minutes)",
@@ -10863,6 +11225,17 @@ const docTemplate = `{
                     "description": "Labor breakdown for this item",
                     "type": "integer"
                 },
+                "supplies": {
+                    "description": "Supplies (non-printed insumos) attached to this item",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SupplyUsageInfo"
+                    }
+                },
+                "supplies_cost": {
+                    "description": "cents (sum of supply lines)",
+                    "type": "integer"
+                },
                 "support_removal_cost": {
                     "description": "cents",
                     "type": "integer"
@@ -10884,6 +11257,21 @@ const docTemplate = `{
                 "waste_cost": {
                     "description": "cents",
                     "type": "integer"
+                }
+            }
+        },
+        "entities.BudgetItemSupplyRequest": {
+            "type": "object",
+            "required": [
+                "supply_id"
+            ],
+            "properties": {
+                "quantity_per_piece": {
+                    "type": "number",
+                    "maximum": 1000000
+                },
+                "supply_id": {
+                    "type": "string"
                 }
             }
         },
@@ -11105,6 +11493,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/entities.StockWarning"
                     }
+                },
+                "supplies_cost": {
+                    "description": "cents - Sum of all items non-printed supply costs",
+                    "type": "integer"
                 },
                 "tax_amount": {
                     "description": "cents",
@@ -11678,6 +12070,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "setup_pct": {
+                    "type": "number"
+                },
+                "supplies_pct": {
                     "type": "number"
                 },
                 "waste_pct": {
@@ -12660,6 +13055,29 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.FindAllSuppliesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.SupplyEntity"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.FindByIDBrandResponse": {
             "type": "object",
             "properties": {
@@ -12673,6 +13091,14 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/entities.MaterialEntity"
+                }
+            }
+        },
+        "entities.FindByIDSupplyResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/entities.SupplyEntity"
                 }
             }
         },
@@ -15106,6 +15532,69 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.SupplyEntity": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "description": "Multi-tenancy",
+                    "type": "string"
+                },
+                "unit": {
+                    "description": "one of un, par, ml, g, m, cm, kg, l",
+                    "type": "string"
+                },
+                "unit_cost": {
+                    "description": "cents, \u003e= 0",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.SupplyUsageInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "quantity_per_piece": {
+                    "type": "number"
+                },
+                "supply_id": {
+                    "type": "string"
+                },
+                "total": {
+                    "description": "cents for this item",
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "unit_cost": {
+                    "description": "cents",
+                    "type": "integer"
+                }
+            }
+        },
         "entities.TopCustomer": {
             "type": "object",
             "properties": {
@@ -15614,6 +16103,44 @@ const docTemplate = `{
                 "temp_table": {
                     "type": "number",
                     "maximum": 300,
+                    "minimum": 0
+                }
+            }
+        },
+        "entities.UpsertSupplyRequestEntity": {
+            "type": "object",
+            "required": [
+                "name",
+                "unit"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": [
+                        "un",
+                        "par",
+                        "ml",
+                        "g",
+                        "m",
+                        "cm",
+                        "kg",
+                        "l"
+                    ]
+                },
+                "unit_cost": {
+                    "type": "integer",
                     "minimum": 0
                 }
             }

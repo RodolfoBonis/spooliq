@@ -60,6 +60,7 @@ type BudgetItemModel struct {
 	PackagingCost      int64 `gorm:"type:bigint;default:0" json:"packaging_cost"`       // cents
 	QualityControlCost int64 `gorm:"type:bigint;default:0" json:"quality_control_cost"` // cents
 	FailureCost        int64 `gorm:"type:bigint;default:0" json:"failure_cost"`         // cents
+	SuppliesCost       int64 `gorm:"type:bigint;default:0" json:"supplies_cost"`        // cents (sum of supply lines)
 	ItemTotalCost      int64 `gorm:"type:bigint;default:0" json:"item_total_cost"`      // cents (sum of all costs)
 
 	// Timestamps
@@ -72,6 +73,7 @@ type BudgetItemModel struct {
 	Filament     *filamentModels.FilamentModel `gorm:"foreignKey:FilamentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"filament,omitempty"`
 	CostPreset   *presetModels.CostPresetModel `gorm:"foreignKey:CostPresetID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"cost_preset,omitempty"`
 	Filaments    []BudgetItemFilamentModel     `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"filaments,omitempty"`
+	Supplies     []BudgetItemSupplyModel       `gorm:"foreignKey:BudgetItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"supplies,omitempty"`
 }
 
 // TableName specifies the table name for GORM
@@ -123,6 +125,7 @@ func (bi *BudgetItemModel) ToEntity() *entities.BudgetItemEntity {
 		PackagingCost:           bi.PackagingCost,
 		QualityControlCost:      bi.QualityControlCost,
 		FailureCost:             bi.FailureCost,
+		SuppliesCost:            bi.SuppliesCost,
 		ItemTotalCost:           bi.ItemTotalCost,
 		CreatedAt:               bi.CreatedAt,
 		UpdatedAt:               bi.UpdatedAt,
@@ -164,6 +167,7 @@ func (bi *BudgetItemModel) FromEntity(entity *entities.BudgetItemEntity) {
 	bi.PackagingCost = entity.PackagingCost
 	bi.QualityControlCost = entity.QualityControlCost
 	bi.FailureCost = entity.FailureCost
+	bi.SuppliesCost = entity.SuppliesCost
 	bi.ItemTotalCost = entity.ItemTotalCost
 	bi.CreatedAt = entity.CreatedAt
 	bi.UpdatedAt = entity.UpdatedAt

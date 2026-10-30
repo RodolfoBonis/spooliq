@@ -16,6 +16,7 @@ import (
 	customerRepo "github.com/RodolfoBonis/spooliq/features/customer/domain/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,14 @@ type fakeBudgetRepo struct {
 	searchTotal       int
 	lastSearchFilters map[string]interface{}
 	lastSearchOrderBy string
+
+	// Stock warnings canned result + call capture (Phase 4C).
+	stockWarnings            []entities.StockWarning
+	getStockWarningsCalls    int
+	getStockWarningsForReqCt int
+	// Captured args of the last GetStockWarningsForRequest call (waste-aware preview).
+	lastStockWarningItems        []entities.PricingItemSpec
+	lastStockWarningBudgetPreset *uuid.UUID
 }
 
 var _ budgetRepo.BudgetRepository = (*fakeBudgetRepo)(nil)
@@ -206,6 +215,17 @@ func (f *fakeBudgetRepo) GetPresetInfo(_ context.Context, id uuid.UUID, presetTy
 }
 func (f *fakeBudgetRepo) GetCompanyByOrganizationID(_ context.Context, _ string) (*entities.CompanyInfo, error) {
 	return &entities.CompanyInfo{}, nil
+}
+func (f *fakeBudgetRepo) UnderlyingTx() *gorm.DB { return nil }
+func (f *fakeBudgetRepo) GetStockWarnings(_ context.Context, _ uuid.UUID, _ string) ([]entities.StockWarning, error) {
+	f.getStockWarningsCalls++
+	return f.stockWarnings, nil
+}
+func (f *fakeBudgetRepo) GetStockWarningsForRequest(_ context.Context, _ string, items []entities.PricingItemSpec, budgetCostPresetID *uuid.UUID) ([]entities.StockWarning, error) {
+	f.getStockWarningsForReqCt++
+	f.lastStockWarningItems = items
+	f.lastStockWarningBudgetPreset = budgetCostPresetID
+	return f.stockWarnings, nil
 }
 func (f *fakeBudgetRepo) FindItemsByBudgetID(_ context.Context, _ uuid.UUID) ([]*entities.BudgetItemEntity, error) {
 	return nil, nil

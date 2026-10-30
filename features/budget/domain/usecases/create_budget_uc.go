@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
@@ -39,6 +40,13 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 
 	if err := validation.Validate(&request); err != nil {
 		uc.logger.Error(ctx, "Validation failed", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, err)
+		return
+	}
+
+	// Cross-field discount validation (percent cap + paired presence).
+	if err := validateDiscountInput(request.DiscountType, request.DiscountValue); err != nil {
+		uc.logger.Error(ctx, "Invalid discount", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, err)
 		return
 	}
@@ -92,34 +100,51 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		return
 	}
 
-	// Validate the remaining references (item-level cost presets + filaments). The
-	// budget-level machine/energy/cost presets were already validated by the resolver.
+	// Validate the remaining references (item-level cost presets + filaments +
+	// supplies). The budget-level machine/energy/cost presets were already validated
+	// by the resolver.
 	if err := uc.validateReferences(ctx, organizationID, nil, nil, nil, request.Items); err != nil {
 		uc.logger.Error(ctx, "Invalid budget references", map[string]interface{}{"error": err.Error()})
 		respondBudgetError(c, err)
 		return
 	}
 
+	// Resolve the payment terms: fall back to the company default when the request
+	// omits them (empty or whitespace-only).
+	paymentTerms := request.PaymentTerms
+	if paymentTerms == nil || strings.TrimSpace(*paymentTerms) == "" {
+		if _, defaultTerms, derr := uc.budgetRepository.GetCompanyQuoteDefaults(ctx, organizationID); derr == nil && defaultTerms != nil {
+			paymentTerms = defaultTerms
+		}
+	}
+
 	// Create budget entity (without global print time - now calculated from items)
 	budget := &entities.BudgetEntity{
-		ID:                uuid.New(),
-		OrganizationID:    organizationID,
-		Name:              request.Name,
-		Description:       request.Description,
-		CustomerID:        request.CustomerID,
-		Status:            entities.StatusDraft,
-		ProfileID:         resolved.ProfileID,
-		MachinePresetID:   resolved.MachinePresetID,
-		EnergyPresetID:    resolved.EnergyPresetID,
-		CostPresetID:      resolved.CostPresetID,
-		IncludeEnergyCost: request.IncludeEnergyCost,
-		IncludeWasteCost:  request.IncludeWasteCost,
-		DeliveryDays:      request.DeliveryDays,
-		PaymentTerms:      request.PaymentTerms,
-		Notes:             request.Notes,
-		OwnerUserID:       userID,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		ID:                 uuid.New(),
+		OrganizationID:     organizationID,
+		Name:               request.Name,
+		Description:        request.Description,
+		CustomerID:         request.CustomerID,
+		Status:             entities.StatusDraft,
+		ProfileID:          resolved.ProfileID,
+		MachinePresetID:    resolved.MachinePresetID,
+		EnergyPresetID:     resolved.EnergyPresetID,
+		CostPresetID:       resolved.CostPresetID,
+		IncludeEnergyCost:  request.IncludeEnergyCost,
+		IncludeWasteCost:   request.IncludeWasteCost,
+		IncludeMachineCost: resolveIncludeMachineCost(request.IncludeMachineCost),
+		DiscountType:       request.DiscountType,
+		DiscountValue:      request.DiscountValue,
+		IncludeShipping:    request.IncludeShipping,
+		ShippingOverride:   request.ShippingOverride,
+		TaxRate:            request.TaxRate,
+		DeliveryDays:       request.DeliveryDays,
+		PaymentTerms:       paymentTerms,
+		Notes:              request.Notes,
+		ValidUntil:         normalizeValidUntil(request.ValidUntil),
+		OwnerUserID:        userID,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
 	}
 
 	// Record initial status history for the draft status
@@ -136,9 +161,23 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 	// Build items (+ filaments) consistently with OrganizationID and legacy columns.
 	built := buildBudgetItems(budget.ID, organizationID, request.Items)
 
-	// Persist everything atomically: budget, status history, items, filaments and
-	// cost calculation all succeed together or roll back together.
+	// Resolve and attach the supplies for each item, snapshotting the catalog values.
+	if err := uc.attachRequestSupplies(ctx, organizationID, built, request.Items); err != nil {
+		uc.logger.Error(ctx, "Failed to resolve item supplies", map[string]interface{}{"error": err.Error()})
+		respondBudgetError(c, err)
+		return
+	}
+
+	// Persist everything atomically: budget, status history, items, filaments,
+	// supplies and the cost calculation all succeed together or roll back together.
 	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
+		// Allocate the sequential, per-organization quote number atomically so
+		// concurrent creates never collide.
+		quoteNumber, qerr := repo.AllocateQuoteNumber(ctx, organizationID)
+		if qerr != nil {
+			return qerr
+		}
+		budget.QuoteNumber = &quoteNumber
 		if err := repo.Create(ctx, budget); err != nil {
 			return err
 		}
@@ -151,6 +190,11 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 			}
 			for _, filament := range b.Filaments {
 				if err := repo.AddItemFilament(ctx, filament); err != nil {
+					return err
+				}
+			}
+			for _, supply := range b.Supplies {
+				if err := repo.AddItemSupply(ctx, supply); err != nil {
 					return err
 				}
 			}

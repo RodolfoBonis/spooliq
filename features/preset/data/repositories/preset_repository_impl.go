@@ -952,7 +952,9 @@ func (r *PresetRepositoryImpl) GetCostPresets(organizationID string, q helpers.L
 			cost_presets.profit_margin_percentage,
 			cost_presets.post_processing_cost_per_hour,
 			cost_presets.support_removal_cost_per_hour,
-			cost_presets.quality_control_cost_per_item
+			cost_presets.quality_control_cost_per_item,
+			cost_presets.failure_rate_percentage,
+			cost_presets.waste_grams_per_color_change
 		`)
 	if order := q.OrderClause(); order != "" {
 		query = query.Order(order)

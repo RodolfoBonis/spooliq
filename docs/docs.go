@@ -10170,7 +10170,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a non-printed supply (insumo) by its ID",
+                "description": "Soft-delete a non-printed supply (insumo) by its ID. Budgets that already reference it keep working from their snapshot.",
                 "tags": [
                     "Supplies"
                 ],
@@ -10203,12 +10203,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/errors.APIError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/errors.APIError"
                         }
@@ -11075,8 +11069,9 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "product_quantity": {
-                    "description": "number of units",
-                    "type": "integer"
+                    "description": "number of units (bounded to guard the supply cost overflow)",
+                    "type": "integer",
+                    "maximum": 1000000
                 },
                 "setup_time_minutes": {
                     "description": "Labor breakdown for this item",

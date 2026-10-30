@@ -20,11 +20,12 @@ func (r *budgetRepositoryImpl) AddItemSupply(ctx context.Context, supply *entiti
 	return nil
 }
 
-// GetItemSupplies returns one item's supplies, ordered by their display order.
-func (r *budgetRepositoryImpl) GetItemSupplies(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemSupplyEntity, error) {
+// GetItemSupplies returns one item's supplies (org-scoped), ordered by their display
+// order.
+func (r *budgetRepositoryImpl) GetItemSupplies(ctx context.Context, itemID uuid.UUID, organizationID string) ([]*entities.BudgetItemSupplyEntity, error) {
 	var supplies []*models.BudgetItemSupplyModel
 	if err := r.db.WithContext(ctx).
-		Where("budget_item_id = ?", itemID).
+		Where("budget_item_id = ? AND organization_id = ?", itemID, organizationID).
 		Order("\"order\" ASC").
 		Find(&supplies).Error; err != nil {
 		return nil, fmt.Errorf("failed to get item supplies: %w", err)
@@ -155,8 +156,9 @@ func (r *budgetRepositoryImpl) loadItemSupplySpecs(ctx context.Context, items []
 // loadSupplyUnitCosts batch-loads the unit cost (CENTS) of every distinct supply
 // referenced by the items in a single org-scoped query. The lookup is NOT filtered
 // by deleted_at (historical consistency with saved budgets, matching filament/cost
-// preset loading). A referenced supply that does not resolve inside the organization
-// is an error (not a silent zero).
+// preset loading): a supply soft-deleted from the catalog still prices an existing
+// budget on recalc/preview. A referenced supply that does not resolve inside the
+// organization is an error (not a silent zero).
 func (r *budgetRepositoryImpl) loadSupplyUnitCosts(ctx context.Context, items []entities.PricingItemSpec, organizationID string) (map[uuid.UUID]int64, error) {
 	seen := make(map[uuid.UUID]struct{})
 	ids := make([]uuid.UUID, 0)
@@ -199,7 +201,9 @@ func (r *budgetRepositoryImpl) loadSupplyUnitCosts(ctx context.Context, items []
 // item supply belonging to the given items to the current catalog values, in ONE
 // statement. It keeps a stored budget's supply snapshots in sync with the prices
 // just used by CalculateCosts. The join is NOT filtered by deleted_at (a later
-// soft-deleted supply still refreshes consistently with the pricing load).
+// soft-deleted supply still refreshes consistently with the pricing load), but it IS
+// org-scoped on BOTH sides of the join so a (hypothetical) supply ID collision across
+// tenants can never pull another org's catalog values into a budget snapshot.
 func (r *budgetRepositoryImpl) refreshSupplySnapshots(ctx context.Context, itemIDs []uuid.UUID, organizationID string) error {
 	ids := uniqueIDs(itemIDs)
 	if len(ids) == 0 {
@@ -210,9 +214,10 @@ func (r *budgetRepositoryImpl) refreshSupplySnapshots(ctx context.Context, itemI
 		 SET name = s.name, unit = s.unit, unit_cost = s.unit_cost, updated_at = ?
 		 FROM supplies s
 		 WHERE bis.supply_id = s.id
+		   AND s.organization_id = ?
 		   AND bis.organization_id = ?
 		   AND bis.budget_item_id IN ?`,
-		time.Now(), organizationID, ids,
+		time.Now(), organizationID, organizationID, ids,
 	).Error; err != nil {
 		return fmt.Errorf("failed to refresh supply snapshots: %w", err)
 	}

@@ -103,7 +103,12 @@ func (uc *BudgetUseCase) GeneratePDF(c *gin.Context) {
 	// total print time. Customer-facing documents distribute the markup over
 	// base_price so the per-item totals sum to the "Subtotal" line and
 	// Subtotal - desconto + frete + impostos == TOTAL exactly.
-	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
+	itemsResponse, totalHours, totalMins, err := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to build budget items response", map[string]interface{}{"error": err.Error(), "budget_id": budgetID})
+		respondBudgetError(c, err)
+		return
+	}
 
 	// Get company info
 	company, err := uc.budgetRepository.GetCompanyByOrganizationID(ctx, organizationID)

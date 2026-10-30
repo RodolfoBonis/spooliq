@@ -14,7 +14,7 @@ func (f *fakeBudgetRepo) AddItemSupply(_ context.Context, _ *entities.BudgetItem
 	return nil
 }
 
-func (f *fakeBudgetRepo) GetItemSupplies(_ context.Context, _ uuid.UUID) ([]*entities.BudgetItemSupplyEntity, error) {
+func (f *fakeBudgetRepo) GetItemSupplies(_ context.Context, _ uuid.UUID, _ string) ([]*entities.BudgetItemSupplyEntity, error) {
 	return nil, nil
 }
 

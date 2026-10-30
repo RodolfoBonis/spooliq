@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/RodolfoBonis/spooliq/core/database"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
@@ -14,15 +13,20 @@ import (
 )
 
 // Delete handles deleting a supply by ID.
+//
+// Deletion is a SOFT delete (see SupplyModel.DeletedAt): the supply is hidden from
+// the catalog (list/find) and can no longer be attached to budget items, while its
+// row remains so budgets that snapshot it keep pricing/recalculating. Historical
+// references therefore never block a delete; the budget_item_supplies FK stays
+// ON DELETE RESTRICT purely as a safety net against an accidental hard delete.
 // @Summary Delete Supply
-// @Description Delete a non-printed supply (insumo) by its ID
+// @Description Soft-delete a non-printed supply (insumo) by its ID. Budgets that already reference it keep working from their snapshot.
 // @Tags Supplies
 // @Param id path string true "Supply ID" format(uuid)
 // @Success 204 "Successfully deleted supply"
 // @Failure 400 {object} errors.APIError
 // @Failure 401 {object} errors.APIError
 // @Failure 404 {object} errors.APIError
-// @Failure 409 {object} errors.APIError
 // @Failure 500 {object} errors.APIError
 // @Router /supplies/{id} [delete]
 // @Security BearerAuth
@@ -55,15 +59,9 @@ func (uc *SupplyUseCase) Delete(c *gin.Context) {
 		return
 	}
 
+	// Soft delete: the row is kept (deleted_at is set) so budgets that snapshot this
+	// supply keep working. A supply in use is therefore never blocked here.
 	if err := uc.repository.Delete(id); err != nil {
-		// Budget item supplies snapshot their catalog values, so a supply is never
-		// blocked by historical references; a RESTRICT violation would still surface
-		// as a clean 409 rather than a 500.
-		if database.IsForeignKeyViolation(err) {
-			uc.logger.Warning(ctx, "Supply deletion blocked: supply in use", map[string]interface{}{"supply_id": id})
-			coreErrors.Respond(c, coreErrors.Conflict("supply_in_use", "Insumo em uso e não pode ser removido"))
-			return
-		}
 		uc.logger.Error(ctx, "Failed to delete supply", map[string]interface{}{"supply_id": id, "error": err.Error()})
 		coreErrors.Respond(c, err)
 		return

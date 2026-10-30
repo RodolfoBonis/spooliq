@@ -3,6 +3,7 @@ package usecases_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/supply/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -300,24 +300,29 @@ func TestSupplyIDErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("delete fk violation -> 409 supply_in_use", func(t *testing.T) {
-		repo := &fakeSupplyRepo{deleteErr: errFakeFK}
+	// Deletion is now a SOFT delete: a supply referenced by budgets is never blocked,
+	// so a successful delete returns 204 and never a 409 supply_in_use.
+	t.Run("valid delete -> 204", func(t *testing.T) {
+		repo := &fakeSupplyRepo{}
+		id := uuid.New()
+		_, c := testCtx(http.MethodDelete, "/supplies/"+id.String(), "")
+		c.Params = gin.Params{{Key: "id", Value: id.String()}}
+		newSupplyUC(repo).Delete(c)
+		// 204 carries no body, so gin does not flush the status to the recorder when the
+		// handler is invoked directly (outside the engine); read it from the writer.
+		if c.Writer.Status() != http.StatusNoContent {
+			t.Fatalf("status = %d, want 204", c.Writer.Status())
+		}
+	})
+
+	t.Run("delete repo error -> 500", func(t *testing.T) {
+		repo := &fakeSupplyRepo{deleteErr: errors.New("boom")}
 		id := uuid.New()
 		w, c := testCtx(http.MethodDelete, "/supplies/"+id.String(), "")
 		c.Params = gin.Params{{Key: "id", Value: id.String()}}
 		newSupplyUC(repo).Delete(c)
-		if w.Code != http.StatusConflict {
-			t.Fatalf("status = %d, want 409", w.Code)
-		}
-		if decode(w)["code"] != "supply_in_use" {
-			t.Errorf("code = %v, want supply_in_use", decode(w)["code"])
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500", w.Code)
 		}
 	})
-}
-
-// errFakeFK is a real *pgconn.PgError carrying SQLSTATE 23503 so the shared
-// database.IsForeignKeyViolation detection is exercised as with the live driver.
-var errFakeFK error = &pgconn.PgError{
-	Code:    "23503",
-	Message: `update or delete on table "supplies" violates foreign key constraint "fk_budget_item_supplies_supply"`,
 }

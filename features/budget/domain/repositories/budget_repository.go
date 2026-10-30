@@ -124,9 +124,8 @@ type BudgetRepository interface {
 	// Item Supply operations (non-printed insumos)
 	// AddItemSupply persists one budget item supply row (with its catalog snapshot).
 	AddItemSupply(ctx context.Context, supply *entities.BudgetItemSupplyEntity) error
-	// GetItemSupplies returns one item's supplies, ordered by display order. Used by
-	// Duplicate to copy supplies onto the new items.
-	GetItemSupplies(ctx context.Context, itemID uuid.UUID) ([]*entities.BudgetItemSupplyEntity, error)
+	// GetItemSupplies returns one item's supplies (org-scoped), ordered by display order.
+	GetItemSupplies(ctx context.Context, itemID uuid.UUID, organizationID string) ([]*entities.BudgetItemSupplyEntity, error)
 	// ValidateSuppliesInOrg ensures every supply ID belongs to the organization and is
 	// live (deleted_at IS NULL). Empty input is a no-op.
 	ValidateSuppliesInOrg(ctx context.Context, supplyIDs []uuid.UUID, organizationID string) error

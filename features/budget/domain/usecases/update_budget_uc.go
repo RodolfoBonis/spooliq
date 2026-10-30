@@ -268,15 +268,6 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			}
 		}
 		built = buildBudgetItems(budget.ID, organizationID, *request.Items)
-		// Resolve/attach supplies. Items are recreated on update, so a request item
-		// whose `supplies` key is ABSENT (nil slice) preserves the PREVIOUS item's
-		// supplies, matched by position/order; an explicit [] clears them; a non-empty
-		// array replaces them. See attachUpdateSupplies.
-		if err := uc.attachUpdateSupplies(ctx, organizationID, budgetID, built, *request.Items); err != nil {
-			uc.logger.Error(ctx, "Failed to resolve item supplies", map[string]interface{}{"error": err.Error()})
-			respondBudgetError(c, err)
-			return
-		}
 	}
 
 	// Persist atomically: the draft-guarded budget update runs first so a concurrent
@@ -289,6 +280,14 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		}
 
 		if request.Items != nil {
+			// Resolve/attach supplies INSIDE the transaction, against the current
+			// (committed, draft-guarded) items before they are replaced. A request item
+			// whose `supplies` key is ABSENT preserves the previous item's supplies
+			// (matched by position/order); an explicit [] clears them; a non-empty array
+			// replaces them with fresh catalog snapshots. See attachUpdateSupplies.
+			if err := uc.attachUpdateSupplies(ctx, repo, organizationID, budgetID, built, *request.Items); err != nil {
+				return err
+			}
 			if err := repo.DeleteAllItems(ctx, budgetID, organizationID); err != nil {
 				return err
 			}

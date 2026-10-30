@@ -81,7 +81,7 @@ func TestAttachUpdateSupplies_PreserveClearReplace(t *testing.T) {
 	}
 
 	built := buildBudgetItems(uuid.New(), org, reqs)
-	if err := uc.attachUpdateSupplies(context.Background(), org, uuid.New(), built, reqs); err != nil {
+	if err := uc.attachUpdateSupplies(context.Background(), repo, org, uuid.New(), built, reqs); err != nil {
 		t.Fatalf("attachUpdateSupplies: %v", err)
 	}
 

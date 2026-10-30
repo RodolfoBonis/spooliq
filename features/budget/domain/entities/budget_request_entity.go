@@ -27,7 +27,7 @@ type BudgetItemRequest struct {
 	// Product information (customer-facing)
 	ProductName        string  `json:"product_name" validate:"required,min=1,max=255"`
 	ProductDescription *string `json:"product_description,omitempty" validate:"omitempty,max=1000"`
-	ProductQuantity    int     `json:"product_quantity" validate:"required,gt=0"` // number of units
+	ProductQuantity    int     `json:"product_quantity" validate:"required,gt=0,lte=1000000"` // number of units (bounded to guard the supply cost overflow)
 	// UnitsPerPrint is how many units one run of the sliced file produces (the
 	// client scales the totals below from it). Stored for re-editing only.
 	UnitsPerPrint *int `json:"units_per_print,omitempty" validate:"omitempty,gt=0,lte=1000000"`

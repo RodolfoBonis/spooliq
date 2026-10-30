@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	budgetRepo "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/google/uuid"
 )
 
@@ -33,9 +34,14 @@ func (uc *BudgetUseCase) attachRequestSupplies(ctx context.Context, organization
 // An explicit empty array clears the item's supplies; a non-empty array replaces
 // them with freshly snapshotted catalog values. `built` and `reqs` are positionally
 // aligned (buildBudgetItems preserves request order).
-func (uc *BudgetUseCase) attachUpdateSupplies(ctx context.Context, organizationID string, budgetID uuid.UUID, built []builtBudgetItem, reqs []entities.BudgetItemRequest) error {
+//
+// It MUST run inside the update transaction (receiving the transaction-bound repo)
+// and AFTER the draft-guarded budget update, so the preserve-by-position read of the
+// previous items/supplies sees the same committed state the item replacement will
+// delete — closing the TOCTOU window a pre-transaction read would leave open.
+func (uc *BudgetUseCase) attachUpdateSupplies(ctx context.Context, repo budgetRepo.BudgetRepository, organizationID string, budgetID uuid.UUID, built []builtBudgetItem, reqs []entities.BudgetItemRequest) error {
 	// Previous items (ordered by "order") and their supplies, for the preserve rule.
-	prevItems, err := uc.budgetRepository.GetItems(ctx, budgetID)
+	prevItems, err := repo.GetItems(ctx, budgetID)
 	if err != nil {
 		return err
 	}
@@ -43,12 +49,12 @@ func (uc *BudgetUseCase) attachUpdateSupplies(ctx context.Context, organizationI
 	for i, it := range prevItems {
 		prevItemIDs[i] = it.ID
 	}
-	prevSuppliesByItem, err := uc.budgetRepository.GetItemSuppliesByItemIDs(ctx, prevItemIDs, organizationID)
+	prevSuppliesByItem, err := repo.GetItemSuppliesByItemIDs(ctx, prevItemIDs, organizationID)
 	if err != nil {
 		return err
 	}
 
-	snapshots, err := uc.budgetRepository.GetSuppliesInfo(ctx, collectSupplyIDs(reqs), organizationID)
+	snapshots, err := repo.GetSuppliesInfo(ctx, collectSupplyIDs(reqs), organizationID)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,8 @@ import (
 
 	repoimpl "github.com/RodolfoBonis/spooliq/features/budget/data/repositories"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	supplyrepo "github.com/RodolfoBonis/spooliq/features/supply/data/repositories"
+	supplyentities "github.com/RodolfoBonis/spooliq/features/supply/domain/entities"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +68,7 @@ func TestIntegration_Supplies_SnapshotPersistAndRefresh(t *testing.T) {
 	require.Equal(t, int64(900), budgetSuppliesCost, "budget supplies_cost")
 
 	// The snapshot was refreshed from 100 -> 150 (the catalog value used for pricing).
-	got, err := repo.GetItemSupplies(ctx, itemID)
+	got, err := repo.GetItemSupplies(ctx, itemID, org)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	require.Equal(t, int64(150), got[0].UnitCost, "snapshot unit_cost refreshed to the catalog value")
@@ -80,7 +82,7 @@ func TestIntegration_Supplies_SnapshotPersistAndRefresh(t *testing.T) {
 
 	require.NoError(t, db.Raw(`SELECT supplies_cost FROM budget_items WHERE id = ?`, itemID).Scan(&itemSuppliesCost).Error)
 	require.Equal(t, int64(1200), itemSuppliesCost, "2*3*200 after the catalog price change")
-	got, err = repo.GetItemSupplies(ctx, itemID)
+	got, err = repo.GetItemSupplies(ctx, itemID, org)
 	require.NoError(t, err)
 	require.Equal(t, int64(200), got[0].UnitCost, "snapshot refreshed to the new catalog price")
 
@@ -136,4 +138,100 @@ func TestIntegration_Supplies_BatchLoadByItemIDs(t *testing.T) {
 	outB, err := repo.GetItemSuppliesByItemIDs(ctx, []uuid.UUID{item1, item2}, "org-b")
 	require.NoError(t, err)
 	require.Empty(t, outB)
+}
+
+// TestIntegration_Supplies_SoftDeleteKeepsBudgetsWorking proves the soft-delete
+// contract end to end against a real PostgreSQL: a supply referenced by a budget can
+// be deleted from the catalog (SOFT: the row survives with deleted_at set), after
+// which
+//
+//   - the supply is hidden from the catalog (find-by-id and list exclude it);
+//   - it can no longer be attached to a new/updated item (ValidateSuppliesInOrg -> 400
+//     supply_not_found; GetSuppliesInfo drops it);
+//   - the existing budget keeps its stored supply snapshot (detail still renders it);
+//   - recalc still prices the item from the (soft-deleted) catalog row, and a later
+//     price change on that row still flows into the recalculation.
+func TestIntegration_Supplies_SoftDeleteKeepsBudgetsWorking(t *testing.T) {
+	db := openTestDB(t, "supply_soft_delete")
+	createPricingSchema(t, db)
+
+	const org = "org-a"
+	ctx := context.Background()
+	budgetRepo := repoimpl.NewBudgetRepository(db)
+	supplyRepo := supplyrepo.NewSupplyRepository(db)
+	now := time.Now()
+
+	fil := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO filaments (id, organization_id, price_per_kg) VALUES (?,?,?)`, fil, org, 10000.0).Error)
+
+	// Catalog supply created through the supply repository (soft-delete aware model).
+	supply := &supplyentities.SupplyEntity{
+		ID: uuid.New(), OrganizationID: org, Name: "LED", Unit: "un", UnitCost: 150, IsActive: true,
+	}
+	require.NoError(t, supplyRepo.Create(supply))
+	require.NotEqual(t, uuid.Nil, supply.ID)
+
+	// Budget with one item consuming 2 LEDs/piece over 3 pieces.
+	budgetID := uuid.New()
+	require.NoError(t, budgetRepo.Create(ctx, &entities.BudgetEntity{
+		ID: budgetID, OrganizationID: org, Name: "B", CustomerID: uuid.New(),
+		Status: entities.StatusDraft, OwnerUserID: "u1", CreatedAt: now, UpdatedAt: now,
+	}))
+	itemID := uuid.New()
+	require.NoError(t, budgetRepo.AddItem(ctx, &entities.BudgetItemEntity{
+		ID: itemID, BudgetID: budgetID, FilamentID: fil, OrganizationID: org,
+		Quantity: 100, Order: 1, ProductName: "A", ProductQuantity: 3, CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, budgetRepo.AddItemFilament(ctx, &entities.BudgetItemFilamentEntity{
+		ID: uuid.New(), BudgetItemID: itemID, FilamentID: fil, OrganizationID: org, Quantity: 100, Order: 1, CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, budgetRepo.AddItemSupply(ctx, &entities.BudgetItemSupplyEntity{
+		ID: uuid.New(), BudgetItemID: itemID, SupplyID: supply.ID, OrganizationID: org,
+		QuantityPerPiece: 2, Order: 0, Name: "LED", Unit: "un", UnitCost: 150, CreatedAt: now, UpdatedAt: now,
+	}))
+
+	require.NoError(t, budgetRepo.CalculateCosts(ctx, budgetID, org))
+	var suppliesCost int64
+	require.NoError(t, db.Raw(`SELECT supplies_cost FROM budget_items WHERE id = ?`, itemID).Scan(&suppliesCost).Error)
+	require.Equal(t, int64(900), suppliesCost, "baseline 2*3*150")
+
+	// --- Soft delete the supply from the catalog. ---
+	require.NoError(t, supplyRepo.Delete(supply.ID))
+
+	// The row is still physically present (soft delete only sets deleted_at).
+	var survivingRows int64
+	require.NoError(t, db.Raw(`SELECT COUNT(*) FROM supplies WHERE id = ? AND deleted_at IS NOT NULL`, supply.ID).Scan(&survivingRows).Error)
+	require.Equal(t, int64(1), survivingRows, "soft delete keeps the row, only sets deleted_at")
+
+	// Hidden from the catalog: find-by-id and list exclude it.
+	_, err := supplyRepo.FindByID(supply.ID, org)
+	require.Error(t, err, "soft-deleted supply is not found by id")
+	list, total, err := supplyRepo.FindAll(org, "", nil, "name asc", 50, 0)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), total, "soft-deleted supply hidden from the list total")
+	require.Empty(t, list)
+
+	// Cannot be attached anew: validation rejects it (surfaces as 400 supply_not_found)
+	// and the live snapshot loader drops it.
+	require.ErrorIs(t, budgetRepo.ValidateSuppliesInOrg(ctx, []uuid.UUID{supply.ID}, org), entities.ErrSupplyNotFound)
+	snaps, err := budgetRepo.GetSuppliesInfo(ctx, []uuid.UUID{supply.ID}, org)
+	require.NoError(t, err)
+	require.NotContains(t, snaps, supply.ID)
+
+	// Budget detail still resolves the stored supply snapshot.
+	got, err := budgetRepo.GetItemSupplies(ctx, itemID, org)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, supply.ID, got[0].SupplyID)
+
+	// Recalc still works and still prices from the (soft-deleted) catalog row.
+	require.NoError(t, budgetRepo.CalculateCosts(ctx, budgetID, org))
+	require.NoError(t, db.Raw(`SELECT supplies_cost FROM budget_items WHERE id = ?`, itemID).Scan(&suppliesCost).Error)
+	require.Equal(t, int64(900), suppliesCost, "recalc of a budget whose supply was soft-deleted still prices from the catalog row")
+
+	// A later price change on the soft-deleted row still flows into recalc.
+	require.NoError(t, db.Exec(`UPDATE supplies SET unit_cost = 200 WHERE id = ?`, supply.ID).Error)
+	require.NoError(t, budgetRepo.CalculateCosts(ctx, budgetID, org))
+	require.NoError(t, db.Raw(`SELECT supplies_cost FROM budget_items WHERE id = ?`, itemID).Scan(&suppliesCost).Error)
+	require.Equal(t, int64(1200), suppliesCost, "2*3*200 after the catalog price change on the soft-deleted row")
 }

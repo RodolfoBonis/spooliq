@@ -584,7 +584,7 @@ func RunMigrations() {
 					ON DELETE RESTRICT
 				`
 				if err := Connector.Exec(sql).Error; err != nil {
-					fmt.Printf("Warning: FK constraint for budget_item_supplies.supply_id failed: %v\n", err)
+					fmt.Printf("Error: FK constraint for budget_item_supplies.supply_id failed (soft delete prevents orphaning, but the RESTRICT safety net is missing): %v\n", err)
 				} else {
 					fmt.Println("Added FK constraint for budget_item_supplies.supply_id")
 				}

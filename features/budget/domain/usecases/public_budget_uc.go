@@ -204,7 +204,12 @@ func (uc *PublicBudgetUseCase) GetPDF(c *gin.Context) {
 
 	// Customer-facing documents distribute the markup over base_price so the per-item
 	// totals reconcile with the Subtotal line (see generate_pdf_uc).
-	itemsResponse, totalHours, totalMins := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
+	itemsResponse, totalHours, totalMins, err := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
+	if err != nil {
+		uc.logger.Error(ctx, "Failed to build budget items response for public PDF", map[string]interface{}{"error": err.Error()})
+		coreErrors.Respond(c, coreErrors.Internal())
+		return
+	}
 
 	company, err := uc.budgetRepository.GetCompanyByOrganizationID(ctx, organizationID)
 	if err != nil {
@@ -451,7 +456,10 @@ func (uc *PublicBudgetUseCase) buildPublicView(ctx context.Context, budget *enti
 	if err != nil {
 		return nil, err
 	}
-	itemResponses, _, _ := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
+	itemResponses, _, _, err := buildBudgetItemResponses(ctx, uc.budgetRepository, items, budget.BasePrice(), organizationID)
+	if err != nil {
+		return nil, err
+	}
 
 	publicItems := make([]entities.PublicBudgetItem, 0, len(itemResponses))
 	for _, it := range itemResponses {

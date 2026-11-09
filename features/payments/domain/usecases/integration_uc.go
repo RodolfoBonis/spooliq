@@ -142,9 +142,14 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 	if hasNewKey {
 		apiKeyPlain = strings.TrimSpace(*req.APIKey)
 	} else if handleChanged && existing != nil {
-		if dec, derr := uc.box.DecryptString(existing.APIKeyCiphertext); derr == nil {
-			apiKeyPlain = dec
+		dec, derr := uc.box.DecryptString(existing.APIKeyCiphertext)
+		if derr != nil {
+			// Cannot re-validate the handle change without the stored key; refuse rather
+			// than marking it verified.
+			coreErrors.Respond(c, coreErrors.ServiceUnavailable("payments_not_configured", "Não foi possível validar as credenciais armazenadas."))
+			return
 		}
+		apiKeyPlain = dec
 	}
 
 	// Re-validate whenever the key or the handle changed.
@@ -219,16 +224,21 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 				}
 			}
 		}
-		if updErr := uc.repo.UpdateIntegrationFields(ctx, existing.ID, fields); updErr != nil {
+		// Update and (on account change) cancel the previous account's pending links in
+		// ONE transaction — a cancel failure aborts the whole update.
+		txErr := uc.repo.WithTransaction(ctx, func(repo domainRepos.PaymentRepository) error {
+			if err := repo.UpdateIntegrationFields(ctx, existing.ID, fields); err != nil {
+				return err
+			}
+			if accountChanged {
+				return repo.CancelPendingForOrg(ctx, organizationID, entities.ReasonAccountChanged)
+			}
+			return nil
+		})
+		if txErr != nil {
+			uc.logger.Error(ctx, "Failed to update integration", map[string]interface{}{"error": txErr.Error()})
 			coreErrors.Respond(c, coreErrors.Internal())
 			return
-		}
-		// The previous account's pending links can no longer be confirmed under the
-		// new credentials/handle — cancel them.
-		if accountChanged {
-			if cerr := uc.repo.CancelPendingForOrg(ctx, organizationID, entities.ReasonAccountChanged); cerr != nil {
-				uc.logger.Error(ctx, "Failed to cancel pending links after account change", map[string]interface{}{"error": cerr.Error()})
-			}
 		}
 	}
 

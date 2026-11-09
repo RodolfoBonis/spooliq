@@ -155,6 +155,13 @@ func (s *Service) alert(ctx context.Context, event string, fields map[string]int
 		for k, v := range fields {
 			scope.SetExtra(k, v)
 		}
+		// Fingerprint per (event, order_nsu) so webhook/job retries of the same anomaly
+		// collapse into one Sentry issue instead of spamming.
+		fp := []string{event}
+		if o, ok := fields["order_nsu"].(string); ok && o != "" {
+			fp = append(fp, o)
+		}
+		scope.SetFingerprint(fp)
 		sentry.CaptureMessage("payments: " + event)
 	})
 }

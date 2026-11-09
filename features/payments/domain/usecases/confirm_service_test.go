@@ -11,6 +11,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/entities"
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/usecases"
+	"github.com/google/uuid"
 )
 
 func newConfirmService(repo domainRepos.PaymentRepository, client *fakeClient, box *crypto.SecretBox) *usecases.ConfirmService {
@@ -54,7 +55,60 @@ func TestConfirm_Paid(t *testing.T) {
 	if fresh.AmountPaidCents != 2000 {
 		t.Fatalf("budget aggregate not updated: %d", fresh.AmountPaidCents)
 	}
+	if got.ReceiptURL == nil || *got.ReceiptURL != "https://receipt.infinitepay.io/x" {
+		t.Fatalf("receipt from payment_check should be preferred, got %v", got.ReceiptURL)
+	}
 	_ = p
+}
+
+func TestConfirm_MissingBudgetRecordsPaidAfterCancel(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	repo.seedIntegration("org1", box, 0, 1, nil)
+	// A payment whose budget is NOT present (deleted).
+	repo.seedPayment(&entities.BudgetPayment{
+		OrganizationID: "org1", BudgetID: uuid.New(), Kind: entities.KindFull,
+		OrderNSU: "spq_missing", AmountCents: 2000, Status: entities.PaymentPending,
+	})
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
+
+	cs := newConfirmService(repo, client, box)
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_missing"}, "", entities.SourceWebhook)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	if res.State != entities.ConfirmPaidState || !res.First {
+		t.Fatalf("missing-budget payment must still be recorded paid, got state=%s first=%v", res.State, res.First)
+	}
+	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_missing")
+	if got.Status != entities.PaymentPaid || got.StatusReason != entities.ReasonPaidAfterCancel {
+		t.Fatalf("missing budget => paid_after_cancel, got status=%s reason=%s", got.Status, got.StatusReason)
+	}
+}
+
+func TestConfirm_SlugMismatchRejected(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	_, p := seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentPending)
+	stored := "slug-ours"
+	p.Slug = &stored
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
+
+	cs := newConfirmService(repo, client, box)
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm", Slug: "slug-theirs"}, "", entities.SourceWebhook)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	if res.State != entities.ConfirmProcessingState {
+		t.Fatalf("slug mismatch must not settle, state=%s", res.State)
+	}
+	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_confirm")
+	if got.Status != entities.PaymentPending || !got.NeedsReview {
+		t.Fatalf("slug mismatch must stay pending + needs_review, got status=%s needs_review=%v", got.Status, got.NeedsReview)
+	}
+	if client.checkCalls != 0 {
+		t.Fatal("slug mismatch must be rejected before payment_check")
+	}
 }
 
 func TestConfirm_NotPaid(t *testing.T) {
@@ -138,7 +192,8 @@ func TestConfirm_Idempotent(t *testing.T) {
 func TestConfirm_PaidAfterCancel(t *testing.T) {
 	box := testBox()
 	repo := newFakeRepo()
-	_, _ = seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentCanceled)
+	_, p := seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentCanceled)
+	p.StatusReason = entities.ReasonBudgetCancelled // refund-worthy cancel
 	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
 
 	cs := newConfirmService(repo, client, box)
@@ -211,5 +266,71 @@ func TestConfirm_ProviderUnavailableStaysPending(t *testing.T) {
 	}
 	if res.State != entities.ConfirmProcessingState {
 		t.Fatalf("state = %s want processing", res.State)
+	}
+}
+
+func TestConfirm_ExpiredLinkSettlesNormally(t *testing.T) {
+	// A link canceled with reason "expired" that is paid settles as a NORMAL payment
+	// (InfinitePay enforces valid_until), not paid_after_cancel.
+	box := testBox()
+	repo := newFakeRepo()
+	budget, p := seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentCanceled)
+	p.StatusReason = entities.ReasonExpired
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
+
+	cs := newConfirmService(repo, client, box)
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm"}, "", entities.SourceWebhook)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	if res.State != entities.ConfirmPaidState || !res.First {
+		t.Fatalf("expected first paid, got state=%s first=%v", res.State, res.First)
+	}
+	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_confirm")
+	if got.Status != entities.PaymentPaid || got.StatusReason != "" {
+		t.Fatalf("expired link must settle as normal paid (reason cleared), got status=%s reason=%q", got.Status, got.StatusReason)
+	}
+	fresh, _ := repo.GetBudgetChargeContext(context.Background(), budget.ID, "org1")
+	if fresh.AmountPaidCents != 2000 {
+		t.Fatalf("settled expired payment must count toward amount_paid, got %d", fresh.AmountPaidCents)
+	}
+}
+
+func TestConfirm_RedirectOnPaidRowDoesNothing(t *testing.T) {
+	// N3: a redirect confirm on an already-paid row performs no check and no alert.
+	box := testBox()
+	repo := newFakeRepo()
+	_, _ = seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentPaid)
+	client := &fakeClient{checkErr: coreServices.ErrIPUnavailable} // would error if called
+
+	cs := newConfirmService(repo, client, box)
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm", TransactionNSU: "garbage"}, "", entities.SourceRedirect)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	if res.State != entities.ConfirmPaidState {
+		t.Fatalf("state = %s want paid", res.State)
+	}
+	if client.checkCalls != 0 {
+		t.Fatal("redirect on a paid row must NOT call payment_check")
+	}
+}
+
+func TestConfirm_RedirectDoesNotPersistHintsBeforeVerification(t *testing.T) {
+	// N3: from the redirect source, a garbage transaction_nsu is never persisted on a
+	// pending row before verification.
+	box := testBox()
+	repo := newFakeRepo()
+	_, _ = seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentPending)
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: false, Paid: false}}
+
+	cs := newConfirmService(repo, client, box)
+	_, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm", TransactionNSU: "garbage-txn"}, "", entities.SourceRedirect)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_confirm")
+	if got.TransactionNSU != nil {
+		t.Fatalf("redirect must not persist transaction_nsu before verification, got %v", *got.TransactionNSU)
 	}
 }

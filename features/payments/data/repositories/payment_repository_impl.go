@@ -53,6 +53,16 @@ func (r *paymentRepository) WithReconcileLock(ctx context.Context, fn func() err
 	return acquired, err
 }
 
+// LockBudget takes a FOR UPDATE row lock on the budget, establishing a consistent
+// budget->payments lock order so concurrent confirmations serialize on the budget.
+func (r *paymentRepository) LockBudget(ctx context.Context, budgetID uuid.UUID, organizationID string) error {
+	var one int
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT 1 FROM budgets WHERE id = ? AND organization_id = ? FOR UPDATE", budgetID, organizationID,
+	).Scan(&one).Error
+	return err
+}
+
 // --- Integration ---
 
 func (r *paymentRepository) GetIntegration(ctx context.Context, organizationID, provider string) (*entities.PaymentIntegration, error) {
@@ -239,7 +249,7 @@ func (r *paymentRepository) CancelPendingForOrg(ctx context.Context, organizatio
 func (r *paymentRepository) ListExpiredPendingLinks(ctx context.Context, now time.Time, limit int) ([]*entities.BudgetPayment, error) {
 	var ms []models.BudgetPaymentModel
 	err := r.db.WithContext(ctx).
-		Where("status = ? AND link_expires_at IS NOT NULL AND link_expires_at < ?", string(entities.PaymentPending), now).
+		Where("status = ? AND link_expires_at IS NOT NULL AND link_expires_at + interval '48 hours' < ?", string(entities.PaymentPending), now).
 		Limit(limit).Find(&ms).Error
 	if err != nil {
 		return nil, err
@@ -252,9 +262,10 @@ func (r *paymentRepository) ListPendingForRecheck(ctx context.Context, now time.
 	// Re-check pending payments still within their validity + 48h grace that have not
 	// been checked in the last 10 minutes (time-based backoff; the job runs every 10m).
 	err := r.db.WithContext(ctx).
-		Where("status = ?", string(entities.PaymentPending)).
+		Where("status = ? AND needs_review = false", string(entities.PaymentPending)).
 		Where("(link_expires_at IS NULL OR ? < link_expires_at + interval '48 hours')", now).
-		Where("(last_checked_at IS NULL OR last_checked_at < ?)", now.Add(-10*time.Minute)).
+		// Exponential backoff on check_attempts: 10m * 2^n, capped at 6h.
+		Where("(last_checked_at IS NULL OR last_checked_at < ? - LEAST(interval '6 hours', interval '10 minutes' * power(2, LEAST(check_attempts, 10))))", now).
 		Order("created_at ASC").
 		Limit(limit).Find(&ms).Error
 	if err != nil {
@@ -347,7 +358,7 @@ func (r *paymentRepository) GetBudgetChargeContextByToken(ctx context.Context, t
 func (r *paymentRepository) SumPaidPrincipal(ctx context.Context, budgetID uuid.UUID) (int64, error) {
 	var sum *int64
 	err := r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
-		Where("budget_id = ? AND status = ? AND status_reason <> ?", budgetID, string(entities.PaymentPaid), entities.ReasonPaidAfterCancel).
+		Where("budget_id = ? AND status = ? AND status_reason IS DISTINCT FROM ?", budgetID, string(entities.PaymentPaid), entities.ReasonPaidAfterCancel).
 		Select("COALESCE(SUM(amount_cents), 0)").Scan(&sum).Error
 	if err != nil {
 		return 0, err
@@ -368,7 +379,7 @@ UPDATE budgets b SET
 	updated_at = now()
 FROM (
 	SELECT
-		COALESCE(SUM(amount_cents) FILTER (WHERE status = 'paid' AND status_reason <> 'paid_after_cancel'), 0) AS paid,
+		COALESCE(SUM(amount_cents) FILTER (WHERE status = 'paid' AND status_reason IS DISTINCT FROM 'paid_after_cancel'), 0) AS paid,
 		COALESCE(SUM(amount_cents) FILTER (WHERE status = 'paid' AND status_reason = 'paid_after_cancel'), 0) AS refund
 	FROM budget_payments WHERE budget_id = ?
 ) sub
@@ -417,6 +428,26 @@ func (r *paymentRepository) ListUnprocessedWebhooks(ctx context.Context, since t
 	var ms []models.PaymentWebhookEventModel
 	err := r.db.WithContext(ctx).
 		Where("processed_at IS NULL AND received_at >= ? AND attempts < ?", since, maxAttempts).
+		Order("received_at ASC").Limit(limit).Find(&ms).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*entities.WebhookEventRecord, 0, len(ms))
+	for i := range ms {
+		out = append(out, &entities.WebhookEventRecord{
+			ID:             ms[i].ID,
+			OrganizationID: ms[i].OrganizationID,
+			Payload:        ms[i].Payload,
+			Attempts:       ms[i].Attempts,
+		})
+	}
+	return out, nil
+}
+
+func (r *paymentRepository) ListAgedOutWebhooks(ctx context.Context, before time.Time, limit int) ([]*entities.WebhookEventRecord, error) {
+	var ms []models.PaymentWebhookEventModel
+	err := r.db.WithContext(ctx).
+		Where("processed_at IS NULL AND received_at < ?", before).
 		Order("received_at ASC").Limit(limit).Find(&ms).Error
 	if err != nil {
 		return nil, err

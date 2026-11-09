@@ -31,6 +31,8 @@ var (
 	// ErrConfirmRetry: a confirmation could not complete now (provider down, etc.) and
 	// MUST be retried — the webhook event must NOT be marked processed.
 	ErrConfirmRetry = errors.New("confirm_retry")
+	// ErrLinkInProgress: another request is already creating a link for this order.
+	ErrLinkInProgress = errors.New("payment_link_in_progress")
 )
 
 // MapChargeError maps a charge/confirm sentinel error to the public HTTP envelope.
@@ -55,6 +57,8 @@ func MapChargeError(err error) *coreErrors.APIError {
 		return coreErrors.Unprocessable("infinitepay_invalid_credentials", "As credenciais da InfinitePay foram recusadas.")
 	case errors.Is(err, ErrProviderRejected):
 		return coreErrors.Unprocessable("infinitepay_request_rejected", "O provedor de pagamento recusou a solicitação.")
+	case errors.Is(err, ErrLinkInProgress):
+		return coreErrors.Conflict("payment_link_in_progress", "Gerando o link de pagamento. Tente novamente em instantes.")
 	default:
 		return coreErrors.Internal()
 	}

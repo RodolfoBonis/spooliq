@@ -27,14 +27,13 @@ func NewConfirmService(s *Service) *ConfirmService {
 type ConfirmResult struct {
 	State    entities.ConfirmState
 	BudgetID string
-	// First is true when THIS call made the first (state-changing) confirmation.
-	First bool
+	First    bool
 }
 
 // Confirm verifies an order with payment_check (using the org's own credentials) and,
 // when paid, marks the payment and recalculates the budget aggregate exactly once. It
-// is safe to call repeatedly (idempotent). It returns ErrConfirmRetry when the attempt
-// should be retried later (provider down) so the caller does NOT mark it done.
+// is safe to call repeatedly (idempotent) and returns ErrConfirmRetry when the attempt
+// should be retried later (provider down, transient DB error).
 func (s *ConfirmService) Confirm(
 	ctx context.Context,
 	organizationID string,
@@ -47,18 +46,6 @@ func (s *ConfirmService) Confirm(
 		return result, err
 	}
 
-	integration, err := s.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
-	if err != nil {
-		return result, ErrConfirmRetry
-	}
-	if integration == nil || integration.APIKeyCiphertext == "" {
-		// No credentials to verify with (never connected, or purged after 7 days).
-		s.alert(ctx, "confirm without credentials — cannot verify received payment", map[string]interface{}{
-			"organization_id": organizationID, "order_nsu": req.OrderNSU, "source": string(source),
-		})
-		return result, ErrPaymentsNotConfigured
-	}
-
 	payment, err := s.repo.GetPaymentByOrderNSU(ctx, organizationID, req.OrderNSU)
 	if err != nil {
 		return result, ErrConfirmRetry
@@ -68,90 +55,130 @@ func (s *ConfirmService) Confirm(
 		return result, nil
 	}
 	result.BudgetID = payment.BudgetID.String()
+	alreadyPaid := payment.Status == entities.PaymentPaid
 
-	apiKey, err := s.decryptAPIKey(integration)
-	if err != nil {
-		return result, err
-	}
-
-	reqSlug := req.ResolvedSlug()
-	// Slug binding: a different slug for our order_nsu means the webhook is not about
-	// our link — reject it.
-	if payment.Slug != nil && *payment.Slug != "" && reqSlug != "" && reqSlug != *payment.Slug {
-		s.alert(ctx, "slug mismatch on confirm", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source)})
+	// N6: a pending row already flagged for manual review is skipped (no re-alert).
+	if payment.Status == entities.PaymentPending && payment.NeedsReview {
 		return result, nil
 	}
-
-	// Persist the webhook's slug/transaction_nsu BEFORE calling payment_check, so the
-	// row carries them even if we crash, and the unique index catches a reused
-	// transaction_nsu. A unique violation here means the transaction was already
-	// recorded against another order — alert and stop.
-	pre := map[string]interface{}{
-		"last_checked_at": time.Now(),
-		"check_attempts":  gorm.Expr("check_attempts + 1"),
-	}
-	if reqSlug != "" && (payment.Slug == nil || *payment.Slug == "") {
-		pre["slug"] = reqSlug
-	}
-	if req.TransactionNSU != "" && (payment.TransactionNSU == nil || *payment.TransactionNSU == "") {
-		pre["transaction_nsu"] = req.TransactionNSU
-	}
-	if err := s.repo.UpdatePaymentFields(ctx, payment.ID, pre); err != nil {
-		s.alert(ctx, "failed to persist pre-check identifiers (possible transaction reuse)", map[string]interface{}{
-			"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "error": err.Error(),
-		})
-		return result, nil
-	}
-
-	check, err := s.client.PaymentCheck(ctx, apiKey, coreServices.InfinitePayPaymentCheckRequest{
-		Handle:         integration.Handle,
-		OrderNSU:       req.OrderNSU,
-		TransactionNSU: req.TransactionNSU,
-		Slug:           reqSlug,
-	})
-	if err != nil {
-		switch {
-		case isUnauthorized(err):
-			s.alert(ctx, "payment_check unauthorized", map[string]interface{}{"budget_id": result.BudgetID, "source": string(source)})
-			return result, ErrInvalidCredentials
-		default:
-			// Provider down or ambiguous: retry later.
-			return result, ErrConfirmRetry
-		}
-	}
-
-	// Bind the response to our order: if it carries an order_nsu it must be ours.
-	if check.OrderNSU != "" && check.OrderNSU != payment.OrderNSU {
-		s.alert(ctx, "payment_check order_nsu mismatch", map[string]interface{}{
-			"budget_id": result.BudgetID, "ours": payment.OrderNSU, "theirs": check.OrderNSU, "source": string(source),
-		})
-		return result, nil
-	}
-
-	if !(check.Success && check.Paid) {
-		// Not paid. If our row is already paid, this looks like a refund/cancel — flag
-		// for manual review but NEVER auto-flip to refunded (per plan).
-		if payment.Status == entities.PaymentPaid {
-			s.alert(ctx, "paid payment no longer reports paid (possible refund — manual review)", map[string]interface{}{
-				"budget_id": result.BudgetID, "order_nsu": payment.OrderNSU, "source": string(source),
-			})
-			if s.notifications != nil {
-				s.notifications.Notify(organizationID, budgetUc.PaidAfterCancelNotification(nil, "pagamento", payment.BudgetID.String()))
-			}
-			result.State = entities.ConfirmPaidState
-		}
-		return result, nil
-	}
-
-	// Already paid: idempotent duplicate confirmation, no side effects.
-	if payment.Status == entities.PaymentPaid {
+	// N3: an already-paid row confirmed via the public redirect does NOTHING — no
+	// payment_check, no alert — so a user cannot spoof refund alerts.
+	if alreadyPaid && source == entities.SourceRedirect {
 		result.State = entities.ConfirmPaidState
 		return result, nil
 	}
 
-	// Value divergence guard, using the Pix discount SNAPSHOT taken at link creation.
+	integration, err := s.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
+	if err != nil {
+		return result, ErrConfirmRetry
+	}
+	if integration == nil || integration.APIKeyCiphertext == "" {
+		s.flagReview(ctx, payment, entities.ReviewNoCredentials)
+		s.alert(ctx, "confirm without credentials — cannot verify received payment", map[string]interface{}{
+			"organization_id": organizationID, "order_nsu": req.OrderNSU, "source": string(source),
+		})
+		return result, ErrPaymentsNotConfigured
+	}
+	apiKey, err := s.decryptAPIKey(integration)
+	if err != nil {
+		return result, ErrPaymentsNotConfigured
+	}
+
+	// Prefer STORED identifiers over the request's (anti-spoof). Use the per-payment
+	// handle snapshot so account changes don't break verification.
+	handle := payment.Handle
+	if handle == "" {
+		handle = integration.Handle
+	}
+	reqSlug := req.ResolvedSlug()
+	slugToCheck := firstNonEmpty(deref(payment.Slug), reqSlug)
+	txnToCheck := firstNonEmpty(deref(payment.TransactionNSU), req.TransactionNSU)
+
+	// Slug binding: a request slug that contradicts the stored one is rejected.
+	if payment.Slug != nil && *payment.Slug != "" && reqSlug != "" && reqSlug != *payment.Slug {
+		if !alreadyPaid {
+			s.flagReview(ctx, payment, entities.ReviewSlugMismatch)
+			s.alert(ctx, "slug mismatch on confirm", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source)})
+		}
+		return result, nil
+	}
+
+	// N3/N5: persist the webhook's hints BEFORE the check only for trusted
+	// (non-redirect) sources on a pending row. A non-23505 DB error is retried.
+	if source != entities.SourceRedirect && !alreadyPaid {
+		pre := map[string]interface{}{"last_checked_at": time.Now(), "check_attempts": gorm.Expr("check_attempts + 1")}
+		if reqSlug != "" && (payment.Slug == nil || *payment.Slug == "") {
+			pre["slug"] = reqSlug
+		}
+		if req.TransactionNSU != "" && (payment.TransactionNSU == nil || *payment.TransactionNSU == "") {
+			pre["transaction_nsu"] = req.TransactionNSU
+		}
+		if err := s.repo.UpdatePaymentFields(ctx, payment.ID, pre); err != nil {
+			if isUniqueViolation(err) {
+				s.alert(ctx, "transaction_nsu reuse rejected by unique index", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU})
+				return result, nil
+			}
+			return result, ErrConfirmRetry
+		}
+	}
+
+	check, err := s.client.PaymentCheck(ctx, apiKey, coreServices.InfinitePayPaymentCheckRequest{
+		Handle:         handle,
+		OrderNSU:       req.OrderNSU,
+		TransactionNSU: txnToCheck,
+		Slug:           slugToCheck,
+	})
+	if err != nil {
+		if isUnauthorized(err) {
+			if !alreadyPaid {
+				s.flagReview(ctx, payment, entities.ReviewUnauthorized)
+			}
+			s.alert(ctx, "payment_check unauthorized", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source)})
+			return result, ErrInvalidCredentials
+		}
+		return result, ErrConfirmRetry
+	}
+
+	// Bind the response to our order.
+	if check.OrderNSU != "" && check.OrderNSU != payment.OrderNSU {
+		if !alreadyPaid {
+			s.flagReview(ctx, payment, entities.ReviewOrderMismatch)
+			s.alert(ctx, "payment_check order_nsu mismatch", map[string]interface{}{
+				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "theirs": check.OrderNSU, "source": string(source),
+			})
+		}
+		return result, nil
+	}
+
+	paid := check.Success && check.Paid
+
+	// Already-paid row re-checked by webhook/job (refund detection).
+	if alreadyPaid {
+		if !paid {
+			if s.notifications != nil {
+				s.notifications.Notify(organizationID, budgetUc.PossibleRefundNotification(nil, "pagamento", payment.BudgetID.String(), "refund_review:"+payment.ID.String()))
+			}
+			s.alert(ctx, "paid payment no longer reports paid (possible refund — manual review)", map[string]interface{}{
+				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source),
+			})
+		} else if check.TransactionNSU != "" && payment.TransactionNSU != nil && *payment.TransactionNSU != "" && check.TransactionNSU != *payment.TransactionNSU {
+			// N4: a paid row now reports a different transaction_nsu.
+			s.alert(ctx, "paid row reports a different transaction_nsu", map[string]interface{}{
+				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "ours": *payment.TransactionNSU, "theirs": check.TransactionNSU,
+			})
+		}
+		result.State = entities.ConfirmPaidState
+		return result, nil
+	}
+
+	if !paid {
+		return result, nil
+	}
+
+	// Value divergence guard, using the Pix discount SNAPSHOT.
 	pixFloor := entities.PixPrice(payment.AmountCents, payment.PixDiscountPercent) - 1
 	if check.PaidAmount < pixFloor {
+		s.flagReview(ctx, payment, entities.ReviewValueDivergence)
 		s.alert(ctx, "payment value divergence (paid below pix floor)", map[string]interface{}{
 			"budget_id": result.BudgetID, "order_nsu": req.OrderNSU,
 			"paid_amount": check.PaidAmount, "expected": payment.AmountCents, "pix_floor": pixFloor, "source": string(source),
@@ -159,7 +186,10 @@ func (s *ConfirmService) Confirm(
 		return result, nil
 	}
 
-	paidAfterCancel := payment.Status == entities.PaymentCanceled
+	// N2: paid_after_cancel only for refund-worthy cancel reasons; an EXPIRED link that
+	// was paid settles NORMALLY (InfinitePay enforced valid_until).
+	settlingExpired := payment.Status == entities.PaymentCanceled && payment.StatusReason == entities.ReasonExpired
+	paidAfterCancel := payment.Status == entities.PaymentCanceled && entities.IsRefundReason(payment.StatusReason)
 
 	budget, err := s.repo.GetBudgetChargeContext(ctx, payment.BudgetID, organizationID)
 	if err != nil {
@@ -167,8 +197,6 @@ func (s *ConfirmService) Confirm(
 	}
 	budgetMissing := budget == nil
 	if budgetMissing {
-		// The budget was deleted/soft-deleted but money arrived: record it as paid with
-		// paid_after_cancel so it surfaces as refund-due, never dropped silently.
 		paidAfterCancel = true
 	}
 
@@ -181,22 +209,34 @@ func (s *ConfirmService) Confirm(
 		"installments":      check.Installments,
 		"paid_at":           now,
 		"raw_event":         json.RawMessage(raw),
+		"link_creating_at":  nil,
 	}
-	if txn := firstNonEmpty(check.TransactionNSU, req.TransactionNSU); txn != "" {
+	if txn := firstNonEmpty(check.TransactionNSU, deref(payment.TransactionNSU), req.TransactionNSU); txn != "" {
 		fields["transaction_nsu"] = txn
 	}
-	if slug := firstNonEmpty(check.ResolvedSlug(), reqSlug); slug != "" {
+	if slug := firstNonEmpty(check.ResolvedSlug(), deref(payment.Slug), reqSlug); slug != "" {
 		fields["slug"] = slug
 	}
 	if r := firstNonEmpty(check.ReceiptURL, receiptURL); validGatewayURL(r) {
 		fields["receipt_url"] = r
 	}
+	// Normalize status_reason: paid_after_cancel when refund-worthy, else clear it (a
+	// settled expired link becomes a normal paid row).
 	if paidAfterCancel {
 		fields["status_reason"] = entities.ReasonPaidAfterCancel
+	} else {
+		fields["status_reason"] = ""
 	}
 
 	var rows int64
 	txErr := s.repo.WithTransaction(ctx, func(repo domainRepos.PaymentRepository) error {
+		// N1: lock the budget row FIRST (budget -> payments order) so concurrent
+		// confirmations serialize and the aggregate recompute is never stale.
+		if !budgetMissing {
+			if err := repo.LockBudget(ctx, payment.BudgetID, organizationID); err != nil {
+				return err
+			}
+		}
 		n, err := repo.MarkPaidGuarded(ctx, payment.ID, organizationID, fields)
 		if err != nil {
 			return err
@@ -205,19 +245,31 @@ func (s *ConfirmService) Confirm(
 		if rows == 0 {
 			return nil
 		}
+		// N2: a settled expired link may have a newer pending link for the same
+		// (budget, kind); supersede it (guarded) so the budget isn't double-charged.
+		if settlingExpired {
+			if newer, nerr := repo.GetPendingByBudgetKind(ctx, payment.BudgetID, payment.Kind); nerr == nil && newer != nil && newer.ID != payment.ID {
+				if _, cerr := repo.CancelPendingByID(ctx, newer.ID, entities.ReasonSuperseded); cerr != nil {
+					return cerr
+				}
+			}
+		}
 		if !budgetMissing {
-			// Race-free: a single UPDATE … = (SELECT SUM …) recomputes the aggregate.
 			return repo.RecalcBudgetAggregate(ctx, payment.BudgetID, organizationID)
 		}
 		return nil
 	})
 	if txErr != nil {
+		if isUniqueViolation(txErr) {
+			s.alert(ctx, "transaction_nsu reuse rejected while settling", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU})
+			return result, nil
+		}
 		return result, ErrConfirmRetry
 	}
 
 	result.State = entities.ConfirmPaidState
 	if rows == 0 {
-		return result, nil // lost the race; already applied
+		return result, nil
 	}
 	result.First = true
 
@@ -226,6 +278,15 @@ func (s *ConfirmService) Confirm(
 	}
 	s.recordPaidSideEffects(ctx, organizationID, budget, payment, check, now, paidAfterCancel, budgetMissing)
 	return result, nil
+}
+
+// flagReview marks a payment for manual review so the reconcile job skips it and we
+// do not re-alert on every webhook/job retry.
+func (s *ConfirmService) flagReview(ctx context.Context, payment *entities.BudgetPayment, reason string) {
+	_ = s.repo.UpdatePaymentFields(ctx, payment.ID, map[string]interface{}{
+		"needs_review":  true,
+		"review_reason": reason,
+	})
 }
 
 // recordPaidSideEffects fires the activity, notification and alerts for a freshly
@@ -258,11 +319,10 @@ func (s *ConfirmService) recordPaidSideEffects(
 		s.notifications.Notify(organizationID, budgetUc.PaymentReceivedNotification(quote, name, budgetID, check.PaidAmount, dedupe))
 	}
 
-	// Principal above total: alert (possible over-collection / double charge).
 	if !budgetMissing {
 		if principal, err := s.repo.SumPaidPrincipal(ctx, payment.BudgetID); err == nil && principal > budget.TotalCost {
 			s.alert(ctx, "paid principal exceeds budget total", map[string]interface{}{
-				"budget_id": budgetID, "principal": principal, "total": budget.TotalCost,
+				"budget_id": budgetID, "order_nsu": payment.OrderNSU, "principal": principal, "total": budget.TotalCost,
 			})
 		}
 	}
@@ -290,4 +350,12 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// deref returns the string a *string points to, or "" when nil.
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

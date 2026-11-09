@@ -36,7 +36,7 @@ func RunPaymentsMigrations() {
 	paymentsOrgFKTables := []string{"payment_integrations", "budget_payments", "payment_webhook_events"}
 	for _, table := range paymentsOrgFKTables {
 		var exists bool
-		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = ?)", table).Scan(&exists)
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ?)", table).Scan(&exists)
 		if !exists {
 			continue
 		}
@@ -44,7 +44,7 @@ func RunPaymentsMigrations() {
 		Connector.Raw(`
 			SELECT EXISTS(
 				SELECT 1 FROM information_schema.table_constraints
-				WHERE table_name = ? AND constraint_name LIKE '%organization%'
+				WHERE table_schema = current_schema() AND table_name = ? AND constraint_name LIKE '%organization%'
 			)
 		`, table).Scan(&fkExists)
 		if !fkExists {
@@ -67,13 +67,13 @@ func RunPaymentsMigrations() {
 	// budget_payments.budget_id FK -> budgets(id) ON DELETE RESTRICT.
 	{
 		var budgetPaymentsExists bool
-		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budget_payments')").Scan(&budgetPaymentsExists)
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'budget_payments')").Scan(&budgetPaymentsExists)
 		if budgetPaymentsExists {
 			var fkExists bool
 			Connector.Raw(`
 				SELECT EXISTS(
 					SELECT 1 FROM information_schema.table_constraints
-					WHERE table_name = 'budget_payments' AND constraint_name = 'fk_budget_payments_budget'
+					WHERE table_schema = current_schema() AND table_name = 'budget_payments' AND constraint_name = 'fk_budget_payments_budget'
 				)
 			`).Scan(&fkExists)
 			if !fkExists {

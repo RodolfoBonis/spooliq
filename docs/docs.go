@@ -14501,6 +14501,9 @@ const docTemplate = `{
                 "kind": {
                     "$ref": "#/definitions/entities.ChargeKind"
                 },
+                "needs_review": {
+                    "type": "boolean"
+                },
                 "paid_amount": {
                     "type": "integer"
                 },

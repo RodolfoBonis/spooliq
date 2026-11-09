@@ -102,6 +102,12 @@ func (r *fakeRepo) WithReconcileLock(_ context.Context, fn func() error) (bool, 
 	return true, fn()
 }
 
+func (r *fakeRepo) LockBudget(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+
+func (r *fakeRepo) ListAgedOutWebhooks(_ context.Context, _ time.Time, _ int) ([]*entities.WebhookEventRecord, error) {
+	return nil, nil
+}
+
 func (r *fakeRepo) GetIntegration(_ context.Context, org, _ string) (*entities.PaymentIntegration, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -313,6 +319,19 @@ func applyPaymentFields(p *entities.BudgetPayment, fields map[string]interface{}
 	}
 	if v, ok := fields["receipt_url"].(string); ok {
 		p.ReceiptURL = &v
+	}
+	if v, ok := fields["needs_review"].(bool); ok {
+		p.NeedsReview = v
+	}
+	if v, ok := fields["review_reason"].(string); ok {
+		p.ReviewReason = v
+	}
+	if raw, ok := fields["link_creating_at"]; ok {
+		if t, ok := raw.(time.Time); ok {
+			p.LinkCreatingAt = &t
+		} else {
+			p.LinkCreatingAt = nil
+		}
 	}
 }
 

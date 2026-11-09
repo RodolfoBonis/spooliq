@@ -19,7 +19,7 @@ const (
 	reconcileLookback     = 48 * time.Hour
 	webhookMaxAttempts    = 10
 	disconnectedRetention = 7 * 24 * time.Hour
-	reconcileBatch        = 100
+	reconcileBatch        = 20
 )
 
 // RegisterReconcileJob wires the background payments reconciliation sweep: it
@@ -39,6 +39,7 @@ func RegisterReconcileJob(lc fx.Lifecycle, repo domainRepos.PaymentRepository, c
 			recheckPendingLinks(ctx, repo, confirm, log)
 			expireOverdueLinks(ctx, repo, log, now)
 			purgeDisconnected(ctx, repo, log, now)
+			alertAgedOutWebhooks(ctx, repo, log, now)
 			return nil
 		})
 		if err != nil {
@@ -158,4 +159,18 @@ func alertExhausted(organizationID, orderNSU string, cause error) {
 		}
 		sentry.CaptureMessage("payments: webhook event exhausted retries")
 	})
+}
+
+// alertAgedOutWebhooks reports webhook events that are unprocessed and older than the
+// retry window, so money that was never confirmed cannot silently disappear.
+func alertAgedOutWebhooks(ctx context.Context, repo domainRepos.PaymentRepository, log logger.Logger, now time.Time) {
+	aged, err := repo.ListAgedOutWebhooks(ctx, now.Add(-reconcileLookback), reconcileBatch)
+	if err != nil {
+		log.Error(ctx, "reconcile: list aged-out webhooks failed", map[string]interface{}{"error": err.Error()})
+		return
+	}
+	for _, ev := range aged {
+		alertExhausted(ev.OrganizationID, "", nil)
+		log.Error(ctx, "reconcile: webhook event aged out unprocessed", map[string]interface{}{"event_id": ev.ID.String()})
+	}
 }

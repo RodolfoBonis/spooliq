@@ -23,11 +23,40 @@ const (
 	ReasonSuperseded      = "superseded"        // a new link with a different amount/settings replaced this one
 	ReasonBudgetCancelled = "budget_cancelled"  // the budget was cancelled
 	ReasonBudgetRevised   = "budget_revised"    // the budget went back to draft for a revision
-	ReasonExpired         = "expired"           // the link passed its valid_until
+	ReasonExpired         = "expired"           // the link passed its valid_until + grace
 	ReasonDisconnected    = "disconnected"      // the integration was disconnected
 	ReasonPaidAfterCancel = "paid_after_cancel" // a cancelled link was paid anyway (manual refund needed)
 	ReasonAccountChanged  = "account_changed"   // the org reconnected with a different key/handle
 )
+
+// review_reason values when a payment is flagged for manual review.
+const (
+	ReviewValueDivergence = "value_divergence"
+	ReviewOrderMismatch   = "order_mismatch"
+	ReviewSlugMismatch    = "slug_mismatch"
+	ReviewUnauthorized    = "unauthorized"
+	ReviewNoCredentials   = "no_credentials"
+	ReviewPossibleRefund  = "possible_refund"
+)
+
+// cancelReasonsRequiringRefund is the set of cancellation reasons that make a later
+// payment a "paid_after_cancel" (money received on a link that should not have been
+// payable). A link canceled because it EXPIRED is NOT in this set: InfinitePay
+// enforces valid_until itself, so a paid expired link was paid in time and settles
+// normally.
+var cancelReasonsRequiringRefund = map[string]bool{
+	ReasonBudgetCancelled: true,
+	ReasonBudgetRevised:   true,
+	ReasonDisconnected:    true,
+	ReasonSuperseded:      true,
+	ReasonAccountChanged:  true,
+}
+
+// IsRefundReason reports whether a cancellation reason makes a subsequent payment a
+// paid_after_cancel (manual-refund) case.
+func IsRefundReason(reason string) bool {
+	return cancelReasonsRequiringRefund[reason]
+}
 
 // BudgetPayment is the domain view of one payment attempt against a budget.
 type BudgetPayment struct {
@@ -38,6 +67,7 @@ type BudgetPayment struct {
 	OrderNSU           string
 	TransactionNSU     *string
 	Slug               *string
+	Handle             string
 	AmountCents        int64
 	PaidAmountCents    int64
 	Installments       int
@@ -45,8 +75,11 @@ type BudgetPayment struct {
 	PixDiscountPercent int
 	CheckoutURL        string
 	ReceiptURL         *string
+	LinkCreatingAt     *time.Time
 	Status             PaymentRecordStatus
 	StatusReason       string
+	NeedsReview        bool
+	ReviewReason       string
 	LinkExpiresAt      *time.Time
 	PaidAt             *time.Time
 	CanceledAt         *time.Time
@@ -69,6 +102,7 @@ type PaymentLineResponse struct {
 	Installments  int        `json:"installments"`
 	Status        string     `json:"status"`
 	StatusReason  string     `json:"status_reason,omitempty"`
+	NeedsReview   bool       `json:"needs_review,omitempty"`
 	CheckoutURL   string     `json:"checkout_url,omitempty"`
 	ReceiptURL    *string    `json:"receipt_url"`
 	PaidAt        *time.Time `json:"paid_at"`

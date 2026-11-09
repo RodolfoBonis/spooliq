@@ -73,7 +73,7 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 	}
 	if blocking {
 		uc.logger.Error(ctx, "Cannot delete a budget with payments", map[string]interface{}{"budget_id": budgetID})
-		coreErrors.Respond(c, coreErrors.Conflict("budget_has_payments", "Não é possível excluir um orçamento que já recebeu pagamento"))
+		coreErrors.Respond(c, coreErrors.Conflict("budget_has_payments", "Não é possível excluir um orçamento com pagamentos pagos ou pendentes. Cancele os links pendentes (e reembolse os pagos) antes de excluir."))
 		return
 	}
 

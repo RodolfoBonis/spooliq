@@ -23,6 +23,9 @@ type BudgetPaymentModel struct {
 	OrderNSU       string  `gorm:"type:varchar(64);not null" json:"order_nsu"`
 	TransactionNSU *string `gorm:"type:varchar(64)" json:"transaction_nsu"`
 	Slug           *string `gorm:"type:varchar(128)" json:"slug"`
+	// Handle is the InfinitePay handle SNAPSHOT at link creation, so payment_check can
+	// address the correct account even if the org later reconnects with another handle.
+	Handle string `gorm:"type:varchar(255)" json:"handle"`
 
 	// Values (cents)
 	AmountCents     int64  `gorm:"type:bigint;not null" json:"amount_cents"`
@@ -36,10 +39,18 @@ type BudgetPaymentModel struct {
 	// Links
 	CheckoutURL string  `gorm:"type:text" json:"checkout_url"`
 	ReceiptURL  *string `gorm:"type:text" json:"receipt_url"`
+	// LinkCreatingAt is a short lease held while the remote CreateLink call is in
+	// flight, so two concurrent requests never call the gateway twice for one order.
+	LinkCreatingAt *time.Time `gorm:"type:timestamptz" json:"link_creating_at"`
 
 	// Lifecycle
 	Status       string `gorm:"type:varchar(12);not null;default:'pending'" json:"status"`
-	StatusReason string `gorm:"type:varchar(32)" json:"status_reason"`
+	StatusReason string `gorm:"type:varchar(32);not null;default:''" json:"status_reason"`
+
+	// NeedsReview flags a row that requires manual attention (value divergence, order
+	// mismatch, unauthorized, no credentials). The reconcile job skips these rows.
+	NeedsReview  bool   `gorm:"not null;default:false" json:"needs_review"`
+	ReviewReason string `gorm:"type:varchar(40);not null;default:''" json:"review_reason"`
 
 	LinkExpiresAt *time.Time `gorm:"type:timestamptz" json:"link_expires_at"`
 	PaidAt        *time.Time `gorm:"type:timestamptz" json:"paid_at"`
@@ -71,6 +82,7 @@ func (m *BudgetPaymentModel) ToEntity() *entities.BudgetPayment {
 		OrderNSU:           m.OrderNSU,
 		TransactionNSU:     m.TransactionNSU,
 		Slug:               m.Slug,
+		Handle:             m.Handle,
 		AmountCents:        m.AmountCents,
 		PaidAmountCents:    m.PaidAmountCents,
 		Installments:       m.Installments,
@@ -78,8 +90,11 @@ func (m *BudgetPaymentModel) ToEntity() *entities.BudgetPayment {
 		PixDiscountPercent: m.PixDiscountPercent,
 		CheckoutURL:        m.CheckoutURL,
 		ReceiptURL:         m.ReceiptURL,
+		LinkCreatingAt:     m.LinkCreatingAt,
 		Status:             entities.PaymentRecordStatus(m.Status),
 		StatusReason:       m.StatusReason,
+		NeedsReview:        m.NeedsReview,
+		ReviewReason:       m.ReviewReason,
 		LinkExpiresAt:      m.LinkExpiresAt,
 		PaidAt:             m.PaidAt,
 		CanceledAt:         m.CanceledAt,

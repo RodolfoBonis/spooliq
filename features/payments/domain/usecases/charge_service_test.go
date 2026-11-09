@@ -198,3 +198,70 @@ func TestCharge_RaceFallsBackToWinnersLink(t *testing.T) {
 		t.Fatalf("provider should not be called after race fallback, calls=%d", client.createCalls)
 	}
 }
+
+func TestCharge_PixChangeSupersedes(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	// Integration now offers a 5% Pix discount; the pending link was snapshotted at 0.
+	integ := repo.seedIntegration("org1", box, 5, 1, nil)
+	budget := repo.seedBudget("org1", 2000, 0, nil, "approved")
+	old := repo.seedPayment(&entities.BudgetPayment{
+		OrganizationID: "org1", BudgetID: budget.ID, Kind: entities.KindFull,
+		OrderNSU: "spq_pix_old", AmountCents: 2000, PixDiscountPercent: 0, Status: entities.PaymentPending,
+		CheckoutURL: "https://checkout.infinitepay.io/old", LinkExpiresAt: futureTime(),
+	})
+	client := &fakeClient{}
+
+	cs := newChargeService(repo, client, box)
+	_, err := cs.CreateOrReuseLink(context.Background(), budget, integ, nil)
+	if err != nil {
+		t.Fatalf("CreateOrReuseLink: %v", err)
+	}
+	if client.createCalls != 1 {
+		t.Fatalf("a pix-discount change must create a NEW link, calls=%d", client.createCalls)
+	}
+	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_pix_old")
+	_ = old
+	if got.Status != entities.PaymentCanceled || got.StatusReason != entities.ReasonSuperseded {
+		t.Fatalf("old link must be superseded on pix change, status=%s reason=%s", got.Status, got.StatusReason)
+	}
+}
+
+func TestCharge_SupersedeRaceReturnsNotAvailable(t *testing.T) {
+	box := testBox()
+	base := newFakeRepo()
+	integ := base.seedIntegration("org1", box, 0, 1, nil)
+	budget := base.seedBudget("org1", 2000, 0, nil, "approved")
+	// A stale pending link (amount differs) that gets paid concurrently: CancelPendingByID
+	// affects 0 rows, so the charge aborts for the caller to recompute.
+	repo := &supersedeRaceRepo{fakeRepo: base, budgetID: budget.ID}
+	client := &fakeClient{}
+
+	cs := newChargeService(repo, client, box)
+	_, err := cs.CreateOrReuseLink(context.Background(), budget, integ, nil)
+	if err != usecases.ErrChargeNotAvailable {
+		t.Fatalf("err = %v want ErrChargeNotAvailable", err)
+	}
+	if client.createCalls != 0 {
+		t.Fatal("no link should be created when the supersede races")
+	}
+}
+
+type supersedeRaceRepo struct {
+	*fakeRepo
+	budgetID uuid.UUID
+}
+
+func (r *supersedeRaceRepo) GetPendingByBudgetKindForUpdate(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
+	// A pending link with a DIFFERENT amount (forces supersede).
+	exp := futureTime()
+	return &entities.BudgetPayment{ID: uuid.New(), OrganizationID: "org1", BudgetID: r.budgetID, Kind: kind, OrderNSU: "spq_stale", AmountCents: 999, Status: entities.PaymentPending, LinkExpiresAt: exp}, nil
+}
+
+func (r *supersedeRaceRepo) CancelPendingByID(ctx context.Context, id uuid.UUID, reason string) (int64, error) {
+	return 0, nil // lost the race: no row was still pending
+}
+
+func (r *supersedeRaceRepo) WithTransaction(ctx context.Context, fn func(repo domainRepos.PaymentRepository) error) error {
+	return fn(r)
+}

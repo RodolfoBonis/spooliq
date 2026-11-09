@@ -16,6 +16,10 @@ import (
 // pending (it got paid/cancelled concurrently). The caller recomputes the charge.
 var errSupersedeRace = errors.New("supersede_race")
 
+// linkLeaseWindow is how long a "creating link" lease is honored before another
+// request may retry the remote call for the same order.
+const linkLeaseWindow = 30 * time.Second
+
 // ChargeService creates or reuses a checkout link for a budget. It is shared by the
 // authenticated and the public pay endpoints.
 type ChargeService struct {
@@ -80,19 +84,37 @@ func (s *ChargeService) CreateOrReuseLink(
 
 	var payment *entities.BudgetPayment
 	var reuseURL string
+	var inProgress bool
 
 	txErr := s.repo.WithTransaction(ctx, func(repo domainRepos.PaymentRepository) error {
-		// FOR UPDATE: serialize two concurrent create-link requests for the same
-		// (budget, kind) so CreateLink is never called twice for one order.
+		// N1: lock the budget row FIRST (budget -> payments order), then the pending row.
+		if err := repo.LockBudget(ctx, budget.ID, budget.OrganizationID); err != nil {
+			return err
+		}
 		pending, err := repo.GetPendingByBudgetKindForUpdate(ctx, budget.ID, kind)
 		if err != nil {
 			return err
 		}
 		if pending != nil {
 			expired := pending.LinkExpiresAt != nil && pending.LinkExpiresAt.Before(now)
-			if pending.AmountCents == amount && pending.PixDiscountPercent == pix && !expired {
+			equivalent := pending.AmountCents == amount && pending.PixDiscountPercent == pix && !expired
+			if equivalent {
+				if pending.CheckoutURL != "" {
+					payment = pending
+					reuseURL = pending.CheckoutURL
+					return nil
+				}
+				// No URL yet: honor a fresh creation lease (N4) to avoid a double
+				// CreateLink; otherwise claim the lease and (re)try the remote call.
+				if pending.LinkCreatingAt != nil && now.Sub(*pending.LinkCreatingAt) < linkLeaseWindow {
+					inProgress = true
+					return nil
+				}
+				if err := repo.UpdatePaymentFields(ctx, pending.ID, map[string]interface{}{"link_creating_at": now}); err != nil {
+					return err
+				}
+				pending.LinkCreatingAt = &now
 				payment = pending
-				reuseURL = pending.CheckoutURL
 				return nil
 			}
 			// Amount/settings changed or the link expired: supersede it (guarded).
@@ -101,7 +123,6 @@ func (s *ChargeService) CreateOrReuseLink(
 				return cerr
 			}
 			if rows == 0 {
-				// It was paid/cancelled concurrently; recompute at the caller.
 				return errSupersedeRace
 			}
 		}
@@ -111,10 +132,12 @@ func (s *ChargeService) CreateOrReuseLink(
 			BudgetID:           budget.ID,
 			Kind:               kind,
 			OrderNSU:           genOrderNSU(),
+			Handle:             integration.Handle,
 			AmountCents:        amount,
 			PixDiscountPercent: pix,
 			Status:             entities.PaymentPending,
 			LinkExpiresAt:      &validUntil,
+			LinkCreatingAt:     &now,
 		}
 		if err := repo.CreatePayment(ctx, newPayment); err != nil {
 			return err
@@ -126,7 +149,6 @@ func (s *ChargeService) CreateOrReuseLink(
 		if errors.Is(txErr, errSupersedeRace) {
 			return nil, ErrChargeNotAvailable
 		}
-		// A concurrent request may have won the (budget, kind) pending slot; reuse it.
 		if pending, perr := s.repo.GetPendingByBudgetKind(ctx, budget.ID, kind); perr == nil && pending != nil && pending.CheckoutURL != "" {
 			return &entities.CreateLinkResponse{
 				CheckoutURL: pending.CheckoutURL,
@@ -139,6 +161,9 @@ func (s *ChargeService) CreateOrReuseLink(
 		return nil, txErr
 	}
 
+	if inProgress {
+		return nil, ErrLinkInProgress
+	}
 	if reuseURL != "" {
 		return &entities.CreateLinkResponse{CheckoutURL: reuseURL, Kind: kind, Amount: amount, ExpiresAt: payment.LinkExpiresAt}, nil
 	}
@@ -151,7 +176,7 @@ func (s *ChargeService) CreateOrReuseLink(
 }
 
 // createRemoteLink calls InfinitePay to create the link and persists the returned
-// checkout_url/slug on the payment row.
+// checkout_url/slug on the payment row, releasing the creation lease.
 func (s *ChargeService) createRemoteLink(
 	ctx context.Context,
 	budget *entities.BudgetChargeContext,
@@ -219,13 +244,12 @@ func (s *ChargeService) createRemoteLink(
 		return nil, ErrProviderRejected
 	}
 
-	fields := map[string]interface{}{"checkout_url": resp.CheckoutURL}
+	fields := map[string]interface{}{"checkout_url": resp.CheckoutURL, "link_creating_at": nil}
 	if resp.Slug != "" {
 		fields["slug"] = resp.Slug
 	}
 	if err := s.repo.UpdatePaymentFields(ctx, payment.ID, fields); err != nil {
 		s.logger.Error(ctx, "Failed to persist checkout_url", map[string]interface{}{"payment_id": payment.ID, "error": err.Error()})
-		// The link exists at the gateway; still return it so the customer can pay.
 	}
 
 	return &entities.CreateLinkResponse{CheckoutURL: resp.CheckoutURL, Kind: payment.Kind, Amount: amount, ExpiresAt: &validUntil}, nil

@@ -171,3 +171,77 @@ func TestIntegration_CancelPendingForBudgetInTransaction(t *testing.T) {
 	require.Equal(t, entities.PaymentCanceled, got.Status)
 	require.Equal(t, entities.ReasonBudgetRevised, got.StatusReason)
 }
+
+func TestIntegration_RecalcExcludesPaidAfterCancel(t *testing.T) {
+	db := openTestDB(t, "pay_recalc")
+	createPaymentsSchema(t, db)
+	repo := repoimpl.NewPaymentRepository(db)
+	ctx := context.Background()
+
+	budgetID := uuid.New()
+	require.NoError(t, db.Exec("INSERT INTO budgets (id, organization_id, total_cost) VALUES (?,?,?)", budgetID, "org1", 3000).Error)
+
+	normal := newPayment("org1", budgetID, entities.KindDeposit, "spq_n", 2000, entities.PaymentPaid)
+	require.NoError(t, repo.CreatePayment(ctx, normal))
+	par := newPayment("org1", budgetID, entities.KindBalance, "spq_p", 1000, entities.PaymentPaid)
+	par.StatusReason = entities.ReasonPaidAfterCancel
+	require.NoError(t, repo.CreatePayment(ctx, par))
+
+	require.NoError(t, repo.RecalcBudgetAggregate(ctx, budgetID, "org1"))
+
+	var paid, refund int64
+	var status string
+	require.NoError(t, db.Raw("SELECT amount_paid_cents, amount_refund_due_cents, payment_status FROM budgets WHERE id = ?", budgetID).Row().Scan(&paid, &refund, &status))
+	require.Equal(t, int64(2000), paid, "paid_after_cancel excluded from amount_paid")
+	require.Equal(t, int64(1000), refund, "paid_after_cancel counted as refund_due")
+	require.Equal(t, "partial", status)
+}
+
+func TestIntegration_ExpireGraceAndGuard(t *testing.T) {
+	db := openTestDB(t, "pay_expire")
+	createPaymentsSchema(t, db)
+	repo := repoimpl.NewPaymentRepository(db)
+	ctx := context.Background()
+	now := time.Now()
+
+	withinGrace := newPayment("org1", uuid.New(), entities.KindFull, "spq_within", 2000, entities.PaymentPending)
+	exp1 := now.Add(-1 * time.Hour)
+	withinGrace.LinkExpiresAt = &exp1
+	require.NoError(t, repo.CreatePayment(ctx, withinGrace))
+
+	pastGrace := newPayment("org1", uuid.New(), entities.KindFull, "spq_past", 2000, entities.PaymentPending)
+	exp2 := now.Add(-49 * time.Hour)
+	pastGrace.LinkExpiresAt = &exp2
+	require.NoError(t, repo.CreatePayment(ctx, pastGrace))
+
+	expired, err := repo.ListExpiredPendingLinks(ctx, now, 50)
+	require.NoError(t, err)
+	require.Len(t, expired, 1, "only links past valid_until + 48h grace are expirable")
+	require.Equal(t, "spq_past", expired[0].OrderNSU)
+
+	// CancelPendingByID is guarded: a paid row is never overwritten.
+	paid := newPayment("org1", uuid.New(), entities.KindDeposit, "spq_paidrow", 2000, entities.PaymentPaid)
+	require.NoError(t, repo.CreatePayment(ctx, paid))
+	rows, err := repo.CancelPendingByID(ctx, paid.ID, entities.ReasonExpired)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), rows, "guard must not cancel a paid row")
+
+	rows, err = repo.CancelPendingByID(ctx, pastGrace.ID, entities.ReasonExpired)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), rows)
+}
+
+func TestIntegration_WithReconcileLock(t *testing.T) {
+	db := openTestDB(t, "pay_lock")
+	createPaymentsSchema(t, db)
+	repo := repoimpl.NewPaymentRepository(db)
+
+	ran := false
+	acquired, err := repo.WithReconcileLock(context.Background(), func() error {
+		ran = true
+		return nil
+	})
+	require.NoError(t, err)
+	require.True(t, acquired)
+	require.True(t, ran)
+}

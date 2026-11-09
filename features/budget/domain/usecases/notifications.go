@@ -85,6 +85,19 @@ func PaidAfterCancelNotification(quoteNumber *int, name, budgetID string) notifi
 	}
 }
 
+// PossibleRefundNotification warns that a previously-paid payment no longer reports
+// paid at the gateway (a likely refund). dedupeKey suppresses repeats from webhook/job
+// retries. It never auto-flips the record — the team confirms on the InfinitePay app.
+func PossibleRefundNotification(quoteNumber *int, name, budgetID, dedupeKey string) notificationEntities.NewNotification {
+	return notificationEntities.NewNotification{
+		Type:      notificationEntities.TypePaymentPaid,
+		Title:     "Possível estorno — " + budgetLabel(quoteNumber, name),
+		Body:      "Um pagamento não consta mais como pago. Confira na InfinitePay.",
+		Link:      budgetLink(budgetID),
+		DedupeKey: dedupeKey,
+	}
+}
+
 // PaymentReceivedActivity builds the activity log entry for a received payment.
 func PaymentReceivedActivity(organizationID, budgetID, name string, quoteNumber *int, amountCents int64, now time.Time) activityEntities.ActivityEntity {
 	qn := 0

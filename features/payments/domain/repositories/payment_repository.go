@@ -20,6 +20,9 @@ type PaymentRepository interface {
 	// replica sweeps at a time. The bool reports whether the lock was acquired (fn runs
 	// only then).
 	WithReconcileLock(ctx context.Context, fn func() error) (bool, error)
+	// LockBudget takes a row lock (SELECT ... FOR UPDATE) on the budget, establishing a
+	// consistent budget->payments lock order so concurrent confirmations serialize.
+	LockBudget(ctx context.Context, budgetID uuid.UUID, organizationID string) error
 
 	// --- Integration ---
 	GetIntegration(ctx context.Context, organizationID, provider string) (*entities.PaymentIntegration, error)
@@ -77,4 +80,7 @@ type PaymentRepository interface {
 	MarkWebhookProcessed(ctx context.Context, id uuid.UUID) error
 	MarkWebhookAttempt(ctx context.Context, id uuid.UUID, lastError string) error
 	ListUnprocessedWebhooks(ctx context.Context, since time.Time, maxAttempts, limit int) ([]*entities.WebhookEventRecord, error)
+	// ListAgedOutWebhooks lists unprocessed events older than before (past the retry
+	// window) so the job can alert that they will never be retried.
+	ListAgedOutWebhooks(ctx context.Context, before time.Time, limit int) ([]*entities.WebhookEventRecord, error)
 }

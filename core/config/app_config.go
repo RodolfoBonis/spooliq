@@ -28,6 +28,18 @@ type AppConfig struct {
 	AsaasAPIKey        string
 	AsaasBaseURL       string
 	AsaasWebhookSecret string
+
+	// InfinitePay (per-company checkout links). Credentials are per-organization and
+	// stored encrypted; only the API host and the global kill switch live here.
+	InfinitePayBaseURL string
+	InfinitePayEnabled bool
+	// PublicAPIBaseURL / PublicWebBaseURL build the webhook and redirect URLs sent to
+	// InfinitePay when a checkout link is created.
+	PublicAPIBaseURL string
+	PublicWebBaseURL string
+	// PaymentsEncryptionKey is the AES key material for encrypting payment
+	// credentials at rest (from Vault). Empty => payment endpoints return 503.
+	PaymentsEncryptionKey string
 }
 
 // NewAppConfig creates and returns a new AppConfig instance.
@@ -36,27 +48,32 @@ func NewAppConfig() *AppConfig {
 	LoadEnvVars()
 
 	return &AppConfig{
-		Port:               EnvPort(),
-		Keycloak:           EnvKeyCloak(),
-		ServiceID:          EnvServiceID(),
-		SentryDSN:          EnvSentryDSN(),
-		DBHost:             EnvDBHost(),
-		DBPort:             EnvDBPort(),
-		DBUser:             EnvDBUser(),
-		DBPassword:         EnvDBPassword(),
-		DBName:             EnvDBName(),
-		Environment:        EnvironmentConfig(),
-		ServiceName:        EnvServiceName(),
-		AmqpConnection:     EnvAmqpConnection(),
-		RedisHost:          EnvRedisHost(),
-		RedisPort:          EnvRedisPort(),
-		RedisPassword:      EnvRedisPassword(),
-		RedisDB:            EnvRedisDB(),
-		CDNBaseURL:         EnvCDNBaseURL(),
-		CDNKeys:            EnvCDNKeys(),
-		AsaasAPIKey:        EnvAsaasAPIKey(),
-		AsaasBaseURL:       EnvAsaasBaseURL(),
-		AsaasWebhookSecret: EnvAsaasWebhookSecret(),
+		Port:                  EnvPort(),
+		Keycloak:              EnvKeyCloak(),
+		ServiceID:             EnvServiceID(),
+		SentryDSN:             EnvSentryDSN(),
+		DBHost:                EnvDBHost(),
+		DBPort:                EnvDBPort(),
+		DBUser:                EnvDBUser(),
+		DBPassword:            EnvDBPassword(),
+		DBName:                EnvDBName(),
+		Environment:           EnvironmentConfig(),
+		ServiceName:           EnvServiceName(),
+		AmqpConnection:        EnvAmqpConnection(),
+		RedisHost:             EnvRedisHost(),
+		RedisPort:             EnvRedisPort(),
+		RedisPassword:         EnvRedisPassword(),
+		RedisDB:               EnvRedisDB(),
+		CDNBaseURL:            EnvCDNBaseURL(),
+		CDNKeys:               EnvCDNKeys(),
+		AsaasAPIKey:           EnvAsaasAPIKey(),
+		AsaasBaseURL:          EnvAsaasBaseURL(),
+		AsaasWebhookSecret:    EnvAsaasWebhookSecret(),
+		InfinitePayBaseURL:    EnvInfinitePayBaseURL(),
+		InfinitePayEnabled:    EnvInfinitePayEnabled(),
+		PublicAPIBaseURL:      EnvPublicAPIBaseURL(),
+		PublicWebBaseURL:      EnvPublicWebBaseURL(),
+		PaymentsEncryptionKey: EnvPaymentsEncryptionKey(),
 	}
 }
 

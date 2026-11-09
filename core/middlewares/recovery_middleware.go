@@ -6,6 +6,7 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +23,8 @@ func Recovery(log logger.Logger) gin.HandlerFunc {
 					log.Error(ctx, "Recovered from panic", logger.Fields{
 						"panic": fmt.Sprintf("%v", rec),
 						"stack": string(debug.Stack()),
-						"path":  c.Request.URL.Path,
+						// Mask secret path tokens (public share token, webhook token).
+						"path": helpers.MaskSensitivePath(c.Request.URL.Path),
 					})
 				}
 				if !c.Writer.Written() {

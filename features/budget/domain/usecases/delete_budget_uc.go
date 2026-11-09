@@ -11,7 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Delete deletes a budget (soft delete, only if not printing/completed)
+// Delete deletes a budget (soft delete, only if not printing/completed and with no
+// paid/pending payments)
 // @Summary Delete budget
 // @Description Delete a budget (soft delete)
 // @Tags budgets
@@ -54,7 +55,29 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 		return
 	}
 
-	// Check if budget can be deleted
+	// A budget with any paid (incl. paid_after_cancel) or pending payment can never be
+	// deleted: money is or may be involved, so the record must be preserved. The
+	// payments feature is the source of truth (via a narrow port); fall back to the
+	// stored aggregate when it is not wired.
+	blocking := false
+	if uc.paymentPresence != nil {
+		has, perr := uc.paymentPresence.HasBlockingPayments(ctx, budgetID, organizationID)
+		if perr != nil {
+			uc.logger.Error(ctx, "Failed to check budget payments", map[string]interface{}{"error": perr.Error(), "budget_id": budgetID})
+			coreErrors.Respond(c, coreErrors.Internal())
+			return
+		}
+		blocking = has
+	} else {
+		blocking = budget.HasPayments()
+	}
+	if blocking {
+		uc.logger.Error(ctx, "Cannot delete a budget with payments", map[string]interface{}{"budget_id": budgetID})
+		coreErrors.Respond(c, coreErrors.Conflict("budget_has_payments", "Não é possível excluir um orçamento com pagamentos pagos ou pendentes. Cancele os links pendentes (e reembolse os pagos) antes de excluir."))
+		return
+	}
+
+	// Check if budget can be deleted (printing/completed budgets are not deletable).
 	if !budget.CanBeDeleted() {
 		uc.logger.Error(ctx, "Cannot delete printing or completed budget", map[string]interface{}{
 			"budget_id": budgetID,

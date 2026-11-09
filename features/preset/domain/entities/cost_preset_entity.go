@@ -19,6 +19,8 @@ type CostPresetEntity struct {
 	PostProcessingCostPerHour float32   `json:"post_processing_cost_per_hour"`
 	SupportRemovalCostPerHour float32   `json:"support_removal_cost_per_hour"`
 	QualityControlCostPerItem float32   `json:"quality_control_cost_per_item"`
+	FailureRatePercentage     float32   `json:"failure_rate_percentage"`
+	WasteGramsPerColorChange  float32   `json:"waste_grams_per_color_change"`
 }
 
 // Validate validates the cost preset entity
@@ -51,6 +53,12 @@ func (c *CostPresetEntity) Validate() error {
 	}
 	if c.QualityControlCostPerItem < 0 {
 		return errors.New("o custo de controle de qualidade por item não pode ser negativo")
+	}
+	if c.FailureRatePercentage < 0 || c.FailureRatePercentage > 100 {
+		return errors.New("o percentual de taxa de falha deve estar entre 0 e 100")
+	}
+	if c.WasteGramsPerColorChange < 0 {
+		return errors.New("o desperdício por troca de cor não pode ser negativo")
 	}
 
 	return nil

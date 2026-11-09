@@ -45,6 +45,9 @@ type PaymentRepository interface {
 	GetPaymentByOrderNSUForUpdate(ctx context.Context, organizationID, orderNSU string) (*entities.BudgetPayment, error)
 	CreatePayment(ctx context.Context, payment *entities.BudgetPayment) error
 	UpdatePaymentFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error
+	// UpdatePendingFields updates a payment only while it is still pending, returning
+	// rows affected (0 => it was paid/canceled concurrently).
+	UpdatePendingFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) (int64, error)
 	// MarkPaidGuarded performs the guarded UPDATE ... WHERE id = ? AND organization_id = ?
 	// AND status IN ('pending','canceled'); rows==1 means this call made the first
 	// confirmation.

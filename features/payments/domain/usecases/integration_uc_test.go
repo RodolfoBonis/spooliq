@@ -2,6 +2,7 @@ package usecases_test
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
+	"github.com/RodolfoBonis/spooliq/core/crypto"
 	coreServices "github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/usecases"
 	"github.com/gin-gonic/gin"
@@ -103,5 +105,25 @@ func TestIntegration_UserDoesNotSeeSensitiveFields(t *testing.T) {
 	}
 	if _, ok := resp["pending_links"]; ok {
 		t.Fatalf("User must not see pending_links")
+	}
+}
+
+func TestIntegration_HandleChangeWithUndecryptableKeyReturns503(t *testing.T) {
+	repo := newFakeRepo()
+	// Seed an integration whose key was encrypted with a DIFFERENT box (the UC's box
+	// cannot decrypt it).
+	otherKey := base64.StdEncoding.EncodeToString([]byte("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"))
+	otherBox, _ := crypto.NewSecretBox(otherKey)
+	ct, _ := otherBox.EncryptString("sk_live_oldkey")
+	repo.seedIntegrationRaw("org1", ct, "mystore")
+
+	uc := newIntegrationUC(repo, &fakeClient{})
+	// Handle-only change (no api_key) => UC must decrypt the stored key, which fails.
+	body := `{"handle":"newstore","enabled":true,"assured_installments":1,"pix_discount_percent":0}`
+	c, w := authCtx(http.MethodPut, body, "org1", []string{"Owner"})
+	uc.Upsert(c)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d want 503; body=%s", w.Code, w.Body.String())
 	}
 }

@@ -21,6 +21,11 @@ func RunPaymentsMigrations() {
 		return
 	}
 
+	// Backfill any NULL status_reason/review_reason BEFORE AutoMigrate adds the
+	// NOT NULL constraint (a pre-existing budget_payments from an earlier build of this
+	// change may have NULLs that would make the ALTER fail).
+	backfillPaymentNulls()
+
 	// ========================================
 	// LEVEL 6: Payments (depends on Companies and Budgets)
 	// ========================================
@@ -148,4 +153,24 @@ func RunPaymentsMigrations() {
 	}
 
 	fmt.Println("Payments migrations setup completed")
+}
+
+// backfillPaymentNulls sets any NULL status_reason/review_reason to ” on an existing
+// budget_payments table so the subsequent AutoMigrate can add NOT NULL safely.
+func backfillPaymentNulls() {
+	var tableExists bool
+	Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'budget_payments')").Scan(&tableExists)
+	if !tableExists {
+		return
+	}
+	for _, col := range []string{"status_reason", "review_reason"} {
+		var colExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'budget_payments' AND column_name = ?)", col).Scan(&colExists)
+		if !colExists {
+			continue
+		}
+		if err := Connector.Exec(fmt.Sprintf("UPDATE budget_payments SET %s = '' WHERE %s IS NULL", col, col)).Error; err != nil {
+			fmt.Printf("Warning: backfill of budget_payments.%s failed: %v\n", col, err)
+		}
+	}
 }

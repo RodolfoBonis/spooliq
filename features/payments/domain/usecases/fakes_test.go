@@ -10,8 +10,10 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/crypto"
 	coreServices "github.com/RodolfoBonis/spooliq/core/services"
+	notificationEntities "github.com/RodolfoBonis/spooliq/features/notification/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/entities"
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -266,6 +268,17 @@ func (r *fakeRepo) UpdatePaymentFields(_ context.Context, id uuid.UUID, fields m
 	return nil
 }
 
+func (r *fakeRepo) UpdatePendingFields(_ context.Context, id uuid.UUID, fields map[string]interface{}) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	p, ok := r.payments[id]
+	if !ok || p.Status != entities.PaymentPending {
+		return 0, nil
+	}
+	applyPaymentFields(p, fields)
+	return 1, nil
+}
+
 func (r *fakeRepo) MarkPaidGuarded(_ context.Context, id uuid.UUID, _ string, fields map[string]interface{}) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -464,6 +477,18 @@ func (r *fakeRepo) seedIntegration(org string, box *crypto.SecretBox, pixPct, as
 	return i
 }
 
+// seedIntegrationRaw stores an integration with a caller-provided API key ciphertext
+// (used to simulate a key the current box cannot decrypt).
+func (r *fakeRepo) seedIntegrationRaw(org, apiKeyCiphertext, handle string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.integrations[org] = &entities.PaymentIntegration{
+		ID: uuid.New(), OrganizationID: org, Provider: entities.ProviderInfinitePay,
+		Handle: handle, APIKeyCiphertext: apiKeyCiphertext, WebhookTokenCiphertext: apiKeyCiphertext,
+		Enabled: true, AssuredInstallments: 1,
+	}
+}
+
 // seedBudget registers a payable budget context.
 func (r *fakeRepo) seedBudget(org string, total, paid int64, deposit *float64, status string) *entities.BudgetChargeContext {
 	b := &entities.BudgetChargeContext{
@@ -493,3 +518,27 @@ func (r *fakeRepo) seedPayment(p *entities.BudgetPayment) *entities.BudgetPaymen
 }
 
 var errUnique = errors.New("duplicate key value violates unique constraint")
+
+// fakeNotifications captures Notify calls for assertions.
+type fakeNotifications struct {
+	mu   sync.Mutex
+	sent []notificationEntities.NewNotification
+}
+
+func (f *fakeNotifications) Notify(_ string, n notificationEntities.NewNotification) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.sent = append(f.sent, n)
+}
+func (f *fakeNotifications) List(_ *gin.Context)        {}
+func (f *fakeNotifications) UnreadCount(_ *gin.Context) {}
+func (f *fakeNotifications) MarkRead(_ *gin.Context)    {}
+func (f *fakeNotifications) MarkAllRead(_ *gin.Context) {}
+
+func (f *fakeNotifications) all() []notificationEntities.NewNotification {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]notificationEntities.NewNotification, len(f.sent))
+	copy(out, f.sent)
+	return out
+}

@@ -245,3 +245,53 @@ func TestIntegration_WithReconcileLock(t *testing.T) {
 	require.True(t, acquired)
 	require.True(t, ran)
 }
+
+func TestIntegration_RecheckSkipsNeedsReviewAndBackoff(t *testing.T) {
+	db := openTestDB(t, "pay_recheck")
+	createPaymentsSchema(t, db)
+	repo := repoimpl.NewPaymentRepository(db)
+	ctx := context.Background()
+	now := time.Now()
+	fut := now.Add(24 * time.Hour)
+
+	due := newPayment("org1", uuid.New(), entities.KindFull, "spq_due", 2000, entities.PaymentPending)
+	due.LinkExpiresAt = &fut
+	require.NoError(t, repo.CreatePayment(ctx, due)) // last_checked_at NULL => due
+
+	flagged := newPayment("org1", uuid.New(), entities.KindFull, "spq_flagged", 2000, entities.PaymentPending)
+	flagged.LinkExpiresAt = &fut
+	require.NoError(t, repo.CreatePayment(ctx, flagged))
+	require.NoError(t, repo.UpdatePaymentFields(ctx, flagged.ID, map[string]interface{}{"needs_review": true, "review_reason": "value_divergence"}))
+
+	recent := newPayment("org1", uuid.New(), entities.KindFull, "spq_recent", 2000, entities.PaymentPending)
+	recent.LinkExpiresAt = &fut
+	require.NoError(t, repo.CreatePayment(ctx, recent))
+	require.NoError(t, repo.UpdatePaymentFields(ctx, recent.ID, map[string]interface{}{"last_checked_at": now})) // checked just now => backoff
+
+	list, err := repo.ListPendingForRecheck(ctx, now, 50)
+	require.NoError(t, err)
+	require.Len(t, list, 1, "only the due, non-flagged link is returned")
+	require.Equal(t, "spq_due", list[0].OrderNSU)
+}
+
+func TestIntegration_AgedOutAlertsOnce(t *testing.T) {
+	db := openTestDB(t, "pay_aged")
+	createPaymentsSchema(t, db)
+	repo := repoimpl.NewPaymentRepository(db)
+	ctx := context.Background()
+	now := time.Now()
+
+	id, err := repo.CreateWebhookEvent(ctx, "org1", []byte(`{"order_nsu":"spq_x"}`), now.Add(-72*time.Hour))
+	require.NoError(t, err)
+
+	before := now.Add(-48 * time.Hour)
+	aged, err := repo.ListAgedOutWebhooks(ctx, before, 50)
+	require.NoError(t, err)
+	require.Len(t, aged, 1)
+
+	// Mark it processed (as the job does after alerting) => no longer aged-out.
+	require.NoError(t, repo.MarkWebhookProcessed(ctx, id))
+	aged, err = repo.ListAgedOutWebhooks(ctx, before, 50)
+	require.NoError(t, err)
+	require.Len(t, aged, 0, "a processed event must not alert again")
+}

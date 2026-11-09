@@ -265,3 +265,38 @@ func (r *supersedeRaceRepo) CancelPendingByID(ctx context.Context, id uuid.UUID,
 func (r *supersedeRaceRepo) WithTransaction(ctx context.Context, fn func(repo domainRepos.PaymentRepository) error) error {
 	return fn(r)
 }
+
+func TestCharge_LeaseReturns409ThenExpires(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	integ := repo.seedIntegration("org1", box, 0, 1, nil)
+	budget := repo.seedBudget("org1", 2000, 0, nil, "approved")
+	fixed := time.Now()
+	repo.seedPayment(&entities.BudgetPayment{
+		OrganizationID: "org1", BudgetID: budget.ID, Kind: entities.KindFull,
+		OrderNSU: "spq_lease", AmountCents: 2000, PixDiscountPercent: 0, Status: entities.PaymentPending,
+		CheckoutURL: "", LinkExpiresAt: futureTime(), LinkCreatingAt: &fixed,
+	})
+	client := &fakeClient{}
+	cs := newChargeService(repo, client, box)
+
+	// Fresh lease held => 409.
+	cs.SetNowForTest(func() time.Time { return fixed.Add(5 * time.Second) })
+	_, err := cs.CreateOrReuseLink(context.Background(), budget, integ, nil)
+	if err != usecases.ErrLinkInProgress {
+		t.Fatalf("err = %v want ErrLinkInProgress", err)
+	}
+	if client.createCalls != 0 {
+		t.Fatal("no remote call while the lease is held")
+	}
+
+	// After 30s the lease expires and the call proceeds.
+	cs.SetNowForTest(func() time.Time { return fixed.Add(31 * time.Second) })
+	_, err = cs.CreateOrReuseLink(context.Background(), budget, integ, nil)
+	if err != nil {
+		t.Fatalf("CreateOrReuseLink after lease: %v", err)
+	}
+	if client.createCalls != 1 {
+		t.Fatalf("remote call should proceed after lease expiry, calls=%d", client.createCalls)
+	}
+}

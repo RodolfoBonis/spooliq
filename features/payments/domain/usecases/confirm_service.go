@@ -56,14 +56,16 @@ func (s *ConfirmService) Confirm(
 	}
 	result.BudgetID = payment.BudgetID.String()
 	alreadyPaid := payment.Status == entities.PaymentPaid
+	isRedirect := source == entities.SourceRedirect
 
-	// N6: a pending row already flagged for manual review is skipped (no re-alert).
+	// A pending row flagged for manual review (by a TRUSTED source) is skipped so we
+	// neither re-alert nor act on it. The redirect can never set this flag (🔴1).
 	if payment.Status == entities.PaymentPending && payment.NeedsReview {
 		return result, nil
 	}
-	// N3: an already-paid row confirmed via the public redirect does NOTHING — no
-	// payment_check, no alert — so a user cannot spoof refund alerts.
-	if alreadyPaid && source == entities.SourceRedirect {
+	// An already-paid row confirmed via the public redirect does NOTHING — no
+	// payment_check, no alert — so a user cannot spoof refund alerts (N3/🔴1).
+	if alreadyPaid && isRedirect {
 		result.State = entities.ConfirmPaidState
 		return result, nil
 	}
@@ -73,10 +75,12 @@ func (s *ConfirmService) Confirm(
 		return result, ErrConfirmRetry
 	}
 	if integration == nil || integration.APIKeyCiphertext == "" {
-		s.flagReview(ctx, payment, entities.ReviewNoCredentials)
-		s.alert(ctx, "confirm without credentials — cannot verify received payment", map[string]interface{}{
-			"organization_id": organizationID, "order_nsu": req.OrderNSU, "source": string(source),
-		})
+		if !isRedirect {
+			s.flagReview(ctx, payment, entities.ReviewNoCredentials)
+			s.alert(ctx, "confirm without credentials — cannot verify received payment", map[string]interface{}{
+				"organization_id": organizationID, "order_nsu": req.OrderNSU, "source": string(source),
+			})
+		}
 		return result, ErrPaymentsNotConfigured
 	}
 	apiKey, err := s.decryptAPIKey(integration)
@@ -84,38 +88,26 @@ func (s *ConfirmService) Confirm(
 		return result, ErrPaymentsNotConfigured
 	}
 
-	// Prefer STORED identifiers over the request's (anti-spoof). Use the per-payment
-	// handle snapshot so account changes don't break verification.
+	// Identifiers sent to payment_check: ALWAYS prefer the STORED ones; a request's
+	// slug/transaction_nsu is used only when the row has none (🔴1 — request values are
+	// spoofable, so they never override and never trigger a mismatch rejection).
 	handle := payment.Handle
 	if handle == "" {
 		handle = integration.Handle
 	}
-	reqSlug := req.ResolvedSlug()
-	slugToCheck := firstNonEmpty(deref(payment.Slug), reqSlug)
-	txnToCheck := firstNonEmpty(deref(payment.TransactionNSU), req.TransactionNSU)
+	storedSlug := deref(payment.Slug)
+	storedTxn := deref(payment.TransactionNSU)
+	slugToCheck := firstNonEmpty(storedSlug, req.ResolvedSlug())
+	txnToCheck := firstNonEmpty(storedTxn, req.TransactionNSU)
 
-	// Slug binding: a request slug that contradicts the stored one is rejected.
-	if payment.Slug != nil && *payment.Slug != "" && reqSlug != "" && reqSlug != *payment.Slug {
-		if !alreadyPaid {
-			s.flagReview(ctx, payment, entities.ReviewSlugMismatch)
-			s.alert(ctx, "slug mismatch on confirm", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source)})
-		}
-		return result, nil
-	}
-
-	// N3/N5: persist the webhook's hints BEFORE the check only for trusted
-	// (non-redirect) sources on a pending row. A non-23505 DB error is retried.
-	if source != entities.SourceRedirect && !alreadyPaid {
-		pre := map[string]interface{}{"last_checked_at": time.Now(), "check_attempts": gorm.Expr("check_attempts + 1")}
-		if reqSlug != "" && (payment.Slug == nil || *payment.Slug == "") {
-			pre["slug"] = reqSlug
-		}
-		if req.TransactionNSU != "" && (payment.TransactionNSU == nil || *payment.TransactionNSU == "") {
-			pre["transaction_nsu"] = req.TransactionNSU
-		}
-		if err := s.repo.UpdatePaymentFields(ctx, payment.ID, pre); err != nil {
+	// Bump the attempt counter (backoff) for trusted retries only; never persist
+	// request hints before verification. A non-23505 DB error is retried (N5).
+	if !isRedirect && !alreadyPaid {
+		if err := s.repo.UpdatePaymentFields(ctx, payment.ID, map[string]interface{}{
+			"last_checked_at": time.Now(),
+			"check_attempts":  gorm.Expr("check_attempts + 1"),
+		}); err != nil {
 			if isUniqueViolation(err) {
-				s.alert(ctx, "transaction_nsu reuse rejected by unique index", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU})
 				return result, nil
 			}
 			return result, ErrConfirmRetry
@@ -130,18 +122,20 @@ func (s *ConfirmService) Confirm(
 	})
 	if err != nil {
 		if isUnauthorized(err) {
-			if !alreadyPaid {
+			if !isRedirect && !alreadyPaid {
 				s.flagReview(ctx, payment, entities.ReviewUnauthorized)
 			}
-			s.alert(ctx, "payment_check unauthorized", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source)})
+			if !isRedirect {
+				s.alert(ctx, "payment_check unauthorized", map[string]interface{}{"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source)})
+			}
 			return result, ErrInvalidCredentials
 		}
 		return result, ErrConfirmRetry
 	}
 
-	// Bind the response to our order.
+	// Bind the gateway's response to our order (trustworthy: comes from payment_check).
 	if check.OrderNSU != "" && check.OrderNSU != payment.OrderNSU {
-		if !alreadyPaid {
+		if !isRedirect && !alreadyPaid {
 			s.flagReview(ctx, payment, entities.ReviewOrderMismatch)
 			s.alert(ctx, "payment_check order_nsu mismatch", map[string]interface{}{
 				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "theirs": check.OrderNSU, "source": string(source),
@@ -161,10 +155,9 @@ func (s *ConfirmService) Confirm(
 			s.alert(ctx, "paid payment no longer reports paid (possible refund — manual review)", map[string]interface{}{
 				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "source": string(source),
 			})
-		} else if check.TransactionNSU != "" && payment.TransactionNSU != nil && *payment.TransactionNSU != "" && check.TransactionNSU != *payment.TransactionNSU {
-			// N4: a paid row now reports a different transaction_nsu.
+		} else if check.TransactionNSU != "" && storedTxn != "" && check.TransactionNSU != storedTxn {
 			s.alert(ctx, "paid row reports a different transaction_nsu", map[string]interface{}{
-				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "ours": *payment.TransactionNSU, "theirs": check.TransactionNSU,
+				"budget_id": result.BudgetID, "order_nsu": req.OrderNSU, "ours": storedTxn, "theirs": check.TransactionNSU,
 			})
 		}
 		result.State = entities.ConfirmPaidState
@@ -186,19 +179,11 @@ func (s *ConfirmService) Confirm(
 		return result, nil
 	}
 
-	// N2: paid_after_cancel only for refund-worthy cancel reasons; an EXPIRED link that
-	// was paid settles NORMALLY (InfinitePay enforced valid_until).
-	settlingExpired := payment.Status == entities.PaymentCanceled && payment.StatusReason == entities.ReasonExpired
-	paidAfterCancel := payment.Status == entities.PaymentCanceled && entities.IsRefundReason(payment.StatusReason)
-
 	budget, err := s.repo.GetBudgetChargeContext(ctx, payment.BudgetID, organizationID)
 	if err != nil {
 		return result, ErrConfirmRetry
 	}
 	budgetMissing := budget == nil
-	if budgetMissing {
-		paidAfterCancel = true
-	}
 
 	now := time.Now()
 	raw, _ := json.Marshal(check)
@@ -211,33 +196,43 @@ func (s *ConfirmService) Confirm(
 		"raw_event":         json.RawMessage(raw),
 		"link_creating_at":  nil,
 	}
-	if txn := firstNonEmpty(check.TransactionNSU, deref(payment.TransactionNSU), req.TransactionNSU); txn != "" {
+	if txn := firstNonEmpty(check.TransactionNSU, storedTxn, req.TransactionNSU); txn != "" {
 		fields["transaction_nsu"] = txn
 	}
-	if slug := firstNonEmpty(check.ResolvedSlug(), deref(payment.Slug), reqSlug); slug != "" {
+	if slug := firstNonEmpty(check.ResolvedSlug(), storedSlug, req.ResolvedSlug()); slug != "" {
 		fields["slug"] = slug
 	}
 	if r := firstNonEmpty(check.ReceiptURL, receiptURL); validGatewayURL(r) {
 		fields["receipt_url"] = r
 	}
-	// Normalize status_reason: paid_after_cancel when refund-worthy, else clear it (a
-	// settled expired link becomes a normal paid row).
-	if paidAfterCancel {
-		fields["status_reason"] = entities.ReasonPaidAfterCancel
-	} else {
-		fields["status_reason"] = ""
-	}
 
 	var rows int64
+	var paidAfterCancel bool
 	txErr := s.repo.WithTransaction(ctx, func(repo domainRepos.PaymentRepository) error {
-		// N1: lock the budget row FIRST (budget -> payments order) so concurrent
-		// confirmations serialize and the aggregate recompute is never stale.
+		// 🔴2/N1: lock the budget FIRST (budget -> payments order), then re-read the
+		// payment UNDER the lock so paid_after_cancel reflects any cancel that committed
+		// between the initial read and here.
 		if !budgetMissing {
 			if err := repo.LockBudget(ctx, payment.BudgetID, organizationID); err != nil {
 				return err
 			}
 		}
-		n, err := repo.MarkPaidGuarded(ctx, payment.ID, organizationID, fields)
+		locked, err := repo.GetPaymentByOrderNSUForUpdate(ctx, organizationID, payment.OrderNSU)
+		if err != nil {
+			return err
+		}
+		if locked == nil {
+			return nil // vanished; rows stays 0
+		}
+		settlingExpired := locked.Status == entities.PaymentCanceled && locked.StatusReason == entities.ReasonExpired
+		paidAfterCancel = budgetMissing || (locked.Status == entities.PaymentCanceled && entities.IsRefundReason(locked.StatusReason))
+		if paidAfterCancel {
+			fields["status_reason"] = entities.ReasonPaidAfterCancel
+		} else {
+			fields["status_reason"] = "" // a settled expired/pending link is a normal paid row
+		}
+
+		n, err := repo.MarkPaidGuarded(ctx, locked.ID, organizationID, fields)
 		if err != nil {
 			return err
 		}
@@ -245,10 +240,8 @@ func (s *ConfirmService) Confirm(
 		if rows == 0 {
 			return nil
 		}
-		// N2: a settled expired link may have a newer pending link for the same
-		// (budget, kind); supersede it (guarded) so the budget isn't double-charged.
 		if settlingExpired {
-			if newer, nerr := repo.GetPendingByBudgetKind(ctx, payment.BudgetID, payment.Kind); nerr == nil && newer != nil && newer.ID != payment.ID {
+			if newer, nerr := repo.GetPendingByBudgetKind(ctx, payment.BudgetID, payment.Kind); nerr == nil && newer != nil && newer.ID != locked.ID {
 				if _, cerr := repo.CancelPendingByID(ctx, newer.ID, entities.ReasonSuperseded); cerr != nil {
 					return cerr
 				}

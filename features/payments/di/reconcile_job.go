@@ -154,6 +154,7 @@ func alertExhausted(organizationID, orderNSU string, cause error) {
 		scope.SetTag("area", "payments.reconcile")
 		scope.SetExtra("organization_id", organizationID)
 		scope.SetExtra("order_nsu", orderNSU)
+		scope.SetFingerprint([]string{"payments_webhook_exhausted", orderNSU})
 		if cause != nil {
 			scope.SetExtra("cause", cause.Error())
 		}
@@ -170,7 +171,13 @@ func alertAgedOutWebhooks(ctx context.Context, repo domainRepos.PaymentRepositor
 		return
 	}
 	for _, ev := range aged {
-		alertExhausted(ev.OrganizationID, "", nil)
+		var payload entities.WebhookPayload
+		_ = json.Unmarshal(ev.Payload, &payload)
+		alertExhausted(ev.OrganizationID, payload.OrderNSU, nil)
 		log.Error(ctx, "reconcile: webhook event aged out unprocessed", map[string]interface{}{"event_id": ev.ID.String()})
+		// Mark it so the alert fires only once: last_error then processed_at (which
+		// excludes it from the next aged-out sweep).
+		_ = repo.MarkWebhookAttempt(ctx, ev.ID, "aged_out")
+		_ = repo.MarkWebhookProcessed(ctx, ev.ID)
 	}
 }

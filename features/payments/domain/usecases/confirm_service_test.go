@@ -86,28 +86,41 @@ func TestConfirm_MissingBudgetRecordsPaidAfterCancel(t *testing.T) {
 	}
 }
 
-func TestConfirm_SlugMismatchRejected(t *testing.T) {
+func TestConfirm_SpoofedRedirectDoesNotBlockLegitWebhook(t *testing.T) {
+	// 🔴1: a redirect with spoofed identifiers must never flag the row for review, so a
+	// later legit webhook still settles it. The request slug/txn are ignored (stored win).
 	box := testBox()
 	repo := newFakeRepo()
 	_, p := seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentPending)
 	stored := "slug-ours"
 	p.Slug = &stored
-	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
-
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: false, Paid: false}}
 	cs := newConfirmService(repo, client, box)
-	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm", Slug: "slug-theirs"}, "", entities.SourceWebhook)
+
+	// Spoofed redirect: payment not yet paid at the gateway.
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm", Slug: "slug-evil", TransactionNSU: "txn-evil"}, "", entities.SourceRedirect)
 	if err != nil {
-		t.Fatalf("Confirm: %v", err)
+		t.Fatalf("Confirm(redirect): %v", err)
 	}
 	if res.State != entities.ConfirmProcessingState {
-		t.Fatalf("slug mismatch must not settle, state=%s", res.State)
+		t.Fatalf("spoofed redirect must not settle, state=%s", res.State)
 	}
 	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_confirm")
-	if got.Status != entities.PaymentPending || !got.NeedsReview {
-		t.Fatalf("slug mismatch must stay pending + needs_review, got status=%s needs_review=%v", got.Status, got.NeedsReview)
+	if got.NeedsReview {
+		t.Fatal("redirect must NEVER flag needs_review (would block legit settlement)")
 	}
-	if client.checkCalls != 0 {
-		t.Fatal("slug mismatch must be rejected before payment_check")
+	if got.TransactionNSU != nil {
+		t.Fatal("redirect must not persist the spoofed transaction_nsu")
+	}
+
+	// Legit webhook: gateway now reports paid.
+	client.checkResp = &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}
+	res, err = cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm"}, "", entities.SourceWebhook)
+	if err != nil {
+		t.Fatalf("Confirm(webhook): %v", err)
+	}
+	if res.State != entities.ConfirmPaidState || !res.First {
+		t.Fatalf("legit webhook must settle, state=%s first=%v", res.State, res.First)
 	}
 }
 
@@ -332,5 +345,124 @@ func TestConfirm_RedirectDoesNotPersistHintsBeforeVerification(t *testing.T) {
 	got, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_confirm")
 	if got.TransactionNSU != nil {
 		t.Fatalf("redirect must not persist transaction_nsu before verification, got %v", *got.TransactionNSU)
+	}
+}
+
+// confirmLockRaceRepo simulates a cancel committing between the initial read and the
+// locked re-read: GetPaymentByOrderNSU returns the pending row, but the locked read
+// returns it as canceled with a refund-worthy reason.
+type confirmLockRaceRepo struct {
+	*fakeRepo
+}
+
+func (r *confirmLockRaceRepo) GetPaymentByOrderNSUForUpdate(ctx context.Context, org, orderNSU string) (*entities.BudgetPayment, error) {
+	p, err := r.fakeRepo.GetPaymentByOrderNSU(ctx, org, orderNSU)
+	if err != nil || p == nil {
+		return p, err
+	}
+	p.Status = entities.PaymentCanceled
+	p.StatusReason = entities.ReasonBudgetCancelled
+	return p, nil
+}
+
+func (r *confirmLockRaceRepo) WithTransaction(ctx context.Context, fn func(repo domainRepos.PaymentRepository) error) error {
+	return fn(r)
+}
+
+func TestConfirm_CancelBetweenReadAndLockBecomesPaidAfterCancel(t *testing.T) {
+	box := testBox()
+	base := newFakeRepo()
+	budget, _ := seedPendingForConfirm(base, box, 0, 2000, entities.PaymentPending)
+	repo := &confirmLockRaceRepo{fakeRepo: base}
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
+
+	svc := usecases.NewService(repo, client, box, testConfig(), nil, nil, nil, logger.NewLogger("test"))
+	cs := usecases.NewConfirmService(svc)
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm"}, "", entities.SourceWebhook)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	if res.State != entities.ConfirmPaidState || !res.First {
+		t.Fatalf("expected first paid, got state=%s first=%v", res.State, res.First)
+	}
+	got, _ := base.GetPaymentByOrderNSU(context.Background(), "org1", "spq_confirm")
+	if got.Status != entities.PaymentPaid || got.StatusReason != entities.ReasonPaidAfterCancel {
+		t.Fatalf("cancel-between-read-and-lock must settle as paid_after_cancel, got status=%s reason=%s", got.Status, got.StatusReason)
+	}
+	fresh, _ := base.GetBudgetChargeContext(context.Background(), budget.ID, "org1")
+	if fresh.RefundDueCents != 2000 {
+		t.Fatalf("refund_due must be > 0 for paid_after_cancel, got %d", fresh.RefundDueCents)
+	}
+}
+
+// dbErrRepo returns a generic (non-unique) error from UpdatePaymentFields.
+type dbErrRepo struct{ *fakeRepo }
+
+func (r *dbErrRepo) UpdatePaymentFields(_ context.Context, _ uuid.UUID, _ map[string]interface{}) error {
+	return errors.New("connection reset")
+}
+func (r *dbErrRepo) WithTransaction(ctx context.Context, fn func(repo domainRepos.PaymentRepository) error) error {
+	return fn(r)
+}
+
+func TestConfirm_PreUpdateDBErrorRetries(t *testing.T) {
+	box := testBox()
+	base := newFakeRepo()
+	_, _ = seedPendingForConfirm(base, box, 0, 2000, entities.PaymentPending)
+	repo := &dbErrRepo{fakeRepo: base}
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
+
+	svc := usecases.NewService(repo, client, box, testConfig(), nil, nil, nil, logger.NewLogger("test"))
+	cs := usecases.NewConfirmService(svc)
+	_, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm"}, "", entities.SourceWebhook)
+	if !errors.Is(err, usecases.ErrConfirmRetry) {
+		t.Fatalf("a non-unique DB error in the pre-update must retry, got %v", err)
+	}
+}
+
+func TestConfirm_SettlingExpiredSupersedesNewerPending(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	budget, p := seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentCanceled)
+	p.StatusReason = entities.ReasonExpired
+	// A newer pending link for the same (budget, kind).
+	newer := repo.seedPayment(&entities.BudgetPayment{
+		OrganizationID: "org1", BudgetID: budget.ID, Kind: entities.KindFull,
+		OrderNSU: "spq_newer", AmountCents: 2000, Status: entities.PaymentPending,
+		CheckoutURL: "https://checkout.infinitepay.io/newer", LinkExpiresAt: futureTime(),
+	})
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: true, Paid: true, PaidAmount: 2000}}
+
+	cs := newConfirmService(repo, client, box)
+	res, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm"}, "", entities.SourceWebhook)
+	if err != nil || res.State != entities.ConfirmPaidState {
+		t.Fatalf("expected paid, got state=%s err=%v", res.State, err)
+	}
+	gotNewer, _ := repo.GetPaymentByOrderNSU(context.Background(), "org1", "spq_newer")
+	_ = newer
+	if gotNewer.Status != entities.PaymentCanceled || gotNewer.StatusReason != entities.ReasonSuperseded {
+		t.Fatalf("newer pending link must be superseded, got status=%s reason=%s", gotNewer.Status, gotNewer.StatusReason)
+	}
+}
+
+func TestConfirm_RefundNotificationHasDedupeKey(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	_, p := seedPendingForConfirm(repo, box, 0, 2000, entities.PaymentPaid)
+	client := &fakeClient{checkResp: &coreServices.InfinitePayPaymentCheckResponse{Success: false, Paid: false}}
+	notif := &fakeNotifications{}
+
+	svc := usecases.NewService(repo, client, box, testConfig(), notif, nil, nil, logger.NewLogger("test"))
+	cs := usecases.NewConfirmService(svc)
+	_, err := cs.Confirm(context.Background(), "org1", entities.WebhookPayload{OrderNSU: "spq_confirm"}, "", entities.SourceWebhook)
+	if err != nil {
+		t.Fatalf("Confirm: %v", err)
+	}
+	sent := notif.all()
+	if len(sent) != 1 {
+		t.Fatalf("expected 1 refund notification, got %d", len(sent))
+	}
+	if sent[0].DedupeKey != "refund_review:"+p.ID.String() {
+		t.Fatalf("refund notification must carry the dedupe key, got %q", sent[0].DedupeKey)
 	}
 }

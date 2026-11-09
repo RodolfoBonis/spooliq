@@ -216,6 +216,12 @@ func (r *paymentRepository) UpdatePaymentFields(ctx context.Context, id uuid.UUI
 	return r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).Where("id = ?", id).Updates(fields).Error
 }
 
+func (r *paymentRepository) UpdatePendingFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) (int64, error) {
+	res := r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
+		Where("id = ? AND status = ?", id, string(entities.PaymentPending)).Updates(fields)
+	return res.RowsAffected, res.Error
+}
+
 func (r *paymentRepository) MarkPaidGuarded(ctx context.Context, id uuid.UUID, organizationID string, fields map[string]interface{}) (int64, error) {
 	res := r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
 		Where("id = ? AND organization_id = ? AND status IN ?", id, organizationID, []string{string(entities.PaymentPending), string(entities.PaymentCanceled)}).
@@ -265,7 +271,7 @@ func (r *paymentRepository) ListPendingForRecheck(ctx context.Context, now time.
 		Where("status = ? AND needs_review = false", string(entities.PaymentPending)).
 		Where("(link_expires_at IS NULL OR ? < link_expires_at + interval '48 hours')", now).
 		// Exponential backoff on check_attempts: 10m * 2^n, capped at 6h.
-		Where("(last_checked_at IS NULL OR last_checked_at < ? - LEAST(interval '6 hours', interval '10 minutes' * power(2, LEAST(check_attempts, 10))))", now).
+		Where("(last_checked_at IS NULL OR last_checked_at + LEAST(interval '6 hours', interval '10 minutes' * power(2, LEAST(check_attempts, 10))) < ?)", now).
 		Order("created_at ASC").
 		Limit(limit).Find(&ms).Error
 	if err != nil {

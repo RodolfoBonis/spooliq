@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	coreErrors "github.com/RodolfoBonis/spooliq/core/errors"
+	"github.com/RodolfoBonis/spooliq/core/helpers"
 	"github.com/RodolfoBonis/spooliq/core/middlewares"
 	"github.com/RodolfoBonis/spooliq/core/services"
 	activityEntities "github.com/RodolfoBonis/spooliq/features/activity/domain/entities"
@@ -20,6 +20,7 @@ import (
 	notificationUc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // Public rate-limit buckets (per IP, per minute).
@@ -28,6 +29,10 @@ const (
 	publicGetRateLimit  = 60
 	publicPostRateLimit = 10
 	maxUserAgentLength  = 255
+	// publicRateKeyPrefix groups the public budget rate-limit buckets. The payment
+	// endpoints reuse the same prefix/bucket so pay/approve/reject share the 10/min
+	// per-IP write limit.
+	publicRateKeyPrefix = "public_budget_rl"
 )
 
 // IPublicBudgetUseCase exposes the customer-facing (no-auth) budget endpoints.
@@ -50,6 +55,24 @@ type PublicBudgetUseCase struct {
 	notifications      notificationUc.INotificationService
 	cache              DashboardCacheInvalidator
 	logger             logger.Logger
+	// paymentProvider assembles the public "payment" block for a budget view. It is
+	// optional (nil disables the block) and wired by the payments feature via FX, so
+	// the budget package never imports it (one-directional dependency).
+	paymentProvider PublicPaymentProvider
+}
+
+// PublicPaymentProvider builds the sanitized public "payment" block for a budget.
+// It is implemented by the payments feature and injected so the public budget view
+// can embed payment state without the budget package importing payments.
+type PublicPaymentProvider interface {
+	PublicPaymentBlock(ctx context.Context, budget *entities.BudgetEntity) (interface{}, error)
+}
+
+// SetPaymentProvider wires the optional public payment provider after construction.
+// It is called by the payments feature's FX wiring; a nil provider leaves the
+// "payment" block absent from the public view.
+func (uc *PublicBudgetUseCase) SetPaymentProvider(p PublicPaymentProvider) {
+	uc.paymentProvider = p
 }
 
 // DashboardCacheInvalidator clears an organization's cached dashboard after
@@ -100,27 +123,14 @@ func NewPublicBudgetUseCase(
 	return uc
 }
 
-// allowRequest applies a per-IP sliding-ish fixed-window rate limit using Redis
-// INCR + EXPIRE. It FAILS OPEN: when Redis is nil or any command errors, the
-// request is allowed, so a cache outage never blocks the public endpoints.
+// allowRequest applies the shared per-IP rate limit. It FAILS OPEN when Redis is
+// unavailable (see helpers.AllowRequest).
 func (uc *PublicBudgetUseCase) allowRequest(ctx context.Context, bucket, ip string, limit int) bool {
-	if uc.redisService == nil {
-		return true
+	var client *redis.Client
+	if uc.redisService != nil {
+		client = uc.redisService.GetClient()
 	}
-	client := uc.redisService.GetClient()
-	if client == nil {
-		return true
-	}
-	key := "public_budget_rl:" + bucket + ":" + ip
-	count, err := client.Incr(ctx, key).Result()
-	if err != nil {
-		return true // fail-open
-	}
-	if count == 1 {
-		// Best-effort expiry; ignore the error (fail-open).
-		_ = client.Expire(ctx, key, publicRateWindow).Err()
-	}
-	return count <= int64(limit)
+	return helpers.AllowRequest(ctx, client, publicRateKeyPrefix, bucket, ip, publicRateWindow, limit)
 }
 
 // GetByToken returns the sanitized public view for a share token.
@@ -135,7 +145,7 @@ func (uc *PublicBudgetUseCase) allowRequest(ctx context.Context, bucket, ip stri
 // @Router /public/budgets/{token} [get]
 func (uc *PublicBudgetUseCase) GetByToken(c *gin.Context) {
 	ctx := c.Request.Context()
-	if !uc.allowRequest(ctx, "get", publicClientIP(c), publicGetRateLimit) {
+	if !uc.allowRequest(ctx, "get", helpers.PublicClientIP(c), publicGetRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests(CodeRateLimited, "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -172,7 +182,7 @@ func (uc *PublicBudgetUseCase) GetByToken(c *gin.Context) {
 // @Router /public/budgets/{token}/pdf [get]
 func (uc *PublicBudgetUseCase) GetPDF(c *gin.Context) {
 	ctx := c.Request.Context()
-	if !uc.allowRequest(ctx, "get", publicClientIP(c), publicGetRateLimit) {
+	if !uc.allowRequest(ctx, "get", helpers.PublicClientIP(c), publicGetRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests(CodeRateLimited, "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -288,7 +298,7 @@ func (uc *PublicBudgetUseCase) Reject(c *gin.Context) {
 // respond is the shared approve/reject handler. newStatus is approved or rejected.
 func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.BudgetStatus) {
 	ctx := c.Request.Context()
-	if !uc.allowRequest(ctx, "post", publicClientIP(c), publicPostRateLimit) {
+	if !uc.allowRequest(ctx, "post", helpers.PublicClientIP(c), publicPostRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests(CodeRateLimited, "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -333,7 +343,7 @@ func (uc *PublicBudgetUseCase) respond(c *gin.Context, newStatus entities.Budget
 		return
 	}
 
-	ip := publicClientIP(c)
+	ip := helpers.PublicClientIP(c)
 	userAgent := c.Request.UserAgent()
 	if utf8.RuneCountInString(userAgent) > maxUserAgentLength {
 		userAgent = string([]rune(userAgent)[:maxUserAgentLength])
@@ -509,42 +519,18 @@ func (uc *PublicBudgetUseCase) buildPublicView(ctx context.Context, budget *enti
 		PaymentTerms:   budget.PaymentTerms,
 		Notes:          budget.Notes,
 	}
-	return view, nil
-}
 
-// publicClientIP resolves the real client IP for the public endpoints behind the
-// Cloudflare -> Traefik -> pod chain. Global trusted proxies stay empty (so
-// c.ClientIP() returns the ingress pod IP, which would collapse every visitor into
-// one rate-limit bucket), so here we prefer the edge-provided headers:
-//  1. CF-Connecting-IP (set by Cloudflare),
-//  2. the first valid IP of X-Forwarded-For,
-//  3. c.ClientIP() as a last resort.
-//
-// These headers are client-settable, so a caller can spoof them to pick its own
-// bucket (and its own recorded customer_response_ip). That is no worse than the
-// current single-bucket behavior, and it never grants access: the share token
-// remains the only credential.
-func publicClientIP(c *gin.Context) string {
-	if ip := firstValidIP(c.GetHeader("CF-Connecting-IP")); ip != "" {
-		return ip
-	}
-	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
-		for _, part := range strings.Split(xff, ",") {
-			if ip := firstValidIP(part); ip != "" {
-				return ip
-			}
+	// Embed the optional payment block (nil provider => absent). A failure here must
+	// not break the budget view, so it is logged and omitted.
+	if uc.paymentProvider != nil {
+		if block, perr := uc.paymentProvider.PublicPaymentBlock(ctx, budget); perr != nil {
+			uc.logger.Error(ctx, "Failed to build public payment block", map[string]interface{}{"error": perr.Error(), "budget_id": budget.ID})
+		} else if block != nil {
+			view.Payment = block
 		}
 	}
-	return c.ClientIP()
-}
 
-// firstValidIP trims s and returns it when it parses as an IP address, else "".
-func firstValidIP(s string) string {
-	s = strings.TrimSpace(s)
-	if net.ParseIP(s) != nil {
-		return s
-	}
-	return ""
+	return view, nil
 }
 
 // underReviewError hides a budget that went back to draft for a revision: the

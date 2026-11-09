@@ -122,11 +122,14 @@ func (p *PublicPaymentProvider) buildNext(integration *entities.PaymentIntegrati
 }
 
 // publicPaymentLines maps PAID payments to the sanitized public rows. Receipt URLs
-// are only exposed when they point to InfinitePay over https.
+// are only exposed when they point to InfinitePay over https. paid_after_cancel rows
+// are EXCLUDED from the public view: they are not counted toward the balance, so the
+// customer must never see a "paid" receipt that does not reduce what they owe (they
+// remain visible in the authenticated/owner view as refund_due).
 func publicPaymentLines(payments []*entities.BudgetPayment) []entities.PublicPaymentLine {
 	lines := make([]entities.PublicPaymentLine, 0)
 	for _, pay := range payments {
-		if pay.Status != entities.PaymentPaid {
+		if pay.Status != entities.PaymentPaid || pay.StatusReason == entities.ReasonPaidAfterCancel {
 			continue
 		}
 		var receipt *string

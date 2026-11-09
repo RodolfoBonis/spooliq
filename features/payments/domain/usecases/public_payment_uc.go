@@ -14,14 +14,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Public rate limit shares the budget endpoints' bucket (10 writes/min per IP), so
-// pay/confirm/approve/reject together are limited. These MUST match the budget
-// package's publicRateKeyPrefix / window.
+// Public rate limit. Pay shares the budget write bucket ("post", 10/min, together
+// with approve/reject). Confirm has its OWN bucket (30/min) so a customer who
+// approves and is then redirected back (which polls confirm a few times) is not
+// throttled by the shared write limit. These MUST match the budget package's
+// publicRateKeyPrefix / window.
 const (
-	publicRateKeyPrefix  = "public_budget_rl"
-	publicRateBucketPost = "post"
-	publicRateWindow     = time.Minute
-	publicPostRateLimit  = 10
+	publicRateKeyPrefix     = "public_budget_rl"
+	publicRateBucketPost    = "post"
+	publicRateBucketConfirm = "confirm"
+	publicRateWindow        = time.Minute
+	publicPostRateLimit     = 10
+	publicConfirmRateLimit  = 30
 )
 
 // PublicConfirmResponse is the body of the public confirm endpoint: the FULL public
@@ -47,12 +51,12 @@ func NewPublicPaymentUseCase(s *Service, charge *ChargeService, confirm *Confirm
 	return &PublicPaymentUseCase{Service: s, charge: charge, confirm: confirm, viewBuilder: viewBuilder, redis: redis}
 }
 
-func (uc *PublicPaymentUseCase) allowPost(c *gin.Context) bool {
+func (uc *PublicPaymentUseCase) allow(c *gin.Context, bucket string, limit int) bool {
 	var client *redis.Client
 	if uc.redis != nil {
 		client = uc.redis.GetClient()
 	}
-	return helpers.AllowRequest(c.Request.Context(), client, publicRateKeyPrefix, publicRateBucketPost, helpers.PublicClientIP(c), publicRateWindow, publicPostRateLimit)
+	return helpers.AllowRequest(c.Request.Context(), client, publicRateKeyPrefix, bucket, helpers.PublicClientIP(c), publicRateWindow, limit)
 }
 
 // Pay creates a checkout link for a public budget token.
@@ -71,7 +75,7 @@ func (uc *PublicPaymentUseCase) allowPost(c *gin.Context) bool {
 // @Router /public/budgets/{token}/payments [post]
 func (uc *PublicPaymentUseCase) Pay(c *gin.Context) {
 	ctx := c.Request.Context()
-	if !uc.allowPost(c) {
+	if !uc.allow(c, publicRateBucketPost, publicPostRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests("rate_limited", "Muitas requisições. Tente novamente em instantes."))
 		return
 	}
@@ -132,7 +136,7 @@ func (uc *PublicPaymentUseCase) Pay(c *gin.Context) {
 // @Router /public/budgets/{token}/payments/confirm [post]
 func (uc *PublicPaymentUseCase) Confirm(c *gin.Context) {
 	ctx := c.Request.Context()
-	if !uc.allowPost(c) {
+	if !uc.allow(c, publicRateBucketConfirm, publicConfirmRateLimit) {
 		coreErrors.Respond(c, coreErrors.TooManyRequests("rate_limited", "Muitas requisições. Tente novamente em instantes."))
 		return
 	}

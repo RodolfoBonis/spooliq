@@ -2926,6 +2926,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/budgets/{id}/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "List budget payments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.BudgetPaymentsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/budgets/{id}/payments/link": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Create budget payment link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateLinkResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/budgets/{id}/pdf": {
             "get": {
                 "security": [
@@ -3598,6 +3700,123 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/company/payments/infinitepay": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the organization's InfinitePay connection and settings.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Get payment integration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.IntegrationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Connects or updates the InfinitePay integration. Validates the API key.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Update payment integration",
+                "parameters": [
+                    {
+                        "description": "Integration settings",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.UpsertIntegrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.IntegrationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Disconnect payment integration",
+                "responses": {
+                    "204": {
+                        "description": "Disconnected"
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
                         }
                     }
                 }
@@ -9394,6 +9613,134 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/budgets/{token}/payments": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-payments"
+                ],
+                "summary": "Public create payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment kind",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreatePublicPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.CreateLinkResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/budgets/{token}/payments/confirm": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-payments"
+                ],
+                "summary": "Public confirm payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Public share token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Confirmation identifiers",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entities.ConfirmPublicPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/usecases.PublicConfirmResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/public/budgets/{token}/pdf": {
             "get": {
                 "description": "Streams the budget PDF for a customer share link. No authentication.",
@@ -10739,6 +11086,53 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/webhooks/infinitepay/{orgId}/{token}": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "InfinitePay webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Webhook token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Accepted"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/errors.HTTPError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -10750,7 +11144,8 @@ const docTemplate = `{
                 "deleted",
                 "status_changed",
                 "approved",
-                "rejected"
+                "rejected",
+                "payment_received"
             ],
             "x-enum-varnames": [
                 "ActionCreated",
@@ -10758,7 +11153,8 @@ const docTemplate = `{
                 "ActionDeleted",
                 "ActionStatusChanged",
                 "ActionApproved",
-                "ActionRejected"
+                "ActionRejected",
+                "ActionPaymentReceived"
             ]
         },
         "entities.ActivityEntity": {
@@ -11275,12 +11671,48 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.BudgetPaymentsResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "deposit_percent": {
+                    "type": "number"
+                },
+                "paid": {
+                    "type": "integer"
+                },
+                "payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PaymentLineResponse"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/entities.PaymentStatus"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "entities.BudgetResponse": {
             "type": "object",
             "properties": {
+                "amount_paid": {
+                    "description": "Payment aggregate (customer-facing field names). AmountPaid mirrors the embedded\namount_paid_cents; BalanceDue is max(0, total - paid). deposit_percent and\npayment_status are exposed via the embedded entity.",
+                    "type": "integer"
+                },
+                "amount_paid_cents": {
+                    "type": "integer"
+                },
                 "approved_at": {
                     "description": "Customer response (recorded via the public approve/reject endpoints).\nApprovedAt / CompletedAt: last approval and completion instants (dashboard\nprofit is counted by approval date; realized profit by completion date).",
                     "type": "string"
+                },
+                "balance_due": {
+                    "type": "integer"
                 },
                 "base_price": {
                     "description": "BasePrice is the sale price before discount/shipping/tax (subtotal + overhead +\nprofit), derived from the stored totals. TaxRateApplied is exposed via the\nembedded entity.",
@@ -11318,6 +11750,10 @@ const docTemplate = `{
                 "delivery_days": {
                     "description": "Additional fields for PDF generation",
                     "type": "integer"
+                },
+                "deposit_percent": {
+                    "description": "DepositPercent is the up-front deposit (sinal) percentage for this budget. Nil\nmeans \"charge the full total\" (no deposit split). When nil at create time the\ncompany's default is copied in.",
+                    "type": "number"
                 },
                 "description": {
                     "type": "string"
@@ -11412,6 +11848,13 @@ const docTemplate = `{
                 "packaging_cost": {
                     "description": "cents - Sum of all items packaging costs",
                     "type": "integer"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "payment_status": {
+                    "description": "Payment aggregate (maintained by the payments feature). PaymentStatus is\nunpaid|partial|paid; AmountPaidCents is the principal paid so far; PaidAt is the\ninstant the budget became fully paid.",
+                    "type": "string"
                 },
                 "payment_terms": {
                     "description": "condições de pagamento",
@@ -11742,6 +12185,19 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.ChargeKind": {
+            "type": "string",
+            "enum": [
+                "deposit",
+                "balance",
+                "full"
+            ],
+            "x-enum-varnames": [
+                "KindDeposit",
+                "KindBalance",
+                "KindFull"
+            ]
+        },
         "entities.ColorType": {
             "type": "string",
             "enum": [
@@ -12018,6 +12474,34 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.ConfirmPublicPaymentRequest": {
+            "type": "object",
+            "properties": {
+                "order_nsu": {
+                    "type": "string"
+                },
+                "receipt_url": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "transaction_nsu": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.ConfirmState": {
+            "type": "string",
+            "enum": [
+                "paid",
+                "processing"
+            ],
+            "x-enum-varnames": [
+                "ConfirmPaidState",
+                "ConfirmProcessingState"
+            ]
+        },
         "entities.ConversionFunnelResponse": {
             "type": "object",
             "properties": {
@@ -12169,6 +12653,11 @@ const docTemplate = `{
                     "description": "Additional fields for PDF",
                     "type": "integer",
                     "minimum": 0
+                },
+                "deposit_percent": {
+                    "description": "DepositPercent is the optional up-front deposit (sinal) percent (0 \u003c x \u003c= 100).\nWhen omitted the organization default is copied in (a nil default means \"charge\nthe full total\").",
+                    "type": "number",
+                    "maximum": 100
                 },
                 "description": {
                     "type": "string",
@@ -12457,6 +12946,23 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.CreateLinkResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "checkout_url": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "kind": {
+                    "$ref": "#/definitions/entities.ChargeKind"
+                }
+            }
+        },
         "entities.CreateMovementRequest": {
             "type": "object",
             "required": [
@@ -12516,6 +13022,14 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.CreatePublicPaymentRequest": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "$ref": "#/definitions/entities.ChargeKind"
                 }
             }
         },
@@ -13323,6 +13837,42 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.IntegrationResponse": {
+            "type": "object",
+            "properties": {
+                "api_key_last4": {
+                    "type": "string"
+                },
+                "assured_installments": {
+                    "type": "integer"
+                },
+                "connected": {
+                    "type": "boolean"
+                },
+                "default_deposit_percent": {
+                    "type": "number"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "handle": {
+                    "type": "string"
+                },
+                "pending_links": {
+                    "description": "PendingLinks counts open (pending) payment links across the org. Omitted for\nthe User role.",
+                    "type": "integer"
+                },
+                "pix_discount_percent": {
+                    "type": "number"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.InvalidFeatureError": {
             "type": "object",
             "properties": {
@@ -13925,6 +14475,41 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.PaymentLineResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "capture_method": {
+                    "type": "string"
+                },
+                "checkout_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "installments": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "$ref": "#/definitions/entities.ChargeKind"
+                },
+                "paid_amount": {
+                    "type": "integer"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "receipt_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.PaymentMethodCreateRequest": {
             "type": "object",
             "required": [
@@ -13985,6 +14570,19 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "entities.PaymentStatus": {
+            "type": "string",
+            "enum": [
+                "unpaid",
+                "partial",
+                "paid"
+            ],
+            "x-enum-varnames": [
+                "StatusUnpaid",
+                "StatusPartial",
+                "StatusPaid"
+            ]
         },
         "entities.PerPrintValues": {
             "type": "object",
@@ -14970,6 +15568,10 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "payment": {
+                    "description": "Payment carries the optional payment block (enabled/status/next charge/history),\nassembled by the payments feature. It is an untyped value so the budget package\nstays independent of the payments package; the concrete shape is\npayments entities.PublicPaymentBlock. Absent when payments are not configured.",
+                    "type": "object"
+                },
                 "payment_terms": {
                     "type": "string"
                 },
@@ -14996,6 +15598,99 @@ const docTemplate = `{
                 },
                 "valid_until": {
                     "type": "string"
+                }
+            }
+        },
+        "entities.PublicPaymentBlock": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "can_pay": {
+                    "type": "boolean"
+                },
+                "deposit_percent": {
+                    "type": "number"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "has_pending_link": {
+                    "type": "boolean"
+                },
+                "next": {
+                    "$ref": "#/definitions/entities.PublicPaymentNext"
+                },
+                "paid": {
+                    "type": "integer"
+                },
+                "payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PublicPaymentLine"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/entities.PaymentStatus"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "unavailable_reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicPaymentLine": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "capture_method": {
+                    "type": "string"
+                },
+                "installments": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "$ref": "#/definitions/entities.ChargeKind"
+                },
+                "paid_amount": {
+                    "type": "integer"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "receipt_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.PublicPaymentNext": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "installment_amount": {
+                    "type": "integer"
+                },
+                "interest_free_installments": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "$ref": "#/definitions/entities.ChargeKind"
+                },
+                "max_installments": {
+                    "type": "integer"
+                },
+                "pix_amount": {
+                    "type": "integer"
+                },
+                "pix_discount_percent": {
+                    "type": "number"
                 }
             }
         },
@@ -15741,6 +16436,10 @@ const docTemplate = `{
                     "description": "Additional fields for PDF. DeliveryDays is tri-state: absent keeps it, explicit\nnull clears it, a value (\u003e= 0) sets it.",
                     "type": "integer"
                 },
+                "deposit_percent": {
+                    "description": "DepositPercent is tri-state. Absent: unchanged. Explicit null: clears it (charge\nthe full total). Value: sets the deposit percent (0 \u003c x \u003c= 100).",
+                    "type": "number"
+                },
                 "description": {
                     "type": "string",
                     "maxLength": 1000
@@ -16094,6 +16793,40 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 1
+                }
+            }
+        },
+        "entities.UpsertIntegrationRequest": {
+            "type": "object",
+            "required": [
+                "handle"
+            ],
+            "properties": {
+                "api_key": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 8
+                },
+                "assured_installments": {
+                    "type": "integer",
+                    "maximum": 12,
+                    "minimum": 1
+                },
+                "default_deposit_percent": {
+                    "type": "number",
+                    "maximum": 100
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "handle": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "pix_discount_percent": {
+                    "type": "number",
+                    "maximum": 30,
+                    "minimum": 0
                 }
             }
         },
@@ -17219,6 +17952,17 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "usecases.PublicConfirmResponse": {
+            "type": "object",
+            "properties": {
+                "confirmation": {
+                    "$ref": "#/definitions/entities.ConfirmState"
+                },
+                "payment": {
+                    "$ref": "#/definitions/entities.PublicPaymentBlock"
                 }
             }
         },

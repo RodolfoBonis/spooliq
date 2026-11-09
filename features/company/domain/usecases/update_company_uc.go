@@ -114,6 +114,15 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 	if request.ZipCode != nil {
 		company.ZipCode = request.ZipCode
 	}
+	if request.DefaultTaxRate != nil {
+		company.DefaultTaxRate = *request.DefaultTaxRate
+	}
+	if request.DefaultQuoteValidityDays != nil {
+		company.DefaultQuoteValidityDays = *request.DefaultQuoteValidityDays
+	}
+	if request.DefaultPaymentTerms != nil {
+		company.DefaultPaymentTerms = request.DefaultPaymentTerms
+	}
 
 	company.UpdatedAt = time.Now()
 
@@ -132,22 +141,25 @@ func (uc *CompanyUseCase) Update(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, entities.CompanyResponse{
-		ID:             company.ID.String(),
-		OrganizationID: company.OrganizationID,
-		Name:           company.Name,
-		TradeName:      company.TradeName,
-		Document:       company.Document,
-		Email:          company.Email,
-		Phone:          company.Phone,
-		WhatsApp:       company.WhatsApp,
-		Instagram:      company.Instagram,
-		Website:        company.Website,
-		LogoURL:        company.LogoURL,
-		Address:        company.Address,
-		City:           company.City,
-		State:          company.State,
-		ZipCode:        company.ZipCode,
-		CreatedAt:      company.CreatedAt,
-		UpdatedAt:      company.UpdatedAt,
+		ID:                       company.ID.String(),
+		OrganizationID:           company.OrganizationID,
+		Name:                     company.Name,
+		TradeName:                company.TradeName,
+		Document:                 company.Document,
+		Email:                    company.Email,
+		Phone:                    company.Phone,
+		WhatsApp:                 company.WhatsApp,
+		Instagram:                company.Instagram,
+		Website:                  company.Website,
+		LogoURL:                  company.LogoURL,
+		Address:                  company.Address,
+		City:                     company.City,
+		State:                    company.State,
+		ZipCode:                  company.ZipCode,
+		DefaultTaxRate:           company.DefaultTaxRate,
+		DefaultQuoteValidityDays: company.DefaultQuoteValidityDays,
+		DefaultPaymentTerms:      company.DefaultPaymentTerms,
+		CreatedAt:                company.CreatedAt,
+		UpdatedAt:                company.UpdatedAt,
 	})
 }

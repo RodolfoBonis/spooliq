@@ -14,6 +14,8 @@ func Routes(route *gin.RouterGroup, useCase usecases.ICustomerUseCase, protectFa
 		customerRoutes.POST("", protectFactory(useCase.Create, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		customerRoutes.GET("", protectFactory(useCase.FindAll, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		customerRoutes.GET("/search", protectFactory(useCase.Search, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		customerRoutes.GET("/export.csv", protectFactory(useCase.ExportCSV, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
+		customerRoutes.POST("/import", protectFactory(useCase.ImportCSV, roles.OwnerRole, roles.OrgAdminRole))
 		customerRoutes.GET("/:id", protectFactory(useCase.FindByID, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		customerRoutes.PUT("/:id", protectFactory(useCase.Update, roles.OwnerRole, roles.OrgAdminRole, roles.UserRole))
 		// Only Owner and OrgAdmin can delete customers

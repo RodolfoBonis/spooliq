@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.22.1 - 2026-11-09
+
+### Changes
+- chore: bump version to 2.22.1 (773c88c)
+- fix(payments): align InfinitePay link payload with documented contract (#134) (f9bf9be)
+
+
 ## v2.22.0 - 2026-11-09
 
 ### Changes

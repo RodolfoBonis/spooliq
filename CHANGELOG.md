@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.22.0 - 2026-11-09
+
+### Changes
+- chore: bump version to 2.22.0 (77714fb)
+- feat(payments): InfinitePay budget payments (deposit/balance/full via public link) (#131) (07f184a)
+
+
 ## v2.21.0 - 2026-10-30
 
 ### Changes

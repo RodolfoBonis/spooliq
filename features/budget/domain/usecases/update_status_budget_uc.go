@@ -135,6 +135,19 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		clearValidUntil = true
 	}
 
+	// Leaving a payable state for draft (revision) or cancelled voids any pending
+	// payment link: a different total on re-send must not be payable via an old link.
+	// CancelPending runs in the SAME transaction (via the tx-bound *gorm.DB) so it is
+	// atomic with the status change. The pending-link index guarantees at most one per
+	// (budget, kind); a different value later marks any superseded link accordingly.
+	cancelReason := ""
+	switch request.Status {
+	case entities.StatusDraft:
+		cancelReason = PendingCancelBudgetRevised
+	case entities.StatusCancelled:
+		cancelReason = PendingCancelBudgetCancelled
+	}
+
 	if err := uc.budgetRepository.WithTransaction(ctx, func(repo budgetRepo.BudgetRepository) error {
 		if err := repo.UpdateStatus(ctx, budget.ID, organizationID, previousStatus, request.Status); err != nil {
 			return err
@@ -151,6 +164,13 @@ func (uc *BudgetUseCase) UpdateStatus(c *gin.Context) {
 		}
 		if err := repo.AddStatusHistory(ctx, history); err != nil {
 			return err
+		}
+		// Cancel pending payment links inside the same transaction when leaving a
+		// payable state. Best-effort wiring: only when a canceler is injected.
+		if cancelReason != "" && uc.pendingCanceler != nil {
+			if err := uc.pendingCanceler.CancelPending(ctx, repo.UnderlyingTx(), budget.ID, organizationID, cancelReason); err != nil {
+				return err
+			}
 		}
 		// On completion, deduct filament stock in the SAME transaction so the status
 		// change and the consumption movements are atomic. The deduction is idempotent

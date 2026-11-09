@@ -21,6 +21,15 @@ const (
 	StatusCancelled BudgetStatus = "cancelled" // StatusCancelled represents a cancelled budget
 )
 
+// Payment status constants for BudgetEntity.PaymentStatus (aggregate of the budget's
+// payments). These mirror payments entities.PaymentStatus but are duplicated here so
+// the budget package does not import the payments package.
+const (
+	PaymentStatusUnpaid  = "unpaid"
+	PaymentStatusPartial = "partial"
+	PaymentStatusPaid    = "paid"
+)
+
 // Discount type constants for BudgetEntity.DiscountType.
 const (
 	DiscountTypePercent = "percent" // DiscountTypePercent: DiscountValue is a 0-100 percentage of base_price
@@ -118,6 +127,19 @@ type BudgetEntity struct {
 	// TaxRate is the budget-level "por dentro" tax rate (percent). When nil the
 	// company default_tax_rate is used. TaxRateApplied records the rate actually used.
 	TaxRate *float64 `json:"tax_rate,omitempty"`
+
+	// DepositPercent is the up-front deposit (sinal) percentage for this budget. Nil
+	// means "charge the full total" (no deposit split). When nil at create time the
+	// company's default is copied in.
+	DepositPercent *float64 `json:"deposit_percent,omitempty"`
+
+	// Payment aggregate (maintained by the payments feature). PaymentStatus is
+	// unpaid|partial|paid; AmountPaidCents is the principal paid so far; PaidAt is the
+	// instant the budget became fully paid.
+	PaymentStatus        string     `json:"payment_status"`
+	AmountPaidCents      int64      `json:"amount_paid_cents"`
+	AmountRefundDueCents int64      `json:"amount_refund_due_cents"`
+	PaidAt               *time.Time `json:"paid_at,omitempty"`
 
 	// Calculated costs (in cents for precision)
 	FilamentCost       int64 `json:"filament_cost"`        // cents - Sum of all items filament costs
@@ -222,9 +244,22 @@ func (b *BudgetEntity) CanBeEdited() bool {
 	return b.Status == StatusDraft
 }
 
-// CanBeDeleted checks if the budget can be deleted
+// CanBeDeleted checks if the budget can be deleted. A printing/completed budget is
+// never deletable; neither is a budget that has received any payment (money changed
+// hands, so the record must be preserved).
 func (b *BudgetEntity) CanBeDeleted() bool {
-	return b.Status != StatusPrinting && b.Status != StatusCompleted
+	return b.Status != StatusPrinting && b.Status != StatusCompleted && b.AmountPaidCents == 0
+}
+
+// HasPayments reports whether any amount has been paid against the budget.
+func (b *BudgetEntity) HasPayments() bool {
+	return b.AmountPaidCents > 0
+}
+
+// PayableStatus reports whether the budget is in a status where the customer may pay
+// (approved/printing/completed while a balance remains).
+func (b *BudgetEntity) PayableStatus() bool {
+	return b.Status == StatusApproved || b.Status == StatusPrinting || b.Status == StatusCompleted
 }
 
 // ExpiredBudget identifies a budget moved to expired by the expiry job.

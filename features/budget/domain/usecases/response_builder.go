@@ -206,6 +206,15 @@ func formatPrintTime(hours, minutes int) string {
 	return fmt.Sprintf("%dm", minutes)
 }
 
+// balanceDue returns the remaining amount to pay on a budget (never negative).
+func balanceDue(b *entities.BudgetEntity) int64 {
+	d := b.TotalCost - b.AmountPaidCents
+	if d < 0 {
+		return 0
+	}
+	return d
+}
+
 // budgetLevelRefs resolves the budget's {id, name} references to its print profile
 // and its budget-level cost preset. Both are best-effort (a missing name degrades
 // to empty rather than failing the response) and either may be nil.
@@ -265,6 +274,8 @@ func (uc *BudgetUseCase) buildBudgetResponse(ctx context.Context, budgetID uuid.
 	return &entities.BudgetResponse{
 		BudgetEntity:          budget,
 		BasePrice:             budget.BasePrice(),
+		AmountPaid:            budget.AmountPaidCents,
+		BalanceDue:            balanceDue(budget),
 		Customer:              customerInfo,
 		Items:                 itemResponses,
 		Profile:               profileRef,
@@ -360,6 +371,8 @@ func (uc *BudgetUseCase) buildBudgetListResponses(ctx context.Context, budgets [
 		responses = append(responses, entities.BudgetResponse{
 			BudgetEntity:          budget,
 			BasePrice:             budget.BasePrice(),
+			AmountPaid:            budget.AmountPaidCents,
+			BalanceDue:            balanceDue(budget),
 			Customer:              customers[budget.CustomerID],
 			Items:                 itemResponses,
 			Profile:               profileRef,

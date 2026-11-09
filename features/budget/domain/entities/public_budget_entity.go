@@ -63,4 +63,10 @@ type PublicBudgetView struct {
 	DeliveryDays *int    `json:"delivery_days"`
 	PaymentTerms *string `json:"payment_terms"`
 	Notes        *string `json:"notes"`
+
+	// Payment carries the optional payment block (enabled/status/next charge/history),
+	// assembled by the payments feature. It is an untyped value so the budget package
+	// stays independent of the payments package; the concrete shape is
+	// payments entities.PublicPaymentBlock. Absent when payments are not configured.
+	Payment interface{} `json:"payment,omitempty" swaggertype:"object"`
 }

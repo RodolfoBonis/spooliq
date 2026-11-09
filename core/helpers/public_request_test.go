@@ -1,4 +1,4 @@
-package usecases
+package helpers
 
 import (
 	"net/http"
@@ -28,7 +28,7 @@ func TestPublicClientIP(t *testing.T) {
 			"CF-Connecting-IP": "203.0.113.7",
 			"X-Forwarded-For":  "198.51.100.9, 10.0.0.1",
 		})
-		if got := publicClientIP(c); got != "203.0.113.7" {
+		if got := PublicClientIP(c); got != "203.0.113.7" {
 			t.Errorf("got %q want 203.0.113.7", got)
 		}
 	})
@@ -37,7 +37,7 @@ func TestPublicClientIP(t *testing.T) {
 		c := newCtxWithHeaders("10.0.0.1:1111", map[string]string{
 			"X-Forwarded-For": "198.51.100.9, 10.0.0.1",
 		})
-		if got := publicClientIP(c); got != "198.51.100.9" {
+		if got := PublicClientIP(c); got != "198.51.100.9" {
 			t.Errorf("got %q want 198.51.100.9", got)
 		}
 	})
@@ -46,7 +46,7 @@ func TestPublicClientIP(t *testing.T) {
 		c := newCtxWithHeaders("10.0.0.1:1111", map[string]string{
 			"X-Forwarded-For": "garbage, 198.51.100.42",
 		})
-		if got := publicClientIP(c); got != "198.51.100.42" {
+		if got := PublicClientIP(c); got != "198.51.100.42" {
 			t.Errorf("got %q want 198.51.100.42", got)
 		}
 	})
@@ -56,7 +56,7 @@ func TestPublicClientIP(t *testing.T) {
 			"CF-Connecting-IP": "not-an-ip",
 			"X-Forwarded-For":  "198.51.100.9",
 		})
-		if got := publicClientIP(c); got != "198.51.100.9" {
+		if got := PublicClientIP(c); got != "198.51.100.9" {
 			t.Errorf("got %q want 198.51.100.9", got)
 		}
 	})

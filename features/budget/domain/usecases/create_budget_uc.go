@@ -138,13 +138,17 @@ func (uc *BudgetUseCase) Create(c *gin.Context) {
 		IncludeShipping:    request.IncludeShipping,
 		ShippingOverride:   request.ShippingOverride,
 		TaxRate:            request.TaxRate,
-		DeliveryDays:       request.DeliveryDays,
-		PaymentTerms:       paymentTerms,
-		Notes:              request.Notes,
-		ValidUntil:         normalizeValidUntil(request.ValidUntil),
-		OwnerUserID:        userID,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
+		// A new budget inherits the organization's default deposit percent when the
+		// request omits one (nil => charge the full total).
+		DepositPercent: uc.resolveDepositPercent(c, organizationID, request.DepositPercent),
+		PaymentStatus:  entities.PaymentStatusUnpaid,
+		DeliveryDays:   request.DeliveryDays,
+		PaymentTerms:   paymentTerms,
+		Notes:          request.Notes,
+		ValidUntil:     normalizeValidUntil(request.ValidUntil),
+		OwnerUserID:    userID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// Record initial status history for the draft status

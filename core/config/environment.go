@@ -171,6 +171,39 @@ func EnvAsaasBaseURL() string {
 	return GetEnv("ASAAS_BASE_URL", "https://sandbox.asaas.com/api/v3")
 }
 
+// EnvInfinitePayBaseURL returns the InfinitePay Checkout API base URL. Per-company
+// credentials are passed per call; this is only the host of the public API.
+func EnvInfinitePayBaseURL() string {
+	return GetEnv("INFINITEPAY_BASE_URL", "https://api.checkout.infinitepay.io")
+}
+
+// EnvInfinitePayEnabled is the global kill switch for the InfinitePay payment
+// feature. Defaults to true; set INFINITEPAY_ENABLED=false to disable every
+// payment endpoint regardless of per-company connection state.
+func EnvInfinitePayEnabled() bool {
+	return GetEnv("INFINITEPAY_ENABLED", "true") == "true"
+}
+
+// EnvPublicAPIBaseURL is the externally reachable base URL of THIS API, used to
+// build the webhook URL registered with InfinitePay
+// ({PUBLIC_API}/v1/webhooks/infinitepay/{org}/{token}).
+func EnvPublicAPIBaseURL() string {
+	return GetEnv("PUBLIC_API_BASE_URL", "")
+}
+
+// EnvPublicWebBaseURL is the public web app base URL, used to build the checkout
+// redirect_url ({PUBLIC_WEB}/orcamento/{token}?pagamento=retorno).
+func EnvPublicWebBaseURL() string {
+	return GetEnv("PUBLIC_WEB_BASE_URL", "")
+}
+
+// EnvPaymentsEncryptionKey returns the AES key material used to encrypt per-company
+// payment credentials at rest. Sourced from Vault. When empty the payment
+// endpoints degrade to 503 payments_not_configured and the app still boots.
+func EnvPaymentsEncryptionKey() string {
+	return GetEnv("PAYMENTS_ENCRYPTION_KEY", "")
+}
+
 // EnvCORSAllowedOrigins returns the explicit list of allowed CORS origins parsed
 // from the comma-separated CORS_ALLOWED_ORIGINS environment variable.
 //

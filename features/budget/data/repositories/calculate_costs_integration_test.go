@@ -92,7 +92,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			discount_amount bigint DEFAULT 0,
 			shipping_cost bigint DEFAULT 0,
 			tax_amount bigint DEFAULT 0,
-			tax_rate_applied double precision DEFAULT 0,
+			tax_rate_applied double precision DEFAULT 0, deposit_percent double precision, payment_status varchar(10) NOT NULL DEFAULT 'unpaid', amount_paid_cents bigint NOT NULL DEFAULT 0, amount_refund_due_cents bigint NOT NULL DEFAULT 0, paid_at timestamptz,
 			total_cost bigint DEFAULT 0,
 			delivery_days integer,
 			payment_terms text,

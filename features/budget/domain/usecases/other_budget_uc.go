@@ -60,7 +60,9 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 
 	// Create new budget as draft, copying ALL relevant fields (including the
 	// PDF-facing ones and the Phase-4A cost flags: machine cost, discount, shipping
-	// and tax). Calculated costs are recomputed by CalculateCosts.
+	// and tax). Calculated costs are recomputed by CalculateCosts. The payment
+	// aggregate is NOT copied (a fresh draft has no payments); only the deposit
+	// percent carries over so the new quote keeps the same deposit policy.
 	newBudget := &entities.BudgetEntity{
 		ID:                 uuid.New(),
 		OrganizationID:     organizationID,
@@ -82,6 +84,8 @@ func (uc *BudgetUseCase) Duplicate(c *gin.Context) {
 		IncludeShipping:    originalBudget.IncludeShipping,
 		ShippingOverride:   originalBudget.ShippingOverride,
 		TaxRate:            originalBudget.TaxRate,
+		DepositPercent:     originalBudget.DepositPercent,
+		PaymentStatus:      entities.PaymentStatusUnpaid,
 		DeliveryDays:       originalBudget.DeliveryDays,
 		PaymentTerms:       originalBudget.PaymentTerms,
 		Notes:              originalBudget.Notes,

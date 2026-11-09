@@ -199,6 +199,20 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		}
 		budget.TaxRate = &v
 	}
+	// DepositPercent: null clears it (charge the full total); a value sets it and must
+	// be in (0, 100]. Explicit range check (the Optional field carries no `validate:` tag).
+	if request.DepositPercent.IsClear() {
+		budget.DepositPercent = nil
+	} else if request.DepositPercent.HasValue() {
+		v := request.DepositPercent.Value
+		if v <= 0 || v >= 100 {
+			verr := coreErrors.Validation(map[string]string{"deposit_percent": "deve ser maior que 0 e menor que 100 (100% = integral, use null)"})
+			uc.logger.Error(ctx, "Invalid deposit percent", map[string]interface{}{"error": verr.Error()})
+			coreErrors.Respond(c, verr)
+			return
+		}
+		budget.DepositPercent = &v
+	}
 	// Validate the resulting discount state (post-merge), so a partial update that
 	// only touches one of type/value is checked against the effective pair.
 	if err := validateDiscountInput(budget.DiscountType, budget.DiscountValue); err != nil {

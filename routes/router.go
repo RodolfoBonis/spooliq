@@ -30,6 +30,7 @@ import (
 	model3duc "github.com/RodolfoBonis/spooliq/features/model3d/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/notification"
 	notificationuc "github.com/RodolfoBonis/spooliq/features/notification/domain/usecases"
+	"github.com/RodolfoBonis/spooliq/features/payments"
 	"github.com/RodolfoBonis/spooliq/features/preset"
 	"github.com/RodolfoBonis/spooliq/features/profile"
 	"github.com/RodolfoBonis/spooliq/features/slicer"
@@ -78,6 +79,7 @@ func InitializeRoutes(
 	profileHandler *profile.Handler,
 	dashboardHandler *dashboard.Handler,
 	webhookHandler *webhooks.Handler,
+	paymentsHandler *payments.Handler,
 	userHandler *users.Handler,
 	accountHandler *account.Handler,
 	adminHandler *admin.Handler,
@@ -117,6 +119,7 @@ func InitializeRoutes(
 	users.SetupRoutes(root, userHandler, protectFactory)
 	account.SetupRoutes(root, accountHandler, protectFactory)
 	webhooks.SetupRoutes(root, webhookHandler)
+	payments.SetupRoutes(root, paymentsHandler, protectFactory)
 	admin.SetupRoutes(root, adminHandler, protectFactory)
 	subscriptions.Routes(root, paymentMethodUc, subscriptionPlanUc, manageSubscriptionUc, protectFactory)
 }

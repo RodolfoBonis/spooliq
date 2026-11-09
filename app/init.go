@@ -47,6 +47,9 @@ func InitAndRun() fx.Option {
 				log.Info(ctx, "Running migrations...")
 
 				services.RunMigrations()
+				// Payments tables depend on companies/budgets existing, so they run
+				// after the core migrations. Additive and safe to re-run.
+				services.RunPaymentsMigrations()
 
 				log.Info(ctx, "Migrations done")
 

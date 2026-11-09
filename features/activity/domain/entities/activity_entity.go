@@ -9,12 +9,13 @@ type ActivityAction string
 
 // Activity actions
 const (
-	ActionCreated       ActivityAction = "created"
-	ActionUpdated       ActivityAction = "updated"
-	ActionDeleted       ActivityAction = "deleted"
-	ActionStatusChanged ActivityAction = "status_changed"
-	ActionApproved      ActivityAction = "approved"
-	ActionRejected      ActivityAction = "rejected"
+	ActionCreated         ActivityAction = "created"
+	ActionUpdated         ActivityAction = "updated"
+	ActionDeleted         ActivityAction = "deleted"
+	ActionStatusChanged   ActivityAction = "status_changed"
+	ActionApproved        ActivityAction = "approved"
+	ActionRejected        ActivityAction = "rejected"
+	ActionPaymentReceived ActivityAction = "payment_received"
 )
 
 // ActivityEntityType represents the type of entity affected.

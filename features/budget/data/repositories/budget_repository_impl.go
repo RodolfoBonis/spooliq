@@ -261,6 +261,7 @@ func (r *budgetRepositoryImpl) Update(ctx context.Context, budget *entities.Budg
 		"include_shipping":     model.IncludeShipping,
 		"shipping_override":    model.ShippingOverride,
 		"tax_rate":             model.TaxRate,
+		"deposit_percent":      model.DepositPercent,
 		"delivery_days":        model.DeliveryDays,
 		"payment_terms":        model.PaymentTerms,
 		"notes":                model.Notes,

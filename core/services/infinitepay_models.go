@@ -6,8 +6,9 @@ package services
 // API key, passed per call via the X-Api-Key header. Amounts are ALWAYS in cents.
 //
 // UNVERIFIED ASSUMPTIONS (no sandbox — confirm during the R$1 production test):
-//   - POST /links accepts items[].price in cents, order_nsu, redirect_url,
-//     customer{name,email,phone_number}, webhook{url,events:["payment"]},
+//   - POST /links accepts items[]{description,price(cents),quantity} (confirmed in the
+//     official docs: an item without "description" is rejected with 422), order_nsu, redirect_url,
+//     customer{name,email,phone_number}, webhook{url,events:[paid,refunded,canceled,payment_failed]},
 //     options{single_payment, valid_until (RFC3339), assured_installments,
 //     discounts.pix (integer %), payment_methods_enabled}, and an optional top-level
 //     handle. Response: { checkout_url, slug? }.
@@ -20,9 +21,10 @@ package services
 
 // InfinitePayItem is a line item in a checkout link. Price is in cents.
 type InfinitePayItem struct {
-	Name     string `json:"name,omitempty"`
-	Price    int64  `json:"price"`
-	Quantity int    `json:"quantity"`
+	// Description is required by the API (the docs call the item label "description").
+	Description string `json:"description"`
+	Price       int64  `json:"price"`
+	Quantity    int    `json:"quantity"`
 }
 
 // InfinitePayCustomer carries the (optional) customer identification shown at checkout.
@@ -72,6 +74,8 @@ type InfinitePayCreateLinkRequest struct {
 // InfinitePayCreateLinkResponse is the response of POST /links.
 type InfinitePayCreateLinkResponse struct {
 	CheckoutURL string `json:"checkout_url"`
+	// URL is accepted as a fallback in case the API returns the link under "url".
+	URL string `json:"url,omitempty"`
 	// Slug identifies the created link; echoed back on webhook/payment_check.
 	Slug string `json:"slug,omitempty"`
 }
@@ -113,7 +117,17 @@ func (r *InfinitePayPaymentCheckResponse) ResolvedSlug() string {
 }
 
 // InfinitePayErrorResponse is the error envelope returned by the Checkout API.
+// Errors may carry a field map (validation failures) besides message/error.
 type InfinitePayErrorResponse struct {
-	Message string `json:"message"`
-	Error   string `json:"error"`
+	Message string                 `json:"message"`
+	Error   string                 `json:"error"`
+	Errors  map[string]interface{} `json:"errors,omitempty"`
+}
+
+// ResolvedCheckoutURL returns checkout_url, falling back to url.
+func (r *InfinitePayCreateLinkResponse) ResolvedCheckoutURL() string {
+	if r.CheckoutURL != "" {
+		return r.CheckoutURL
+	}
+	return r.URL
 }

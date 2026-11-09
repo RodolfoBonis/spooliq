@@ -323,7 +323,7 @@ func (uc *IntegrationUseCase) validateCredential(ctx context.Context, apiKey, ha
 func (uc *IntegrationUseCase) validateViaTestLink(ctx context.Context, apiKey, handle string) error {
 	_, err := uc.client.CreateLink(ctx, apiKey, coreServices.InfinitePayCreateLinkRequest{
 		Handle:   handle,
-		Items:    []coreServices.InfinitePayItem{{Name: "Validação", Price: validateLinkAmountCents, Quantity: 1}},
+		Items:    []coreServices.InfinitePayItem{{Description: "Validação", Price: validateLinkAmountCents, Quantity: 1}},
 		OrderNSU: "spq_validate_" + strings.ReplaceAll(uuid.NewString(), "-", ""),
 		Options: &coreServices.InfinitePayLinkOptions{
 			SinglePayment: true,

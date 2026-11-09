@@ -2,11 +2,13 @@ package usecases_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/crypto"
+	coreServices "github.com/RodolfoBonis/spooliq/core/services"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/entities"
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/usecases"
@@ -298,5 +300,72 @@ func TestCharge_LeaseReturns409ThenExpires(t *testing.T) {
 	}
 	if client.createCalls != 1 {
 		t.Fatalf("remote call should proceed after lease expiry, calls=%d", client.createCalls)
+	}
+}
+
+// TestCharge_LinkPayloadMatchesInfinitePayContract pins the POST /links body to the
+// documented contract: items need "description" (a missing one is rejected with 422)
+// and webhook events must come from the documented set.
+func TestCharge_LinkPayloadMatchesInfinitePayContract(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	integ := repo.seedIntegration("org1", box, 0, 1, nil)
+	budget := repo.seedBudget("org1", 2000, 0, nil, "approved")
+	client := &fakeClient{}
+
+	cs := newChargeService(repo, client, box)
+	if _, err := cs.CreateOrReuseLink(context.Background(), budget, integ, nil); err != nil {
+		t.Fatalf("CreateOrReuseLink: %v", err)
+	}
+
+	raw, err := json.Marshal(client.lastCreateReq)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var body struct {
+		Items   []map[string]interface{} `json:"items"`
+		Webhook struct {
+			Events []string `json:"events"`
+		} `json:"webhook"`
+	}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(body.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(body.Items))
+	}
+	if d, _ := body.Items[0]["description"].(string); d == "" {
+		t.Fatalf("item must carry a non-empty description, got %s", raw)
+	}
+	if _, ok := body.Items[0]["name"]; ok {
+		t.Fatalf("item must not send the undocumented \"name\" field: %s", raw)
+	}
+	allowed := map[string]bool{"created": true, "paid": true, "settled": true, "canceled": true, "refunded": true, "payment_failed": true}
+	if len(body.Webhook.Events) == 0 {
+		t.Fatalf("webhook events must be set")
+	}
+	for _, e := range body.Webhook.Events {
+		if !allowed[e] {
+			t.Fatalf("webhook event %q is not in the documented set", e)
+		}
+	}
+}
+
+// TestCharge_AcceptsURLFallbackInLinkResponse covers a response that returns the link
+// under "url" instead of "checkout_url".
+func TestCharge_AcceptsURLFallbackInLinkResponse(t *testing.T) {
+	box := testBox()
+	repo := newFakeRepo()
+	integ := repo.seedIntegration("org1", box, 0, 1, nil)
+	budget := repo.seedBudget("org1", 2000, 0, nil, "approved")
+	client := &fakeClient{createResp: &coreServices.InfinitePayCreateLinkResponse{URL: "https://checkout.infinitepay.io/fallback"}}
+
+	cs := newChargeService(repo, client, box)
+	resp, err := cs.CreateOrReuseLink(context.Background(), budget, integ, nil)
+	if err != nil {
+		t.Fatalf("CreateOrReuseLink: %v", err)
+	}
+	if resp.CheckoutURL != "https://checkout.infinitepay.io/fallback" {
+		t.Fatalf("expected fallback URL, got %q", resp.CheckoutURL)
 	}
 }

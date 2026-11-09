@@ -47,6 +47,7 @@ type fakeClient struct {
 	checkResp       *coreServices.InfinitePayPaymentCheckResponse
 	checkErr        error
 	lastCreateOrder string
+	lastCreateReq   coreServices.InfinitePayCreateLinkRequest
 }
 
 func (f *fakeClient) CreateLink(_ context.Context, _ string, req coreServices.InfinitePayCreateLinkRequest) (*coreServices.InfinitePayCreateLinkResponse, error) {
@@ -54,6 +55,7 @@ func (f *fakeClient) CreateLink(_ context.Context, _ string, req coreServices.In
 	defer f.mu.Unlock()
 	f.createCalls++
 	f.lastCreateOrder = req.OrderNSU
+	f.lastCreateReq = req
 	if f.createErr != nil {
 		return nil, f.createErr
 	}

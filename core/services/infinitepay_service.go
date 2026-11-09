@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/RodolfoBonis/go-otel-agent/logger"
@@ -114,12 +115,31 @@ func (s *InfinitePayService) doRequest(ctx context.Context, apiKey, method, path
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Never log the body (customer data / tokens). Only the status drives the map.
-		s.logger.Error(ctx, "InfinitePay API returned error status", map[string]interface{}{
+		// Never log the raw body (it may echo customer data). Only the provider's own
+		// error fields are logged, so validation failures (422) are diagnosable.
+		fields := map[string]interface{}{
 			"method":      method,
 			"path":        path,
 			"status_code": resp.StatusCode,
-		})
+		}
+		var apiErr InfinitePayErrorResponse
+		if json.Unmarshal(respBody, &apiErr) == nil {
+			if apiErr.Message != "" {
+				fields["provider_message"] = truncate(apiErr.Message, 300)
+			}
+			if apiErr.Error != "" {
+				fields["provider_error"] = truncate(apiErr.Error, 300)
+			}
+			if len(apiErr.Errors) > 0 {
+				keys := make([]string, 0, len(apiErr.Errors))
+				for k := range apiErr.Errors {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				fields["provider_error_fields"] = keys
+			}
+		}
+		s.logger.Error(ctx, "InfinitePay API returned error status", fields)
 		switch {
 		case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 			return ErrIPUnauthorized
@@ -136,4 +156,12 @@ func (s *InfinitePayService) doRequest(ctx context.Context, apiKey, method, path
 		}
 	}
 	return nil
+}
+
+// truncate caps a provider-supplied string before it is logged.
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }

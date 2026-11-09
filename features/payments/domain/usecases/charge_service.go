@@ -232,7 +232,7 @@ func (s *ChargeService) createRemoteLink(
 
 	req := coreServices.InfinitePayCreateLinkRequest{
 		Handle:   integration.Handle,
-		Items:    []coreServices.InfinitePayItem{{Name: itemName, Price: amount, Quantity: 1}},
+		Items:    []coreServices.InfinitePayItem{{Description: itemName, Price: amount, Quantity: 1}},
 		OrderNSU: payment.OrderNSU,
 		Options: &coreServices.InfinitePayLinkOptions{
 			SinglePayment: true,
@@ -250,7 +250,7 @@ func (s *ChargeService) createRemoteLink(
 	}
 	req.Webhook = &coreServices.InfinitePayWebhook{
 		URL:    s.webhookURL(budget.OrganizationID, webhookToken),
-		Events: []string{"payment"},
+		Events: []string{"paid", "refunded", "canceled", "payment_failed"},
 	}
 	if budget.CustomerName != "" || budget.CustomerEmail != "" {
 		req.Customer = &coreServices.InfinitePayCustomer{
@@ -266,7 +266,8 @@ func (s *ChargeService) createRemoteLink(
 		_ = s.repo.UpdatePaymentFields(ctx, payment.ID, map[string]interface{}{"link_creating_at": nil})
 		return nil, s.mapClientError(ctx, "create_link", budget.ID, err)
 	}
-	if !validGatewayURL(resp.CheckoutURL) {
+	checkoutURL := resp.ResolvedCheckoutURL()
+	if !validGatewayURL(checkoutURL) {
 		_ = s.repo.UpdatePaymentFields(ctx, payment.ID, map[string]interface{}{"link_creating_at": nil})
 		s.alert(ctx, "checkout_url rejected (non-infinitepay host)", map[string]interface{}{
 			"budget_id": budget.ID.String(),
@@ -275,7 +276,7 @@ func (s *ChargeService) createRemoteLink(
 		return nil, ErrProviderRejected
 	}
 
-	fields := map[string]interface{}{"checkout_url": resp.CheckoutURL, "link_creating_at": nil}
+	fields := map[string]interface{}{"checkout_url": checkoutURL, "link_creating_at": nil}
 	if resp.Slug != "" {
 		fields["slug"] = resp.Slug
 	}
@@ -290,7 +291,7 @@ func (s *ChargeService) createRemoteLink(
 		return nil, ErrChargeNotAvailable
 	}
 
-	return &entities.CreateLinkResponse{CheckoutURL: resp.CheckoutURL, Kind: payment.Kind, Amount: amount, ExpiresAt: &validUntil}, nil
+	return &entities.CreateLinkResponse{CheckoutURL: checkoutURL, Kind: payment.Kind, Amount: amount, ExpiresAt: &validUntil}, nil
 }
 
 // mapClientError maps an InfinitePay client error to a payment sentinel, alerting on

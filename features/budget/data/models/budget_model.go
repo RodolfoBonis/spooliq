@@ -85,6 +85,16 @@ type BudgetModel struct {
 	// TaxRate is the budget-level "por dentro" tax rate (percent); nil => company default.
 	TaxRate *float64 `gorm:"type:double precision" json:"tax_rate"`
 
+	// DepositPercent is the up-front deposit (sinal) percentage; nil => charge the
+	// full total (no split). Copied from the company default at create time when nil.
+	DepositPercent *float64 `gorm:"type:double precision" json:"deposit_percent"`
+
+	// Payment aggregate, maintained by the payments feature. The DB default of
+	// 'unpaid' backfills existing rows on AutoMigrate.
+	PaymentStatus   string     `gorm:"type:varchar(10);not null;default:'unpaid'" json:"payment_status"`
+	AmountPaidCents int64      `gorm:"type:bigint;not null;default:0" json:"amount_paid_cents"`
+	PaidAt          *time.Time `gorm:"type:timestamptz" json:"paid_at"`
+
 	// Calculated costs (in cents)
 	FilamentCost       int64 `gorm:"type:bigint;default:0" json:"filament_cost"`
 	WasteCost          int64 `gorm:"type:bigint;default:0" json:"waste_cost"`
@@ -147,6 +157,9 @@ func (b *BudgetModel) BeforeCreate(tx *gorm.DB) error {
 	if b.Status == "" {
 		b.Status = string(entities.StatusDraft)
 	}
+	if b.PaymentStatus == "" {
+		b.PaymentStatus = entities.PaymentStatusUnpaid
+	}
 	return nil
 }
 
@@ -184,6 +197,10 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		IncludeShipping:           b.IncludeShipping,
 		ShippingOverride:          b.ShippingOverride,
 		TaxRate:                   b.TaxRate,
+		DepositPercent:            b.DepositPercent,
+		PaymentStatus:             b.PaymentStatus,
+		AmountPaidCents:           b.AmountPaidCents,
+		PaidAt:                    b.PaidAt,
 		FilamentCost:              b.FilamentCost,
 		WasteCost:                 b.WasteCost,
 		EnergyCost:                b.EnergyCost,
@@ -254,6 +271,12 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.IncludeShipping = entity.IncludeShipping
 	b.ShippingOverride = entity.ShippingOverride
 	b.TaxRate = entity.TaxRate
+	b.DepositPercent = entity.DepositPercent
+	if entity.PaymentStatus != "" {
+		b.PaymentStatus = entity.PaymentStatus
+	}
+	b.AmountPaidCents = entity.AmountPaidCents
+	b.PaidAt = entity.PaidAt
 	b.FilamentCost = entity.FilamentCost
 	b.WasteCost = entity.WasteCost
 	b.EnergyCost = entity.EnergyCost

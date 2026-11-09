@@ -173,6 +173,12 @@ type BudgetResponse struct {
 	// embedded entity.
 	BasePrice int64 `json:"base_price"`
 
+	// Payment aggregate (customer-facing field names). AmountPaid mirrors the embedded
+	// amount_paid_cents; BalanceDue is max(0, total - paid). deposit_percent and
+	// payment_status are exposed via the embedded entity.
+	AmountPaid int64 `json:"amount_paid"`
+	BalanceDue int64 `json:"balance_due"`
+
 	Customer      *CustomerInfo        `json:"customer"`
 	Items         []BudgetItemResponse `json:"items"`
 	MachinePreset *PresetInfo          `json:"machine_preset,omitempty"`

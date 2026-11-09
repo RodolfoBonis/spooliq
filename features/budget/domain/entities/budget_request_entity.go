@@ -109,6 +109,11 @@ type CreateBudgetRequest struct {
 	// TaxRate (optional, percent 0..<100). When omitted the company default is used.
 	TaxRate *float64 `json:"tax_rate,omitempty" validate:"omitempty,gte=0,lt=100"`
 
+	// DepositPercent is the optional up-front deposit (sinal) percent (0 < x <= 100).
+	// When omitted the organization default is copied in (a nil default means "charge
+	// the full total").
+	DepositPercent *float64 `json:"deposit_percent,omitempty" validate:"omitempty,gt=0,lte=100"`
+
 	// Additional fields for PDF
 	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`
 	PaymentTerms *string `json:"payment_terms,omitempty" validate:"omitempty,max=1000"`
@@ -125,11 +130,11 @@ type CreateBudgetRequest struct {
 // UpdateBudgetRequest represents the request to update an existing budget.
 //
 // Tri-state fields (tax_rate, discount_type, discount_value, shipping_override,
-// valid_until) use coreTypes.Optional so the handler can tell three request shapes
-// apart: the key absent (leave the stored value unchanged), the key present with an
-// explicit JSON null (clear the field back to its default/NULL), and the key present
-// with a value (set it). A plain pointer cannot express the null case; see the field
-// comments below for the exact per-field semantics.
+// valid_until, deposit_percent) use coreTypes.Optional so the handler can tell three
+// request shapes apart: the key absent (leave the stored value unchanged), the key
+// present with an explicit JSON null (clear the field back to its default/NULL), and
+// the key present with a value (set it). A plain pointer cannot express the null
+// case; see the field comments below for the exact per-field semantics.
 type UpdateBudgetRequest struct {
 	Name        *string    `json:"name,omitempty" validate:"omitempty,min=1,max=255"`
 	Description *string    `json:"description,omitempty" validate:"omitempty,max=1000"`
@@ -172,6 +177,10 @@ type UpdateBudgetRequest struct {
 	// TaxRate is tri-state (percent 0..<100). Absent: unchanged. Explicit null: clears
 	// the budget-level rate so the company default applies. Value: a rate in [0, 100).
 	TaxRate coreTypes.Optional[float64] `json:"tax_rate,omitempty" swaggertype:"number"`
+
+	// DepositPercent is tri-state. Absent: unchanged. Explicit null: clears it (charge
+	// the full total). Value: sets the deposit percent (0 < x <= 100).
+	DepositPercent coreTypes.Optional[float64] `json:"deposit_percent,omitempty" swaggertype:"number"`
 
 	// Additional fields for PDF. DeliveryDays is tri-state: absent keeps it, explicit
 	// null clears it, a value (>= 0) sets it.

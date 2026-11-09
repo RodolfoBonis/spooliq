@@ -1,0 +1,146 @@
+package services
+
+import (
+	"fmt"
+
+	paymentModels "github.com/RodolfoBonis/spooliq/features/payments/data/models"
+)
+
+// RunPaymentsMigrations migrates the payments tables (InfinitePay integration,
+// budget payments, webhook events) and adds their FK constraints and indexes
+// idempotently. It runs AFTER RunMigrations so the budgets/companies tables already
+// exist. Everything here is additive: the feature stays inert until an organization
+// connects a provider, and all statements are safe to re-run.
+//
+// The budgets.deposit_percent / payment_status / amount_paid_cents / paid_at columns
+// are added by RunMigrations' AutoMigrate of the budget model (the fields live on
+// BudgetModel), so they are not handled here.
+func RunPaymentsMigrations() {
+	if Connector == nil {
+		fmt.Println("Warning: payments migrations skipped (no DB connection)")
+		return
+	}
+
+	// ========================================
+	// LEVEL 6: Payments (depends on Companies and Budgets)
+	// ========================================
+	if err := Connector.AutoMigrate(
+		&paymentModels.PaymentIntegrationModel{},
+		&paymentModels.BudgetPaymentModel{},
+		&paymentModels.PaymentWebhookEventModel{},
+	); err != nil {
+		panic(fmt.Sprintf("ERROR DURING PAYMENTS MIGRATION: %s", err.Error()))
+	}
+
+	// organization_id FK constraints (companies ON DELETE RESTRICT), idempotent.
+	paymentsOrgFKTables := []string{"payment_integrations", "budget_payments", "payment_webhook_events"}
+	for _, table := range paymentsOrgFKTables {
+		var exists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = ?)", table).Scan(&exists)
+		if !exists {
+			continue
+		}
+		var fkExists bool
+		Connector.Raw(`
+			SELECT EXISTS(
+				SELECT 1 FROM information_schema.table_constraints
+				WHERE table_name = ? AND constraint_name LIKE '%organization%'
+			)
+		`, table).Scan(&fkExists)
+		if !fkExists {
+			sql := fmt.Sprintf(`
+				ALTER TABLE %s
+				ADD CONSTRAINT fk_%s_organization
+				FOREIGN KEY (organization_id)
+				REFERENCES companies(organization_id)
+				ON UPDATE CASCADE
+				ON DELETE RESTRICT
+			`, table, table)
+			if err := Connector.Exec(sql).Error; err != nil {
+				fmt.Printf("Warning: FK constraint for %s.organization_id failed: %v\n", table, err)
+			} else {
+				fmt.Printf("Added FK constraint for %s.organization_id\n", table)
+			}
+		}
+	}
+
+	// budget_payments.budget_id FK -> budgets(id) ON DELETE RESTRICT. A budget with
+	// payments cannot be deleted at the application layer; this is the safety net.
+	{
+		var budgetPaymentsExists bool
+		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budget_payments')").Scan(&budgetPaymentsExists)
+		if budgetPaymentsExists {
+			var fkExists bool
+			Connector.Raw(`
+				SELECT EXISTS(
+					SELECT 1 FROM information_schema.table_constraints
+					WHERE table_name = 'budget_payments' AND constraint_name = 'fk_budget_payments_budget'
+				)
+			`).Scan(&fkExists)
+			if !fkExists {
+				sql := `
+					ALTER TABLE budget_payments
+					ADD CONSTRAINT fk_budget_payments_budget
+					FOREIGN KEY (budget_id)
+					REFERENCES budgets(id)
+					ON UPDATE CASCADE
+					ON DELETE RESTRICT
+				`
+				if err := Connector.Exec(sql).Error; err != nil {
+					fmt.Printf("Warning: FK constraint for budget_payments.budget_id failed: %v\n", err)
+				} else {
+					fmt.Println("Added FK constraint for budget_payments.budget_id")
+				}
+			}
+		}
+	}
+
+	// ========================================
+	// PAYMENTS INDEXES (idempotent)
+	// ========================================
+	paymentIndexes := []struct {
+		name string
+		sql  string
+	}{
+		{
+			// One integration per (organization, provider).
+			"uq_payment_integrations_org_provider",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_integrations_org_provider ON payment_integrations(organization_id, provider)",
+		},
+		{
+			// order_nsu is the idempotency key for a link; globally unique.
+			"uq_budget_payments_order_nsu",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budget_payments_order_nsu ON budget_payments(order_nsu)",
+		},
+		{
+			// transaction_nsu is unique when present (partial), guaranteeing a single
+			// confirmation per gateway transaction.
+			"uq_budget_payments_transaction_nsu",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budget_payments_transaction_nsu ON budget_payments(transaction_nsu) WHERE transaction_nsu IS NOT NULL",
+		},
+		{
+			// The anti-race guard: at most one pending link per (budget, kind).
+			"uq_budget_payments_pending",
+			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budget_payments_pending ON budget_payments(budget_id, kind) WHERE status = 'pending'",
+		},
+		{
+			// Reconcile job sweeps by status + age.
+			"idx_budget_payments_status_created",
+			"CREATE INDEX IF NOT EXISTS idx_budget_payments_status_created ON budget_payments(status, created_at)",
+		},
+		{
+			// Reconcile job reprocesses unprocessed events by age.
+			"idx_payment_webhook_events_unprocessed",
+			"CREATE INDEX IF NOT EXISTS idx_payment_webhook_events_unprocessed ON payment_webhook_events(received_at) WHERE processed_at IS NULL",
+		},
+	}
+	for _, idx := range paymentIndexes {
+		if err := Connector.Exec(idx.sql).Error; err != nil {
+			fmt.Printf("Warning: Index %s creation failed: %v\n", idx.name, err)
+		} else {
+			fmt.Printf("Created index %s\n", idx.name)
+		}
+	}
+
+	fmt.Println("Payments migrations setup completed")
+}

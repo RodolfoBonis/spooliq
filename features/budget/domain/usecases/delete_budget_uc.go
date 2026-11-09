@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Delete deletes a budget (soft delete, only if not printing/completed)
+// Delete deletes a budget (soft delete, only if not printing/completed and unpaid)
 // @Summary Delete budget
 // @Description Delete a budget (soft delete)
 // @Tags budgets
@@ -54,7 +54,17 @@ func (uc *BudgetUseCase) Delete(c *gin.Context) {
 		return
 	}
 
-	// Check if budget can be deleted
+	// A budget that received any payment can never be deleted: money changed hands,
+	// so the record must be preserved (409 budget_has_payments).
+	if budget.HasPayments() {
+		uc.logger.Error(ctx, "Cannot delete a budget with payments", map[string]interface{}{
+			"budget_id": budgetID,
+		})
+		coreErrors.Respond(c, coreErrors.Conflict("budget_has_payments", "Não é possível excluir um orçamento que já recebeu pagamento"))
+		return
+	}
+
+	// Check if budget can be deleted (printing/completed budgets are not deletable).
 	if !budget.CanBeDeleted() {
 		uc.logger.Error(ctx, "Cannot delete printing or completed budget", map[string]interface{}{
 			"budget_id": budgetID,

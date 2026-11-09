@@ -49,6 +49,12 @@ type BudgetUseCase struct {
 	// the same transaction as the status change. Injected via FX (stock feature).
 	stockDeductor StockDeductor
 	notifications notificationUc.INotificationService
+	// paymentDefaults supplies the org's default deposit percent for new budgets, and
+	// pendingCanceler cancels pending payment links when a budget leaves a payable
+	// state. Both are narrow ports implemented by the payments feature and injected via
+	// FX; either may be nil when payments are not wired (keeps budget independent).
+	paymentDefaults PaymentDefaultsProvider
+	pendingCanceler PendingPaymentCanceler
 }
 
 // NewBudgetUseCase creates a new instance of BudgetUseCase
@@ -64,6 +70,8 @@ func NewBudgetUseCase(
 	presetProvider DefaultPresetProvider,
 	stockDeductor StockDeductor,
 	notifications notificationUc.INotificationService,
+	paymentDefaults PaymentDefaultsProvider,
+	pendingCanceler PendingPaymentCanceler,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
@@ -77,6 +85,8 @@ func NewBudgetUseCase(
 		presetProvider:     presetProvider,
 		stockDeductor:      stockDeductor,
 		notifications:      notifications,
+		paymentDefaults:    paymentDefaults,
+		pendingCanceler:    pendingCanceler,
 	}
 }
 
@@ -87,6 +97,24 @@ func NewBudgetUseCase(
 func (uc *BudgetUseCase) resolvePresets(c *gin.Context, organizationID string, in PresetResolutionInput) (ResolvedPresets, error) {
 	resolver := newPresetResolver(uc.profileProvider, uc.presetProvider, uc.budgetRepository.ValidatePresetInOrg)
 	return resolver.Resolve(c.Request.Context(), organizationID, in)
+}
+
+// resolveDepositPercent returns the deposit percent to store on a new budget: the
+// explicit request value when provided, otherwise the organization default (resolved
+// via the payments feature). A nil result means "charge the full total".
+func (uc *BudgetUseCase) resolveDepositPercent(c *gin.Context, organizationID string, requested *float64) *float64 {
+	if requested != nil {
+		return requested
+	}
+	if uc.paymentDefaults == nil {
+		return nil
+	}
+	def, err := uc.paymentDefaults.DefaultDepositPercent(c.Request.Context(), organizationID)
+	if err != nil {
+		uc.logger.Error(c.Request.Context(), "Failed to resolve default deposit percent", map[string]interface{}{"error": err.Error()})
+		return nil
+	}
+	return def
 }
 
 // Note: isAdmin and getUserID have been replaced by helpers.GetOrganizationID and helpers.GetUserID

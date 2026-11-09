@@ -55,9 +55,10 @@ type BudgetPayment struct {
 	UpdatedAt       time.Time
 }
 
-// PaymentLineResponse is one payment row in the authenticated budget payments list
-// and in the public payment block (both expose the same non-sensitive fields: no
-// nsu, no slug).
+// PaymentLineResponse is one payment row in the authenticated budget payments list.
+// It exposes non-sensitive fields only (no nsu, no slug). status_reason is included
+// so the owner UI can show the "reembolse pela InfinitePay" note for paid_after_cancel;
+// it is intentionally NOT exposed on the public payment line.
 type PaymentLineResponse struct {
 	Kind          ChargeKind `json:"kind"`
 	Amount        int64      `json:"amount"`
@@ -65,6 +66,7 @@ type PaymentLineResponse struct {
 	CaptureMethod string     `json:"capture_method"`
 	Installments  int        `json:"installments"`
 	Status        string     `json:"status"`
+	StatusReason  string     `json:"status_reason,omitempty"`
 	CheckoutURL   string     `json:"checkout_url,omitempty"`
 	ReceiptURL    *string    `json:"receipt_url"`
 	PaidAt        *time.Time `json:"paid_at"`

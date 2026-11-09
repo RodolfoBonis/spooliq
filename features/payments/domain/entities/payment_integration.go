@@ -68,5 +68,5 @@ type UpsertIntegrationRequest struct {
 	Enabled               bool     `json:"enabled"`
 	AssuredInstallments   int      `json:"assured_installments" validate:"gte=1,lte=12"`
 	PixDiscountPercent    float64  `json:"pix_discount_percent" validate:"gte=0,lte=30"`
-	DefaultDepositPercent *float64 `json:"default_deposit_percent" validate:"omitempty,gt=0,lte=100"`
+	DefaultDepositPercent *float64 `json:"default_deposit_percent" validate:"omitempty,gt=0,lt=100"`
 }

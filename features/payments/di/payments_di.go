@@ -43,6 +43,14 @@ var Module = fx.Module(
 			}
 			return usecases.NewService(repo, client, box, cfg, notifications, activity, invalidator, log)
 		},
+		// Adapter: expose the budget public UC as the narrow PublicViewBuilder so the
+		// public confirm endpoint can return the full budget view.
+		func(pub budgetUc.IPublicBudgetUseCase) budgetUc.PublicViewBuilder {
+			if concrete, ok := pub.(*budgetUc.PublicBudgetUseCase); ok {
+				return concrete
+			}
+			return nil
+		},
 		usecases.NewChargeService,
 		usecases.NewConfirmService,
 		usecases.NewIntegrationUseCase,

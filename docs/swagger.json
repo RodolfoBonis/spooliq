@@ -3740,7 +3740,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Connects or updates the InfinitePay integration. Validates the API key.",
+                "description": "Connects or updates the InfinitePay integration. Validates the API key.\n422 codes: api_key_required (connecting without a key), infinitepay_invalid_credentials (key rejected).",
                 "consumes": [
                     "application/json"
                 ],
@@ -12649,8 +12649,7 @@
                 },
                 "deposit_percent": {
                     "description": "DepositPercent is the optional up-front deposit (sinal) percent (0 \u003c x \u003c= 100).\nWhen omitted the organization default is copied in (a nil default means \"charge\nthe full total\").",
-                    "type": "number",
-                    "maximum": 100
+                    "type": "number"
                 },
                 "description": {
                     "type": "string",
@@ -14500,6 +14499,9 @@
                 },
                 "status": {
                     "type": "string"
+                },
+                "status_reason": {
+                    "type": "string"
                 }
             }
         },
@@ -15591,99 +15593,6 @@
                 },
                 "valid_until": {
                     "type": "string"
-                }
-            }
-        },
-        "entities.PublicPaymentBlock": {
-            "type": "object",
-            "properties": {
-                "balance": {
-                    "type": "integer"
-                },
-                "can_pay": {
-                    "type": "boolean"
-                },
-                "deposit_percent": {
-                    "type": "number"
-                },
-                "enabled": {
-                    "type": "boolean"
-                },
-                "has_pending_link": {
-                    "type": "boolean"
-                },
-                "next": {
-                    "$ref": "#/definitions/entities.PublicPaymentNext"
-                },
-                "paid": {
-                    "type": "integer"
-                },
-                "payments": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entities.PublicPaymentLine"
-                    }
-                },
-                "status": {
-                    "$ref": "#/definitions/entities.PaymentStatus"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "unavailable_reason": {
-                    "type": "string"
-                }
-            }
-        },
-        "entities.PublicPaymentLine": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "integer"
-                },
-                "capture_method": {
-                    "type": "string"
-                },
-                "installments": {
-                    "type": "integer"
-                },
-                "kind": {
-                    "$ref": "#/definitions/entities.ChargeKind"
-                },
-                "paid_amount": {
-                    "type": "integer"
-                },
-                "paid_at": {
-                    "type": "string"
-                },
-                "receipt_url": {
-                    "type": "string"
-                }
-            }
-        },
-        "entities.PublicPaymentNext": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "integer"
-                },
-                "installment_amount": {
-                    "type": "integer"
-                },
-                "interest_free_installments": {
-                    "type": "integer"
-                },
-                "kind": {
-                    "$ref": "#/definitions/entities.ChargeKind"
-                },
-                "max_installments": {
-                    "type": "integer"
-                },
-                "pix_amount": {
-                    "type": "integer"
-                },
-                "pix_discount_percent": {
-                    "type": "number"
                 }
             }
         },
@@ -16806,8 +16715,7 @@
                     "minimum": 1
                 },
                 "default_deposit_percent": {
-                    "type": "number",
-                    "maximum": 100
+                    "type": "number"
                 },
                 "enabled": {
                     "type": "boolean"
@@ -17951,11 +17859,84 @@
         "usecases.PublicConfirmResponse": {
             "type": "object",
             "properties": {
+                "base_price": {
+                    "type": "integer"
+                },
+                "can_respond": {
+                    "type": "boolean"
+                },
+                "company": {
+                    "$ref": "#/definitions/entities.PublicBudgetCompany"
+                },
                 "confirmation": {
                     "$ref": "#/definitions/entities.ConfirmState"
                 },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/entities.PublicBudgetCustomer"
+                },
+                "customer_response_at": {
+                    "type": "string"
+                },
+                "customer_response_name": {
+                    "type": "string"
+                },
+                "delivery_days": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "discount_amount": {
+                    "type": "integer"
+                },
+                "is_expired": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.PublicBudgetItem"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
                 "payment": {
-                    "$ref": "#/definitions/entities.PublicPaymentBlock"
+                    "description": "Payment carries the optional payment block (enabled/status/next charge/history),\nassembled by the payments feature. It is an untyped value so the budget package\nstays independent of the payments package; the concrete shape is\npayments entities.PublicPaymentBlock. Absent when payments are not configured.",
+                    "type": "object"
+                },
+                "payment_terms": {
+                    "type": "string"
+                },
+                "quote_number": {
+                    "type": "integer"
+                },
+                "rejection_reason": {
+                    "type": "string"
+                },
+                "shipping_cost": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tax_amount": {
+                    "type": "integer"
+                },
+                "tax_rate_applied": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "valid_until": {
+                    "type": "string"
                 }
             }
         },

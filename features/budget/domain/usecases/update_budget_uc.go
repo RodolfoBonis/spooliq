@@ -205,8 +205,8 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 		budget.DepositPercent = nil
 	} else if request.DepositPercent.HasValue() {
 		v := request.DepositPercent.Value
-		if v <= 0 || v > 100 {
-			verr := coreErrors.Validation(map[string]string{"deposit_percent": "deve ser maior que 0 e no máximo 100"})
+		if v <= 0 || v >= 100 {
+			verr := coreErrors.Validation(map[string]string{"deposit_percent": "deve ser maior que 0 e menor que 100 (100% = integral, use null)"})
 			uc.logger.Error(ctx, "Invalid deposit percent", map[string]interface{}{"error": verr.Error()})
 			coreErrors.Respond(c, verr)
 			return

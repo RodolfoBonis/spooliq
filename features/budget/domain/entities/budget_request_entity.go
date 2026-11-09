@@ -112,7 +112,7 @@ type CreateBudgetRequest struct {
 	// DepositPercent is the optional up-front deposit (sinal) percent (0 < x <= 100).
 	// When omitted the organization default is copied in (a nil default means "charge
 	// the full total").
-	DepositPercent *float64 `json:"deposit_percent,omitempty" validate:"omitempty,gt=0,lte=100"`
+	DepositPercent *float64 `json:"deposit_percent,omitempty" validate:"omitempty,gt=0,lt=100"`
 
 	// Additional fields for PDF
 	DeliveryDays *int    `json:"delivery_days,omitempty" validate:"omitempty,gte=0"`

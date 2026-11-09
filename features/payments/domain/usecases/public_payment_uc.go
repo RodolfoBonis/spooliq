@@ -8,6 +8,7 @@ import (
 	"github.com/RodolfoBonis/spooliq/core/helpers"
 	coreServices "github.com/RodolfoBonis/spooliq/core/services"
 	budgetEntities "github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	budgetUc "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/entities"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -23,26 +24,27 @@ const (
 	publicPostRateLimit  = 10
 )
 
-// PublicConfirmResponse is the body of the public confirm endpoint. It carries the
-// refreshed payment block (merge into the cached public budget view) plus the
-// confirmation state.
+// PublicConfirmResponse is the body of the public confirm endpoint: the FULL public
+// budget view (same body as GET /public/budgets/:token, payment block included) plus
+// a top-level `confirmation`. The embedded view's fields are promoted to the top level
+// by encoding/json. The web strips `confirmation` and setQueryData's the rest.
 type PublicConfirmResponse struct {
-	Confirmation entities.ConfirmState        `json:"confirmation"`
-	Payment      *entities.PublicPaymentBlock `json:"payment"`
+	*budgetEntities.PublicBudgetView
+	Confirmation entities.ConfirmState `json:"confirmation"`
 }
 
 // PublicPaymentUseCase implements the customer-facing (no-auth) pay/confirm endpoints.
 type PublicPaymentUseCase struct {
 	*Service
-	charge   *ChargeService
-	confirm  *ConfirmService
-	provider *PublicPaymentProvider
-	redis    *coreServices.RedisService
+	charge      *ChargeService
+	confirm     *ConfirmService
+	viewBuilder budgetUc.PublicViewBuilder
+	redis       *coreServices.RedisService
 }
 
 // NewPublicPaymentUseCase builds the public payment use case.
-func NewPublicPaymentUseCase(s *Service, charge *ChargeService, confirm *ConfirmService, provider *PublicPaymentProvider, redis *coreServices.RedisService) *PublicPaymentUseCase {
-	return &PublicPaymentUseCase{Service: s, charge: charge, confirm: confirm, provider: provider, redis: redis}
+func NewPublicPaymentUseCase(s *Service, charge *ChargeService, confirm *ConfirmService, viewBuilder budgetUc.PublicViewBuilder, redis *coreServices.RedisService) *PublicPaymentUseCase {
+	return &PublicPaymentUseCase{Service: s, charge: charge, confirm: confirm, viewBuilder: viewBuilder, redis: redis}
 }
 
 func (uc *PublicPaymentUseCase) allowPost(c *gin.Context) bool {
@@ -114,7 +116,7 @@ func (uc *PublicPaymentUseCase) Pay(c *gin.Context) {
 }
 
 // Confirm verifies a payment from the public redirect and returns the refreshed
-// payment block plus the confirmation state.
+// public budget view plus the confirmation state.
 // @Summary Public confirm payment
 // @Tags public-payments
 // @Accept json
@@ -183,23 +185,16 @@ func (uc *PublicPaymentUseCase) Confirm(c *gin.Context) {
 	uc.respondConfirm(c, c.Param("token"), result.State)
 }
 
-// respondConfirm reloads the budget and returns the refreshed payment block.
+// respondConfirm reloads the budget's public view and returns it with the
+// confirmation state at the top level.
 func (uc *PublicPaymentUseCase) respondConfirm(c *gin.Context, token string, state entities.ConfirmState) {
 	ctx := c.Request.Context()
 	resp := PublicConfirmResponse{Confirmation: state}
-	if fresh, err := uc.repo.GetBudgetChargeContextByToken(ctx, token); err == nil && fresh != nil {
-		minimal := &budgetEntities.BudgetEntity{
-			ID:              fresh.ID,
-			OrganizationID:  fresh.OrganizationID,
-			Status:          budgetEntities.BudgetStatus(fresh.Status),
-			TotalCost:       fresh.TotalCost,
-			AmountPaidCents: fresh.AmountPaidCents,
-			DepositPercent:  fresh.DepositPercent,
-		}
-		if block, berr := uc.provider.PublicPaymentBlock(ctx, minimal); berr == nil {
-			if b, ok := block.(*entities.PublicPaymentBlock); ok {
-				resp.Payment = b
-			}
+	if uc.viewBuilder != nil {
+		if view, err := uc.viewBuilder.BuildPublicViewByToken(ctx, token); err != nil {
+			uc.logger.Error(ctx, "Failed to rebuild public view after confirm", map[string]interface{}{"error": err.Error()})
+		} else {
+			resp.PublicBudgetView = view
 		}
 	}
 	c.JSON(http.StatusOK, resp)

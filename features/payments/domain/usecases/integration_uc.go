@@ -85,6 +85,7 @@ func (uc *IntegrationUseCase) Get(c *gin.Context) {
 // Upsert connects or updates the organization's InfinitePay integration.
 // @Summary Update payment integration
 // @Description Connects or updates the InfinitePay integration. Validates the API key.
+// @Description 422 codes: api_key_required (connecting without a key), infinitepay_invalid_credentials (key rejected).
 // @Tags payments
 // @Accept json
 // @Produce json

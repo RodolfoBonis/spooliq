@@ -137,6 +137,7 @@ func buildBudgetPaymentsResponse(budget *entities.BudgetChargeContext, payments 
 			CaptureMethod: p.CaptureMethod,
 			Installments:  p.Installments,
 			Status:        string(p.Status),
+			StatusReason:  p.StatusReason,
 			CheckoutURL:   p.CheckoutURL,
 			ReceiptURL:    p.ReceiptURL,
 			PaidAt:        p.PaidAt,

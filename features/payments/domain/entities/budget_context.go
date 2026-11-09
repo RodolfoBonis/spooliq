@@ -17,6 +17,7 @@ type BudgetChargeContext struct {
 	Status          string
 	TotalCost       int64
 	AmountPaidCents int64
+	RefundDueCents  int64
 	DepositPercent  *float64
 	ValidUntil      *time.Time
 	Name            string

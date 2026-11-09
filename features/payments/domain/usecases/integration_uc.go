@@ -20,6 +20,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// validateLinkAmountCents is the R$1 amount used for the fallback link validation.
+const validateLinkAmountCents int64 = 100
+
 // IntegrationUseCase implements the authenticated company payment integration
 // endpoints (GET/PUT/DELETE /company/payments/infinitepay).
 type IntegrationUseCase struct {
@@ -130,6 +133,28 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 		return
 	}
 
+	handleChanged := existing != nil && existing.Handle != req.Handle
+	accountChanged := hasNewKey || handleChanged
+
+	// Resolve the plaintext key to validate with: the new key, or the stored one when
+	// only the handle changed.
+	var apiKeyPlain string
+	if hasNewKey {
+		apiKeyPlain = strings.TrimSpace(*req.APIKey)
+	} else if handleChanged && existing != nil {
+		if dec, derr := uc.box.DecryptString(existing.APIKeyCiphertext); derr == nil {
+			apiKeyPlain = dec
+		}
+	}
+
+	// Re-validate whenever the key or the handle changed.
+	if accountChanged && apiKeyPlain != "" {
+		if verr := uc.validateCredential(ctx, apiKeyPlain, req.Handle); verr != nil {
+			coreErrors.Respond(c, MapChargeError(verr))
+			return
+		}
+	}
+
 	now := time.Now()
 	fields := map[string]interface{}{
 		"handle":                  req.Handle,
@@ -143,20 +168,17 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 
 	var apiKeyCipher, apiKeyLast4 string
 	if hasNewKey {
-		apiKey := strings.TrimSpace(*req.APIKey)
-		if verr := uc.validateCredential(ctx, apiKey, req.Handle); verr != nil {
-			coreErrors.Respond(c, MapChargeError(verr))
-			return
-		}
-		ciphertext, encErr := uc.box.EncryptString(apiKey)
+		ciphertext, encErr := uc.box.EncryptString(apiKeyPlain)
 		if encErr != nil {
 			coreErrors.Respond(c, coreErrors.ServiceUnavailable("payments_not_configured", "Pagamentos não estão configurados no momento."))
 			return
 		}
 		apiKeyCipher = ciphertext
-		apiKeyLast4 = last4(apiKey)
+		apiKeyLast4 = last4(apiKeyPlain)
 		fields["api_key_ciphertext"] = ciphertext
 		fields["api_key_last4"] = apiKeyLast4
+		fields["verified_at"] = now
+	} else if accountChanged {
 		fields["verified_at"] = now
 	}
 
@@ -190,8 +212,6 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 			return
 		}
 	} else {
-		// Keep the existing webhook token stable (existing links already use it);
-		// only generate one if somehow missing.
 		if existing.WebhookTokenCiphertext == "" {
 			if token, tokErr := generateWebhookToken(); tokErr == nil {
 				if tokenCipher, encErr := uc.box.EncryptString(token); encErr == nil {
@@ -202,6 +222,13 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 		if updErr := uc.repo.UpdateIntegrationFields(ctx, existing.ID, fields); updErr != nil {
 			coreErrors.Respond(c, coreErrors.Internal())
 			return
+		}
+		// The previous account's pending links can no longer be confirmed under the
+		// new credentials/handle — cancel them.
+		if accountChanged {
+			if cerr := uc.repo.CancelPendingForOrg(ctx, organizationID, entities.ReasonAccountChanged); cerr != nil {
+				uc.logger.Error(ctx, "Failed to cancel pending links after account change", map[string]interface{}{"error": cerr.Error()})
+			}
 		}
 	}
 
@@ -259,10 +286,11 @@ func (uc *IntegrationUseCase) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// validateCredential checks an API key against InfinitePay without side effects by
-// issuing a payment_check for a non-existent order: a 401/403 means the key is
-// rejected; any other non-5xx outcome means the key was accepted. A 5xx surfaces as
-// "provider unavailable".
+// validateCredential proves an API key is usable. A payment_check for a non-existent
+// order that returns WITHOUT error means the key authenticated (the order simply does
+// not exist). A 401/403 means the key is rejected. A 5xx is "provider unavailable".
+// Any other ambiguous 4xx falls back to creating a R$1 link (+1h validity) per the
+// plan, which definitively exercises authentication.
 func (uc *IntegrationUseCase) validateCredential(ctx context.Context, apiKey, handle string) error {
 	_, err := uc.client.PaymentCheck(ctx, apiKey, coreServices.InfinitePayPaymentCheckRequest{
 		Handle:   handle,
@@ -276,7 +304,31 @@ func (uc *IntegrationUseCase) validateCredential(ctx context.Context, apiKey, ha
 	case isUnavailable(err):
 		return ErrProviderUnavailable
 	default:
+		return uc.validateViaTestLink(ctx, apiKey, handle)
+	}
+}
+
+// validateViaTestLink creates a throwaway R$1 link (single payment, 1h validity) to
+// confirm the key authenticates. The link is never persisted and expires quickly.
+func (uc *IntegrationUseCase) validateViaTestLink(ctx context.Context, apiKey, handle string) error {
+	_, err := uc.client.CreateLink(ctx, apiKey, coreServices.InfinitePayCreateLinkRequest{
+		Handle:   handle,
+		Items:    []coreServices.InfinitePayItem{{Name: "Validação", Price: validateLinkAmountCents, Quantity: 1}},
+		OrderNSU: "spq_validate_" + strings.ReplaceAll(uuid.NewString(), "-", ""),
+		Options: &coreServices.InfinitePayLinkOptions{
+			SinglePayment: true,
+			ValidUntil:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		},
+	})
+	switch {
+	case err == nil:
 		return nil
+	case isUnauthorized(err):
+		return ErrInvalidCredentials
+	case isUnavailable(err):
+		return ErrProviderUnavailable
+	default:
+		return ErrInvalidCredentials
 	}
 }
 

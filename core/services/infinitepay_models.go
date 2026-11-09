@@ -4,8 +4,19 @@ package services
 //
 // The Checkout API is public (no approval): each organization connects with its own
 // API key, passed per call via the X-Api-Key header. Amounts are ALWAYS in cents.
-// There is no sandbox, so these shapes are modeled from the public docs and the
-// R$1 production checklist is how they are confirmed; see the PR for open questions.
+//
+// UNVERIFIED ASSUMPTIONS (no sandbox — confirm during the R$1 production test):
+//   - POST /links accepts items[].price in cents, order_nsu, redirect_url,
+//     customer{name,email,phone_number}, webhook{url,events:["payment"]},
+//     options{single_payment, valid_until (RFC3339), assured_installments,
+//     discounts.pix (integer %), payment_methods_enabled}, and an optional top-level
+//     handle. Response: { checkout_url, slug? }.
+//   - The webhook POSTs { handle, order_nsu, transaction_nsu, invoice_slug | slug }.
+//     invoice_slug is the link slug; slug is a fallback.
+//   - POST /payment_check accepts { handle, order_nsu, transaction_nsu?, slug? } and
+//     returns at least { success, paid, paid_amount (cents), capture_method,
+//     installments }. It MAY NOT echo transaction_nsu / receipt_url / order_nsu, so the
+//     confirm path treats those as optional and falls back to the request values.
 
 // InfinitePayItem is a line item in a checkout link. Price is in cents.
 type InfinitePayItem struct {
@@ -28,7 +39,7 @@ type InfinitePayWebhook struct {
 	Events []string `json:"events,omitempty"`
 }
 
-// InfinitePayDiscounts configures per-method discounts. Pix is a percentage (0-100).
+// InfinitePayDiscounts configures per-method discounts. Pix is an integer percentage (0-30).
 type InfinitePayDiscounts struct {
 	Pix int `json:"pix,omitempty"`
 }
@@ -49,6 +60,7 @@ type InfinitePayLinkOptions struct {
 
 // InfinitePayCreateLinkRequest is the body of POST /links.
 type InfinitePayCreateLinkRequest struct {
+	Handle      string                  `json:"handle,omitempty"`
 	Items       []InfinitePayItem       `json:"items"`
 	OrderNSU    string                  `json:"order_nsu"`
 	RedirectURL string                  `json:"redirect_url"`
@@ -66,7 +78,7 @@ type InfinitePayCreateLinkResponse struct {
 
 // InfinitePayPaymentCheckRequest is the body of POST /payment_check. Any subset of
 // identifiers may be provided; order_nsu alone is the minimum the confirmation path
-// relies on (see Q1 in the plan).
+// relies on.
 type InfinitePayPaymentCheckRequest struct {
 	Handle         string `json:"handle,omitempty"`
 	OrderNSU       string `json:"order_nsu,omitempty"`
@@ -75,8 +87,8 @@ type InfinitePayPaymentCheckRequest struct {
 }
 
 // InfinitePayPaymentCheckResponse is the response of POST /payment_check. Fields are
-// modeled defensively: not every field is guaranteed by the docs, so the confirm
-// service treats a zero PaidAmount with Paid=false as "not paid".
+// modeled defensively: only success+paid+paid_amount are relied upon; the rest may be
+// absent.
 type InfinitePayPaymentCheckResponse struct {
 	Success bool `json:"success"`
 	Paid    bool `json:"paid"`
@@ -88,7 +100,16 @@ type InfinitePayPaymentCheckResponse struct {
 	OrderNSU       string `json:"order_nsu"`
 	TransactionNSU string `json:"transaction_nsu"`
 	Slug           string `json:"slug"`
+	InvoiceSlug    string `json:"invoice_slug"`
 	ReceiptURL     string `json:"receipt_url"`
+}
+
+// ResolvedSlug returns invoice_slug when present, else slug.
+func (r *InfinitePayPaymentCheckResponse) ResolvedSlug() string {
+	if r.InvoiceSlug != "" {
+		return r.InvoiceSlug
+	}
+	return r.Slug
 }
 
 // InfinitePayErrorResponse is the error envelope returned by the Checkout API.

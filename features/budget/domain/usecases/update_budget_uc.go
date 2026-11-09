@@ -293,17 +293,6 @@ func (uc *BudgetUseCase) Update(c *gin.Context) {
 			return err
 		}
 
-		// deposit_percent is not part of the generic Update column set, so persist it
-		// explicitly here (within the draft-guarded transaction). A nil value clears it.
-		// UnderlyingTx is nil for fake repositories in unit tests; guard it.
-		if tx := repo.UnderlyingTx(); tx != nil {
-			if err := tx.Table("budgets").
-				Where("id = ? AND organization_id = ?", budget.ID, organizationID).
-				Update("deposit_percent", budget.DepositPercent).Error; err != nil {
-				return err
-			}
-		}
-
 		if request.Items != nil {
 			// Resolve/attach supplies INSIDE the transaction, against the current
 			// (committed, draft-guarded) items before they are replaced. A request item

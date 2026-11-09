@@ -18,7 +18,7 @@ type PublicPaymentNext struct {
 	Kind                     ChargeKind `json:"kind"`
 	Amount                   int64      `json:"amount"`
 	PixAmount                int64      `json:"pix_amount"`
-	PixDiscountPercent       float64    `json:"pix_discount_percent"`
+	PixDiscountPercent       int        `json:"pix_discount_percent"`
 	InterestFreeInstallments int        `json:"interest_free_installments"`
 	InstallmentAmount        int64      `json:"installment_amount"`
 	MaxInstallments          int        `json:"max_installments"`

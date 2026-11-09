@@ -51,6 +51,7 @@ func (uc *BudgetPaymentsUseCase) List(c *gin.Context) {
 
 	budget, err := uc.repo.GetBudgetChargeContext(ctx, budgetID, organizationID)
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -61,6 +62,7 @@ func (uc *BudgetPaymentsUseCase) List(c *gin.Context) {
 
 	payments, err := uc.repo.GetPaymentsByBudget(ctx, budgetID, organizationID)
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -99,6 +101,7 @@ func (uc *BudgetPaymentsUseCase) CreateLink(c *gin.Context) {
 
 	budget, err := uc.repo.GetBudgetChargeContext(ctx, budgetID, organizationID)
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -109,6 +112,7 @@ func (uc *BudgetPaymentsUseCase) CreateLink(c *gin.Context) {
 
 	integration, err := uc.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -149,6 +153,7 @@ func buildBudgetPaymentsResponse(budget *entities.BudgetChargeContext, payments 
 		Total:          budget.TotalCost,
 		Paid:           paid,
 		Balance:        balance,
+		RefundDue:      budget.RefundDueCents,
 		DepositPercent: budget.DepositPercent,
 		Payments:       lines,
 	}

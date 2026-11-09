@@ -103,7 +103,7 @@ func (p *PublicPaymentProvider) buildNext(integration *entities.PaymentIntegrati
 		return nil
 	}
 	assured := 1
-	var pixPct float64
+	var pixPct int
 	if integration != nil {
 		if integration.AssuredInstallments > 0 {
 			assured = integration.AssuredInstallments

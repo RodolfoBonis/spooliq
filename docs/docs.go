@@ -11689,6 +11689,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/entities.PaymentLineResponse"
                     }
                 },
+                "refund_due": {
+                    "type": "integer"
+                },
                 "status": {
                     "$ref": "#/definitions/entities.PaymentStatus"
                 },
@@ -11705,6 +11708,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "amount_paid_cents": {
+                    "type": "integer"
+                },
+                "amount_refund_due_cents": {
                     "type": "integer"
                 },
                 "approved_at": {
@@ -13862,7 +13868,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "pix_discount_percent": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "provider": {
                     "type": "string"
@@ -16732,7 +16738,7 @@ const docTemplate = `{
                     "maxLength": 255
                 },
                 "pix_discount_percent": {
-                    "type": "number",
+                    "type": "integer",
                     "maximum": 30,
                     "minimum": 0
                 }

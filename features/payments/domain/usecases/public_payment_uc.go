@@ -78,6 +78,7 @@ func (uc *PublicPaymentUseCase) Pay(c *gin.Context) {
 
 	budget, err := uc.repo.GetBudgetChargeContextByToken(ctx, c.Param("token"))
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -102,6 +103,7 @@ func (uc *PublicPaymentUseCase) Pay(c *gin.Context) {
 
 	integration, err := uc.repo.GetIntegration(ctx, budget.OrganizationID, entities.ProviderInfinitePay)
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -137,6 +139,7 @@ func (uc *PublicPaymentUseCase) Confirm(c *gin.Context) {
 
 	budget, err := uc.repo.GetBudgetChargeContextByToken(ctx, c.Param("token"))
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
@@ -162,6 +165,7 @@ func (uc *PublicPaymentUseCase) Confirm(c *gin.Context) {
 	// Ownership: the order must belong to this token's budget.
 	payment, err := uc.repo.GetPaymentByOrderNSU(ctx, budget.OrganizationID, req.OrderNSU)
 	if err != nil {
+		uc.logger.Error(ctx, "payments endpoint internal error", map[string]interface{}{"error": err.Error()})
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}

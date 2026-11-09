@@ -7,7 +7,7 @@ import (
 )
 
 // Sentinel errors returned by the payment services. Handlers map them to the public
-// HTTP contract via MapChargeError / MapError.
+// HTTP contract via MapChargeError.
 var (
 	// ErrPaymentsNotConfigured: no encryption key (or provider base URL) is set.
 	ErrPaymentsNotConfigured = errors.New("payments_not_configured")
@@ -28,6 +28,9 @@ var (
 	ErrInvalidCredentials = errors.New("infinitepay_invalid_credentials")
 	// ErrProviderRejected: InfinitePay rejected a well-formed request (4xx).
 	ErrProviderRejected = errors.New("infinitepay_request_rejected")
+	// ErrConfirmRetry: a confirmation could not complete now (provider down, etc.) and
+	// MUST be retried — the webhook event must NOT be marked processed.
+	ErrConfirmRetry = errors.New("confirm_retry")
 )
 
 // MapChargeError maps a charge/confirm sentinel error to the public HTTP envelope.

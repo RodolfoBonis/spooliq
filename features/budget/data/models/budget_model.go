@@ -91,9 +91,10 @@ type BudgetModel struct {
 
 	// Payment aggregate, maintained by the payments feature. The DB default of
 	// 'unpaid' backfills existing rows on AutoMigrate.
-	PaymentStatus   string     `gorm:"type:varchar(10);not null;default:'unpaid'" json:"payment_status"`
-	AmountPaidCents int64      `gorm:"type:bigint;not null;default:0" json:"amount_paid_cents"`
-	PaidAt          *time.Time `gorm:"type:timestamptz" json:"paid_at"`
+	PaymentStatus        string     `gorm:"type:varchar(10);not null;default:'unpaid'" json:"payment_status"`
+	AmountPaidCents      int64      `gorm:"type:bigint;not null;default:0" json:"amount_paid_cents"`
+	AmountRefundDueCents int64      `gorm:"type:bigint;not null;default:0" json:"amount_refund_due_cents"`
+	PaidAt               *time.Time `gorm:"type:timestamptz" json:"paid_at"`
 
 	// Calculated costs (in cents)
 	FilamentCost       int64 `gorm:"type:bigint;default:0" json:"filament_cost"`
@@ -200,6 +201,7 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		DepositPercent:            b.DepositPercent,
 		PaymentStatus:             b.PaymentStatus,
 		AmountPaidCents:           b.AmountPaidCents,
+		AmountRefundDueCents:      b.AmountRefundDueCents,
 		PaidAt:                    b.PaidAt,
 		FilamentCost:              b.FilamentCost,
 		WasteCost:                 b.WasteCost,
@@ -276,6 +278,7 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 		b.PaymentStatus = entity.PaymentStatus
 	}
 	b.AmountPaidCents = entity.AmountPaidCents
+	b.AmountRefundDueCents = entity.AmountRefundDueCents
 	b.PaidAt = entity.PaidAt
 	b.FilamentCost = entity.FilamentCost
 	b.WasteCost = entity.WasteCost

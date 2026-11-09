@@ -55,6 +55,7 @@ type BudgetUseCase struct {
 	// FX; either may be nil when payments are not wired (keeps budget independent).
 	paymentDefaults PaymentDefaultsProvider
 	pendingCanceler PendingPaymentCanceler
+	paymentPresence PaymentPresenceChecker
 }
 
 // NewBudgetUseCase creates a new instance of BudgetUseCase
@@ -72,6 +73,7 @@ func NewBudgetUseCase(
 	notifications notificationUc.INotificationService,
 	paymentDefaults PaymentDefaultsProvider,
 	pendingCanceler PendingPaymentCanceler,
+	paymentPresence PaymentPresenceChecker,
 ) IBudgetUseCase {
 	return &BudgetUseCase{
 		budgetRepository:   budgetRepository,
@@ -87,6 +89,7 @@ func NewBudgetUseCase(
 		notifications:      notifications,
 		paymentDefaults:    paymentDefaults,
 		pendingCanceler:    pendingCanceler,
+		paymentPresence:    paymentPresence,
 	}
 }
 

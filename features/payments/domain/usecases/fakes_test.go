@@ -78,13 +78,11 @@ func (f *fakeClient) PaymentCheck(_ context.Context, _ string, _ coreServices.In
 
 type fakeRepo struct {
 	mu           sync.Mutex
-	integrations map[string]*entities.PaymentIntegration // keyed by org
+	integrations map[string]*entities.PaymentIntegration
 	payments     map[uuid.UUID]*entities.BudgetPayment
 	budgets      map[uuid.UUID]*entities.BudgetChargeContext
 	tokens       map[string]uuid.UUID
-	// createErr, when set, makes the next CreatePayment fail (simulates a race on
-	// the pending unique index).
-	createErr error
+	createErr    error
 }
 
 func newFakeRepo() *fakeRepo {
@@ -98,6 +96,10 @@ func newFakeRepo() *fakeRepo {
 
 func (r *fakeRepo) WithTransaction(ctx context.Context, fn func(repo domainRepos.PaymentRepository) error) error {
 	return fn(r)
+}
+
+func (r *fakeRepo) WithReconcileLock(_ context.Context, fn func() error) (bool, error) {
+	return true, fn()
 }
 
 func (r *fakeRepo) GetIntegration(_ context.Context, org, _ string) (*entities.PaymentIntegration, error) {
@@ -141,8 +143,8 @@ func applyIntegrationFields(integ *entities.PaymentIntegration, fields map[strin
 	if v, ok := fields["api_key_last4"].(string); ok {
 		integ.APIKeyLast4 = v
 	}
-	if _, ok := fields["disconnected_at"]; ok {
-		if t, ok := fields["disconnected_at"].(time.Time); ok {
+	if raw, ok := fields["disconnected_at"]; ok {
+		if t, ok := raw.(time.Time); ok {
 			integ.DisconnectedAt = &t
 		} else {
 			integ.DisconnectedAt = nil
@@ -210,6 +212,10 @@ func (r *fakeRepo) GetPendingByBudgetKind(_ context.Context, budgetID uuid.UUID,
 	return nil, nil
 }
 
+func (r *fakeRepo) GetPendingByBudgetKindForUpdate(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
+	return r.GetPendingByBudgetKind(ctx, budgetID, kind)
+}
+
 func (r *fakeRepo) GetPaymentByOrderNSU(_ context.Context, _ string, orderNSU string) (*entities.BudgetPayment, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -220,6 +226,10 @@ func (r *fakeRepo) GetPaymentByOrderNSU(_ context.Context, _ string, orderNSU st
 		}
 	}
 	return nil, nil
+}
+
+func (r *fakeRepo) GetPaymentByOrderNSUForUpdate(ctx context.Context, org, orderNSU string) (*entities.BudgetPayment, error) {
+	return r.GetPaymentByOrderNSU(ctx, org, orderNSU)
 }
 
 func (r *fakeRepo) CreatePayment(_ context.Context, p *entities.BudgetPayment) error {
@@ -250,7 +260,7 @@ func (r *fakeRepo) UpdatePaymentFields(_ context.Context, id uuid.UUID, fields m
 	return nil
 }
 
-func (r *fakeRepo) MarkPaidGuarded(_ context.Context, id uuid.UUID, fields map[string]interface{}) (int64, error) {
+func (r *fakeRepo) MarkPaidGuarded(_ context.Context, id uuid.UUID, _ string, fields map[string]interface{}) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	p, ok := r.payments[id]
@@ -261,6 +271,18 @@ func (r *fakeRepo) MarkPaidGuarded(_ context.Context, id uuid.UUID, fields map[s
 		return 0, nil
 	}
 	applyPaymentFields(p, fields)
+	return 1, nil
+}
+
+func (r *fakeRepo) CancelPendingByID(_ context.Context, id uuid.UUID, reason string) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	p, ok := r.payments[id]
+	if !ok || p.Status != entities.PaymentPending {
+		return 0, nil
+	}
+	p.Status = entities.PaymentCanceled
+	p.StatusReason = reason
 	return 1, nil
 }
 
@@ -292,9 +314,6 @@ func applyPaymentFields(p *entities.BudgetPayment, fields map[string]interface{}
 	if v, ok := fields["receipt_url"].(string); ok {
 		p.ReceiptURL = &v
 	}
-	if v, ok := fields["check_attempts"].(int); ok {
-		p.CheckAttempts = v
-	}
 }
 
 func (r *fakeRepo) CancelPendingForBudget(_ context.Context, budgetID uuid.UUID, _ string, reason string) error {
@@ -325,7 +344,7 @@ func (r *fakeRepo) ListExpiredPendingLinks(_ context.Context, _ time.Time, _ int
 	return nil, nil
 }
 
-func (r *fakeRepo) ListPendingWithIdentifiers(_ context.Context, _ time.Time, _ int) ([]*entities.BudgetPayment, error) {
+func (r *fakeRepo) ListPendingForRecheck(_ context.Context, _ time.Time, _ int) ([]*entities.BudgetPayment, error) {
 	return nil, nil
 }
 
@@ -354,20 +373,42 @@ func (r *fakeRepo) SumPaidPrincipal(_ context.Context, budgetID uuid.UUID) (int6
 	defer r.mu.Unlock()
 	var sum int64
 	for _, p := range r.payments {
-		if p.BudgetID == budgetID && p.Status == entities.PaymentPaid {
+		if p.BudgetID == budgetID && p.Status == entities.PaymentPaid && p.StatusReason != entities.ReasonPaidAfterCancel {
 			sum += p.AmountCents
 		}
 	}
 	return sum, nil
 }
 
-func (r *fakeRepo) UpdateBudgetAggregate(_ context.Context, budgetID uuid.UUID, amountPaid int64, status string, paidAt *time.Time) error {
+func (r *fakeRepo) RecalcBudgetAggregate(_ context.Context, budgetID uuid.UUID, _ string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	var paid, refund int64
+	for _, p := range r.payments {
+		if p.BudgetID == budgetID && p.Status == entities.PaymentPaid {
+			if p.StatusReason == entities.ReasonPaidAfterCancel {
+				refund += p.AmountCents
+			} else {
+				paid += p.AmountCents
+			}
+		}
+	}
 	if b, ok := r.budgets[budgetID]; ok {
-		b.AmountPaidCents = amountPaid
+		b.AmountPaidCents = paid
+		b.RefundDueCents = refund
 	}
 	return nil
+}
+
+func (r *fakeRepo) HasBlockingPayments(_ context.Context, budgetID uuid.UUID, _ string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, p := range r.payments {
+		if p.BudgetID == budgetID && (p.Status == entities.PaymentPaid || p.Status == entities.PaymentPending) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (r *fakeRepo) CreateWebhookEvent(_ context.Context, _ string, _ []byte, _ time.Time) (uuid.UUID, error) {
@@ -382,7 +423,7 @@ func (r *fakeRepo) ListUnprocessedWebhooks(_ context.Context, _ time.Time, _, _ 
 }
 
 // seedIntegration adds an active integration for org with the given settings.
-func (r *fakeRepo) seedIntegration(org string, box *crypto.SecretBox, pixPct float64, assured int, deposit *float64) *entities.PaymentIntegration {
+func (r *fakeRepo) seedIntegration(org string, box *crypto.SecretBox, pixPct, assured int, deposit *float64) *entities.PaymentIntegration {
 	key, _ := box.EncryptString("sk_live_testkey1234")
 	tok, _ := box.EncryptString("webhooktoken")
 	i := &entities.PaymentIntegration{

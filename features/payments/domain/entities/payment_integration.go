@@ -21,7 +21,7 @@ type PaymentIntegration struct {
 	WebhookTokenCiphertext string
 	Enabled                bool
 	AssuredInstallments    int
-	PixDiscountPercent     float64
+	PixDiscountPercent     int
 	DefaultDepositPercent  *float64
 	VerifiedAt             *time.Time
 	DisconnectedAt         *time.Time
@@ -51,7 +51,7 @@ type IntegrationResponse struct {
 	Handle                string     `json:"handle"`
 	APIKeyLast4           string     `json:"api_key_last4,omitempty"`
 	AssuredInstallments   int        `json:"assured_installments"`
-	PixDiscountPercent    float64    `json:"pix_discount_percent"`
+	PixDiscountPercent    int        `json:"pix_discount_percent"`
 	DefaultDepositPercent *float64   `json:"default_deposit_percent"`
 	VerifiedAt            *time.Time `json:"verified_at"`
 	// PendingLinks counts open (pending) payment links across the org. Omitted for
@@ -67,6 +67,6 @@ type UpsertIntegrationRequest struct {
 	APIKey                *string  `json:"api_key" validate:"omitempty,min=8,max=255"`
 	Enabled               bool     `json:"enabled"`
 	AssuredInstallments   int      `json:"assured_installments" validate:"gte=1,lte=12"`
-	PixDiscountPercent    float64  `json:"pix_discount_percent" validate:"gte=0,lte=30"`
+	PixDiscountPercent    int      `json:"pix_discount_percent" validate:"gte=0,lte=30"`
 	DefaultDepositPercent *float64 `json:"default_deposit_percent" validate:"omitempty,gt=0,lt=100"`
 }

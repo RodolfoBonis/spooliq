@@ -62,6 +62,7 @@ func createPaymentsSchema(t *testing.T, db *gorm.DB) {
 		status varchar(20) NOT NULL DEFAULT 'approved',
 		total_cost bigint NOT NULL DEFAULT 0,
 		amount_paid_cents bigint NOT NULL DEFAULT 0,
+		amount_refund_due_cents bigint NOT NULL DEFAULT 0,
 		deposit_percent double precision,
 		payment_status varchar(10) NOT NULL DEFAULT 'unpaid',
 		paid_at timestamptz,
@@ -130,13 +131,13 @@ func TestIntegration_GuardedMarkPaidAndAggregate(t *testing.T) {
 	p := newPayment("org1", budgetID, entities.KindFull, "spq_guard", 2000, entities.PaymentPending)
 	require.NoError(t, repo.CreatePayment(ctx, p))
 
-	rows, err := repo.MarkPaidGuarded(ctx, p.ID, map[string]interface{}{
+	rows, err := repo.MarkPaidGuarded(ctx, p.ID, "org1", map[string]interface{}{
 		"status": string(entities.PaymentPaid), "paid_amount_cents": int64(2000), "paid_at": time.Now(),
 	})
 	require.NoError(t, err)
 	require.Equal(t, int64(1), rows, "first guarded mark should affect one row")
 
-	rows, err = repo.MarkPaidGuarded(ctx, p.ID, map[string]interface{}{"status": string(entities.PaymentPaid)})
+	rows, err = repo.MarkPaidGuarded(ctx, p.ID, "org1", map[string]interface{}{"status": string(entities.PaymentPaid)})
 	require.NoError(t, err)
 	require.Equal(t, int64(0), rows, "second guarded mark is a no-op (idempotency)")
 
@@ -144,8 +145,7 @@ func TestIntegration_GuardedMarkPaidAndAggregate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(2000), sum)
 
-	now := time.Now()
-	require.NoError(t, repo.UpdateBudgetAggregate(ctx, budgetID, sum, string(entities.StatusPaid), &now))
+	require.NoError(t, repo.RecalcBudgetAggregate(ctx, budgetID, "org1"))
 
 	fresh, err := repo.GetBudgetChargeContext(ctx, budgetID, "org1")
 	require.NoError(t, err)

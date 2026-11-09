@@ -11,7 +11,11 @@ import (
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+// reconcileLockKey is the advisory-lock key for the payments reconcile sweep.
+const reconcileLockKey int64 = 918273645
 
 // paymentRepository is the GORM implementation of the payments data port.
 type paymentRepository struct {
@@ -30,13 +34,30 @@ func (r *paymentRepository) WithTransaction(ctx context.Context, fn func(repo do
 	})
 }
 
+// WithReconcileLock holds pg_try_advisory_xact_lock for the duration of fn so only
+// one replica sweeps at a time. fn's own queries use the pool (the lock just
+// serializes the sweep across processes).
+func (r *paymentRepository) WithReconcileLock(ctx context.Context, fn func() error) (bool, error) {
+	acquired := false
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var ok bool
+		if e := tx.Raw("SELECT pg_try_advisory_xact_lock(?)", reconcileLockKey).Scan(&ok).Error; e != nil {
+			return e
+		}
+		if !ok {
+			return nil
+		}
+		acquired = true
+		return fn()
+	})
+	return acquired, err
+}
+
 // --- Integration ---
 
 func (r *paymentRepository) GetIntegration(ctx context.Context, organizationID, provider string) (*entities.PaymentIntegration, error) {
 	var m models.PaymentIntegrationModel
-	err := r.db.WithContext(ctx).
-		Where("organization_id = ? AND provider = ?", organizationID, provider).
-		First(&m).Error
+	err := r.db.WithContext(ctx).Where("organization_id = ? AND provider = ?", organizationID, provider).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -69,9 +90,7 @@ func (r *paymentRepository) CreateIntegration(ctx context.Context, integration *
 }
 
 func (r *paymentRepository) UpdateIntegrationFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error {
-	return r.db.WithContext(ctx).Model(&models.PaymentIntegrationModel{}).
-		Where("id = ?", id).
-		Updates(fields).Error
+	return r.db.WithContext(ctx).Model(&models.PaymentIntegrationModel{}).Where("id = ?", id).Updates(fields).Error
 }
 
 func (r *paymentRepository) CountPendingLinks(ctx context.Context, organizationID string) (int64, error) {
@@ -84,9 +103,7 @@ func (r *paymentRepository) CountPendingLinks(ctx context.Context, organizationI
 
 func (r *paymentRepository) ListDisconnectedBefore(ctx context.Context, cutoff time.Time) ([]*entities.PaymentIntegration, error) {
 	var ms []models.PaymentIntegrationModel
-	err := r.db.WithContext(ctx).
-		Where("disconnected_at IS NOT NULL AND disconnected_at <= ?", cutoff).
-		Find(&ms).Error
+	err := r.db.WithContext(ctx).Where("disconnected_at IS NOT NULL AND disconnected_at <= ?", cutoff).Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
@@ -107,23 +124,24 @@ func (r *paymentRepository) GetPaymentsByBudget(ctx context.Context, budgetID uu
 	var ms []models.BudgetPaymentModel
 	err := r.db.WithContext(ctx).
 		Where("budget_id = ? AND organization_id = ?", budgetID, organizationID).
-		Order("created_at DESC").
-		Find(&ms).Error
+		Order("created_at DESC").Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*entities.BudgetPayment, 0, len(ms))
-	for i := range ms {
-		out = append(out, ms[i].ToEntity())
-	}
-	return out, nil
+	return toPaymentEntities(ms), nil
 }
 
 func (r *paymentRepository) GetPendingByBudgetKind(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
+	return r.findPending(r.db.WithContext(ctx), budgetID, kind)
+}
+
+func (r *paymentRepository) GetPendingByBudgetKindForUpdate(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
+	return r.findPending(r.db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}), budgetID, kind)
+}
+
+func (r *paymentRepository) findPending(q *gorm.DB, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
 	var m models.BudgetPaymentModel
-	err := r.db.WithContext(ctx).
-		Where("budget_id = ? AND kind = ? AND status = ?", budgetID, string(kind), string(entities.PaymentPending)).
-		First(&m).Error
+	err := q.Where("budget_id = ? AND kind = ? AND status = ?", budgetID, string(kind), string(entities.PaymentPending)).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -134,10 +152,16 @@ func (r *paymentRepository) GetPendingByBudgetKind(ctx context.Context, budgetID
 }
 
 func (r *paymentRepository) GetPaymentByOrderNSU(ctx context.Context, organizationID, orderNSU string) (*entities.BudgetPayment, error) {
+	return r.findByOrder(r.db.WithContext(ctx), organizationID, orderNSU)
+}
+
+func (r *paymentRepository) GetPaymentByOrderNSUForUpdate(ctx context.Context, organizationID, orderNSU string) (*entities.BudgetPayment, error) {
+	return r.findByOrder(r.db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}), organizationID, orderNSU)
+}
+
+func (r *paymentRepository) findByOrder(q *gorm.DB, organizationID, orderNSU string) (*entities.BudgetPayment, error) {
 	var m models.BudgetPaymentModel
-	err := r.db.WithContext(ctx).
-		Where("organization_id = ? AND order_nsu = ?", organizationID, orderNSU).
-		First(&m).Error
+	err := q.Where("organization_id = ? AND order_nsu = ?", organizationID, orderNSU).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -149,24 +173,25 @@ func (r *paymentRepository) GetPaymentByOrderNSU(ctx context.Context, organizati
 
 func (r *paymentRepository) CreatePayment(ctx context.Context, payment *entities.BudgetPayment) error {
 	m := models.BudgetPaymentModel{
-		ID:              payment.ID,
-		OrganizationID:  payment.OrganizationID,
-		BudgetID:        payment.BudgetID,
-		Kind:            string(payment.Kind),
-		OrderNSU:        payment.OrderNSU,
-		TransactionNSU:  payment.TransactionNSU,
-		Slug:            payment.Slug,
-		AmountCents:     payment.AmountCents,
-		PaidAmountCents: payment.PaidAmountCents,
-		Installments:    payment.Installments,
-		CaptureMethod:   payment.CaptureMethod,
-		CheckoutURL:     payment.CheckoutURL,
-		ReceiptURL:      payment.ReceiptURL,
-		Status:          string(payment.Status),
-		StatusReason:    payment.StatusReason,
-		LinkExpiresAt:   payment.LinkExpiresAt,
-		PaidAt:          payment.PaidAt,
-		CheckAttempts:   payment.CheckAttempts,
+		ID:                 payment.ID,
+		OrganizationID:     payment.OrganizationID,
+		BudgetID:           payment.BudgetID,
+		Kind:               string(payment.Kind),
+		OrderNSU:           payment.OrderNSU,
+		TransactionNSU:     payment.TransactionNSU,
+		Slug:               payment.Slug,
+		AmountCents:        payment.AmountCents,
+		PaidAmountCents:    payment.PaidAmountCents,
+		Installments:       payment.Installments,
+		CaptureMethod:      payment.CaptureMethod,
+		PixDiscountPercent: payment.PixDiscountPercent,
+		CheckoutURL:        payment.CheckoutURL,
+		ReceiptURL:         payment.ReceiptURL,
+		Status:             string(payment.Status),
+		StatusReason:       payment.StatusReason,
+		LinkExpiresAt:      payment.LinkExpiresAt,
+		PaidAt:             payment.PaidAt,
+		CheckAttempts:      payment.CheckAttempts,
 	}
 	if m.ID == uuid.Nil {
 		m.ID = uuid.New()
@@ -178,73 +203,68 @@ func (r *paymentRepository) CreatePayment(ctx context.Context, payment *entities
 }
 
 func (r *paymentRepository) UpdatePaymentFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error {
-	return r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
-		Where("id = ?", id).
-		Updates(fields).Error
+	return r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).Where("id = ?", id).Updates(fields).Error
 }
 
-func (r *paymentRepository) MarkPaidGuarded(ctx context.Context, id uuid.UUID, fields map[string]interface{}) (int64, error) {
+func (r *paymentRepository) MarkPaidGuarded(ctx context.Context, id uuid.UUID, organizationID string, fields map[string]interface{}) (int64, error) {
 	res := r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
-		Where("id = ? AND status IN ?", id, []string{string(entities.PaymentPending), string(entities.PaymentCanceled)}).
+		Where("id = ? AND organization_id = ? AND status IN ?", id, organizationID, []string{string(entities.PaymentPending), string(entities.PaymentCanceled)}).
 		Updates(fields)
+	return res.RowsAffected, res.Error
+}
+
+func (r *paymentRepository) CancelPendingByID(ctx context.Context, id uuid.UUID, reason string) (int64, error) {
+	res := r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
+		Where("id = ? AND status = ?", id, string(entities.PaymentPending)).
+		Updates(map[string]interface{}{
+			"status":        string(entities.PaymentCanceled),
+			"status_reason": reason,
+			"canceled_at":   time.Now(),
+		})
 	return res.RowsAffected, res.Error
 }
 
 func (r *paymentRepository) CancelPendingForBudget(ctx context.Context, budgetID uuid.UUID, organizationID, reason string) error {
 	return r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
 		Where("budget_id = ? AND organization_id = ? AND status = ?", budgetID, organizationID, string(entities.PaymentPending)).
-		Updates(map[string]interface{}{
-			"status":        string(entities.PaymentCanceled),
-			"status_reason": reason,
-			"canceled_at":   time.Now(),
-		}).Error
+		Updates(map[string]interface{}{"status": string(entities.PaymentCanceled), "status_reason": reason, "canceled_at": time.Now()}).Error
 }
 
 func (r *paymentRepository) CancelPendingForOrg(ctx context.Context, organizationID, reason string) error {
 	return r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
 		Where("organization_id = ? AND status = ?", organizationID, string(entities.PaymentPending)).
-		Updates(map[string]interface{}{
-			"status":        string(entities.PaymentCanceled),
-			"status_reason": reason,
-			"canceled_at":   time.Now(),
-		}).Error
+		Updates(map[string]interface{}{"status": string(entities.PaymentCanceled), "status_reason": reason, "canceled_at": time.Now()}).Error
 }
 
 func (r *paymentRepository) ListExpiredPendingLinks(ctx context.Context, now time.Time, limit int) ([]*entities.BudgetPayment, error) {
 	var ms []models.BudgetPaymentModel
 	err := r.db.WithContext(ctx).
 		Where("status = ? AND link_expires_at IS NOT NULL AND link_expires_at < ?", string(entities.PaymentPending), now).
-		Limit(limit).
-		Find(&ms).Error
+		Limit(limit).Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*entities.BudgetPayment, 0, len(ms))
-	for i := range ms {
-		out = append(out, ms[i].ToEntity())
-	}
-	return out, nil
+	return toPaymentEntities(ms), nil
 }
 
-func (r *paymentRepository) ListPendingWithIdentifiers(ctx context.Context, since time.Time, limit int) ([]*entities.BudgetPayment, error) {
+func (r *paymentRepository) ListPendingForRecheck(ctx context.Context, now time.Time, limit int) ([]*entities.BudgetPayment, error) {
 	var ms []models.BudgetPaymentModel
+	// Re-check pending payments still within their validity + 48h grace that have not
+	// been checked in the last 10 minutes (time-based backoff; the job runs every 10m).
 	err := r.db.WithContext(ctx).
-		Where("status = ? AND created_at >= ? AND (slug IS NOT NULL OR transaction_nsu IS NOT NULL)", string(entities.PaymentPending), since).
-		Limit(limit).
-		Find(&ms).Error
+		Where("status = ?", string(entities.PaymentPending)).
+		Where("(link_expires_at IS NULL OR ? < link_expires_at + interval '48 hours')", now).
+		Where("(last_checked_at IS NULL OR last_checked_at < ?)", now.Add(-10*time.Minute)).
+		Order("created_at ASC").
+		Limit(limit).Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*entities.BudgetPayment, 0, len(ms))
-	for i := range ms {
-		out = append(out, ms[i].ToEntity())
-	}
-	return out, nil
+	return toPaymentEntities(ms), nil
 }
 
 // --- Budget aggregate ---
 
-// budgetChargeRow is the scan target for the budget slice + customer contact.
 type budgetChargeRow struct {
 	ID              uuid.UUID
 	OrganizationID  string
@@ -252,6 +272,7 @@ type budgetChargeRow struct {
 	Status          string
 	TotalCost       int64
 	AmountPaidCents int64
+	RefundDueCents  int64
 	DepositPercent  *float64
 	ValidUntil      *time.Time
 	Name            string
@@ -269,6 +290,7 @@ func (row *budgetChargeRow) toContext() *entities.BudgetChargeContext {
 		Status:          row.Status,
 		TotalCost:       row.TotalCost,
 		AmountPaidCents: row.AmountPaidCents,
+		RefundDueCents:  row.RefundDueCents,
 		DepositPercent:  row.DepositPercent,
 		ValidUntil:      row.ValidUntil,
 		Name:            row.Name,
@@ -286,14 +308,14 @@ func (row *budgetChargeRow) toContext() *entities.BudgetChargeContext {
 
 const budgetChargeSelect = `
 	b.id, b.organization_id, b.public_token, b.status, b.total_cost,
-	b.amount_paid_cents, b.deposit_percent, b.valid_until, b.name, b.quote_number,
+	b.amount_paid_cents, b.amount_refund_due_cents AS refund_due_cents, b.deposit_percent,
+	b.valid_until, b.name, b.quote_number,
 	c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone`
 
 func (r *paymentRepository) GetBudgetChargeContext(ctx context.Context, budgetID uuid.UUID, organizationID string) (*entities.BudgetChargeContext, error) {
 	var row budgetChargeRow
 	err := r.db.WithContext(ctx).
-		Table("budgets b").
-		Select(budgetChargeSelect).
+		Table("budgets b").Select(budgetChargeSelect).
 		Joins("LEFT JOIN customers c ON c.id = b.customer_id").
 		Where("b.id = ? AND b.organization_id = ? AND b.deleted_at IS NULL", budgetID, organizationID).
 		Scan(&row).Error
@@ -309,8 +331,7 @@ func (r *paymentRepository) GetBudgetChargeContext(ctx context.Context, budgetID
 func (r *paymentRepository) GetBudgetChargeContextByToken(ctx context.Context, token string) (*entities.BudgetChargeContext, error) {
 	var row budgetChargeRow
 	err := r.db.WithContext(ctx).
-		Table("budgets b").
-		Select(budgetChargeSelect).
+		Table("budgets b").Select(budgetChargeSelect).
 		Joins("LEFT JOIN customers c ON c.id = b.customer_id").
 		Where("b.public_token = ? AND b.deleted_at IS NULL", token).
 		Scan(&row).Error
@@ -326,9 +347,8 @@ func (r *paymentRepository) GetBudgetChargeContextByToken(ctx context.Context, t
 func (r *paymentRepository) SumPaidPrincipal(ctx context.Context, budgetID uuid.UUID) (int64, error) {
 	var sum *int64
 	err := r.db.WithContext(ctx).Model(&models.BudgetPaymentModel{}).
-		Where("budget_id = ? AND status = ?", budgetID, string(entities.PaymentPaid)).
-		Select("COALESCE(SUM(amount_cents), 0)").
-		Scan(&sum).Error
+		Where("budget_id = ? AND status = ? AND status_reason <> ?", budgetID, string(entities.PaymentPaid), entities.ReasonPaidAfterCancel).
+		Select("COALESCE(SUM(amount_cents), 0)").Scan(&sum).Error
 	if err != nil {
 		return 0, err
 	}
@@ -338,16 +358,31 @@ func (r *paymentRepository) SumPaidPrincipal(ctx context.Context, budgetID uuid.
 	return *sum, nil
 }
 
-func (r *paymentRepository) UpdateBudgetAggregate(ctx context.Context, budgetID uuid.UUID, amountPaid int64, status string, paidAt *time.Time) error {
-	return r.db.WithContext(ctx).
-		Table("budgets").
-		Where("id = ?", budgetID).
-		Updates(map[string]interface{}{
-			"amount_paid_cents": amountPaid,
-			"payment_status":    status,
-			"paid_at":           paidAt,
-			"updated_at":        time.Now(),
-		}).Error
+func (r *paymentRepository) RecalcBudgetAggregate(ctx context.Context, budgetID uuid.UUID, organizationID string) error {
+	const q = `
+UPDATE budgets b SET
+	amount_paid_cents = sub.paid,
+	amount_refund_due_cents = sub.refund,
+	payment_status = CASE WHEN sub.paid <= 0 THEN 'unpaid' WHEN sub.paid >= b.total_cost THEN 'paid' ELSE 'partial' END,
+	paid_at = CASE WHEN sub.paid >= b.total_cost THEN COALESCE(b.paid_at, now()) ELSE NULL END,
+	updated_at = now()
+FROM (
+	SELECT
+		COALESCE(SUM(amount_cents) FILTER (WHERE status = 'paid' AND status_reason <> 'paid_after_cancel'), 0) AS paid,
+		COALESCE(SUM(amount_cents) FILTER (WHERE status = 'paid' AND status_reason = 'paid_after_cancel'), 0) AS refund
+	FROM budget_payments WHERE budget_id = ?
+) sub
+WHERE b.id = ? AND b.organization_id = ?`
+	return r.db.WithContext(ctx).Exec(q, budgetID, budgetID, organizationID).Error
+}
+
+func (r *paymentRepository) HasBlockingPayments(ctx context.Context, budgetID uuid.UUID, organizationID string) (bool, error) {
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(
+		`SELECT EXISTS(SELECT 1 FROM budget_payments WHERE budget_id = ? AND organization_id = ? AND status IN ('paid','pending'))`,
+		budgetID, organizationID,
+	).Scan(&exists).Error
+	return exists, err
 }
 
 // --- Webhook events ---
@@ -366,28 +401,23 @@ func (r *paymentRepository) CreateWebhookEvent(ctx context.Context, organization
 }
 
 func (r *paymentRepository) MarkWebhookProcessed(ctx context.Context, id uuid.UUID) error {
-	now := time.Now()
 	return r.db.WithContext(ctx).Model(&models.PaymentWebhookEventModel{}).
-		Where("id = ?", id).
-		Updates(map[string]interface{}{"processed_at": now}).Error
+		Where("id = ?", id).Updates(map[string]interface{}{"processed_at": time.Now()}).Error
 }
 
 func (r *paymentRepository) MarkWebhookAttempt(ctx context.Context, id uuid.UUID, lastError string) error {
 	return r.db.WithContext(ctx).Model(&models.PaymentWebhookEventModel{}).
-		Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"attempts":   gorm.Expr("attempts + 1"),
-			"last_error": lastError,
-		}).Error
+		Where("id = ?", id).Updates(map[string]interface{}{
+		"attempts":   gorm.Expr("attempts + 1"),
+		"last_error": lastError,
+	}).Error
 }
 
 func (r *paymentRepository) ListUnprocessedWebhooks(ctx context.Context, since time.Time, maxAttempts, limit int) ([]*entities.WebhookEventRecord, error) {
 	var ms []models.PaymentWebhookEventModel
 	err := r.db.WithContext(ctx).
 		Where("processed_at IS NULL AND received_at >= ? AND attempts < ?", since, maxAttempts).
-		Order("received_at ASC").
-		Limit(limit).
-		Find(&ms).Error
+		Order("received_at ASC").Limit(limit).Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
@@ -401,4 +431,12 @@ func (r *paymentRepository) ListUnprocessedWebhooks(ctx context.Context, since t
 		})
 	}
 	return out, nil
+}
+
+func toPaymentEntities(ms []models.BudgetPaymentModel) []*entities.BudgetPayment {
+	out := make([]*entities.BudgetPayment, 0, len(ms))
+	for i := range ms {
+		out = append(out, ms[i].ToEntity())
+	}
+	return out
 }

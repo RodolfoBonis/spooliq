@@ -23,6 +23,13 @@ type PendingPaymentCanceler interface {
 	CancelPending(ctx context.Context, tx *gorm.DB, budgetID uuid.UUID, organizationID, reason string) error
 }
 
+// PaymentPresenceChecker reports whether a budget has payments that block deletion
+// (any paid — including paid_after_cancel — or pending row). Implemented by the
+// payments feature.
+type PaymentPresenceChecker interface {
+	HasBlockingPayments(ctx context.Context, budgetID uuid.UUID, organizationID string) (bool, error)
+}
+
 // Pending-cancel reasons passed by the budget status change.
 const (
 	PendingCancelBudgetCancelled = "budget_cancelled"

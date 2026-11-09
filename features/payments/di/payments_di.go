@@ -62,6 +62,7 @@ var Module = fx.Module(
 		// Budget-facing ports (implemented here so budget never imports payments).
 		NewDefaultsProvider,
 		NewPendingCanceler,
+		NewPresenceChecker,
 	),
 	// Wire the public payment block into the budget public view, and start the
 	// reconcile job.

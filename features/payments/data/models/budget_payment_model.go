@@ -10,8 +10,9 @@ import (
 
 // BudgetPaymentModel is one payment attempt (link) against a budget. A budget can
 // have at most one PENDING payment per kind, enforced by a partial unique index on
-// (budget_id, kind) WHERE status = 'pending' (added in RunMigrations). order_nsu is
-// globally unique; transaction_nsu is unique when present (partial unique index).
+// (budget_id, kind) WHERE status = 'pending' (added in RunPaymentsMigrations).
+// order_nsu is globally unique; transaction_nsu is unique when present (partial
+// unique index).
 type BudgetPaymentModel struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	OrganizationID string    `gorm:"type:varchar(255);not null;index:idx_budget_payments_org" json:"organization_id"`
@@ -28,6 +29,9 @@ type BudgetPaymentModel struct {
 	PaidAmountCents int64  `gorm:"type:bigint;not null;default:0" json:"paid_amount_cents"`
 	Installments    int    `gorm:"type:integer;not null;default:0" json:"installments"`
 	CaptureMethod   string `gorm:"type:varchar(20)" json:"capture_method"`
+	// PixDiscountPercent is the Pix discount (integer %) SNAPSHOT at link creation, so
+	// the confirm floor and the link's Pix price are stable even if settings change.
+	PixDiscountPercent int `gorm:"type:integer;not null;default:0" json:"pix_discount_percent"`
 
 	// Links
 	CheckoutURL string  `gorm:"type:text" json:"checkout_url"`
@@ -42,12 +46,13 @@ type BudgetPaymentModel struct {
 	CanceledAt    *time.Time `gorm:"type:timestamptz" json:"canceled_at"`
 	RefundedAt    *time.Time `gorm:"type:timestamptz" json:"refunded_at"`
 
-	// Control
+	// Control. The composite (status, created_at) index is created in
+	// RunPaymentsMigrations (no GORM index tag here so the raw index is not shadowed).
 	LastCheckedAt *time.Time      `gorm:"type:timestamptz" json:"last_checked_at"`
 	CheckAttempts int             `gorm:"type:integer;not null;default:0" json:"check_attempts"`
 	RawEvent      json.RawMessage `gorm:"type:jsonb" json:"raw_event,omitempty"`
 
-	CreatedAt time.Time `gorm:"autoCreateTime;index:idx_budget_payments_status_created" json:"created_at"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
@@ -59,28 +64,29 @@ func (BudgetPaymentModel) TableName() string {
 // ToEntity maps the model to its domain entity.
 func (m *BudgetPaymentModel) ToEntity() *entities.BudgetPayment {
 	return &entities.BudgetPayment{
-		ID:              m.ID,
-		OrganizationID:  m.OrganizationID,
-		BudgetID:        m.BudgetID,
-		Kind:            entities.ChargeKind(m.Kind),
-		OrderNSU:        m.OrderNSU,
-		TransactionNSU:  m.TransactionNSU,
-		Slug:            m.Slug,
-		AmountCents:     m.AmountCents,
-		PaidAmountCents: m.PaidAmountCents,
-		Installments:    m.Installments,
-		CaptureMethod:   m.CaptureMethod,
-		CheckoutURL:     m.CheckoutURL,
-		ReceiptURL:      m.ReceiptURL,
-		Status:          entities.PaymentRecordStatus(m.Status),
-		StatusReason:    m.StatusReason,
-		LinkExpiresAt:   m.LinkExpiresAt,
-		PaidAt:          m.PaidAt,
-		CanceledAt:      m.CanceledAt,
-		RefundedAt:      m.RefundedAt,
-		LastCheckedAt:   m.LastCheckedAt,
-		CheckAttempts:   m.CheckAttempts,
-		CreatedAt:       m.CreatedAt,
-		UpdatedAt:       m.UpdatedAt,
+		ID:                 m.ID,
+		OrganizationID:     m.OrganizationID,
+		BudgetID:           m.BudgetID,
+		Kind:               entities.ChargeKind(m.Kind),
+		OrderNSU:           m.OrderNSU,
+		TransactionNSU:     m.TransactionNSU,
+		Slug:               m.Slug,
+		AmountCents:        m.AmountCents,
+		PaidAmountCents:    m.PaidAmountCents,
+		Installments:       m.Installments,
+		CaptureMethod:      m.CaptureMethod,
+		PixDiscountPercent: m.PixDiscountPercent,
+		CheckoutURL:        m.CheckoutURL,
+		ReceiptURL:         m.ReceiptURL,
+		Status:             entities.PaymentRecordStatus(m.Status),
+		StatusReason:       m.StatusReason,
+		LinkExpiresAt:      m.LinkExpiresAt,
+		PaidAt:             m.PaidAt,
+		CanceledAt:         m.CanceledAt,
+		RefundedAt:         m.RefundedAt,
+		LastCheckedAt:      m.LastCheckedAt,
+		CheckAttempts:      m.CheckAttempts,
+		CreatedAt:          m.CreatedAt,
+		UpdatedAt:          m.UpdatedAt,
 	}
 }

@@ -23,7 +23,7 @@ type PaymentIntegrationModel struct {
 
 	Enabled               bool     `gorm:"not null;default:false" json:"enabled"`
 	AssuredInstallments   int      `gorm:"not null;default:1" json:"assured_installments"`
-	PixDiscountPercent    float64  `gorm:"type:double precision;not null;default:0" json:"pix_discount_percent"`
+	PixDiscountPercent    int      `gorm:"type:integer;not null;default:0" json:"pix_discount_percent"`
 	DefaultDepositPercent *float64 `gorm:"type:double precision" json:"default_deposit_percent"` // null = total
 
 	VerifiedAt     *time.Time `gorm:"type:timestamptz" json:"verified_at"`

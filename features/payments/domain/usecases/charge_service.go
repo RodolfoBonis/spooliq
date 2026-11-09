@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,10 @@ import (
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
 	"github.com/google/uuid"
 )
+
+// errSupersedeRace signals that a pending link we tried to supersede was no longer
+// pending (it got paid/cancelled concurrently). The caller recomputes the charge.
+var errSupersedeRace = errors.New("supersede_race")
 
 // ChargeService creates or reuses a checkout link for a budget. It is shared by the
 // authenticated and the public pay endpoints.
@@ -33,9 +38,9 @@ func payableStatus(status string) bool {
 }
 
 // CreateOrReuseLink resolves the next charge for a budget and returns a checkout
-// link, reusing an equivalent pending link when one exists. requestedKind, when
-// non-nil, must match the next due charge (public pay passes the kind the customer
-// clicked; the authenticated endpoint passes nil).
+// link, reusing an equivalent pending link when one exists (same amount AND same Pix
+// discount snapshot, not expired). requestedKind, when non-nil, must match the next
+// due charge.
 func (s *ChargeService) CreateOrReuseLink(
 	ctx context.Context,
 	budget *entities.BudgetChargeContext,
@@ -71,41 +76,45 @@ func (s *ChargeService) CreateOrReuseLink(
 	validUntil := s.linkValidUntil(budget, now)
 	amount := next.Amount
 	kind := next.Kind
+	pix := integration.PixDiscountPercent
 
 	var payment *entities.BudgetPayment
 	var reuseURL string
 
 	txErr := s.repo.WithTransaction(ctx, func(repo domainRepos.PaymentRepository) error {
-		pending, err := repo.GetPendingByBudgetKind(ctx, budget.ID, kind)
+		// FOR UPDATE: serialize two concurrent create-link requests for the same
+		// (budget, kind) so CreateLink is never called twice for one order.
+		pending, err := repo.GetPendingByBudgetKindForUpdate(ctx, budget.ID, kind)
 		if err != nil {
 			return err
 		}
 		if pending != nil {
 			expired := pending.LinkExpiresAt != nil && pending.LinkExpiresAt.Before(now)
-			if pending.AmountCents == amount && !expired {
-				// Reuse the equivalent pending link.
+			if pending.AmountCents == amount && pending.PixDiscountPercent == pix && !expired {
 				payment = pending
 				reuseURL = pending.CheckoutURL
 				return nil
 			}
-			// Amount changed or the link expired: supersede it.
-			if err := repo.UpdatePaymentFields(ctx, pending.ID, map[string]interface{}{
-				"status":        string(entities.PaymentCanceled),
-				"status_reason": entities.ReasonSuperseded,
-				"canceled_at":   now,
-			}); err != nil {
-				return err
+			// Amount/settings changed or the link expired: supersede it (guarded).
+			rows, cerr := repo.CancelPendingByID(ctx, pending.ID, entities.ReasonSuperseded)
+			if cerr != nil {
+				return cerr
+			}
+			if rows == 0 {
+				// It was paid/cancelled concurrently; recompute at the caller.
+				return errSupersedeRace
 			}
 		}
 		newPayment := &entities.BudgetPayment{
-			ID:             uuid.New(),
-			OrganizationID: budget.OrganizationID,
-			BudgetID:       budget.ID,
-			Kind:           kind,
-			OrderNSU:       genOrderNSU(),
-			AmountCents:    amount,
-			Status:         entities.PaymentPending,
-			LinkExpiresAt:  &validUntil,
+			ID:                 uuid.New(),
+			OrganizationID:     budget.OrganizationID,
+			BudgetID:           budget.ID,
+			Kind:               kind,
+			OrderNSU:           genOrderNSU(),
+			AmountCents:        amount,
+			PixDiscountPercent: pix,
+			Status:             entities.PaymentPending,
+			LinkExpiresAt:      &validUntil,
 		}
 		if err := repo.CreatePayment(ctx, newPayment); err != nil {
 			return err
@@ -114,8 +123,10 @@ func (s *ChargeService) CreateOrReuseLink(
 		return nil
 	})
 	if txErr != nil {
-		// A concurrent request may have won the (budget, kind) pending slot; try to
-		// reuse its link instead of surfacing a raw unique-violation error.
+		if errors.Is(txErr, errSupersedeRace) {
+			return nil, ErrChargeNotAvailable
+		}
+		// A concurrent request may have won the (budget, kind) pending slot; reuse it.
 		if pending, perr := s.repo.GetPendingByBudgetKind(ctx, budget.ID, kind); perr == nil && pending != nil && pending.CheckoutURL != "" {
 			return &entities.CreateLinkResponse{
 				CheckoutURL: pending.CheckoutURL,
@@ -128,18 +139,10 @@ func (s *ChargeService) CreateOrReuseLink(
 		return nil, txErr
 	}
 
-	// Reusing a link that already has a checkout_url: no API call needed.
 	if reuseURL != "" {
-		return &entities.CreateLinkResponse{
-			CheckoutURL: reuseURL,
-			Kind:        kind,
-			Amount:      amount,
-			ExpiresAt:   payment.LinkExpiresAt,
-		}, nil
+		return &entities.CreateLinkResponse{CheckoutURL: reuseURL, Kind: kind, Amount: amount, ExpiresAt: payment.LinkExpiresAt}, nil
 	}
 
-	// Call the provider. The row already exists with order_nsu, so a failure here
-	// leaves it pending for the next attempt (same order_nsu => idempotent).
 	resp, err := s.createRemoteLink(ctx, budget, integration, payment, amount, validUntil)
 	if err != nil {
 		return nil, err
@@ -175,6 +178,7 @@ func (s *ChargeService) createRemoteLink(
 	}
 
 	req := coreServices.InfinitePayCreateLinkRequest{
+		Handle:   integration.Handle,
 		Items:    []coreServices.InfinitePayItem{{Name: itemName, Price: amount, Quantity: 1}},
 		OrderNSU: payment.OrderNSU,
 		Options: &coreServices.InfinitePayLinkOptions{
@@ -186,7 +190,7 @@ func (s *ChargeService) createRemoteLink(
 		req.Options.AssuredInstallments = integration.AssuredInstallments
 	}
 	if integration.PixDiscountPercent > 0 {
-		req.Options.Discounts = &coreServices.InfinitePayDiscounts{Pix: int(integration.PixDiscountPercent + 0.5)}
+		req.Options.Discounts = &coreServices.InfinitePayDiscounts{Pix: integration.PixDiscountPercent}
 	}
 	if budget.PublicToken != nil && *budget.PublicToken != "" {
 		req.RedirectURL = s.redirectURL(*budget.PublicToken)
@@ -224,12 +228,7 @@ func (s *ChargeService) createRemoteLink(
 		// The link exists at the gateway; still return it so the customer can pay.
 	}
 
-	return &entities.CreateLinkResponse{
-		CheckoutURL: resp.CheckoutURL,
-		Kind:        payment.Kind,
-		Amount:      amount,
-		ExpiresAt:   &validUntil,
-	}, nil
+	return &entities.CreateLinkResponse{CheckoutURL: resp.CheckoutURL, Kind: payment.Kind, Amount: amount, ExpiresAt: &validUntil}, nil
 }
 
 // mapClientError maps an InfinitePay client error to a payment sentinel, alerting on

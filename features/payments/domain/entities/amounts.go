@@ -9,6 +9,8 @@ const (
 	MinChargeCents int64 = 100
 	// MaxInstallments is the hard cap on card installments.
 	MaxInstallments = 12
+	// MaxPixDiscountPercent bounds the Pix discount a seller can configure.
+	MaxPixDiscountPercent = 30
 )
 
 // ChargeKind identifies what a given charge represents on a budget.
@@ -39,7 +41,8 @@ const (
 
 // Reasons a budget is not currently chargeable.
 const (
-	// ReasonBelowMinimum: the charge (or remaining balance) is under R$ 1.
+	// ReasonBelowMinimum: the charge (or remaining balance, or the whole total) is
+	// under R$ 1.
 	ReasonBelowMinimum = "below_minimum"
 	// ReasonAlreadyPaid: the total is already covered.
 	ReasonAlreadyPaid = "already_paid"
@@ -63,24 +66,28 @@ func DepositAmount(total int64, depositPercent float64) int64 {
 	if total <= 0 || depositPercent <= 0 {
 		return 0
 	}
-	// Basis points (percent * 100), rounded to the nearest integer bp.
 	bps := int64(depositPercent*100 + 0.5)
-	// Half-up division by 10_000 (100% in bps).
 	return (total*bps + 5000) / 10000
 }
 
 // NextChargeFor decides the next charge for a budget given its total, the amount
-// already paid (sum of paid charges' principal) and the optional deposit percent
-// (nil => charge the full total). The rules:
+// already paid (sum of paid charges' principal, EXCLUDING paid_after_cancel) and the
+// optional deposit percent (nil => charge the full total). The rules:
 //   - total <= 0                      -> not chargeable (invalid_total)
+//   - total < R$1                     -> not chargeable (below_minimum), with or without a deposit
 //   - paid >= total                   -> not chargeable (already_paid)
 //   - paid > 0 (partial)              -> balance = total-paid; chargeable unless < R$1
 //   - nothing paid, deposit set       -> deposit; but if the deposit OR the remainder
 //     is under R$1 (or the deposit covers the whole total) -> charge the full total
-//   - nothing paid, no deposit        -> full; not chargeable if total < R$1
+//   - nothing paid, no deposit        -> full
 func NextChargeFor(total, paid int64, depositPercent *float64) NextCharge {
 	if total <= 0 {
 		return NextCharge{Kind: KindFull, Amount: total, Chargeable: false, Reason: ReasonInvalidTotal}
+	}
+	// A budget whose total is itself under the gateway minimum is never chargeable,
+	// regardless of any deposit configuration.
+	if total < MinChargeCents {
+		return NextCharge{Kind: KindFull, Amount: total, Chargeable: false, Reason: ReasonBelowMinimum}
 	}
 	if paid >= total {
 		return NextCharge{Kind: KindFull, Amount: 0, Chargeable: false, Reason: ReasonAlreadyPaid}
@@ -97,25 +104,21 @@ func NextChargeFor(total, paid int64, depositPercent *float64) NextCharge {
 		dep := DepositAmount(total, *depositPercent)
 		remainder := total - dep
 		if dep < MinChargeCents || remainder < MinChargeCents || dep >= total {
-			// Splitting makes no sense: charge the whole total at once.
 			return NextCharge{Kind: KindFull, Amount: total, Chargeable: true}
 		}
 		return NextCharge{Kind: KindDeposit, Amount: dep, Chargeable: true}
-	}
-	if total < MinChargeCents {
-		return NextCharge{Kind: KindFull, Amount: total, Chargeable: false, Reason: ReasonBelowMinimum}
 	}
 	return NextCharge{Kind: KindFull, Amount: total, Chargeable: true}
 }
 
 // PixPrice returns the amount a Pix payer pays after the Pix discount, rounded
-// HALF-UP. pixDiscountPercent is a percentage (0..100); values <= 0 return amount
-// unchanged.
-func PixPrice(amount int64, pixDiscountPercent float64) int64 {
+// HALF-UP. pixDiscountPercent is an integer percentage (0..30); values <= 0 return
+// amount unchanged.
+func PixPrice(amount int64, pixDiscountPercent int) int64 {
 	if amount <= 0 || pixDiscountPercent <= 0 {
 		return amount
 	}
-	discount := DepositAmount(amount, pixDiscountPercent)
+	discount := (amount*int64(pixDiscountPercent) + 50) / 100
 	return amount - discount
 }
 

@@ -149,20 +149,19 @@ func TestCharge_AlreadyPaid(t *testing.T) {
 }
 
 // raceRepo wraps the fake to simulate a concurrent create winning the pending
-// (budget, kind) slot: the first pending read returns nil (so the service tries to
-// create), CreatePayment fails with a unique violation, and the fallback read finds
-// the winner's link.
+// (budget, kind) slot: the in-transaction locked read returns nil (so the service
+// tries to create), CreatePayment fails with a unique violation, and the fallback
+// (non-locking) read finds the winner's link.
 type raceRepo struct {
 	*fakeRepo
 	winner *entities.BudgetPayment
-	reads  int
+}
+
+func (r *raceRepo) GetPendingByBudgetKindForUpdate(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
+	return nil, nil
 }
 
 func (r *raceRepo) GetPendingByBudgetKind(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error) {
-	r.reads++
-	if r.reads == 1 {
-		return nil, nil
-	}
 	cp := *r.winner
 	return &cp, nil
 }

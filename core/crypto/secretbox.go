@@ -11,53 +11,48 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"io"
 	"strings"
 )
 
-// ciphertextPrefix tags the current ciphertext scheme. A future scheme would use
-// a new prefix and Decrypt would branch on it.
+// ciphertextPrefix tags the current ciphertext scheme.
 const ciphertextPrefix = "v1:"
 
-// Errors returned by the SecretBox. They are intentionally generic so callers
-// never leak key material or plaintext into logs when reporting a failure.
+// keyBytes is the required key length: AES-256.
+const keyBytes = 32
+
+// Errors returned by the SecretBox. They are intentionally generic so callers never
+// leak key material or plaintext into logs when reporting a failure.
 var (
 	// ErrNotConfigured is returned by Encrypt/Decrypt when no key was provided.
-	// Callers translate it into a 503 payments_not_configured so the app keeps
-	// booting without the key.
 	ErrNotConfigured = errors.New("secretbox: encryption key not configured")
-	// ErrInvalidKey is returned by NewSecretBox when the key cannot be decoded to
-	// a valid AES key length (16, 24 or 32 bytes).
-	ErrInvalidKey = errors.New("secretbox: invalid encryption key")
-	// ErrInvalidCiphertext is returned by Decrypt when the input is malformed,
-	// uses an unknown version or fails authentication.
+	// ErrInvalidKey is returned by NewSecretBox when the key is not base64 of exactly
+	// 32 bytes (AES-256).
+	ErrInvalidKey = errors.New("secretbox: invalid encryption key (must be base64 of 32 bytes)")
+	// ErrInvalidCiphertext is returned by Decrypt when the input is malformed, uses an
+	// unknown version or fails authentication.
 	ErrInvalidCiphertext = errors.New("secretbox: invalid ciphertext")
 )
 
-// SecretBox encrypts and decrypts short secrets with AES-GCM. The zero value is
-// not usable; build one with NewSecretBox. When constructed without a key it is
-// "not configured": Configured() reports false and Encrypt/Decrypt return
-// ErrNotConfigured, so the application can start and only the payment endpoints
-// degrade to 503.
+// SecretBox encrypts and decrypts short secrets with AES-256-GCM. Build one with
+// NewSecretBox. When constructed without a key it is "not configured": Configured()
+// reports false and Encrypt/Decrypt return ErrNotConfigured, so the application can
+// start and only the payment endpoints degrade to 503.
 type SecretBox struct {
 	aead cipher.AEAD
 }
 
-// NewSecretBox builds a SecretBox from the raw key material. An empty key yields a
-// not-configured box (no error) so the app boots without PAYMENTS_ENCRYPTION_KEY.
-//
-// The key is decoded, in order, as: standard base64, URL base64, hex, then raw
-// bytes. Whatever decoding first yields an AES key length (16/24/32 bytes) wins;
-// 32 bytes (AES-256) is the intended size. Anything else is ErrInvalidKey.
+// NewSecretBox builds a SecretBox from the key material. An empty key yields a
+// not-configured box (no error). The key MUST be base64 (standard or URL, padded or
+// not) that decodes to EXACTLY 32 bytes; anything else is ErrInvalidKey.
 func NewSecretBox(key string) (*SecretBox, error) {
 	if key == "" {
 		return &SecretBox{}, nil
 	}
 
 	raw := decodeKey(key)
-	if raw == nil {
+	if len(raw) != keyBytes {
 		return nil, ErrInvalidKey
 	}
 
@@ -72,31 +67,17 @@ func NewSecretBox(key string) (*SecretBox, error) {
 	return &SecretBox{aead: aead}, nil
 }
 
-// decodeKey tries several encodings and returns the first result with a valid AES
-// key length, or nil when none match.
+// decodeKey tries the base64 encodings and returns the first successful decode, or
+// nil when none decode. Length is validated by the caller.
 func decodeKey(key string) []byte {
-	candidates := [][]byte{}
-	if b, err := base64.StdEncoding.DecodeString(key); err == nil {
-		candidates = append(candidates, b)
-	}
-	if b, err := base64.RawStdEncoding.DecodeString(key); err == nil {
-		candidates = append(candidates, b)
-	}
-	if b, err := base64.URLEncoding.DecodeString(key); err == nil {
-		candidates = append(candidates, b)
-	}
-	if b, err := base64.RawURLEncoding.DecodeString(key); err == nil {
-		candidates = append(candidates, b)
-	}
-	if b, err := hex.DecodeString(key); err == nil {
-		candidates = append(candidates, b)
-	}
-	candidates = append(candidates, []byte(key))
-
-	for _, c := range candidates {
-		switch len(c) {
-		case 16, 24, 32:
-			return c
+	for _, enc := range []*base64.Encoding{
+		base64.StdEncoding,
+		base64.RawStdEncoding,
+		base64.URLEncoding,
+		base64.RawURLEncoding,
+	} {
+		if b, err := enc.DecodeString(key); err == nil && len(b) == keyBytes {
+			return b
 		}
 	}
 	return nil
@@ -108,7 +89,6 @@ func (s *SecretBox) Configured() bool {
 }
 
 // Encrypt seals plaintext and returns the versioned, base64url-encoded ciphertext.
-// It returns ErrNotConfigured when the box has no key.
 func (s *SecretBox) Encrypt(plaintext []byte) (string, error) {
 	if !s.Configured() {
 		return "", ErrNotConfigured
@@ -117,7 +97,6 @@ func (s *SecretBox) Encrypt(plaintext []byte) (string, error) {
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", err
 	}
-	// Seal appends the ciphertext (and tag) to nonce, so the output is nonce‖ct.
 	sealed := s.aead.Seal(nonce, nonce, plaintext, nil)
 	return ciphertextPrefix + base64.RawURLEncoding.EncodeToString(sealed), nil
 }

@@ -53,7 +53,8 @@ func (p *defaultsProvider) DefaultDepositPercent(ctx context.Context, organizati
 
 // pendingCanceler implements budgetUc.PendingPaymentCanceler. It cancels pending
 // payment links on the transaction-bound *gorm.DB handed in by the budget status
-// change, so the cancellation commits atomically with the status transition.
+// change, so the cancellation commits atomically with the status transition. The
+// WHERE status = 'pending' guard ensures a paid/canceled row is never overwritten.
 type pendingCanceler struct{}
 
 // NewPendingCanceler builds the pending-payment canceler for the budget feature.
@@ -71,4 +72,19 @@ func (c *pendingCanceler) CancelPending(ctx context.Context, tx *gorm.DB, budget
 			"canceled_at":   time.Now(),
 			"updated_at":    time.Now(),
 		}).Error
+}
+
+// presenceChecker implements budgetUc.PaymentPresenceChecker so budget deletion can
+// be blocked when paid/pending payments exist.
+type presenceChecker struct {
+	repo domainRepos.PaymentRepository
+}
+
+// NewPresenceChecker builds the payment-presence checker for the budget feature.
+func NewPresenceChecker(repo domainRepos.PaymentRepository) budgetUc.PaymentPresenceChecker {
+	return &presenceChecker{repo: repo}
+}
+
+func (p *presenceChecker) HasBlockingPayments(ctx context.Context, budgetID uuid.UUID, organizationID string) (bool, error) {
+	return p.repo.HasBlockingPayments(ctx, budgetID, organizationID)
 }

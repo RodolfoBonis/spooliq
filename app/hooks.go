@@ -68,6 +68,17 @@ func SetupMiddlewaresAndRoutes(lifecycle fx.Lifecycle, router *gin.Engine, activ
 	// routing; without it they fall through to 404.
 	router.Use(middlewares.Cors())
 
+	// Sanitize secret path tokens (public share token, webhook token) for tracing and
+	// metrics BEFORE the observability middleware records the span name and url.path.
+	// Routing has already matched and handlers read path params (not URL.Path), so this
+	// only changes what is logged/traced, never behavior.
+	router.Use(func(c *gin.Context) {
+		if masked := helpers.MaskSensitivePath(c.Request.URL.Path); masked != c.Request.URL.Path {
+			c.Request.URL.Path = masked
+		}
+		c.Next()
+	})
+
 	// Observability middleware (tracing + metrics + enrichment)
 	router.Use(ginmiddleware.New(agent, "spooliq-api"))
 

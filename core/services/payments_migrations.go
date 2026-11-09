@@ -12,9 +12,9 @@ import (
 // exist. Everything here is additive: the feature stays inert until an organization
 // connects a provider, and all statements are safe to re-run.
 //
-// The budgets.deposit_percent / payment_status / amount_paid_cents / paid_at columns
-// are added by RunMigrations' AutoMigrate of the budget model (the fields live on
-// BudgetModel), so they are not handled here.
+// The budgets.deposit_percent / payment_status / amount_paid_cents /
+// amount_refund_due_cents / paid_at columns are added by RunMigrations' AutoMigrate of
+// the budget model.
 func RunPaymentsMigrations() {
 	if Connector == nil {
 		fmt.Println("Warning: payments migrations skipped (no DB connection)")
@@ -64,8 +64,7 @@ func RunPaymentsMigrations() {
 		}
 	}
 
-	// budget_payments.budget_id FK -> budgets(id) ON DELETE RESTRICT. A budget with
-	// payments cannot be deleted at the application layer; this is the safety net.
+	// budget_payments.budget_id FK -> budgets(id) ON DELETE RESTRICT.
 	{
 		var budgetPaymentsExists bool
 		Connector.Raw("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name = 'budget_payments')").Scan(&budgetPaymentsExists)
@@ -96,46 +95,52 @@ func RunPaymentsMigrations() {
 	}
 
 	// ========================================
-	// PAYMENTS INDEXES (idempotent)
+	// PAYMENTS INDEXES (idempotent). The CRITICAL unique indexes enforce money-safety
+	// invariants; failing to create them must FAIL STARTUP rather than run without them.
 	// ========================================
 	paymentIndexes := []struct {
-		name string
-		sql  string
+		name     string
+		sql      string
+		critical bool
 	}{
 		{
-			// One integration per (organization, provider).
 			"uq_payment_integrations_org_provider",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_integrations_org_provider ON payment_integrations(organization_id, provider)",
+			true,
 		},
 		{
-			// order_nsu is the idempotency key for a link; globally unique.
 			"uq_budget_payments_order_nsu",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budget_payments_order_nsu ON budget_payments(order_nsu)",
+			true,
 		},
 		{
-			// transaction_nsu is unique when present (partial), guaranteeing a single
-			// confirmation per gateway transaction.
 			"uq_budget_payments_transaction_nsu",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budget_payments_transaction_nsu ON budget_payments(transaction_nsu) WHERE transaction_nsu IS NOT NULL",
+			true,
 		},
 		{
 			// The anti-race guard: at most one pending link per (budget, kind).
 			"uq_budget_payments_pending",
 			"CREATE UNIQUE INDEX IF NOT EXISTS uq_budget_payments_pending ON budget_payments(budget_id, kind) WHERE status = 'pending'",
+			true,
 		},
 		{
-			// Reconcile job sweeps by status + age.
+			// Reconcile job sweeps by status + age. Note: no GORM index tag shadows this.
 			"idx_budget_payments_status_created",
 			"CREATE INDEX IF NOT EXISTS idx_budget_payments_status_created ON budget_payments(status, created_at)",
+			false,
 		},
 		{
-			// Reconcile job reprocesses unprocessed events by age.
 			"idx_payment_webhook_events_unprocessed",
 			"CREATE INDEX IF NOT EXISTS idx_payment_webhook_events_unprocessed ON payment_webhook_events(received_at) WHERE processed_at IS NULL",
+			false,
 		},
 	}
 	for _, idx := range paymentIndexes {
 		if err := Connector.Exec(idx.sql).Error; err != nil {
+			if idx.critical {
+				panic(fmt.Sprintf("ERROR: critical payments index %s failed to create: %s", idx.name, err.Error()))
+			}
 			fmt.Printf("Warning: Index %s creation failed: %v\n", idx.name, err)
 		} else {
 			fmt.Printf("Created index %s\n", idx.name)

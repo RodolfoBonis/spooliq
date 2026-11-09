@@ -16,78 +16,65 @@ import (
 type PaymentRepository interface {
 	// WithTransaction runs fn against a transaction-bound repository.
 	WithTransaction(ctx context.Context, fn func(repo PaymentRepository) error) error
+	// WithReconcileLock runs fn while holding a session-level advisory lock so only one
+	// replica sweeps at a time. The bool reports whether the lock was acquired (fn runs
+	// only then).
+	WithReconcileLock(ctx context.Context, fn func() error) (bool, error)
 
 	// --- Integration ---
-
-	// GetIntegration returns the org's integration for a provider, or (nil, nil) when
-	// none exists.
 	GetIntegration(ctx context.Context, organizationID, provider string) (*entities.PaymentIntegration, error)
-	// CreateIntegration inserts a new integration row.
 	CreateIntegration(ctx context.Context, integration *entities.PaymentIntegration) error
-	// UpdateIntegrationFields updates the given columns with a map (never a struct, so
-	// zero values are not skipped).
 	UpdateIntegrationFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error
-	// CountPendingLinks counts pending payment links across the organization.
 	CountPendingLinks(ctx context.Context, organizationID string) (int64, error)
-	// ListDisconnectedBefore lists integrations disconnected at or before cutoff
-	// (used by the reconcile job to purge stale credentials).
 	ListDisconnectedBefore(ctx context.Context, cutoff time.Time) ([]*entities.PaymentIntegration, error)
-	// DeleteIntegration permanently removes an integration row.
 	DeleteIntegration(ctx context.Context, id uuid.UUID) error
 
 	// --- Budget payments ---
-
-	// GetPaymentsByBudget returns all payments of a budget, newest first.
 	GetPaymentsByBudget(ctx context.Context, budgetID uuid.UUID, organizationID string) ([]*entities.BudgetPayment, error)
-	// GetPendingByBudgetKind returns the single pending payment for (budget, kind), or
-	// (nil, nil) when none.
+	// GetPendingByBudgetKind returns the pending payment for (budget, kind), or (nil, nil).
 	GetPendingByBudgetKind(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error)
-	// GetPaymentByOrderNSU returns a payment by its order_nsu scoped to the org, or
-	// (nil, nil) when none.
+	// GetPendingByBudgetKindForUpdate is GetPendingByBudgetKind with a row lock
+	// (SELECT ... FOR UPDATE), used inside the charge transaction to serialize two
+	// concurrent create-link requests for the same (budget, kind).
+	GetPendingByBudgetKindForUpdate(ctx context.Context, budgetID uuid.UUID, kind entities.ChargeKind) (*entities.BudgetPayment, error)
 	GetPaymentByOrderNSU(ctx context.Context, organizationID, orderNSU string) (*entities.BudgetPayment, error)
-	// CreatePayment inserts a payment row. A unique partial index enforces at most one
-	// pending row per (budget, kind).
+	// GetPaymentByOrderNSUForUpdate locks the row for the confirm transaction.
+	GetPaymentByOrderNSUForUpdate(ctx context.Context, organizationID, orderNSU string) (*entities.BudgetPayment, error)
 	CreatePayment(ctx context.Context, payment *entities.BudgetPayment) error
-	// UpdatePaymentFields updates the given columns of a payment by id.
 	UpdatePaymentFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error
-	// MarkPaidGuarded performs the guarded UPDATE ... WHERE id = ? AND status IN
-	// ('pending','canceled'), returning rows affected (1 => this call made the first
-	// confirmation). fields carry the paid columns.
-	MarkPaidGuarded(ctx context.Context, id uuid.UUID, fields map[string]interface{}) (int64, error)
-	// CancelPendingForBudget cancels every pending payment of a budget with the given
-	// status_reason. Runs inside the caller's transaction when WithTransaction wraps it.
+	// MarkPaidGuarded performs the guarded UPDATE ... WHERE id = ? AND organization_id = ?
+	// AND status IN ('pending','canceled'); rows==1 means this call made the first
+	// confirmation.
+	MarkPaidGuarded(ctx context.Context, id uuid.UUID, organizationID string, fields map[string]interface{}) (int64, error)
+	// CancelPendingByID cancels a single payment only if it is still pending, returning
+	// rows affected (0 means it was no longer pending — never overwrite paid).
+	CancelPendingByID(ctx context.Context, id uuid.UUID, reason string) (int64, error)
+	// CancelPendingForBudget cancels every PENDING payment of a budget (guarded).
 	CancelPendingForBudget(ctx context.Context, budgetID uuid.UUID, organizationID, reason string) error
-	// CancelPendingForOrg cancels every pending payment of an organization.
+	// CancelPendingForOrg cancels every PENDING payment of an organization (guarded).
 	CancelPendingForOrg(ctx context.Context, organizationID, reason string) error
 	// ListExpiredPendingLinks lists pending payments whose link_expires_at < now.
 	ListExpiredPendingLinks(ctx context.Context, now time.Time, limit int) ([]*entities.BudgetPayment, error)
-	// ListPendingWithIdentifiers lists pending payments created since cutoff that have a
-	// slug or transaction_nsu (so the job can re-check them).
-	ListPendingWithIdentifiers(ctx context.Context, since time.Time, limit int) ([]*entities.BudgetPayment, error)
+	// ListPendingForRecheck lists pending payments still within their validity + 48h
+	// grace that are due for another payment_check (basic time-based backoff).
+	ListPendingForRecheck(ctx context.Context, now time.Time, limit int) ([]*entities.BudgetPayment, error)
 
 	// --- Budget aggregate (budgets table) ---
-
-	// GetBudgetChargeContext loads the budget slice needed to charge, scoped to the
-	// org. Returns (nil, nil) when not found.
 	GetBudgetChargeContext(ctx context.Context, budgetID uuid.UUID, organizationID string) (*entities.BudgetChargeContext, error)
-	// GetBudgetChargeContextByToken loads the budget slice by public share token.
-	// Returns (nil, nil) when not found.
 	GetBudgetChargeContextByToken(ctx context.Context, token string) (*entities.BudgetChargeContext, error)
-	// SumPaidPrincipal sums amount_cents over the budget's PAID payments.
+	// SumPaidPrincipal sums amount_cents over the budget's PAID payments, EXCLUDING
+	// paid_after_cancel (refund-due money is not "paid" toward the total).
 	SumPaidPrincipal(ctx context.Context, budgetID uuid.UUID) (int64, error)
-	// UpdateBudgetAggregate writes amount_paid_cents, payment_status and paid_at on the
-	// budget.
-	UpdateBudgetAggregate(ctx context.Context, budgetID uuid.UUID, amountPaid int64, status string, paidAt *time.Time) error
+	// RecalcBudgetAggregate recomputes amount_paid_cents, amount_refund_due_cents,
+	// payment_status and paid_at from the payments rows in ONE race-free UPDATE.
+	RecalcBudgetAggregate(ctx context.Context, budgetID uuid.UUID, organizationID string) error
+	// HasBlockingPayments reports whether the budget has any paid or pending payment
+	// (used to block deletion).
+	HasBlockingPayments(ctx context.Context, budgetID uuid.UUID, organizationID string) (bool, error)
 
 	// --- Webhook events ---
-
-	// CreateWebhookEvent stores a received payload, returning its id.
 	CreateWebhookEvent(ctx context.Context, organizationID string, payload []byte, receivedAt time.Time) (uuid.UUID, error)
-	// MarkWebhookProcessed stamps processed_at.
 	MarkWebhookProcessed(ctx context.Context, id uuid.UUID) error
-	// MarkWebhookAttempt increments attempts and records the last error.
 	MarkWebhookAttempt(ctx context.Context, id uuid.UUID, lastError string) error
-	// ListUnprocessedWebhooks lists unprocessed events received since cutoff with fewer
-	// than maxAttempts attempts.
 	ListUnprocessedWebhooks(ctx context.Context, since time.Time, maxAttempts, limit int) ([]*entities.WebhookEventRecord, error)
 }

@@ -136,9 +136,10 @@ type BudgetEntity struct {
 	// Payment aggregate (maintained by the payments feature). PaymentStatus is
 	// unpaid|partial|paid; AmountPaidCents is the principal paid so far; PaidAt is the
 	// instant the budget became fully paid.
-	PaymentStatus   string     `json:"payment_status"`
-	AmountPaidCents int64      `json:"amount_paid_cents"`
-	PaidAt          *time.Time `json:"paid_at,omitempty"`
+	PaymentStatus        string     `json:"payment_status"`
+	AmountPaidCents      int64      `json:"amount_paid_cents"`
+	AmountRefundDueCents int64      `json:"amount_refund_due_cents"`
+	PaidAt               *time.Time `json:"paid_at,omitempty"`
 
 	// Calculated costs (in cents for precision)
 	FilamentCost       int64 `json:"filament_cost"`        // cents - Sum of all items filament costs

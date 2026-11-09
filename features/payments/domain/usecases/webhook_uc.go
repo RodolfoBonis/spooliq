@@ -20,6 +20,11 @@ const maxWebhookBody = 64 * 1024
 // confirmTimeout bounds the background confirmation triggered by a webhook.
 const confirmTimeout = 20 * time.Second
 
+// dummyWebhookToken is a fixed-length value used for a constant-time comparison when
+// the org/integration/token is unknown, so an attacker cannot distinguish "unknown
+// org" from "wrong token" by timing.
+const dummyWebhookToken = "0000000000000000000000000000000000000000000"
+
 // WebhookUseCase implements the InfinitePay webhook endpoint. The webhook is
 // unsigned, so the per-integration token in the URL is the only credential and every
 // state change is re-verified via payment_check.
@@ -73,24 +78,23 @@ func (uc *WebhookUseCase) Handle(c *gin.Context) {
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
 	}
-	if integration == nil || integration.WebhookTokenCiphertext == "" {
-		coreErrors.Respond(c, coreErrors.Unauthorized("invalid_webhook_token", "Token inválido"))
-		return
+	// Always run a constant-time compare, even when the org/integration/token is
+	// unknown, so timing does not reveal which case failed.
+	expected := dummyWebhookToken
+	if integration != nil && integration.WebhookTokenCiphertext != "" {
+		if decoded, derr := uc.decryptWebhookToken(integration); derr == nil {
+			expected = decoded
+		}
 	}
-	expected, err := uc.decryptWebhookToken(integration)
-	if err != nil {
-		coreErrors.Respond(c, coreErrors.ServiceUnavailable("payments_not_configured", "Pagamentos não estão configurados."))
-		return
-	}
-	if subtle.ConstantTimeCompare([]byte(expected), []byte(token)) != 1 {
+	valid := subtle.ConstantTimeCompare([]byte(expected), []byte(token)) == 1
+	if integration == nil || integration.WebhookTokenCiphertext == "" || !valid {
 		coreErrors.Respond(c, coreErrors.Unauthorized("invalid_webhook_token", "Token inválido"))
 		return
 	}
 
 	var payload entities.WebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
-		// Still 200 so the provider does not hammer retries on a payload we can log and
-		// inspect later, but record it as an event for visibility.
+		// Still 200 so the provider does not hammer retries; record it for inspection.
 		_, _ = uc.repo.CreateWebhookEvent(ctx, organizationID, body, time.Now())
 		c.Status(http.StatusOK)
 		return
@@ -108,18 +112,23 @@ func (uc *WebhookUseCase) Handle(c *gin.Context) {
 }
 
 // processAsync confirms the payment in the background and records the outcome on the
-// stored event so the reconcile job can retry failures.
+// stored event so the reconcile job can retry failures. Bookkeeping uses a FRESH
+// context so it is not cancelled when the 20s confirm context expires.
 func (uc *WebhookUseCase) processAsync(organizationID string, payload entities.WebhookPayload, eventID uuid.UUID) {
-	ctx, cancel := context.WithTimeout(context.Background(), confirmTimeout)
+	defer RecoverToSentry("payments.webhook", uc.logger)
+
+	confirmCtx, cancel := context.WithTimeout(context.Background(), confirmTimeout)
 	defer cancel()
 
-	_, err := uc.confirm.Confirm(ctx, organizationID, payload, "", entities.SourceWebhook)
+	_, err := uc.confirm.Confirm(confirmCtx, organizationID, payload, "", entities.SourceWebhook)
+
 	if eventID == uuid.Nil {
 		return
 	}
+	bookkeeping := context.Background()
 	if err != nil {
-		_ = uc.repo.MarkWebhookAttempt(ctx, eventID, err.Error())
+		_ = uc.repo.MarkWebhookAttempt(bookkeeping, eventID, err.Error())
 		return
 	}
-	_ = uc.repo.MarkWebhookProcessed(ctx, eventID)
+	_ = uc.repo.MarkWebhookProcessed(bookkeeping, eventID)
 }

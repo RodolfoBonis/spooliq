@@ -9,39 +9,42 @@ import (
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/entities"
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
 	paymentUc "github.com/RodolfoBonis/spooliq/features/payments/domain/usecases"
+	"github.com/getsentry/sentry-go"
 	"go.uber.org/fx"
 )
 
 const (
-	// reconcileInterval is how often the payments reconcile sweep runs.
-	reconcileInterval = 10 * time.Minute
-	// reconcileInitialDelay postpones the first sweep so migrations have run.
+	reconcileInterval     = 10 * time.Minute
 	reconcileInitialDelay = time.Minute
-	// reconcileLookback bounds how far back the job reprocesses events/links.
-	reconcileLookback = 48 * time.Hour
-	// webhookMaxAttempts caps webhook event reprocessing.
-	webhookMaxAttempts = 10
-	// disconnectedRetention is how long disconnected credentials are kept before purge.
+	reconcileLookback     = 48 * time.Hour
+	webhookMaxAttempts    = 10
 	disconnectedRetention = 7 * 24 * time.Hour
-	// reconcileBatch bounds each sweep's work.
-	reconcileBatch = 100
+	reconcileBatch        = 100
 )
 
 // RegisterReconcileJob wires the background payments reconciliation sweep: it
-// reprocesses unprocessed webhook events, re-checks pending links, expires overdue
-// links and purges credentials disconnected for over 7 days. It mirrors the budget
-// expiry job's lifecycle (one run shortly after start, then every 10 minutes, cleanly
-// stopped on shutdown).
+// reprocesses unprocessed webhook events, re-checks pending links (within validity +
+// 48h grace), expires overdue links and purges credentials disconnected for over 7
+// days. It holds an advisory lock so only one replica sweeps at a time, recovers from
+// panics, and mirrors the budget expiry job's lifecycle.
 func RegisterReconcileJob(lc fx.Lifecycle, repo domainRepos.PaymentRepository, confirm *paymentUc.ConfirmService, log logger.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ticker := time.NewTicker(reconcileInterval)
 
-	runOnce := func() {
-		now := time.Now()
-		reprocessWebhooks(ctx, repo, confirm, log, now)
-		recheckPendingLinks(ctx, repo, confirm, log, now)
-		expireOverdueLinks(ctx, repo, log, now)
-		purgeDisconnected(ctx, repo, log, now)
+	runSweep := func() {
+		defer paymentUc.RecoverToSentry("payments.reconcile", log)
+		acquired, err := repo.WithReconcileLock(ctx, func() error {
+			now := time.Now()
+			reprocessWebhooks(ctx, repo, confirm, log, now)
+			recheckPendingLinks(ctx, repo, confirm, log)
+			expireOverdueLinks(ctx, repo, log, now)
+			purgeDisconnected(ctx, repo, log, now)
+			return nil
+		})
+		if err != nil {
+			log.Error(ctx, "reconcile sweep failed", map[string]interface{}{"error": err.Error()})
+		}
+		_ = acquired // when false, another replica holds the lock; nothing to do
 	}
 
 	lc.Append(fx.Hook{
@@ -51,14 +54,14 @@ func RegisterReconcileJob(lc fx.Lifecycle, repo domainRepos.PaymentRepository, c
 				case <-ctx.Done():
 					return
 				case <-time.After(reconcileInitialDelay):
-					runOnce()
+					runSweep()
 				}
 				for {
 					select {
 					case <-ctx.Done():
 						return
 					case <-ticker.C:
-						runOnce()
+						runSweep()
 					}
 				}
 			}()
@@ -72,7 +75,6 @@ func RegisterReconcileJob(lc fx.Lifecycle, repo domainRepos.PaymentRepository, c
 	})
 }
 
-// reprocessWebhooks re-confirms unprocessed webhook events.
 func reprocessWebhooks(ctx context.Context, repo domainRepos.PaymentRepository, confirm *paymentUc.ConfirmService, log logger.Logger, now time.Time) {
 	events, err := repo.ListUnprocessedWebhooks(ctx, now.Add(-reconcileLookback), webhookMaxAttempts, reconcileBatch)
 	if err != nil {
@@ -88,6 +90,7 @@ func reprocessWebhooks(ctx context.Context, repo domainRepos.PaymentRepository, 
 		if _, cerr := confirm.Confirm(ctx, ev.OrganizationID, payload, "", entities.SourceJob); cerr != nil {
 			_ = repo.MarkWebhookAttempt(ctx, ev.ID, cerr.Error())
 			if ev.Attempts+1 >= webhookMaxAttempts {
+				alertExhausted(ev.OrganizationID, payload.OrderNSU, cerr)
 				log.Error(ctx, "reconcile: webhook event exhausted attempts", map[string]interface{}{"event_id": ev.ID.String()})
 			}
 			continue
@@ -96,9 +99,8 @@ func reprocessWebhooks(ctx context.Context, repo domainRepos.PaymentRepository, 
 	}
 }
 
-// recheckPendingLinks re-confirms pending payments that carry a slug/transaction_nsu.
-func recheckPendingLinks(ctx context.Context, repo domainRepos.PaymentRepository, confirm *paymentUc.ConfirmService, log logger.Logger, now time.Time) {
-	pending, err := repo.ListPendingWithIdentifiers(ctx, now.Add(-reconcileLookback), reconcileBatch)
+func recheckPendingLinks(ctx context.Context, repo domainRepos.PaymentRepository, confirm *paymentUc.ConfirmService, log logger.Logger) {
+	pending, err := repo.ListPendingForRecheck(ctx, time.Now(), reconcileBatch)
 	if err != nil {
 		log.Error(ctx, "reconcile: list pending links failed", map[string]interface{}{"error": err.Error()})
 		return
@@ -112,12 +114,11 @@ func recheckPendingLinks(ctx context.Context, repo domainRepos.PaymentRepository
 			payload.TransactionNSU = *p.TransactionNSU
 		}
 		if _, cerr := confirm.Confirm(ctx, p.OrganizationID, payload, "", entities.SourceJob); cerr != nil {
-			log.Error(ctx, "reconcile: pending link recheck failed", map[string]interface{}{"payment_order_nsu": p.OrderNSU, "error": cerr.Error()})
+			log.Error(ctx, "reconcile: pending link recheck failed", map[string]interface{}{"order_nsu": p.OrderNSU, "error": cerr.Error()})
 		}
 	}
 }
 
-// expireOverdueLinks cancels pending links past their validity.
 func expireOverdueLinks(ctx context.Context, repo domainRepos.PaymentRepository, log logger.Logger, now time.Time) {
 	expired, err := repo.ListExpiredPendingLinks(ctx, now, reconcileBatch)
 	if err != nil {
@@ -125,17 +126,13 @@ func expireOverdueLinks(ctx context.Context, repo domainRepos.PaymentRepository,
 		return
 	}
 	for _, p := range expired {
-		if err := repo.UpdatePaymentFields(ctx, p.ID, map[string]interface{}{
-			"status":        string(entities.PaymentCanceled),
-			"status_reason": entities.ReasonExpired,
-			"canceled_at":   now,
-		}); err != nil {
+		// Guarded: only expire a row that is still pending (never overwrite paid).
+		if _, err := repo.CancelPendingByID(ctx, p.ID, entities.ReasonExpired); err != nil {
 			log.Error(ctx, "reconcile: expire link failed", map[string]interface{}{"payment_id": p.ID.String(), "error": err.Error()})
 		}
 	}
 }
 
-// purgeDisconnected removes credentials disconnected for longer than the retention.
 func purgeDisconnected(ctx context.Context, repo domainRepos.PaymentRepository, log logger.Logger, now time.Time) {
 	stale, err := repo.ListDisconnectedBefore(ctx, now.Add(-disconnectedRetention))
 	if err != nil {
@@ -147,4 +144,18 @@ func purgeDisconnected(ctx context.Context, repo domainRepos.PaymentRepository, 
 			log.Error(ctx, "reconcile: purge disconnected integration failed", map[string]interface{}{"integration_id": integ.ID.String(), "error": err.Error()})
 		}
 	}
+}
+
+// alertExhausted reports to Sentry that a webhook event will no longer be retried.
+func alertExhausted(organizationID, orderNSU string, cause error) {
+	sentry.WithScope(func(scope *sentry.Scope) {
+		scope.SetLevel(sentry.LevelError)
+		scope.SetTag("area", "payments.reconcile")
+		scope.SetExtra("organization_id", organizationID)
+		scope.SetExtra("order_nsu", orderNSU)
+		if cause != nil {
+			scope.SetExtra("cause", cause.Error())
+		}
+		sentry.CaptureMessage("payments: webhook event exhausted retries")
+	})
 }

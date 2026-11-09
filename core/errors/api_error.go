@@ -105,3 +105,27 @@ func Validation(fields map[string]string) *APIError {
 func Internal() *APIError {
 	return newAPIError(http.StatusInternalServerError, CodeInternalError, genericInternalMessage)
 }
+
+// Gone builds a 410 Gone APIError.
+func Gone(code, message string) *APIError {
+	return newAPIError(http.StatusGone, code, message)
+}
+
+// TooManyRequests builds a 429 Too Many Requests APIError.
+func TooManyRequests(code, message string) *APIError {
+	return newAPIError(http.StatusTooManyRequests, code, message)
+}
+
+// Unprocessable builds a 422 Unprocessable Entity APIError. It is used when a
+// request is well-formed but fails a business rule (e.g. a rejected credential or
+// an amount below the gateway minimum).
+func Unprocessable(code, message string) *APIError {
+	return newAPIError(http.StatusUnprocessableEntity, code, message)
+}
+
+// ServiceUnavailable builds a 503 Service Unavailable APIError. It is used when a
+// dependency is not configured or temporarily unreachable (e.g. the payment
+// provider is down or no encryption key is set).
+func ServiceUnavailable(code, message string) *APIError {
+	return newAPIError(http.StatusServiceUnavailable, code, message)
+}

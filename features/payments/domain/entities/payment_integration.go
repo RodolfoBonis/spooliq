@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -76,9 +77,13 @@ type UpsertIntegrationRequest struct {
 	AssuredInstallments   int      `json:"assured_installments" validate:"gte=1,lte=12"`
 	PixDiscountPercent    int      `json:"pix_discount_percent" validate:"gte=0,lte=30"`
 	DefaultDepositPercent *float64 `json:"default_deposit_percent" validate:"omitempty,gt=0,lt=100"`
-	// FeeRates is the optional InfinitePay fee table. Nil/absent means "not configured".
-	// Range/precision are validated in the use case (not by the struct validator).
-	FeeRates *FeeRates `json:"fee_rates"`
-	// EmbedFeeInPrice may only be true when the reference card rate is configured.
-	EmbedFeeInPrice bool `json:"embed_fee_in_price"`
+	// FeeRates is the optional InfinitePay fee table, kept as raw JSON so the use case
+	// can tell three cases apart (older desktops must not wipe the table):
+	//   - key ABSENT        -> len == 0           -> keep the stored table;
+	//   - explicit null      -> "null"            -> clear the table;
+	//   - a JSON object      -> parse into FeeRates -> replace the table.
+	FeeRates json.RawMessage `json:"fee_rates"`
+	// EmbedFeeInPrice is a pointer so an ABSENT key keeps the stored flag; present
+	// true/false sets it. It may only be true when the reference card rate exists.
+	EmbedFeeInPrice *bool `json:"embed_fee_in_price"`
 }

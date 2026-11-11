@@ -7,11 +7,16 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 )
 
-// CaptureMethodPix is the capture_method value InfinitePay reports for a Pix payment.
-// Any other value (notably "credit_card") is treated as a card payment by FeeFor.
-const CaptureMethodPix = "pix"
+// capture_method values InfinitePay reports. FeeFor only recognises these two; any
+// other value (including an empty one) is treated as UNKNOWN so the fee snapshot stays
+// NULL rather than being guessed as a card charge.
+const (
+	CaptureMethodPix        = "pix"
+	CaptureMethodCreditCard = "credit_card"
+)
 
 // FeeRates is an organization's InfinitePay fee table. Each value is a percentage of
 // the charged amount, with up to two decimal places, between 0 and MaxFeeRatePercent.
@@ -73,16 +78,22 @@ func (f *FeeRates) CreditRate(installments int) (float64, bool) {
 	return v, ok
 }
 
-// rateFor resolves the applicable rate for a (method, installments) pair. Pix uses the
-// Pix rate; every other method is treated as a card charge.
+// rateFor resolves the applicable rate for a (method, installments) pair. Only the two
+// known methods are recognised (case-insensitively): "pix" uses the Pix rate and
+// "credit_card" uses the card rate. Any other/empty method is UNKNOWN (ok=false) so the
+// fee is not guessed.
 func (f *FeeRates) rateFor(method string, installments int) (float64, bool) {
 	if f == nil {
 		return 0, false
 	}
-	if method == CaptureMethodPix {
+	switch {
+	case strings.EqualFold(method, CaptureMethodPix):
 		return f.Pix, true
+	case strings.EqualFold(method, CaptureMethodCreditCard):
+		return f.CreditRate(installments)
+	default:
+		return 0, false
 	}
-	return f.CreditRate(installments)
 }
 
 // feeCents rounds paid × rate/100 to the nearest cent (half away from zero, the same

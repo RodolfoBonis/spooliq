@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/budget/data/models"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
@@ -22,6 +23,9 @@ type budgetRepositoryImpl struct {
 	// tests and whenever the payments feature does not inject it, in which case the fee
 	// rate is 0 (no change to pricing).
 	feeProvider repositories.PaymentFeeProvider
+	// log is used for observability (fee resolution / the tax+fee>=100 guard). Nil in
+	// tests built via NewBudgetRepository; every call site is nil-guarded.
+	log logger.Logger
 }
 
 // NewBudgetRepository creates a new instance of BudgetRepository
@@ -30,10 +34,10 @@ func NewBudgetRepository(db *gorm.DB) repositories.BudgetRepository {
 }
 
 // NewBudgetRepositoryWithFeeProvider builds the repository with an embedded payment fee
-// provider. Used by FX wiring so draft pricing can embed the org's fee; tests use the
-// plain NewBudgetRepository (nil provider => fee rate 0).
-func NewBudgetRepositoryWithFeeProvider(db *gorm.DB, feeProvider repositories.PaymentFeeProvider) repositories.BudgetRepository {
-	return &budgetRepositoryImpl{db: db, feeProvider: feeProvider}
+// provider and a logger. Used by FX wiring so draft pricing can embed the org's fee;
+// tests use the plain NewBudgetRepository (nil provider => fee rate 0).
+func NewBudgetRepositoryWithFeeProvider(db *gorm.DB, feeProvider repositories.PaymentFeeProvider, log logger.Logger) repositories.BudgetRepository {
+	return &budgetRepositoryImpl{db: db, feeProvider: feeProvider, log: log}
 }
 
 // WithTransaction runs fn inside a single database transaction. The repository
@@ -41,7 +45,11 @@ func NewBudgetRepositoryWithFeeProvider(db *gorm.DB, feeProvider repositories.Pa
 // returning an error rolls everything back.
 func (r *budgetRepositoryImpl) WithTransaction(ctx context.Context, fn func(repo repositories.BudgetRepository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(&budgetRepositoryImpl{db: tx})
+		// Carry every collaborator onto the tx-bound repository so writes done inside the
+		// transaction (create/update/duplicate/recalc -> CalculateCosts) still embed the
+		// org's payment fee and keep observability. Dropping feeProvider here previously
+		// meant only the (non-transactional) preview embedded the fee.
+		return fn(&budgetRepositoryImpl{db: tx, feeProvider: r.feeProvider, log: r.log})
 	})
 }
 
@@ -1251,8 +1259,8 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 	}
 
 	// Resolve the embedded payment fee rate (0 when the org does not embed it). A
-	// provider failure must not break pricing: it is logged by the provider and we
-	// fall back to 0 (no fee).
+	// provider failure must not break pricing: resolvePaymentFeeRate logs it and falls
+	// back to 0 (no fee).
 	feeRate := r.resolvePaymentFeeRate(ctx, in.OrganizationID)
 
 	pin := pricing.PricingInput{
@@ -1323,7 +1331,14 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 		}
 	}
 
-	return pricing.Calculate(pin)
+	result, err := pricing.Calculate(pin)
+	if err == nil && feeRate > 0 && result.PaymentFeeRateApplied == 0 && r.log != nil {
+		// The pure engine dropped the fee because tax + fee >= 100% (undefined gross-up).
+		r.log.Warning(ctx, "embedded payment fee dropped: tax + fee >= 100%", map[string]interface{}{
+			"organization_id": in.OrganizationID, "tax_rate": taxRate, "requested_fee_rate": feeRate,
+		})
+	}
+	return result, err
 }
 
 // resolveTaxRate returns the effective "por dentro" tax rate for the computation:
@@ -1354,7 +1369,15 @@ func (r *budgetRepositoryImpl) resolvePaymentFeeRate(ctx context.Context, organi
 		return 0
 	}
 	rate, err := r.feeProvider.EmbeddedFeeRatePercent(ctx, organizationID)
-	if err != nil || rate < 0 {
+	if err != nil {
+		if r.log != nil {
+			r.log.Error(ctx, "failed to resolve embedded payment fee rate; pricing without a fee", map[string]interface{}{
+				"organization_id": organizationID, "error": err.Error(),
+			})
+		}
+		return 0
+	}
+	if rate < 0 {
 		return 0
 	}
 	return rate

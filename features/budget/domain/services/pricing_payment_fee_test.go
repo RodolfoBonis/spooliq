@@ -39,26 +39,45 @@ func ptrInt64(v int64) *int64 { return &v }
 // the payment-fee fields are absent (0) across representative budgets — the money-safety
 // guarantee that existing budgets never reprice.
 func TestCalculate_FeeZeroIsIdentical(t *testing.T) {
-	for i, in := range representativePricingInputs() {
-		withZero := in
-		withZero.PaymentFeeRatePercent = 0
-
-		base, err := Calculate(in)
+	// GOLDEN values captured from main (the fee-less engine) for the representative
+	// inputs. They are hard-coded (not recomputed from the engine under test) so this
+	// test fails if the fee change shifts any total, tax or per-item sale value when no
+	// fee is embedded — the money-safety guarantee for existing budgets.
+	golden := []struct {
+		total int64
+		tax   int64
+		sales []int64
+	}{
+		{total: 1200, tax: 0, sales: []int64{1200}},
+		{total: 2287, tax: 137, sales: []int64{2287}},
+		{total: 8569, tax: 728, sales: []int64{8569}},
+		{total: 6698, tax: 804, sales: []int64{1921, 2277}},
+	}
+	inputs := representativePricingInputs()
+	if len(inputs) != len(golden) {
+		t.Fatalf("golden table out of sync: %d inputs vs %d golden", len(inputs), len(golden))
+	}
+	for i, in := range inputs {
+		in.PaymentFeeRatePercent = 0 // explicit: no embedded fee
+		got, err := Calculate(in)
 		if err != nil {
 			t.Fatalf("case %d: %v", i, err)
 		}
-		got, err := Calculate(withZero)
-		if err != nil {
-			t.Fatalf("case %d: %v", i, err)
+		if got.Total != golden[i].total {
+			t.Errorf("case %d: Total = %d, want %d", i, got.Total, golden[i].total)
 		}
-		if got.Total != base.Total || got.TaxAmount != base.TaxAmount ||
-			got.PaymentFee != 0 || got.PaymentFeeRateApplied != 0 {
-			t.Errorf("case %d: fee=0 changed result: %+v vs %+v", i, got, base)
+		if got.TaxAmount != golden[i].tax {
+			t.Errorf("case %d: TaxAmount = %d, want %d", i, got.TaxAmount, golden[i].tax)
 		}
-		// Per-item sale totals must be unchanged too.
-		for j := range base.Items {
-			if got.Items[j].SaleTotal != base.Items[j].SaleTotal {
-				t.Errorf("case %d item %d: SaleTotal %d != %d", i, j, got.Items[j].SaleTotal, base.Items[j].SaleTotal)
+		if got.PaymentFee != 0 || got.PaymentFeeRateApplied != 0 {
+			t.Errorf("case %d: fee must be zero, got %d / %v", i, got.PaymentFee, got.PaymentFeeRateApplied)
+		}
+		if len(got.Items) != len(golden[i].sales) {
+			t.Fatalf("case %d: %d items, want %d", i, len(got.Items), len(golden[i].sales))
+		}
+		for j := range golden[i].sales {
+			if got.Items[j].SaleTotal != golden[i].sales[j] {
+				t.Errorf("case %d item %d: SaleTotal = %d, want %d", i, j, got.Items[j].SaleTotal, golden[i].sales[j])
 			}
 		}
 	}
@@ -90,9 +109,13 @@ func TestCalculate_FeeEmbedded(t *testing.T) {
 		if got.PaymentFeeRateApplied != 6.1 {
 			t.Errorf("rate applied = %v, want 6.1", got.PaymentFeeRateApplied)
 		}
-		// tax = total - net - fee = 10649 - 10000 - 650 = -1 ... guard: tax should be 0 here
-		if got.TaxAmount != got.Total-10000-got.PaymentFee {
-			t.Errorf("tax split inconsistent: %d", got.TaxAmount)
+		// With no tax, the whole gross-up is the fee: tax must be exactly 0.
+		if got.TaxAmount != 0 {
+			t.Errorf("tax = %d, want 0 (no tax configured)", got.TaxAmount)
+		}
+		// Reconciliation: net + tax + fee == total.
+		if 10000+got.TaxAmount+got.PaymentFee != got.Total {
+			t.Errorf("reconcile failed: %d + %d + %d != %d", 10000, got.TaxAmount, got.PaymentFee, got.Total)
 		}
 	})
 

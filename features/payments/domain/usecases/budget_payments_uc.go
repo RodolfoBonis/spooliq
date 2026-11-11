@@ -67,9 +67,14 @@ func (uc *BudgetPaymentsUseCase) List(c *gin.Context) {
 		return
 	}
 
-	// The current fee table estimates fees for payments confirmed before it existed.
+	// The current fee table estimates fees for payments confirmed before it existed. A
+	// lookup error must not fail the list (fees simply stay unknown), but it is logged.
 	var rates *entities.FeeRates
-	if integration, ierr := uc.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay); ierr == nil && integration != nil {
+	if integration, ierr := uc.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay); ierr != nil {
+		uc.logger.Error(ctx, "payments list: failed to load integration for fee estimate", map[string]interface{}{
+			"error": ierr.Error(), "organization_id": organizationID, "budget_id": budgetID.String(),
+		})
+	} else if integration != nil {
 		rates = integration.FeeRates
 	}
 

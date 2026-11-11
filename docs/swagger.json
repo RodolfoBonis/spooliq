@@ -16761,49 +16761,7 @@
             }
         },
         "entities.UpsertIntegrationRequest": {
-            "type": "object",
-            "required": [
-                "handle"
-            ],
-            "properties": {
-                "api_key": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 8
-                },
-                "assured_installments": {
-                    "type": "integer",
-                    "maximum": 12,
-                    "minimum": 1
-                },
-                "default_deposit_percent": {
-                    "type": "number"
-                },
-                "embed_fee_in_price": {
-                    "description": "EmbedFeeInPrice may only be true when the reference card rate is configured.",
-                    "type": "boolean"
-                },
-                "enabled": {
-                    "type": "boolean"
-                },
-                "fee_rates": {
-                    "description": "FeeRates is the optional InfinitePay fee table. Nil/absent means \"not configured\".\nRange/precision are validated in the use case (not by the struct validator).",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/entities.FeeRates"
-                        }
-                    ]
-                },
-                "handle": {
-                    "type": "string",
-                    "maxLength": 255
-                },
-                "pix_discount_percent": {
-                    "type": "integer",
-                    "maximum": 30,
-                    "minimum": 0
-                }
-            }
+            "type": "object"
         },
         "entities.UpsertMaterialRequestEntity": {
             "type": "object",

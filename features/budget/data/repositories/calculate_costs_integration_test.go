@@ -9,6 +9,7 @@ import (
 
 	repoimpl "github.com/RodolfoBonis/spooliq/features/budget/data/repositories"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -680,7 +681,7 @@ func TestIntegration_CalculateCosts_EmbedsPaymentFee(t *testing.T) {
 
 	const org = "org-fee"
 	ctx := context.Background()
-	repo := repoimpl.NewBudgetRepositoryWithFeeProvider(db, stubFeeProvider{rate: 6.1})
+	repo := repoimpl.NewBudgetRepositoryWithFeeProvider(db, stubFeeProvider{rate: 6.1}, nil)
 	now := time.Now()
 
 	fil := uuid.New()
@@ -701,7 +702,9 @@ func TestIntegration_CalculateCosts_EmbedsPaymentFee(t *testing.T) {
 		ID: uuid.New(), BudgetItemID: itemID, FilamentID: fil, OrganizationID: org, Quantity: 1000, Order: 1, CreatedAt: now, UpdatedAt: now,
 	}))
 
-	require.NoError(t, repo.CalculateCosts(ctx, budgetID, org))
+	require.NoError(t, repo.WithTransaction(ctx, func(txRepo repositories.BudgetRepository) error {
+		return txRepo.CalculateCosts(ctx, budgetID, org)
+	}))
 
 	// net = 10000; want engine with the same 6.1% embedded fee.
 	want, err := pricing.Calculate(pricing.PricingInput{

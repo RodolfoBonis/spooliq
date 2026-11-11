@@ -57,16 +57,22 @@ func (p *defaultsProvider) DefaultDepositPercent(ctx context.Context, organizati
 // org turned the embed_fee_in_price switch on and the reference rate is configured.
 type feeProvider struct {
 	repo domainRepos.PaymentRepository
+	log  logger.Logger
 }
 
 // NewFeeProvider builds the embedded-payment-fee provider for the budget feature.
-func NewFeeProvider(repo domainRepos.PaymentRepository) budgetRepos.PaymentFeeProvider {
-	return &feeProvider{repo: repo}
+func NewFeeProvider(repo domainRepos.PaymentRepository, log logger.Logger) budgetRepos.PaymentFeeProvider {
+	return &feeProvider{repo: repo, log: log}
 }
 
 func (p *feeProvider) EmbeddedFeeRatePercent(ctx context.Context, organizationID string) (float64, error) {
 	integration, err := p.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
 	if err != nil {
+		if p.log != nil {
+			p.log.Error(ctx, "failed to load integration for embedded payment fee", map[string]interface{}{
+				"organization_id": organizationID, "error": err.Error(),
+			})
+		}
 		return 0, err
 	}
 	if integration == nil || !integration.Active() || !integration.EmbedFeeInPrice {

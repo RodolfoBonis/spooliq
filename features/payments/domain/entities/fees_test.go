@@ -131,3 +131,33 @@ func TestReferenceRate(t *testing.T) {
 		t.Errorf("nil ReferenceRate should be unknown")
 	}
 }
+
+func TestFeeFor_MethodRecognition(t *testing.T) {
+	rates := ratesFixture()
+	tests := []struct {
+		name         string
+		method       string
+		installments int
+		wantOK       bool
+		wantRate     float64
+	}{
+		{name: "pix lowercase", method: "pix", installments: 1, wantOK: true, wantRate: 0},
+		{name: "PIX uppercase (EqualFold)", method: "PIX", installments: 1, wantOK: true, wantRate: 0},
+		{name: "credit_card lowercase", method: "credit_card", installments: 1, wantOK: true, wantRate: 4.2},
+		{name: "Credit_Card mixed case (EqualFold)", method: "Credit_Card", installments: 1, wantOK: true, wantRate: 4.2},
+		{name: "empty method is unknown", method: "", installments: 1, wantOK: false},
+		{name: "unknown method (boleto) is unknown", method: "boleto", installments: 1, wantOK: false},
+		{name: "debit is unknown (not a known method)", method: "debit_card", installments: 1, wantOK: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rate, _, ok := FeeFor(rates, tt.method, tt.installments, 10000)
+			if ok != tt.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, tt.wantOK)
+			}
+			if ok && rate != tt.wantRate {
+				t.Errorf("rate = %v, want %v", rate, tt.wantRate)
+			}
+		})
+	}
+}

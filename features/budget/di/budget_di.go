@@ -1,6 +1,7 @@
 package di
 
 import (
+	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/features/budget/data/repositories"
 	budgetRepos "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
@@ -18,8 +19,8 @@ var Module = fx.Module(
 		// The repository embeds the org's payment fee into draft pricing via the
 		// PaymentFeeProvider port (implemented by the payments feature). The fee
 		// provider depends only on the payment repository, so no FX cycle forms.
-		func(db *gorm.DB, feeProvider budgetRepos.PaymentFeeProvider) budgetRepos.BudgetRepository {
-			return repositories.NewBudgetRepositoryWithFeeProvider(db, feeProvider)
+		func(db *gorm.DB, feeProvider budgetRepos.PaymentFeeProvider, log logger.Logger) budgetRepos.BudgetRepository {
+			return repositories.NewBudgetRepositoryWithFeeProvider(db, feeProvider, log)
 		},
 		// Resolver providers: narrow adapters over the profile and preset
 		// repositories, supplied as the budget package's own interfaces so the

@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.23.0 - 2026-11-11
+
+### Changes
+- chore: bump version to 2.23.0 (4bc4b71)
+- feat(payments): embedded payment fees and real net on budgets (#137) (12d1cb5)
+
+
 ## v2.22.1 - 2026-11-09
 
 ### Changes

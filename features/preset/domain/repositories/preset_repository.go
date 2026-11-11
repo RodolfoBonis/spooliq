@@ -74,6 +74,8 @@ type CostPresetResponse struct {
 	PostProcessingCostPerHour float32   `json:"post_processing_cost_per_hour"`
 	SupportRemovalCostPerHour float32   `json:"support_removal_cost_per_hour"`
 	QualityControlCostPerItem float32   `json:"quality_control_cost_per_item"`
+	FailureRatePercentage     float32   `json:"failure_rate_percentage"`
+	WasteGramsPerColorChange  float32   `json:"waste_grams_per_color_change"`
 }
 
 // PresetRepository defines the contract for preset data operations.

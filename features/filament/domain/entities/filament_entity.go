@@ -43,6 +43,17 @@ type FilamentEntity struct {
 	PrintTemperature *int `json:"print_temperature,omitempty"` // °C
 	BedTemperature   *int `json:"bed_temperature,omitempty"`   // °C
 
+	// Stock control (Phase 4C). TrackStock enables inventory tracking for this
+	// filament; any manual stock movement turns it on. StockGrams is the current
+	// balance in grams and MAY go negative (consumption is never blocked). It is
+	// NOT editable through the filament update endpoint — it changes only through
+	// stock movements. LowStockThresholdGrams is the optional alert threshold:
+	// nil means no alert. IsLowStock is a computed convenience flag.
+	TrackStock             bool  `json:"track_stock"`
+	StockGrams             int64 `json:"stock_grams"`
+	LowStockThresholdGrams *int  `json:"low_stock_threshold_grams"`
+	IsLowStock             bool  `json:"is_low_stock"`
+
 	// Timestamps
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`

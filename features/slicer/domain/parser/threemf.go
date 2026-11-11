@@ -157,6 +157,33 @@ type sliceInfoPlate struct {
 		UsedM string `xml:"used_m,attr"`
 		UsedG string `xml:"used_g,attr"`
 	} `xml:"filament"`
+	Object []struct {
+		Name    string `xml:"name,attr"`
+		Skipped string `xml:"skipped,attr"`
+	} `xml:"object"`
+}
+
+// objects groups the plate's printed objects by name, in first-seen order.
+// Objects the user skipped in the slicer are not printed and are left out.
+func (p sliceInfoPlate) objects() []entities.PlateObject {
+	out := make([]entities.PlateObject, 0, len(p.Object))
+	index := map[string]int{}
+	for _, o := range p.Object {
+		if strings.EqualFold(strings.TrimSpace(o.Skipped), "true") {
+			continue
+		}
+		name := strings.TrimSpace(o.Name)
+		if name == "" {
+			name = "objeto"
+		}
+		if i, ok := index[name]; ok {
+			out[i].Count++
+			continue
+		}
+		index[name] = len(out)
+		out = append(out, entities.PlateObject{Name: name, Count: 1})
+	}
+	return out
 }
 
 type sliceInfoKV struct {
@@ -215,6 +242,7 @@ func parseSliceInfo(data []byte, fbColors, fbTypes []string) []entities.Plate {
 			PrintTimeSeconds: prediction,
 			Estimated:        false,
 			Filaments:        filaments,
+			Objects:          sp.objects(),
 		})
 	}
 	return plates

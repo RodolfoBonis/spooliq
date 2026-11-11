@@ -226,6 +226,7 @@ func (g *gcodeGatherer) build() *entities.Analysis {
 			PrintTimeSeconds: printTime,
 			Estimated:        estimated,
 			Filaments:        filaments,
+			Objects:          []entities.PlateObject{}, // plain G-code has no object list
 		}},
 		Warnings: warnings,
 	}

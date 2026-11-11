@@ -14,6 +14,7 @@ var Module = fx.Module("services",
 		NewRedisService,
 		NewAuthService,
 		NewAsaasService,
+		NewInfinitePayService,
 		NewKeycloakAdminService,
 		func(logger logger.Logger, agent *otelagent.Agent) *gorm.DB {
 			if Connector == nil {

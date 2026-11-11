@@ -128,6 +128,13 @@ type PricingInput struct {
 	// calling. A rate of 0 means no tax.
 	TaxRatePercent float64
 
+	// PaymentFeeRatePercent is the InfinitePay fee embedded "por dentro" of the price
+	// (0..30), resolved by the caller only when the integration is active AND the org
+	// opted to embed the fee. It is combined with the tax into a single gross-up so the
+	// total covers both percentages of the charged amount. A rate of 0 keeps the total
+	// byte-identical to a fee-less budget.
+	PaymentFeeRatePercent float64
+
 	Items []PricingItemInput
 }
 
@@ -188,7 +195,13 @@ type PricingResult struct {
 	TaxAmount      int64
 	TaxRateApplied float64 // the effective rate actually applied (percent)
 
-	Total int64 // BasePrice - DiscountAmount + ShippingCost + TaxAmount
+	// PaymentFee is the embedded InfinitePay fee (cents); PaymentFeeRateApplied is the
+	// fee rate actually applied (0 when not embedded or when the combined tax+fee was
+	// clamped for the >=100% protection).
+	PaymentFee            int64
+	PaymentFeeRateApplied float64
+
+	Total int64 // BasePrice - DiscountAmount + ShippingCost + TaxAmount + PaymentFee
 }
 
 // WasteGramsPerChangeOrDefault resolves the grams purged per color change from a raw
@@ -461,11 +474,28 @@ func Calculate(in PricingInput) (PricingResult, error) {
 	}
 	result.ShippingCost = shipping
 
-	// Taxes "por dentro": gross the net up so the tax is included in the total.
+	// Taxes and the embedded payment fee are both "por dentro" (percentages of the
+	// charged total), so they gross the net up in ONE combined adjustment:
+	//   total = round(net / (1 - (tax + fee)/100))
+	//   PaymentFee = round(total * fee/100); TaxAmount = total - net - PaymentFee.
+	// With fee = 0 this reduces EXACTLY to the previous tax-only calculation.
 	net := result.BasePrice - discount + shipping
 	result.TaxRateApplied = in.TaxRatePercent
-	total := TaxInsideTotalCents(net, in.TaxRatePercent)
-	result.TaxAmount = total - net
+	feeRate := in.PaymentFeeRatePercent
+	if feeRate < 0 {
+		feeRate = 0
+	}
+	// Protection: if tax + fee would reach 100% the gross-up is undefined, so the fee is
+	// dropped (the caller logs a warning when it sees PaymentFeeRateApplied == 0 for a
+	// requested fee > 0).
+	if in.TaxRatePercent+feeRate >= 100 {
+		feeRate = 0
+	}
+	combined := in.TaxRatePercent + feeRate
+	total := TaxInsideTotalCents(net, combined)
+	result.PaymentFee = PercentageCents(total, feeRate)
+	result.PaymentFeeRateApplied = feeRate
+	result.TaxAmount = total - net - result.PaymentFee
 	result.Total = total
 
 	// Distribute the markup across items so the per-item sale totals PLUS shipping

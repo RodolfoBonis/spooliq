@@ -73,6 +73,8 @@ type BudgetPayment struct {
 	Installments       int
 	CaptureMethod      string
 	PixDiscountPercent int
+	FeeRatePercent     *float64
+	FeeCents           *int64
 	CheckoutURL        string
 	ReceiptURL         *string
 	LinkCreatingAt     *time.Time
@@ -103,21 +105,30 @@ type PaymentLineResponse struct {
 	Status        string     `json:"status"`
 	StatusReason  string     `json:"status_reason,omitempty"`
 	NeedsReview   bool       `json:"needs_review,omitempty"`
-	CheckoutURL   string     `json:"checkout_url,omitempty"`
-	ReceiptURL    *string    `json:"receipt_url"`
-	PaidAt        *time.Time `json:"paid_at"`
-	CreatedAt     time.Time  `json:"created_at"`
+	// FeeAmount/NetAmount are cents (null when the fee is unknown); FeeRatePercent is
+	// the applied rate (null when unknown).
+	FeeAmount      *int64     `json:"fee_amount"`
+	NetAmount      *int64     `json:"net_amount"`
+	FeeRatePercent *float64   `json:"fee_rate_percent"`
+	CheckoutURL    string     `json:"checkout_url,omitempty"`
+	ReceiptURL     *string    `json:"receipt_url"`
+	PaidAt         *time.Time `json:"paid_at"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 // BudgetPaymentsResponse is the authenticated GET /budgets/:id/payments response.
 // RefundDue is the sum of paid_after_cancel principal (money received on a cancelled
 // link that must be refunded via InfinitePay); it is NOT part of Paid.
 type BudgetPaymentsResponse struct {
-	Status         PaymentStatus         `json:"status"`
-	Total          int64                 `json:"total"`
-	Paid           int64                 `json:"paid"`
-	Balance        int64                 `json:"balance"`
-	RefundDue      int64                 `json:"refund_due"`
+	Status    PaymentStatus `json:"status"`
+	Total     int64         `json:"total"`
+	Paid      int64         `json:"paid"`
+	Balance   int64         `json:"balance"`
+	RefundDue int64         `json:"refund_due"`
+	// Fees is the sum of known fees over paid, counted lines (excludes paid_after_cancel,
+	// matching RecalcBudgetAggregate). NetReceived is the paid principal minus those fees.
+	Fees           int64                 `json:"fees"`
+	NetReceived    int64                 `json:"net_received"`
 	DepositPercent *float64              `json:"deposit_percent"`
 	Payments       []PaymentLineResponse `json:"payments"`
 }

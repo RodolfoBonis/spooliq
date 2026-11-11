@@ -26,6 +26,11 @@ type PaymentIntegrationModel struct {
 	PixDiscountPercent    int      `gorm:"type:integer;not null;default:0" json:"pix_discount_percent"`
 	DefaultDepositPercent *float64 `gorm:"type:double precision" json:"default_deposit_percent"` // null = total
 
+	// FeeRates is the org's InfinitePay fee table (jsonb, null = not configured).
+	FeeRates *entities.FeeRates `gorm:"type:jsonb" json:"fee_rates"`
+	// EmbedFeeInPrice toggles embedding the reference card fee into the budget price.
+	EmbedFeeInPrice bool `gorm:"not null;default:false" json:"embed_fee_in_price"`
+
 	VerifiedAt     *time.Time `gorm:"type:timestamptz" json:"verified_at"`
 	DisconnectedAt *time.Time `gorm:"type:timestamptz" json:"disconnected_at"`
 
@@ -53,6 +58,8 @@ func (m *PaymentIntegrationModel) ToEntity() *entities.PaymentIntegration {
 		AssuredInstallments:    m.AssuredInstallments,
 		PixDiscountPercent:     m.PixDiscountPercent,
 		DefaultDepositPercent:  m.DefaultDepositPercent,
+		FeeRates:               m.FeeRates,
+		EmbedFeeInPrice:        m.EmbedFeeInPrice,
 		VerifiedAt:             m.VerifiedAt,
 		DisconnectedAt:         m.DisconnectedAt,
 		CreatedAt:              m.CreatedAt,

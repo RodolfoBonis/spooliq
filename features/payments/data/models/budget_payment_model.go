@@ -36,6 +36,13 @@ type BudgetPaymentModel struct {
 	// the confirm floor and the link's Pix price are stable even if settings change.
 	PixDiscountPercent int `gorm:"type:integer;not null;default:0" json:"pix_discount_percent"`
 
+	// Fee SNAPSHOT at confirmation: the InfinitePay fee rate (percent) and amount
+	// (cents) computed from the org's fee table when the payment was marked paid. Both
+	// are NULL when no fee table was configured at confirm time; the GET then estimates
+	// from the current table.
+	FeeRatePercent *float64 `gorm:"type:double precision" json:"fee_rate_percent"`
+	FeeCents       *int64   `gorm:"type:bigint" json:"fee_cents"`
+
 	// Links
 	CheckoutURL string  `gorm:"type:text" json:"checkout_url"`
 	ReceiptURL  *string `gorm:"type:text" json:"receipt_url"`
@@ -88,6 +95,8 @@ func (m *BudgetPaymentModel) ToEntity() *entities.BudgetPayment {
 		Installments:       m.Installments,
 		CaptureMethod:      m.CaptureMethod,
 		PixDiscountPercent: m.PixDiscountPercent,
+		FeeRatePercent:     m.FeeRatePercent,
+		FeeCents:           m.FeeCents,
 		CheckoutURL:        m.CheckoutURL,
 		ReceiptURL:         m.ReceiptURL,
 		LinkCreatingAt:     m.LinkCreatingAt,

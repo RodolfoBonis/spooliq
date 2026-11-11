@@ -47,7 +47,7 @@ func openProfitDB(t *testing.T) *gorm.DB {
 			name varchar(255) DEFAULT '', quote_number integer, status varchar(20) NOT NULL,
 			machine_preset_id uuid, cost_preset_id uuid,
 			total_cost bigint DEFAULT 0, tax_amount bigint DEFAULT 0, shipping_cost bigint DEFAULT 0,
-			profit_amount bigint DEFAULT 0, discount_amount bigint DEFAULT 0,
+			profit_amount bigint DEFAULT 0, discount_amount bigint DEFAULT 0, payment_fee_amount bigint DEFAULT 0,
 			filament_cost bigint DEFAULT 0, waste_cost bigint DEFAULT 0, energy_cost bigint DEFAULT 0,
 			machine_cost bigint DEFAULT 0, setup_cost bigint DEFAULT 0, labor_cost bigint DEFAULT 0,
 			post_processing_cost bigint DEFAULT 0, packaging_cost bigint DEFAULT 0,
@@ -58,6 +58,9 @@ func openProfitDB(t *testing.T) *gorm.DB {
 		`CREATE TABLE budget_items (id uuid PRIMARY KEY, budget_id uuid, item_total_cost bigint DEFAULT 0,
 			print_time_hours integer DEFAULT 0, print_time_minutes integer DEFAULT 0)`,
 		`CREATE TABLE budget_item_filaments (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), budget_item_id uuid, filament_id uuid, quantity numeric)`,
+		`CREATE TABLE budget_payments (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), budget_id uuid,
+			status varchar(12) NOT NULL DEFAULT 'pending', status_reason varchar(32) NOT NULL DEFAULT '',
+			fee_cents bigint)`,
 		`CREATE TABLE budget_status_history (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), budget_id uuid,
 			organization_id varchar(255), previous_status varchar(20), new_status varchar(20),
 			changed_by varchar(255), notes text, created_at timestamptz)`,
@@ -282,4 +285,59 @@ func TestProfitEdgeCases(t *testing.T) {
 	require.Len(t, p.ByMaterial, 1)
 	require.EqualValues(t, 5000, p.ByMaterial[0].Revenue, "half of the budget goes to the item with filament")
 	require.EqualValues(t, 1000, p.ByMaterial[0].Profit)
+}
+
+// TestProfitWithPaymentFees verifies the dashboard profit accounts for payment fees:
+// the embedded fee counts as revenue (it is inside the total), the real InfinitePay fee
+// is subtracted as a cost, paid_after_cancel fees are excluded, and a budget paid
+// outside InfinitePay keeps the embedded fee as profit.
+func TestProfitWithPaymentFees(t *testing.T) {
+	db := openProfitDB(t)
+	repo := repoimpl.NewDashboardRepository(db)
+
+	now := time.Now()
+	start, end := now.Add(-30*24*time.Hour), now.Add(time.Hour)
+	inWindow := now.Add(-5 * 24 * time.Hour)
+
+	cust := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO customers (id, organization_id, name, email) VALUES (?, ?, 'Ana', 'a@x')`, cust, profitOrg).Error)
+
+	insertFeeSale := func(id uuid.UUID, fee int64) {
+		require.NoError(t, db.Exec(`INSERT INTO budgets (id, organization_id, customer_id, status,
+			total_cost, tax_amount, shipping_cost, profit_amount, discount_amount, payment_fee_amount, approved_at, created_at)
+			VALUES (?, ?, ?, 'completed', 10650, 0, 0, 2000, 0, ?, ?, ?)`,
+			id, profitOrg, cust, fee, inWindow, inWindow).Error)
+	}
+	addPayment := func(budget uuid.UUID, status, reason string, feeCents int64) {
+		require.NoError(t, db.Exec(`INSERT INTO budget_payments (budget_id, status, status_reason, fee_cents)
+			VALUES (?, ?, ?, ?)`, budget, status, reason, feeCents).Error)
+	}
+
+	// b1: embedded fee 650, paid via InfinitePay (real fee 650) + a paid_after_cancel
+	// payment whose fee (999) must be ignored.
+	b1 := uuid.New()
+	insertFeeSale(b1, 650)
+	addPayment(b1, "paid", "", 650)
+	addPayment(b1, "paid", "paid_after_cancel", 999)
+
+	// b2: embedded fee 650, paid OUTSIDE InfinitePay (no payment row -> real fee 0).
+	b2 := uuid.New()
+	insertFeeSale(b2, 650)
+
+	o, err := repo.GetOverview(profitOrg, start, end, start.Add(-30*24*time.Hour), start)
+	require.NoError(t, err)
+
+	// Net revenue includes the embedded fees (they stay inside the total): 2 * 10650.
+	require.EqualValues(t, 21300, o.NetRevenue)
+	// b1 profit: 2000 - 0 + 650 - 650 = 2000 (real fee cancels the embedded fee).
+	// b2 profit: 2000 - 0 + 650 - 0   = 2650 (embedded fee kept as profit).
+	require.EqualValues(t, 4650, o.Profit)
+	// Production cost = net - profit.
+	require.EqualValues(t, 21300-4650, o.ProductionCost)
+
+	// Sanity: raising the real fee on b1 reduces the total profit by exactly that delta.
+	require.NoError(t, db.Exec(`UPDATE budget_payments SET fee_cents = 1650 WHERE budget_id = ? AND status_reason = ''`, b1).Error)
+	o2, err := repo.GetOverview(profitOrg, start, end, start.Add(-30*24*time.Hour), start)
+	require.NoError(t, err)
+	require.EqualValues(t, 4650-1000, o2.Profit, "profit drops by the extra R$10 of real fee")
 }

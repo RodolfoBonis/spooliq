@@ -90,6 +90,8 @@ func (r *paymentRepository) CreateIntegration(ctx context.Context, integration *
 		AssuredInstallments:    integration.AssuredInstallments,
 		PixDiscountPercent:     integration.PixDiscountPercent,
 		DefaultDepositPercent:  integration.DefaultDepositPercent,
+		FeeRates:               integration.FeeRates,
+		EmbedFeeInPrice:        integration.EmbedFeeInPrice,
 		VerifiedAt:             integration.VerifiedAt,
 		DisconnectedAt:         integration.DisconnectedAt,
 	}

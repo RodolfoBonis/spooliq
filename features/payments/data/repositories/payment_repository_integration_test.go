@@ -295,3 +295,42 @@ func TestIntegration_AgedOutAlertsOnce(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, aged, 0, "a processed event must not alert again")
 }
+
+// TestIntegration_FeeRatesJSONBRoundTrip verifies the fee_rates jsonb column and the
+// embed_fee_in_price flag survive a Create + Get, and that an update can clear the table
+// back to NULL.
+func TestIntegration_FeeRatesJSONBRoundTrip(t *testing.T) {
+	db := openTestDB(t, "pay_feerates")
+	createPaymentsSchema(t, db)
+	repo := repoimpl.NewPaymentRepository(db)
+	ctx := context.Background()
+
+	integ := &entities.PaymentIntegration{
+		ID: uuid.New(), OrganizationID: "org1", Provider: entities.ProviderInfinitePay,
+		Handle: "store", Enabled: true, AssuredInstallments: 3,
+		FeeRates: &entities.FeeRates{
+			Pix: 0, Credit1x: 4.2, CreditInstallments: map[string]float64{"2": 5.4, "3": 6.1},
+		},
+		EmbedFeeInPrice: true,
+	}
+	require.NoError(t, repo.CreateIntegration(ctx, integ))
+
+	got, err := repo.GetIntegration(ctx, "org1", entities.ProviderInfinitePay)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.True(t, got.EmbedFeeInPrice)
+	require.NotNil(t, got.FeeRates)
+	require.Equal(t, 4.2, got.FeeRates.Credit1x)
+	r, ok := got.FeeRates.ReferenceRate(3)
+	require.True(t, ok)
+	require.Equal(t, 6.1, r)
+
+	// Clearing the table back to NULL via an Updates map must not panic and must null it.
+	require.NoError(t, repo.UpdateIntegrationFields(ctx, got.ID, map[string]interface{}{
+		"fee_rates": (*entities.FeeRates)(nil), "embed_fee_in_price": false,
+	}))
+	got2, err := repo.GetIntegration(ctx, "org1", entities.ProviderInfinitePay)
+	require.NoError(t, err)
+	require.Nil(t, got2.FeeRates)
+	require.False(t, got2.EmbedFeeInPrice)
+}

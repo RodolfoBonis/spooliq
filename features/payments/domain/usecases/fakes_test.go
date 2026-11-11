@@ -153,6 +153,19 @@ func applyIntegrationFields(integ *entities.PaymentIntegration, fields map[strin
 	if v, ok := fields["api_key_last4"].(string); ok {
 		integ.APIKeyLast4 = v
 	}
+	if v, ok := fields["assured_installments"].(int); ok {
+		integ.AssuredInstallments = v
+	}
+	if raw, ok := fields["fee_rates"]; ok {
+		if fr, ok := raw.(*entities.FeeRates); ok {
+			integ.FeeRates = fr // may be nil (explicit clear)
+		} else {
+			integ.FeeRates = nil
+		}
+	}
+	if v, ok := fields["embed_fee_in_price"].(bool); ok {
+		integ.EmbedFeeInPrice = v
+	}
 	if raw, ok := fields["disconnected_at"]; ok {
 		if t, ok := raw.(time.Time); ok {
 			integ.DisconnectedAt = &t
@@ -328,6 +341,12 @@ func applyPaymentFields(p *entities.BudgetPayment, fields map[string]interface{}
 	}
 	if v, ok := fields["installments"].(int); ok {
 		p.Installments = v
+	}
+	if v, ok := fields["fee_rate_percent"].(float64); ok {
+		p.FeeRatePercent = &v
+	}
+	if v, ok := fields["fee_cents"].(int64); ok {
+		p.FeeCents = &v
 	}
 	if v, ok := fields["transaction_nsu"].(string); ok {
 		p.TransactionNSU = &v

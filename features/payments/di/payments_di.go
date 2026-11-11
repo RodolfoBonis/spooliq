@@ -63,6 +63,7 @@ var Module = fx.Module(
 		NewDefaultsProvider,
 		NewPendingCanceler,
 		NewPresenceChecker,
+		NewFeeProvider,
 	),
 	// Wire the public payment block into the budget public view, and start the
 	// reconcile job.

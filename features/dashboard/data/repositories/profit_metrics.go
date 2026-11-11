@@ -8,14 +8,23 @@ import (
 // Profit definitions (single source of truth for every dashboard endpoint):
 //   - a sale is a budget in approved/printing/completed, dated by approved_at;
 //   - net revenue = total_cost - tax_amount - shipping_cost (tax and shipping are
-//     pass-through, not business revenue);
-//   - profit = profit_amount - discount_amount (the markup minus what was given away);
+//     pass-through, not business revenue); the embedded payment fee stays inside the
+//     total, so it counts as net revenue, as it should;
+//   - profit = profit_amount - discount_amount + payment_fee_amount - real payment fees,
+//     where the real fees are SUM(fee_cents) over the budget's paid, counted payments
+//     (excluding paid_after_cancel). The embedded fee counts as revenue (the shop
+//     charged it); the real InfinitePay fee counts as a cost. A budget paid outside
+//     InfinitePay therefore keeps the embedded fee as profit;
 //   - production cost = net revenue - profit (direct costs + overhead);
 //   - margin = sum(profit) / sum(net revenue), i.e. weighted by value.
 const (
 	saleStatuses   = "('approved','printing','completed')"
 	netRevenueExpr = "(b.total_cost - b.tax_amount - b.shipping_cost)"
-	profitExpr     = "(b.profit_amount - b.discount_amount)"
+	// realPaymentFeeExpr is the correlated sum of the budget's real InfinitePay fees
+	// (paid, counted payments only). Every query using profitExpr aliases budgets as "b".
+	realPaymentFeeExpr = "(SELECT COALESCE(SUM(bp.fee_cents), 0) FROM budget_payments bp " +
+		"WHERE bp.budget_id = b.id AND bp.status = 'paid' AND bp.status_reason IS DISTINCT FROM 'paid_after_cancel')"
+	profitExpr = "(b.profit_amount - b.discount_amount + b.payment_fee_amount - " + realPaymentFeeExpr + ")"
 )
 
 // saleWindow filters budgets aliased "b" by approval date (no filter for "all").

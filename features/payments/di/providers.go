@@ -7,6 +7,7 @@ import (
 	"github.com/RodolfoBonis/go-otel-agent/logger"
 	"github.com/RodolfoBonis/spooliq/core/config"
 	"github.com/RodolfoBonis/spooliq/core/crypto"
+	budgetRepos "github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	budgetUc "github.com/RodolfoBonis/spooliq/features/budget/domain/usecases"
 	"github.com/RodolfoBonis/spooliq/features/payments/domain/entities"
 	domainRepos "github.com/RodolfoBonis/spooliq/features/payments/domain/repositories"
@@ -49,6 +50,39 @@ func (p *defaultsProvider) DefaultDepositPercent(ctx context.Context, organizati
 		return nil, nil
 	}
 	return integration.DefaultDepositPercent, nil
+}
+
+// feeProvider implements budgetRepos.PaymentFeeProvider: a budget embeds the reference
+// card fee (credit at assured_installments) ONLY when the integration is active and the
+// org turned the embed_fee_in_price switch on and the reference rate is configured.
+type feeProvider struct {
+	repo domainRepos.PaymentRepository
+	log  logger.Logger
+}
+
+// NewFeeProvider builds the embedded-payment-fee provider for the budget feature.
+func NewFeeProvider(repo domainRepos.PaymentRepository, log logger.Logger) budgetRepos.PaymentFeeProvider {
+	return &feeProvider{repo: repo, log: log}
+}
+
+func (p *feeProvider) EmbeddedFeeRatePercent(ctx context.Context, organizationID string) (float64, error) {
+	integration, err := p.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
+	if err != nil {
+		if p.log != nil {
+			p.log.Error(ctx, "failed to load integration for embedded payment fee", map[string]interface{}{
+				"organization_id": organizationID, "error": err.Error(),
+			})
+		}
+		return 0, err
+	}
+	if integration == nil || !integration.Active() || !integration.EmbedFeeInPrice {
+		return 0, nil
+	}
+	rate, ok := integration.FeeRates.ReferenceRate(integration.AssuredInstallments)
+	if !ok {
+		return 0, nil
+	}
+	return rate, nil
 }
 
 // pendingCanceler implements budgetUc.PendingPaymentCanceler. It cancels pending

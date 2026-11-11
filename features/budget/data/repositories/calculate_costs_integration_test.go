@@ -9,6 +9,7 @@ import (
 
 	repoimpl "github.com/RodolfoBonis/spooliq/features/budget/data/repositories"
 	"github.com/RodolfoBonis/spooliq/features/budget/domain/entities"
+	"github.com/RodolfoBonis/spooliq/features/budget/domain/repositories"
 	pricing "github.com/RodolfoBonis/spooliq/features/budget/domain/services"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -92,7 +93,7 @@ func createPricingSchema(t *testing.T, db *gorm.DB) {
 			discount_amount bigint DEFAULT 0,
 			shipping_cost bigint DEFAULT 0,
 			tax_amount bigint DEFAULT 0,
-			tax_rate_applied double precision DEFAULT 0, deposit_percent double precision, payment_status varchar(10) NOT NULL DEFAULT 'unpaid', amount_paid_cents bigint NOT NULL DEFAULT 0, amount_refund_due_cents bigint NOT NULL DEFAULT 0, paid_at timestamptz,
+			tax_rate_applied double precision DEFAULT 0, payment_fee_amount bigint DEFAULT 0, payment_fee_rate_applied double precision DEFAULT 0, deposit_percent double precision, payment_status varchar(10) NOT NULL DEFAULT 'unpaid', amount_paid_cents bigint NOT NULL DEFAULT 0, amount_refund_due_cents bigint NOT NULL DEFAULT 0, paid_at timestamptz,
 			total_cost bigint DEFAULT 0,
 			delivery_days integer,
 			payment_terms text,
@@ -662,4 +663,66 @@ func TestIntegration_CalculateCosts_Phase4AColumns(t *testing.T) {
 		saleSum += it.SaleTotal
 	}
 	require.Equal(t, got.TotalCost-got.ShippingCost, saleSum, "item sale totals + shipping must equal total")
+}
+
+// stubFeeProvider implements budgetRepos.PaymentFeeProvider for the embedded-fee test.
+type stubFeeProvider struct{ rate float64 }
+
+func (s stubFeeProvider) EmbeddedFeeRatePercent(_ context.Context, _ string) (float64, error) {
+	return s.rate, nil
+}
+
+// TestIntegration_CalculateCosts_EmbedsPaymentFee asserts a draft recalc with the fee
+// provider active embeds the fee into the total and persists payment_fee_amount /
+// payment_fee_rate_applied, matching the pure engine fed the same fee rate.
+func TestIntegration_CalculateCosts_EmbedsPaymentFee(t *testing.T) {
+	db := openTestDB(t, "budget_fee_embed")
+	createPricingSchema(t, db)
+
+	const org = "org-fee"
+	ctx := context.Background()
+	repo := repoimpl.NewBudgetRepositoryWithFeeProvider(db, stubFeeProvider{rate: 6.1}, nil)
+	now := time.Now()
+
+	fil := uuid.New()
+	require.NoError(t, db.Exec(`INSERT INTO filaments (id, organization_id, price_per_kg) VALUES (?,?,?)`, fil, org, 10000.0).Error)
+	require.NoError(t, db.Exec(`INSERT INTO companies (organization_id, default_tax_rate) VALUES (?, ?)`, org, 0.0).Error)
+
+	budgetID := uuid.New()
+	require.NoError(t, repo.Create(ctx, &entities.BudgetEntity{
+		ID: budgetID, OrganizationID: org, Name: "Fee", CustomerID: uuid.New(),
+		Status: entities.StatusDraft, OwnerUserID: "user-1", CreatedAt: now, UpdatedAt: now,
+	}))
+	itemID := uuid.New()
+	require.NoError(t, repo.AddItem(ctx, &entities.BudgetItemEntity{
+		ID: itemID, BudgetID: budgetID, FilamentID: fil, OrganizationID: org,
+		Quantity: 1000, Order: 1, ProductName: "A", ProductQuantity: 1, CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, repo.AddItemFilament(ctx, &entities.BudgetItemFilamentEntity{
+		ID: uuid.New(), BudgetItemID: itemID, FilamentID: fil, OrganizationID: org, Quantity: 1000, Order: 1, CreatedAt: now, UpdatedAt: now,
+	}))
+
+	require.NoError(t, repo.WithTransaction(ctx, func(txRepo repositories.BudgetRepository) error {
+		return txRepo.CalculateCosts(ctx, budgetID, org)
+	}))
+
+	// net = 10000; want engine with the same 6.1% embedded fee.
+	want, err := pricing.Calculate(pricing.PricingInput{
+		PaymentFeeRatePercent: 6.1,
+		Items: []pricing.PricingItemInput{
+			{Quantity: 1, Filaments: []pricing.PricingFilamentInput{{Grams: 1000, PricePerKgCents: 10000}}},
+		},
+	})
+	require.NoError(t, err)
+	require.Greater(t, want.PaymentFee, int64(0))
+
+	var got struct {
+		PaymentFeeAmount      int64
+		PaymentFeeRateApplied float64
+		TotalCost             int64
+	}
+	require.NoError(t, db.Raw(`SELECT payment_fee_amount, payment_fee_rate_applied, total_cost FROM budgets WHERE id = ?`, budgetID).Scan(&got).Error)
+	require.Equal(t, want.PaymentFee, got.PaymentFeeAmount, "payment_fee_amount")
+	require.Equal(t, 6.1, got.PaymentFeeRateApplied, "payment_fee_rate_applied")
+	require.Equal(t, want.Total, got.TotalCost, "total_cost grossed up by the fee")
 }

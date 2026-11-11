@@ -1,9 +1,11 @@
 package usecases
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -71,6 +73,9 @@ func (uc *IntegrationUseCase) Get(c *gin.Context) {
 		resp.AssuredInstallments = integration.AssuredInstallments
 		resp.PixDiscountPercent = integration.PixDiscountPercent
 		resp.DefaultDepositPercent = integration.DefaultDepositPercent
+		// Fee settings are non-sensitive: returned for every role (User included).
+		resp.FeeRates = integration.FeeRates
+		resp.EmbedFeeInPrice = integration.EmbedFeeInPrice
 		resp.VerifiedAt = integration.VerifiedAt
 		if privileged {
 			resp.APIKeyLast4 = integration.APIKeyLast4
@@ -121,10 +126,49 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 		return
 	}
 
+	// Parse the fee table from its raw JSON: absent keeps, null clears, object replaces.
+	feeRatesProvided, newFeeRates, parseErr := parseFeeRates(req.FeeRates)
+	if parseErr != nil {
+		coreErrors.Respond(c, coreErrors.BadRequest(coreErrors.CodeInvalidRequest, "fee_rates inválido"))
+		return
+	}
+	if feeRatesProvided {
+		if err := entities.ValidateFeeRates(newFeeRates); err != nil {
+			coreErrors.Respond(c, coreErrors.Unprocessable("payment_fee_rate_invalid", "Taxas de pagamento inválidas: use percentuais de 0 a 30 com até duas casas decimais."))
+			return
+		}
+	}
+
 	existing, err := uc.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
 	if err != nil {
 		coreErrors.Respond(c, coreErrors.Internal())
 		return
+	}
+
+	// Effective fee settings: an ABSENT key keeps the stored value so an older client
+	// (≤0.8) that does not send these fields never wipes them; a provided value replaces
+	// (or, for an explicit null table, clears).
+	var existingFeeRates *entities.FeeRates
+	existingEmbed := false
+	if existing != nil {
+		existingFeeRates = existing.FeeRates
+		existingEmbed = existing.EmbedFeeInPrice
+	}
+	effectiveFeeRates := existingFeeRates
+	if feeRatesProvided {
+		effectiveFeeRates = newFeeRates // nil when the client sent an explicit null
+	}
+	effectiveEmbed := existingEmbed
+	if req.EmbedFeeInPrice != nil {
+		effectiveEmbed = *req.EmbedFeeInPrice
+	}
+	// The price-embed switch requires the reference card rate (credit at
+	// assured_installments; à vista when N=1) to be configured.
+	if effectiveEmbed {
+		if _, ok := effectiveFeeRates.ReferenceRate(req.AssuredInstallments); !ok {
+			coreErrors.Respond(c, coreErrors.Unprocessable("payment_fee_rate_missing", "Cadastre a taxa de crédito usada para embutir no preço antes de ativar o interruptor."))
+			return
+		}
 	}
 
 	hasNewKey := req.APIKey != nil && strings.TrimSpace(*req.APIKey) != ""
@@ -170,6 +214,13 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 		"disconnected_at":         nil,
 		"updated_at":              now,
 	}
+	// Only persist the fee table when the client sent the key (keep-on-absent).
+	if feeRatesProvided {
+		fields["fee_rates"] = newFeeRates
+	}
+	if req.EmbedFeeInPrice != nil {
+		fields["embed_fee_in_price"] = *req.EmbedFeeInPrice
+	}
 
 	var apiKeyCipher, apiKeyLast4 string
 	if hasNewKey {
@@ -210,6 +261,8 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 			AssuredInstallments:    req.AssuredInstallments,
 			PixDiscountPercent:     req.PixDiscountPercent,
 			DefaultDepositPercent:  req.DefaultDepositPercent,
+			FeeRates:               effectiveFeeRates,
+			EmbedFeeInPrice:        effectiveEmbed,
 			VerifiedAt:             &now,
 		}
 		if createErr := uc.repo.CreateIntegration(ctx, integration); createErr != nil {
@@ -357,6 +410,24 @@ func generateWebhookToken() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+// parseFeeRates interprets the raw fee_rates JSON from the request. It returns whether
+// the key was PRESENT (len > 0), the parsed table (nil for an explicit null), and a
+// parse error for malformed JSON. An absent key (present=false) means "keep the stored
+// table"; an explicit null (present=true, rates=nil) means "clear it".
+func parseFeeRates(raw json.RawMessage) (present bool, rates *entities.FeeRates, err error) {
+	if len(raw) == 0 {
+		return false, nil, nil
+	}
+	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return true, nil, nil
+	}
+	var fr entities.FeeRates
+	if uerr := json.Unmarshal(raw, &fr); uerr != nil {
+		return true, nil, uerr
+	}
+	return true, &fr, nil
 }
 
 // isPrivileged reports whether the caller is an Owner or OrgAdmin (the roles allowed

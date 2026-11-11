@@ -11680,6 +11680,13 @@ const docTemplate = `{
                 "deposit_percent": {
                     "type": "number"
                 },
+                "fees": {
+                    "description": "Fees is the sum of known fees over paid, counted lines (excludes paid_after_cancel,\nmatching RecalcBudgetAggregate). NetReceived is the paid principal minus those fees.",
+                    "type": "integer"
+                },
+                "net_received": {
+                    "type": "integer"
+                },
                 "paid": {
                     "type": "integer"
                 },
@@ -11858,6 +11865,13 @@ const docTemplate = `{
                 "paid_at": {
                     "type": "string"
                 },
+                "payment_fee_amount": {
+                    "description": "Embedded InfinitePay payment fee (cents) and the rate actually applied (percent,\n0 when not embedded). The fee is included in TotalCost; it is an internal price\ncomponent hidden from the customer (its value flows into the displayed subtotal).",
+                    "type": "integer"
+                },
+                "payment_fee_rate_applied": {
+                    "type": "number"
+                },
                 "payment_status": {
                     "description": "Payment aggregate (maintained by the payments feature). PaymentStatus is\nunpaid|partial|paid; AmountPaidCents is the principal paid so far; PaidAt is the\ninstant the budget became fully paid.",
                     "type": "string"
@@ -11960,7 +11974,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "total_cost": {
-                    "description": "cents - Final total (base - discount + shipping + tax)",
+                    "description": "cents - Final total (base - discount + shipping + tax + payment fee)",
                     "type": "integer"
                 },
                 "total_print_time_display": {
@@ -13297,6 +13311,24 @@ const docTemplate = `{
                 }
             }
         },
+        "entities.FeeRates": {
+            "type": "object",
+            "properties": {
+                "credit_1x": {
+                    "type": "number"
+                },
+                "credit_installments": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number",
+                        "format": "float64"
+                    }
+                },
+                "pix": {
+                    "type": "number"
+                }
+            }
+        },
         "entities.Filament": {
             "type": "object",
             "properties": {
@@ -13857,8 +13889,19 @@ const docTemplate = `{
                 "default_deposit_percent": {
                     "type": "number"
                 },
+                "embed_fee_in_price": {
+                    "type": "boolean"
+                },
                 "enabled": {
                     "type": "boolean"
+                },
+                "fee_rates": {
+                    "description": "FeeRates and EmbedFeeInPrice are non-sensitive settings included for every role.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entities.FeeRates"
+                        }
+                    ]
                 },
                 "handle": {
                     "type": "string"
@@ -14495,6 +14538,13 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "fee_amount": {
+                    "description": "FeeAmount/NetAmount are cents (null when the fee is unknown); FeeRatePercent is\nthe applied rate (null when unknown).",
+                    "type": "integer"
+                },
+                "fee_rate_percent": {
+                    "type": "number"
+                },
                 "installments": {
                     "type": "integer"
                 },
@@ -14503,6 +14553,9 @@ const docTemplate = `{
                 },
                 "needs_review": {
                     "type": "boolean"
+                },
+                "net_amount": {
+                    "type": "integer"
                 },
                 "paid_amount": {
                     "type": "integer"
@@ -16715,37 +16768,7 @@ const docTemplate = `{
             }
         },
         "entities.UpsertIntegrationRequest": {
-            "type": "object",
-            "required": [
-                "handle"
-            ],
-            "properties": {
-                "api_key": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 8
-                },
-                "assured_installments": {
-                    "type": "integer",
-                    "maximum": 12,
-                    "minimum": 1
-                },
-                "default_deposit_percent": {
-                    "type": "number"
-                },
-                "enabled": {
-                    "type": "boolean"
-                },
-                "handle": {
-                    "type": "string",
-                    "maxLength": 255
-                },
-                "pix_discount_percent": {
-                    "type": "integer",
-                    "maximum": 30,
-                    "minimum": 0
-                }
-            }
+            "type": "object"
         },
         "entities.UpsertMaterialRequestEntity": {
             "type": "object",

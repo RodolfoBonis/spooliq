@@ -117,6 +117,11 @@ type BudgetModel struct {
 	TaxAmount      int64   `gorm:"type:bigint;default:0" json:"tax_amount"`
 	TaxRateApplied float64 `gorm:"type:double precision;default:0" json:"tax_rate_applied"`
 
+	// Embedded InfinitePay payment fee (cents) and the rate applied (percent). Default 0
+	// so existing budgets and fee-less budgets keep the same total and profit.
+	PaymentFeeAmount      int64   `gorm:"type:bigint;default:0" json:"payment_fee_amount"`
+	PaymentFeeRateApplied float64 `gorm:"type:double precision;default:0" json:"payment_fee_rate_applied"`
+
 	TotalCost int64 `gorm:"type:bigint;default:0" json:"total_cost"` // Final total
 
 	// Additional fields for PDF generation
@@ -220,6 +225,8 @@ func (b *BudgetModel) ToEntity() *entities.BudgetEntity {
 		ShippingCost:              b.ShippingCost,
 		TaxAmount:                 b.TaxAmount,
 		TaxRateApplied:            b.TaxRateApplied,
+		PaymentFeeAmount:          b.PaymentFeeAmount,
+		PaymentFeeRateApplied:     b.PaymentFeeRateApplied,
 		TotalCost:                 b.TotalCost,
 		DeliveryDays:              b.DeliveryDays,
 		PaymentTerms:              b.PaymentTerms,
@@ -297,6 +304,8 @@ func (b *BudgetModel) FromEntity(entity *entities.BudgetEntity) {
 	b.ShippingCost = entity.ShippingCost
 	b.TaxAmount = entity.TaxAmount
 	b.TaxRateApplied = entity.TaxRateApplied
+	b.PaymentFeeAmount = entity.PaymentFeeAmount
+	b.PaymentFeeRateApplied = entity.PaymentFeeRateApplied
 	b.TotalCost = entity.TotalCost
 	b.DeliveryDays = entity.DeliveryDays
 	b.PaymentTerms = entity.PaymentTerms

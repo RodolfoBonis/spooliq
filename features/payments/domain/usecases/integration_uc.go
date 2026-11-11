@@ -71,6 +71,9 @@ func (uc *IntegrationUseCase) Get(c *gin.Context) {
 		resp.AssuredInstallments = integration.AssuredInstallments
 		resp.PixDiscountPercent = integration.PixDiscountPercent
 		resp.DefaultDepositPercent = integration.DefaultDepositPercent
+		// Fee settings are non-sensitive: returned for every role (User included).
+		resp.FeeRates = integration.FeeRates
+		resp.EmbedFeeInPrice = integration.EmbedFeeInPrice
 		resp.VerifiedAt = integration.VerifiedAt
 		if privileged {
 			resp.APIKeyLast4 = integration.APIKeyLast4
@@ -120,6 +123,18 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 		coreErrors.Respond(c, err)
 		return
 	}
+	if err := entities.ValidateFeeRates(req.FeeRates); err != nil {
+		coreErrors.Respond(c, coreErrors.Unprocessable("payment_fee_rate_invalid", "Taxas de pagamento inválidas: use percentuais de 0 a 30 com até duas casas decimais."))
+		return
+	}
+	// The price-embed switch requires the reference card rate (credit at
+	// assured_installments; à vista when N=1) to be configured.
+	if req.EmbedFeeInPrice {
+		if _, ok := req.FeeRates.ReferenceRate(req.AssuredInstallments); !ok {
+			coreErrors.Respond(c, coreErrors.Unprocessable("payment_fee_rate_missing", "Cadastre a taxa de crédito usada para embutir no preço antes de ativar o interruptor."))
+			return
+		}
+	}
 
 	existing, err := uc.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay)
 	if err != nil {
@@ -167,6 +182,8 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 		"assured_installments":    req.AssuredInstallments,
 		"pix_discount_percent":    req.PixDiscountPercent,
 		"default_deposit_percent": req.DefaultDepositPercent,
+		"fee_rates":               req.FeeRates,
+		"embed_fee_in_price":      req.EmbedFeeInPrice,
 		"disconnected_at":         nil,
 		"updated_at":              now,
 	}
@@ -210,6 +227,8 @@ func (uc *IntegrationUseCase) Upsert(c *gin.Context) {
 			AssuredInstallments:    req.AssuredInstallments,
 			PixDiscountPercent:     req.PixDiscountPercent,
 			DefaultDepositPercent:  req.DefaultDepositPercent,
+			FeeRates:               req.FeeRates,
+			EmbedFeeInPrice:        req.EmbedFeeInPrice,
 			VerifiedAt:             &now,
 		}
 		if createErr := uc.repo.CreateIntegration(ctx, integration); createErr != nil {

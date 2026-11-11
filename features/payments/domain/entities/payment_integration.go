@@ -23,10 +23,14 @@ type PaymentIntegration struct {
 	AssuredInstallments    int
 	PixDiscountPercent     int
 	DefaultDepositPercent  *float64
-	VerifiedAt             *time.Time
-	DisconnectedAt         *time.Time
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	// FeeRates is the org's InfinitePay fee table (nil when not configured yet).
+	FeeRates *FeeRates
+	// EmbedFeeInPrice toggles embedding the reference card fee into the budget price.
+	EmbedFeeInPrice bool
+	VerifiedAt      *time.Time
+	DisconnectedAt  *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // Connected reports whether the integration still holds live credentials (not
@@ -45,15 +49,18 @@ func (p *PaymentIntegration) Active() bool {
 // returned; only its last 4 characters. Sensitive fields (last4, pending_links) are
 // omitted for the User role by the use case.
 type IntegrationResponse struct {
-	Provider              string     `json:"provider"`
-	Connected             bool       `json:"connected"`
-	Enabled               bool       `json:"enabled"`
-	Handle                string     `json:"handle"`
-	APIKeyLast4           string     `json:"api_key_last4,omitempty"`
-	AssuredInstallments   int        `json:"assured_installments"`
-	PixDiscountPercent    int        `json:"pix_discount_percent"`
-	DefaultDepositPercent *float64   `json:"default_deposit_percent"`
-	VerifiedAt            *time.Time `json:"verified_at"`
+	Provider              string   `json:"provider"`
+	Connected             bool     `json:"connected"`
+	Enabled               bool     `json:"enabled"`
+	Handle                string   `json:"handle"`
+	APIKeyLast4           string   `json:"api_key_last4,omitempty"`
+	AssuredInstallments   int      `json:"assured_installments"`
+	PixDiscountPercent    int      `json:"pix_discount_percent"`
+	DefaultDepositPercent *float64 `json:"default_deposit_percent"`
+	// FeeRates and EmbedFeeInPrice are non-sensitive settings included for every role.
+	FeeRates        *FeeRates  `json:"fee_rates"`
+	EmbedFeeInPrice bool       `json:"embed_fee_in_price"`
+	VerifiedAt      *time.Time `json:"verified_at"`
 	// PendingLinks counts open (pending) payment links across the org. Omitted for
 	// the User role.
 	PendingLinks *int64 `json:"pending_links,omitempty"`
@@ -69,4 +76,9 @@ type UpsertIntegrationRequest struct {
 	AssuredInstallments   int      `json:"assured_installments" validate:"gte=1,lte=12"`
 	PixDiscountPercent    int      `json:"pix_discount_percent" validate:"gte=0,lte=30"`
 	DefaultDepositPercent *float64 `json:"default_deposit_percent" validate:"omitempty,gt=0,lt=100"`
+	// FeeRates is the optional InfinitePay fee table. Nil/absent means "not configured".
+	// Range/precision are validated in the use case (not by the struct validator).
+	FeeRates *FeeRates `json:"fee_rates"`
+	// EmbedFeeInPrice may only be true when the reference card rate is configured.
+	EmbedFeeInPrice bool `json:"embed_fee_in_price"`
 }

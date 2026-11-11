@@ -63,12 +63,17 @@ func ExpiredNotification(b entities.ExpiredBudget) notificationEntities.NewNotif
 
 // PaymentReceivedNotification tells the team a customer paid (deposit, balance or
 // full) on a budget. dedupeKey (per payment) prevents a duplicate notification when
-// the webhook and the redirect confirm the same payment.
-func PaymentReceivedNotification(quoteNumber *int, name, budgetID string, amountCents int64, dedupeKey string) notificationEntities.NewNotification {
+// the webhook and the redirect confirm the same payment. When netCents is non-nil the
+// body also shows the net amount the shop receives after the InfinitePay fee.
+func PaymentReceivedNotification(quoteNumber *int, name, budgetID string, amountCents int64, netCents *int64, dedupeKey string) notificationEntities.NewNotification {
+	body := "O cliente pagou " + formatBRL(amountCents) + " pelo link."
+	if netCents != nil {
+		body = "O cliente pagou " + formatBRL(amountCents) + " pelo link (você recebe ≈ " + formatBRL(*netCents) + ")."
+	}
 	return notificationEntities.NewNotification{
 		Type:      notificationEntities.TypePaymentPaid,
 		Title:     "Pagamento recebido — " + budgetLabel(quoteNumber, name),
-		Body:      "O cliente pagou " + formatBRL(amountCents) + " pelo link.",
+		Body:      body,
 		Link:      budgetLink(budgetID),
 		DedupeKey: dedupeKey,
 	}

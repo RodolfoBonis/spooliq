@@ -18,11 +18,22 @@ import (
 
 type budgetRepositoryImpl struct {
 	db *gorm.DB
+	// feeProvider resolves the embedded payment fee rate for a budget's org. Nil in
+	// tests and whenever the payments feature does not inject it, in which case the fee
+	// rate is 0 (no change to pricing).
+	feeProvider repositories.PaymentFeeProvider
 }
 
 // NewBudgetRepository creates a new instance of BudgetRepository
 func NewBudgetRepository(db *gorm.DB) repositories.BudgetRepository {
 	return &budgetRepositoryImpl{db: db}
+}
+
+// NewBudgetRepositoryWithFeeProvider builds the repository with an embedded payment fee
+// provider. Used by FX wiring so draft pricing can embed the org's fee; tests use the
+// plain NewBudgetRepository (nil provider => fee rate 0).
+func NewBudgetRepositoryWithFeeProvider(db *gorm.DB, feeProvider repositories.PaymentFeeProvider) repositories.BudgetRepository {
+	return &budgetRepositoryImpl{db: db, feeProvider: feeProvider}
 }
 
 // WithTransaction runs fn inside a single database transaction. The repository
@@ -1121,24 +1132,26 @@ func (r *budgetRepositoryImpl) CalculateCosts(ctx context.Context, budgetID uuid
 		Model(&models.BudgetModel{}).
 		Where("id = ? AND organization_id = ?", budgetID, organizationID).
 		Updates(map[string]interface{}{
-			"filament_cost":        result.FilamentCost,
-			"waste_cost":           result.WasteCost,
-			"energy_cost":          result.EnergyCost,
-			"machine_cost":         result.MachineCost,
-			"setup_cost":           result.SetupCost,
-			"labor_cost":           result.LaborCost,
-			"post_processing_cost": result.PostProcessingCost,
-			"packaging_cost":       result.PackagingCost,
-			"quality_control_cost": result.QualityControlCost,
-			"failure_cost":         result.FailureCost,
-			"supplies_cost":        result.SuppliesCost,
-			"overhead_cost":        result.Overhead,
-			"profit_amount":        result.Profit,
-			"discount_amount":      result.DiscountAmount,
-			"shipping_cost":        result.ShippingCost,
-			"tax_amount":           result.TaxAmount,
-			"tax_rate_applied":     result.TaxRateApplied,
-			"total_cost":           result.Total,
+			"filament_cost":            result.FilamentCost,
+			"waste_cost":               result.WasteCost,
+			"energy_cost":              result.EnergyCost,
+			"machine_cost":             result.MachineCost,
+			"setup_cost":               result.SetupCost,
+			"labor_cost":               result.LaborCost,
+			"post_processing_cost":     result.PostProcessingCost,
+			"packaging_cost":           result.PackagingCost,
+			"quality_control_cost":     result.QualityControlCost,
+			"failure_cost":             result.FailureCost,
+			"supplies_cost":            result.SuppliesCost,
+			"overhead_cost":            result.Overhead,
+			"profit_amount":            result.Profit,
+			"discount_amount":          result.DiscountAmount,
+			"shipping_cost":            result.ShippingCost,
+			"tax_amount":               result.TaxAmount,
+			"tax_rate_applied":         result.TaxRateApplied,
+			"payment_fee_amount":       result.PaymentFee,
+			"payment_fee_rate_applied": result.PaymentFeeRateApplied,
+			"total_cost":               result.Total,
 		}).Error; err != nil {
 		return fmt.Errorf("failed to update budget costs: %w", err)
 	}
@@ -1237,6 +1250,11 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 		return zero, err
 	}
 
+	// Resolve the embedded payment fee rate (0 when the org does not embed it). A
+	// provider failure must not break pricing: it is logged by the provider and we
+	// fall back to 0 (no fee).
+	feeRate := r.resolvePaymentFeeRate(ctx, in.OrganizationID)
+
 	pin := pricing.PricingInput{
 		IncludeWasteCost:      in.IncludeWasteCost,
 		EnergyEnabled:         energyEnabled,
@@ -1249,6 +1267,7 @@ func (r *budgetRepositoryImpl) ComputeBudgetPricing(ctx context.Context, in enti
 		IncludeShipping:       in.IncludeShipping,
 		ShippingOverrideCents: in.ShippingOverrideCents,
 		TaxRatePercent:        taxRate,
+		PaymentFeeRatePercent: feeRate,
 	}
 	if in.BudgetCostPresetID != nil {
 		rates := costPresetByID[*in.BudgetCostPresetID]
@@ -1324,6 +1343,21 @@ func (r *budgetRepositoryImpl) resolveTaxRate(ctx context.Context, in entities.P
 		return 0, fmt.Errorf("failed to load company default tax rate: %w", res.Error)
 	}
 	return rate, nil
+}
+
+// resolvePaymentFeeRate returns the embedded payment fee rate (percent) for the org, or
+// 0 when there is no provider or the org does not embed a fee. A provider error is
+// swallowed (returns 0) so a payments-side issue never blocks budget pricing; the
+// provider itself is responsible for logging.
+func (r *budgetRepositoryImpl) resolvePaymentFeeRate(ctx context.Context, organizationID string) float64 {
+	if r.feeProvider == nil {
+		return 0
+	}
+	rate, err := r.feeProvider.EmbeddedFeeRatePercent(ctx, organizationID)
+	if err != nil || rate < 0 {
+		return 0
+	}
+	return rate
 }
 
 // loadItemFilamentSpecs batch-loads the filaments (grams) of every given item in a

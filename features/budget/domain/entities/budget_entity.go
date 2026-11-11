@@ -162,7 +162,13 @@ type BudgetEntity struct {
 	TaxAmount      int64   `json:"tax_amount"`       // cents
 	TaxRateApplied float64 `json:"tax_rate_applied"` // percent actually applied
 
-	TotalCost int64 `json:"total_cost"` // cents - Final total (base - discount + shipping + tax)
+	// Embedded InfinitePay payment fee (cents) and the rate actually applied (percent,
+	// 0 when not embedded). The fee is included in TotalCost; it is an internal price
+	// component hidden from the customer (its value flows into the displayed subtotal).
+	PaymentFeeAmount      int64   `json:"payment_fee_amount"`
+	PaymentFeeRateApplied float64 `json:"payment_fee_rate_applied"`
+
+	TotalCost int64 `json:"total_cost"` // cents - Final total (base - discount + shipping + tax + payment fee)
 
 	// Additional fields for PDF generation
 	DeliveryDays *int    `json:"delivery_days,omitempty"` // prazo de entrega em dias
@@ -179,11 +185,20 @@ type BudgetEntity struct {
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
 
-// BasePrice returns the sale price before discount/shipping/tax adjustments,
-// derived from the stored total: base = total + discount - shipping - tax. It is
-// the figure the PDF/response show as the pre-adjustment subtotal.
+// BasePrice returns the INTERNAL sale price before discount/shipping/tax AND before
+// the embedded payment fee: base = total + discount - shipping - tax - payment_fee.
+// It is the pre-adjustment subtotal used by the authenticated API and the per-item
+// distribution; the payment fee is reported separately so the owner sees it.
 func (b *BudgetEntity) BasePrice() int64 {
-	return b.TotalCost + b.DiscountAmount - b.ShippingCost - b.TaxAmount
+	return b.TotalCost + b.DiscountAmount - b.ShippingCost - b.TaxAmount - b.PaymentFeeAmount
+}
+
+// CustomerSubtotal is the subtotal shown to the CUSTOMER (public view, PDF, CSV): the
+// base price WITH the embedded payment fee folded in, so the fee never appears as its
+// own line yet still reconciles (subtotal - discount + shipping + tax == total). With
+// no embedded fee it equals BasePrice, keeping existing documents byte-identical.
+func (b *BudgetEntity) CustomerSubtotal() int64 {
+	return b.BasePrice() + b.PaymentFeeAmount
 }
 
 // IsExpired reports whether the budget's validity has passed as of now. It is a

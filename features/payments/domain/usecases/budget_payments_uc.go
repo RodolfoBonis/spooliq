@@ -67,7 +67,13 @@ func (uc *BudgetPaymentsUseCase) List(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, buildBudgetPaymentsResponse(budget, payments))
+	// The current fee table estimates fees for payments confirmed before it existed.
+	var rates *entities.FeeRates
+	if integration, ierr := uc.repo.GetIntegration(ctx, organizationID, entities.ProviderInfinitePay); ierr == nil && integration != nil {
+		rates = integration.FeeRates
+	}
+
+	c.JSON(http.StatusOK, buildBudgetPaymentsResponse(budget, payments, rates))
 }
 
 // CreateLink creates (or reuses) the next checkout link for the budget.
@@ -125,28 +131,44 @@ func (uc *BudgetPaymentsUseCase) CreateLink(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// buildBudgetPaymentsResponse assembles the authenticated payments response.
-func buildBudgetPaymentsResponse(budget *entities.BudgetChargeContext, payments []*entities.BudgetPayment) entities.BudgetPaymentsResponse {
+// buildBudgetPaymentsResponse assembles the authenticated payments response. rates is
+// the org's current fee table (may be nil); it is used to estimate per-line fees for
+// payments confirmed before any table existed (the snapshot wins when present).
+func buildBudgetPaymentsResponse(budget *entities.BudgetChargeContext, payments []*entities.BudgetPayment, rates *entities.FeeRates) entities.BudgetPaymentsResponse {
 	paid := budget.AmountPaidCents
 	balance := budget.TotalCost - paid
 	if balance < 0 {
 		balance = 0
 	}
 	lines := make([]entities.PaymentLineResponse, 0, len(payments))
+	var fees, netReceived int64
 	for _, p := range payments {
+		feeAmount, netAmount, ratePercent := resolveLineFee(p, rates)
 		lines = append(lines, entities.PaymentLineResponse{
-			Kind:          p.Kind,
-			Amount:        p.AmountCents,
-			PaidAmount:    p.PaidAmountCents,
-			CaptureMethod: p.CaptureMethod,
-			Installments:  p.Installments,
-			Status:        string(p.Status),
-			StatusReason:  p.StatusReason,
-			CheckoutURL:   p.CheckoutURL,
-			ReceiptURL:    p.ReceiptURL,
-			PaidAt:        p.PaidAt,
-			CreatedAt:     p.CreatedAt,
+			Kind:           p.Kind,
+			Amount:         p.AmountCents,
+			PaidAmount:     p.PaidAmountCents,
+			CaptureMethod:  p.CaptureMethod,
+			Installments:   p.Installments,
+			Status:         string(p.Status),
+			StatusReason:   p.StatusReason,
+			CheckoutURL:    p.CheckoutURL,
+			ReceiptURL:     p.ReceiptURL,
+			PaidAt:         p.PaidAt,
+			CreatedAt:      p.CreatedAt,
+			FeeAmount:      feeAmount,
+			NetAmount:      netAmount,
+			FeeRatePercent: ratePercent,
 		})
+		// Totals count only paid lines that count toward the budget (exclude
+		// paid_after_cancel, the same filter RecalcBudgetAggregate uses).
+		if p.Status == entities.PaymentPaid && p.StatusReason != entities.ReasonPaidAfterCancel {
+			netReceived += p.PaidAmountCents
+			if feeAmount != nil {
+				fees += *feeAmount
+				netReceived -= *feeAmount
+			}
+		}
 	}
 	return entities.BudgetPaymentsResponse{
 		Status:         entities.Status(budget.TotalCost, paid),
@@ -154,7 +176,30 @@ func buildBudgetPaymentsResponse(budget *entities.BudgetChargeContext, payments 
 		Paid:           paid,
 		Balance:        balance,
 		RefundDue:      budget.RefundDueCents,
+		Fees:           fees,
+		NetReceived:    netReceived,
 		DepositPercent: budget.DepositPercent,
 		Payments:       lines,
 	}
+}
+
+// resolveLineFee returns the fee amount, net amount and rate for a payment line. A
+// stored snapshot wins; otherwise a paid line is estimated from the current fee table.
+// Unknown fees (no snapshot and no usable rate, or a non-paid line) return all-nil.
+func resolveLineFee(p *entities.BudgetPayment, rates *entities.FeeRates) (feeAmount *int64, netAmount *int64, ratePercent *float64) {
+	if p.FeeCents != nil && p.FeeRatePercent != nil {
+		fee := *p.FeeCents
+		net := p.PaidAmountCents - fee
+		rate := *p.FeeRatePercent
+		return &fee, &net, &rate
+	}
+	if p.Status != entities.PaymentPaid {
+		return nil, nil, nil
+	}
+	rate, fee, ok := entities.FeeFor(rates, p.CaptureMethod, p.Installments, p.PaidAmountCents)
+	if !ok {
+		return nil, nil, nil
+	}
+	net := p.PaidAmountCents - fee
+	return &fee, &net, &rate
 }

@@ -329,6 +329,12 @@ func applyPaymentFields(p *entities.BudgetPayment, fields map[string]interface{}
 	if v, ok := fields["installments"].(int); ok {
 		p.Installments = v
 	}
+	if v, ok := fields["fee_rate_percent"].(float64); ok {
+		p.FeeRatePercent = &v
+	}
+	if v, ok := fields["fee_cents"].(int64); ok {
+		p.FeeCents = &v
+	}
 	if v, ok := fields["transaction_nsu"].(string); ok {
 		p.TransactionNSU = &v
 	}

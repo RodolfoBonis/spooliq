@@ -206,6 +206,17 @@ func (s *ConfirmService) Confirm(
 		fields["receipt_url"] = r
 	}
 
+	// Snapshot the InfinitePay fee from the org's fee table (when configured), so the
+	// net received is stable even if the table later changes. Unknown => left NULL and
+	// the GET estimates from the current table.
+	var netCents *int64
+	if rate, cents, ok := entities.FeeFor(integration.FeeRates, check.CaptureMethod, check.Installments, check.PaidAmount); ok {
+		fields["fee_rate_percent"] = rate
+		fields["fee_cents"] = cents
+		net := check.PaidAmount - cents
+		netCents = &net
+	}
+
 	var rows int64
 	var paidAfterCancel bool
 	txErr := s.repo.WithTransaction(ctx, func(repo domainRepos.PaymentRepository) error {
@@ -269,7 +280,7 @@ func (s *ConfirmService) Confirm(
 	if !budgetMissing {
 		budgetUc.InvalidateDashboard(ctx, s.cache, s.logger, organizationID)
 	}
-	s.recordPaidSideEffects(ctx, organizationID, budget, payment, check, now, paidAfterCancel, budgetMissing)
+	s.recordPaidSideEffects(ctx, organizationID, budget, payment, check, now, paidAfterCancel, budgetMissing, netCents)
 	return result, nil
 }
 
@@ -293,6 +304,7 @@ func (s *ConfirmService) recordPaidSideEffects(
 	now time.Time,
 	paidAfterCancel bool,
 	budgetMissing bool,
+	netCents *int64,
 ) {
 	var quote *int
 	name := "orçamento"
@@ -309,7 +321,7 @@ func (s *ConfirmService) recordPaidSideEffects(
 	}
 	if s.notifications != nil {
 		dedupe := "payment_received:" + payment.ID.String()
-		s.notifications.Notify(organizationID, budgetUc.PaymentReceivedNotification(quote, name, budgetID, check.PaidAmount, dedupe))
+		s.notifications.Notify(organizationID, budgetUc.PaymentReceivedNotification(quote, name, budgetID, check.PaidAmount, netCents, dedupe))
 	}
 
 	if !budgetMissing {

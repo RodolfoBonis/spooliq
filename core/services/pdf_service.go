@@ -348,7 +348,7 @@ func (s *PDFService) addCostSummary(pdf *gofpdf.Fpdf, budget *budgetEntities.Bud
 	pdf.SetFont("Arial", "", 10)
 	pdf.SetTextColor(r, g, b)
 	pdf.Cell(120, 6, s.convertUTF8("Subtotal:"))
-	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.BasePrice())/100.0))
+	pdf.Cell(0, 6, fmt.Sprintf("R$ %.2f", float64(budget.CustomerSubtotal())/100.0))
 	pdf.Ln(5)
 
 	if budget.DiscountAmount > 0 {
